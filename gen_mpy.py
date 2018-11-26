@@ -35,9 +35,11 @@ s = subprocess.check_output(pp_cmd.split())
 parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
+typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
+lv_func_pattern = re.compile('lv_(.+)')
 create_obj_pattern = re.compile('lv_([^_]+)_create')
 excluded_ctors = ['lv_%s_create' % obj for obj in args.exclude]
 obj_ctors = [func for func in funcs if create_obj_pattern.match(func.name) and not func.name in excluded_ctors]
@@ -51,7 +53,7 @@ def get_methods(obj_name, funcs):
 base_obj_name = 'obj'
 base_methods = get_methods(base_obj_name, funcs)
 base_ctor = next(ctor for ctor in obj_ctors if ctor.name == 'lv_%s_create' % base_obj_name)
-obj_ctors.remove(base_ctor) # base_ctor is called explicitly
+obj_ctors.remove(base_ctor) # base_ctor is called explicitly in order to move all base methods definition before any other object definition
 
 #
 # Type convertors
@@ -62,7 +64,7 @@ class MissingConversionException(ValueError):
 
 mp_to_lv = {
     'bool'                  : 'mp_obj_is_true',
-    'char*'                 : 'mp_obj_str_get_str',
+    'char*'                 : '(char*)mp_obj_str_get_str',
     'const char*'           : 'mp_obj_str_get_str',
     'lv_obj_t*'             : 'mp_to_lv',
     'const lv_obj_t*'       : 'mp_to_lv',
@@ -75,15 +77,17 @@ mp_to_lv = {
 }
 
 lv_to_mp = {
-    'bool'          : 'convert_to_bool',
-    'char*'         : 'convert_to_str',
-    'const char*'   : 'convert_to_str',
-    'uint8_t'       : 'mp_obj_new_int_from_uint',
-    'uint16_t'      : 'mp_obj_new_int_from_uint',
-    'uint32_t'      : 'mp_obj_new_int_from_uint',
-    'int8_t'        : 'mp_obj_new_int',
-    'int16_t'       : 'mp_obj_new_int',
-    'int32_t'       : 'mp_obj_new_int',
+    'bool'                  : 'convert_to_bool',
+    'char*'                 : 'convert_to_str',
+    'const char*'           : 'convert_to_str',
+    'lv_obj_t*'             : 'lv_to_mp',
+    'const lv_obj_t*'       : 'lv_to_mp',
+    'uint8_t'               : 'mp_obj_new_int_from_uint',
+    'uint16_t'              : 'mp_obj_new_int_from_uint',
+    'uint32_t'              : 'mp_obj_new_int_from_uint',
+    'int8_t'                : 'mp_obj_new_int',
+    'int16_t'               : 'mp_obj_new_int',
+    'int32_t'               : 'mp_obj_new_int',
 }
 
 #
@@ -139,8 +143,21 @@ typedef struct mp_lv_obj_t {
 
 STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
 {
+    if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
     return mp_lv_obj->lv_obj;
+}
+
+STATIC inline const mp_obj_type_t *get_BaseObj_type();
+
+STATIC inline mp_obj_t *lv_to_mp(lv_obj_t *lv_obj)
+{
+    mp_lv_obj_t *result = m_new_obj(mp_lv_obj_t);
+    *result = (mp_lv_obj_t){
+        .base = {get_BaseObj_type()},
+        .lv_obj = lv_obj,
+    };
+    return MP_OBJ_FROM_PTR(result);
 }
 
 STATIC mp_obj_t make_new(
@@ -174,43 +191,73 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
 """)
 
 #
-# Emit Mpy function definitions
+# Generate types from typedefs when needed
 #
 
 def get_arg_type(arg):
     indirect_level = 0
-    while isinstance(arg,c_ast.PtrDecl):
+    while isinstance(arg, c_ast.PtrDecl):
         indirect_level += 1
         arg = arg.type
     return '{quals}{type}{indirection}'.format(
-        quals=''.join('%s ' % qual for qual in arg.quals),
+        quals=''.join('%s ' % qual for qual in arg.quals) if hasattr(arg, 'quals') else '',
         type=gen.visit(arg),
         indirection='*' * indirect_level)
+
+def get_arg_name(arg):
+    if isinstance(arg, c_ast.PtrDecl) or isinstance(arg, c_ast.FuncDecl):
+        return get_arg_name(arg.type)
+    return arg.declname if hasattr(arg, 'declname') else arg.name
+
+# print "// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs)
+
+def try_generate_type(type):
+    global typedefs
+    global mp_to_lv, lv_to_mp
+    if type in mp_to_lv:
+        return True
+    for new_type in [get_arg_type(x) for x in typedefs if get_arg_name(x) == type]:
+        if try_generate_type(new_type):
+           mp_to_lv[type] = mp_to_lv[new_type]
+           if new_type in lv_to_mp:
+               lv_to_mp[type] = lv_to_mp[new_type]
+           # print "// %s = (%s)" % (type, new_type)
+           return True
+    return False
+  
+
+#
+# Emit Mpy function definitions
+#
 
 def build_arg(arg, index):
     arg_type = get_arg_type(arg.type)
     if not arg_type in mp_to_lv:
-        raise MissingConversionException("Missing conversion to %s" % arg_type)
+        try_generate_type(arg_type)
+        if not arg_type in mp_to_lv:
+            raise MissingConversionException("Missing conversion to %s" % arg_type)
     return '{var} = {convertor}(args[{i}]);'.format(
         var = gen.visit(arg),
         convertor = mp_to_lv[arg_type],
         i = index) 
 
 def gen_func(func):
-    print("""
-/*    
-{ast}
-*/
-    """).format(ast=func)
+    # print("/*\n{ast}\n*/").format(ast=func)
     args = func.type.args.params
-    param_count = len(args)
+    # Handle the case of a single function argument which is "void"
+    if len(args)==1 and get_arg_type(args[0].type) == "void":
+        param_count = 0
+    else:
+        param_count = len(args)
     return_type = get_arg_type(func.type.type)
     if return_type == "void":        
         build_result = ""
         build_return_value = "mp_const_none" 
     else:
         if not return_type in lv_to_mp:
-            raise MissingConversionException("Missing convertion from %s" % return_type)
+            try_generate_type(return_type)
+            if not return_type in lv_to_mp:
+                raise MissingConversionException("Missing convertion from %s" % return_type)
         build_result = "%s res = " % return_type
         build_return_value = "%s(res)" % lv_to_mp[return_type]
     print("""
@@ -310,15 +357,28 @@ STATIC const mp_obj_type_t {obj}_type = {{
          (gen_obj_methods(base_obj_name, base_methods) if should_add_base_methods else []) + gen_obj_methods(obj_name, methods))))
 
 # Generate base object
+
 gen_obj(base_ctor) # base methods must appear first because they are used on every object
 
+print ("""
+STATIC inline const mp_obj_type_t *get_BaseObj_type()
+{{
+    return &{base_obj}_type;
+}}
+""".format(base_obj=base_obj_name));
+
 # Generate all other objects
+
 for obj_ctor in obj_ctors:
     gen_obj(obj_ctor)
 
+# Generate all module functions (method functions already generated)
+
+module_funcs = []
 for module_func in funcs:
     try:
         gen_func(module_func)
+        module_funcs.append(module_func)
     except MissingConversionException as exp:
         gen_func_error(module_func, exp)
     
@@ -345,19 +405,22 @@ print("""
 extern void lv_mp_init();
 
 STATIC mp_obj_t _lv_mp_init()
-{
+{{
     lv_mp_init();
     return mp_const_none;
-}
+}}
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(lv_mp_init_obj, _lv_mp_init);
 
-STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_lvgl) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR___init__), (mp_obj_t)&lv_mp_init_obj },
-    %s
-};
-""" % ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{obj}), (mp_obj_t)&{obj}_type }}'.format(obj = x) for x in obj_names]))
+STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
+    {{ MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_lvgl) }},
+    {{ MP_OBJ_NEW_QSTR(MP_QSTR___init__), (mp_obj_t)&lv_mp_init_obj }},
+    {objects},
+    {functions},
+}};
+""".format(
+        objects = ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{obj}), (mp_obj_t)&{obj}_type }}'.format(obj = o) for o in obj_names]),
+        functions =  ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{func_name}), (mp_obj_t)&mp_{func}_obj }}'.format(func = f.name, func_name = re.match(lv_func_pattern, f.name).group(1)) for f in module_funcs])))
 
 print("""
 STATIC MP_DEFINE_CONST_DICT (
