@@ -1,8 +1,15 @@
 # TODO
 # - On print extensions, print the reflected internal representation of the object
 # - Verify that when mp_obj is given it is indeed the right type (mp_lv_obj_t). Report error if not. can be added to mp_to_lv.
-# - Implement inheritance instead of embed base methods (how?)
+# - Implement inheritance instead of embed base methods (how? seems it's not supported, see https://github.com/micropython/micropython/issues/1159)
 
+from __future__ import print_function
+import sys
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+    
+    
 from sys import argv
 from pycparser import c_parser, c_ast, c_generator
 from argparse import ArgumentParser
@@ -28,6 +35,21 @@ pp_cmd = 'gcc -E -std=c99 {include} {input} {first_input}'.format(
     include=' '.join('-I %s' % inc for inc in args.include))
 s = subprocess.check_output(pp_cmd.split())
 
+
+#
+# lv text patterns
+# 
+
+lv_func_pattern = re.compile('lv_(.+)')
+create_obj_pattern = re.compile('lv_([^_]+)_create')
+base_obj_name = 'obj'
+
+def ctor_name_from_obj_name(obj_name):
+    return 'lv_%s_create' % obj_name
+
+def is_method_of(func_name, obj_name):
+    return func_name.startswith('lv_%s_' % obj_name)
+
 #
 # Initialization and data structures
 #
@@ -39,21 +61,23 @@ typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
-lv_func_pattern = re.compile('lv_(.+)')
-create_obj_pattern = re.compile('lv_([^_]+)_create')
-excluded_ctors = ['lv_%s_create' % obj for obj in args.exclude]
+excluded_ctors = [ctor_name_from_obj_name(obj) for obj in args.exclude]
 obj_ctors = [func for func in funcs if create_obj_pattern.match(func.name) and not func.name in excluded_ctors]
 for obj_ctor in obj_ctors:
     funcs.remove(obj_ctor)
 obj_names = [re.match(create_obj_pattern, ctor.name).group(1) for ctor in obj_ctors]
 
-def get_methods(obj_name, funcs):
-    return [func for func in funcs if func.name.startswith('lv_%s_' % obj_name) and (not func.name == 'lv_%s_create' % obj_name)]
+def get_ctor(obj_name):
+    global obj_ctors
+    return next(ctor for ctor in obj_ctors if ctor.name == ctor_name_from_obj_name(obj_name))
 
-base_obj_name = 'obj'
-base_methods = get_methods(base_obj_name, funcs)
-base_ctor = next(ctor for ctor in obj_ctors if ctor.name == 'lv_%s_create' % base_obj_name)
-obj_ctors.remove(base_ctor) # base_ctor is called explicitly in order to move all base methods definition before any other object definition
+def get_methods(obj_name):
+    global funcs
+    return [func for func in funcs if is_method_of(func.name,obj_name) and (not func.name == ctor_name_from_obj_name(obj_name))]
+
+# By default all object (except base_obj) inherit from base_obj. Later we refine this according to hierarchy.
+parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
+
 
 #
 # Type convertors
@@ -104,6 +128,7 @@ print ("""
  * Preprocessing command:
  * {pp_cmd}
  *
+ * Generating Objects: {objs}
  */
 
 /*
@@ -122,7 +147,8 @@ print ("""
 """.format(
         cmd_line=' '.join(argv),
         pp_cmd=pp_cmd,
-        lv_headers='\n'.join('#include "%s"' % header for header in args.input)));
+        objs=", ".join([objname for objname in obj_names]),
+        lv_headers='\n'.join('#include "%s"' % header for header in args.input)))
 
 
 #
@@ -230,6 +256,8 @@ def try_generate_type(type):
 # Emit Mpy function definitions
 #
 
+generated_funcs = {}
+
 def build_arg(arg, index):
     arg_type = get_arg_type(arg.type)
     if not arg_type in mp_to_lv:
@@ -275,14 +303,14 @@ STATIC mp_obj_t mp_{func}(size_t n_args, const mp_obj_t *args)
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{func});
 
- """).format(func=func.name, 
+ """.format(func=func.name, 
              print_func=gen.visit(func),
              count=param_count, 
              build_args="\n    ".join([build_arg(arg,i) for i,arg in enumerate(args) if arg.name]), 
              send_args=", ".join(arg.name for arg in args if arg.name),
              build_result=build_result,
-             build_return_value=build_return_value)
-    funcs.remove(func)
+             build_return_value=build_return_value))
+    generated_funcs[func] = True
 
 
 def gen_func_error(method, exp):
@@ -301,21 +329,21 @@ def gen_func_error(method, exp):
 # Emit Mpy objects definitions
 #
 
-def gen_obj_methods(obj_name, methods):
+def gen_obj_methods(obj_name):
     method_prefix = "lv_%s_" % obj_name
-    return ["{{MP_OBJ_NEW_QSTR(MP_QSTR_{method_name}), (mp_obj_t)&mp_{method}_obj}}".\
-                    format(method=method.name, method_name=method.name[len(method_prefix):]) for method in methods]
+    result = ["{{MP_OBJ_NEW_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".\
+                    format(method=method.name, method_name=method.name[len(method_prefix):]) for method in get_methods(obj_name)]
+    if obj_name in parent_obj_names:
+        result += gen_obj_methods(parent_obj_names[obj_name])
+    return result
 
-def gen_obj(obj_ctor):
-    obj_name = re.match(create_obj_pattern, obj_ctor.name).group(1)
+def gen_obj(obj_name):
     should_add_base_methods = obj_name != 'obj'
-    methods = base_methods if obj_name == base_obj_name else get_methods(obj_name, funcs)
-    for method in methods[:]: # copy the list because we remove elements while iterating it...
+    for method in get_methods(obj_name):
         try:
             gen_func(method)
         except MissingConversionException as exp:
             gen_func_error(method, exp)
-            methods.remove(method)
        
     # print([method.name for method in methods])
     print("""
@@ -346,6 +374,9 @@ STATIC mp_obj_t {obj}_make_new(
     return make_new(&lv_{obj}_create, type, n_args, n_kw, args);           
 }}
 
+
+STATIC const mp_obj_type_t {base_obj}_type;
+    
 STATIC const mp_obj_type_t {obj}_type = {{
     {{ &mp_type_type }},
     .name = MP_QSTR_{obj},
@@ -353,12 +384,27 @@ STATIC const mp_obj_type_t {obj}_type = {{
     .make_new = {obj}_make_new,
     .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
 }};
-    """.format(obj=obj_name, locals_dict_entries=",\n    ".join(
-         (gen_obj_methods(base_obj_name, base_methods) if should_add_base_methods else []) + gen_obj_methods(obj_name, methods))))
+    """.format(obj = obj_name, base_obj = base_obj_name,
+            base_class = '&%s_type' % base_obj_name if should_add_base_methods else 'NULL',
+            locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name))))
 
-# Generate base object
 
-gen_obj(base_ctor) # base methods must appear first because they are used on every object
+# Generate all other objects. Generate parent objects first
+
+generated_obj_names = {}
+for obj_name in obj_names:
+    # eprint("--> %s [%s]" % (obj_name, ", ".join([name for name in generated_obj_names])))
+    parent_obj_name = parent_obj_names[obj_name] if obj_name in parent_obj_names else None
+
+    while parent_obj_name != None and not parent_obj_name in generated_obj_names:
+        gen_obj(parent_obj_name)
+        generated_obj_names[parent_obj_name] = True
+        parent_obj_name = parent_obj_names[parent_obj_name] if parent_obj_name in parent_obj_names else None
+
+    if not obj_name in generated_obj_names:
+        # eprint("--> gen obj %s" % obj_name)
+        gen_obj(obj_name)
+        generated_obj_names[obj_name] = True
 
 print ("""
 STATIC inline const mp_obj_type_t *get_BaseObj_type()
@@ -367,29 +413,35 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type()
 }}
 """.format(base_obj=base_obj_name));
 
-# Generate all other objects
 
-for obj_ctor in obj_ctors:
-    gen_obj(obj_ctor)
+# Generate all module functions (not including method functions which were already generated)
 
-# Generate all module functions (method functions already generated)
+print("""
+/* 
+ *
+ * Global Module Functions
+ *
+ */
+""")
 
-module_funcs = []
-for module_func in funcs:
+module_funcs = [func for func in funcs if not func in generated_funcs]
+for module_func in module_funcs[:]:
     try:
         gen_func(module_func)
-        module_funcs.append(module_func)
     except MissingConversionException as exp:
         gen_func_error(module_func, exp)
+        module_funcs.remove(module_func)
     
-print("""
+functions_not_generated = [func.name for func in funcs if not func in generated_funcs]
+if len(functions_not_generated) > 0:
+    print("""
 /*
  * Functions not generated:
  * {funcs}
  *
  */
 
-""".format(funcs = "\n * ".join([func.name for func in funcs])))
+""".format(funcs = "\n * ".join(functions_not_generated)))
 
 #
 # Emit Mpy Module definition
@@ -414,13 +466,13 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(lv_mp_init_obj, _lv_mp_init);
 
 STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
     {{ MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_lvgl) }},
-    {{ MP_OBJ_NEW_QSTR(MP_QSTR___init__), (mp_obj_t)&lv_mp_init_obj }},
+    {{ MP_OBJ_NEW_QSTR(MP_QSTR___init__), MP_ROM_PTR(&lv_mp_init_obj) }},
     {objects},
     {functions},
 }};
 """.format(
-        objects = ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{obj}), (mp_obj_t)&{obj}_type }}'.format(obj = o) for o in obj_names]),
-        functions =  ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{func_name}), (mp_obj_t)&mp_{func}_obj }}'.format(func = f.name, func_name = re.match(lv_func_pattern, f.name).group(1)) for f in module_funcs])))
+        objects = ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&{obj}_type) }}'.format(obj = o) for o in obj_names]),
+        functions =  ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{func_name}), MP_ROM_PTR(&mp_{func}_obj) }}'.format(func = f.name, func_name = re.match(lv_func_pattern, f.name).group(1)) for f in module_funcs])))
 
 print("""
 STATIC MP_DEFINE_CONST_DICT (

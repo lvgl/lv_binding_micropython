@@ -8,6 +8,7 @@
  * Preprocessing command:
  * gcc -E -std=c99 -I pycparser/utils/fake_libc_include -include ../lv_objx/lv_arc.h -include ../lv_objx/lv_bar.h -include ../lv_objx/lv_btn.h -include ../lv_objx/lv_btnm.h -include ../lv_objx/lv_calendar.h -include ../lv_objx/lv_cb.h -include ../lv_objx/lv_chart.h -include ../lv_objx/lv_cont.h -include ../lv_objx/lv_ddlist.h -include ../lv_objx/lv_gauge.h -include ../lv_objx/lv_imgbtn.h -include ../lv_objx/lv_img.h -include ../lv_objx/lv_kb.h -include ../lv_objx/lv_label.h -include ../lv_objx/lv_led.h -include ../lv_objx/lv_line.h -include ../lv_objx/lv_list.h -include ../lv_objx/lv_lmeter.h -include ../lv_objx/lv_mbox.h -include ../lv_objx/lv_objx_templ.h -include ../lv_objx/lv_page.h -include ../lv_objx/lv_preload.h -include ../lv_objx/lv_roller.h -include ../lv_objx/lv_slider.h -include ../lv_objx/lv_sw.h -include ../lv_objx/lv_tabview.h -include ../lv_objx/lv_ta.h -include ../lv_objx/lv_win.h ../lv_objx/lv_arc.h
  *
+ * Generating Objects: obj, arc, cont, btn, label, bar, btnm, cb, line, chart, page, ddlist, lmeter, gauge, img, kb, led, list, mbox, preload, roller, slider, sw, win, tabview, ta
  */
 
 /*
@@ -970,51 +971,51 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_is_focused_obj, 1, 1, mp_lv_obj_is
  */
 
 STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(obj_locals_dict, obj_locals_dict_table);
@@ -1035,6 +1036,9 @@ STATIC mp_obj_t obj_make_new(
     return make_new(&lv_obj_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t obj_type = {
     { &mp_type_type },
     .name = MP_QSTR_obj,
@@ -1043,12 +1047,6 @@ STATIC const mp_obj_type_t obj_type = {
     .locals_dict = (mp_obj_dict_t*)&obj_locals_dict,
 };
     
-
-STATIC inline const mp_obj_type_t *get_BaseObj_type()
-{
-    return &obj_type;
-}
-
 
 /*
  * lvgl extension definition for:
@@ -1120,54 +1118,54 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_arc_get_angle_end_obj, 1, 1, mp_lv_arc
  */
 
 STATIC const mp_rom_map_elem_t arc_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_angles), (mp_obj_t)&mp_lv_arc_set_angles_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_angle_start), (mp_obj_t)&mp_lv_arc_get_angle_start_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_angle_end), (mp_obj_t)&mp_lv_arc_get_angle_end_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_angles), MP_ROM_PTR(&mp_lv_arc_set_angles_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_angle_start), MP_ROM_PTR(&mp_lv_arc_get_angle_start_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_angle_end), MP_ROM_PTR(&mp_lv_arc_get_angle_end_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(arc_locals_dict, arc_locals_dict_table);
@@ -1188,6 +1186,9 @@ STATIC mp_obj_t arc_make_new(
     return make_new(&lv_arc_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t arc_type = {
     { &mp_type_type },
     .name = MP_QSTR_arc,
@@ -1332,58 +1333,58 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_fit_height_obj, 1, 1, mp_lv_c
  */
 
 STATIC const mp_rom_map_elem_t cont_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_layout), (mp_obj_t)&mp_lv_cont_set_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_fit), (mp_obj_t)&mp_lv_cont_set_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_layout), (mp_obj_t)&mp_lv_cont_get_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hor_fit), (mp_obj_t)&mp_lv_cont_get_hor_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ver_fit), (mp_obj_t)&mp_lv_cont_get_ver_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_width), (mp_obj_t)&mp_lv_cont_get_fit_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_height), (mp_obj_t)&mp_lv_cont_get_fit_height_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_layout), MP_ROM_PTR(&mp_lv_cont_set_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_fit), MP_ROM_PTR(&mp_lv_cont_set_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_layout), MP_ROM_PTR(&mp_lv_cont_get_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hor_fit), MP_ROM_PTR(&mp_lv_cont_get_hor_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ver_fit), MP_ROM_PTR(&mp_lv_cont_get_ver_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_width), MP_ROM_PTR(&mp_lv_cont_get_fit_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_height), MP_ROM_PTR(&mp_lv_cont_get_fit_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(cont_locals_dict, cont_locals_dict_table);
@@ -1404,6 +1405,9 @@ STATIC mp_obj_t cont_make_new(
     return make_new(&lv_cont_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t cont_type = {
     { &mp_type_type },
     .name = MP_QSTR_cont,
@@ -1711,67 +1715,67 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_ink_out_time_obj, 1, 1, mp_lv_
  */
 
 STATIC const mp_rom_map_elem_t btn_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_layout), (mp_obj_t)&mp_lv_btn_set_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_fit), (mp_obj_t)&mp_lv_btn_set_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_layout), (mp_obj_t)&mp_lv_btn_get_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hor_fit), (mp_obj_t)&mp_lv_btn_get_hor_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ver_fit), (mp_obj_t)&mp_lv_btn_get_ver_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_toggle), (mp_obj_t)&mp_lv_btn_set_toggle_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_state), (mp_obj_t)&mp_lv_btn_set_state_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_toggle), (mp_obj_t)&mp_lv_btn_toggle_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ink_in_time), (mp_obj_t)&mp_lv_btn_set_ink_in_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ink_wait_time), (mp_obj_t)&mp_lv_btn_set_ink_wait_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ink_out_time), (mp_obj_t)&mp_lv_btn_set_ink_out_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_state), (mp_obj_t)&mp_lv_btn_get_state_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_toggle), (mp_obj_t)&mp_lv_btn_get_toggle_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ink_in_time), (mp_obj_t)&mp_lv_btn_get_ink_in_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ink_wait_time), (mp_obj_t)&mp_lv_btn_get_ink_wait_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ink_out_time), (mp_obj_t)&mp_lv_btn_get_ink_out_time_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_layout), MP_ROM_PTR(&mp_lv_btn_set_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_fit), MP_ROM_PTR(&mp_lv_btn_set_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_layout), MP_ROM_PTR(&mp_lv_btn_get_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hor_fit), MP_ROM_PTR(&mp_lv_btn_get_hor_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ver_fit), MP_ROM_PTR(&mp_lv_btn_get_ver_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_toggle), MP_ROM_PTR(&mp_lv_btn_set_toggle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_state), MP_ROM_PTR(&mp_lv_btn_set_state_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_toggle), MP_ROM_PTR(&mp_lv_btn_toggle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ink_in_time), MP_ROM_PTR(&mp_lv_btn_set_ink_in_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ink_wait_time), MP_ROM_PTR(&mp_lv_btn_set_ink_wait_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ink_out_time), MP_ROM_PTR(&mp_lv_btn_set_ink_out_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_state), MP_ROM_PTR(&mp_lv_btn_get_state_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_toggle), MP_ROM_PTR(&mp_lv_btn_get_toggle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ink_in_time), MP_ROM_PTR(&mp_lv_btn_get_ink_in_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ink_wait_time), MP_ROM_PTR(&mp_lv_btn_get_ink_wait_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ink_out_time), MP_ROM_PTR(&mp_lv_btn_get_ink_out_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(btn_locals_dict, btn_locals_dict_table);
@@ -1792,6 +1796,9 @@ STATIC mp_obj_t btn_make_new(
     return make_new(&lv_btn_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t btn_type = {
     { &mp_type_type },
     .name = MP_QSTR_btn,
@@ -2104,67 +2111,67 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_cut_text_obj, 3, 3, mp_lv_label_
  */
 
 STATIC const mp_rom_map_elem_t label_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), (mp_obj_t)&mp_lv_label_set_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_array_text), (mp_obj_t)&mp_lv_label_set_array_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_static_text), (mp_obj_t)&mp_lv_label_set_static_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_long_mode), (mp_obj_t)&mp_lv_label_set_long_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_align), (mp_obj_t)&mp_lv_label_set_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_recolor), (mp_obj_t)&mp_lv_label_set_recolor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_body_draw), (mp_obj_t)&mp_lv_label_set_body_draw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_speed), (mp_obj_t)&mp_lv_label_set_anim_speed_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), (mp_obj_t)&mp_lv_label_get_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_long_mode), (mp_obj_t)&mp_lv_label_get_long_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_align), (mp_obj_t)&mp_lv_label_get_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_recolor), (mp_obj_t)&mp_lv_label_get_recolor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_body_draw), (mp_obj_t)&mp_lv_label_get_body_draw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_speed), (mp_obj_t)&mp_lv_label_get_anim_speed_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_ins_text), (mp_obj_t)&mp_lv_label_ins_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_cut_text), (mp_obj_t)&mp_lv_label_cut_text_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), MP_ROM_PTR(&mp_lv_label_set_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_array_text), MP_ROM_PTR(&mp_lv_label_set_array_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_static_text), MP_ROM_PTR(&mp_lv_label_set_static_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_long_mode), MP_ROM_PTR(&mp_lv_label_set_long_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_align), MP_ROM_PTR(&mp_lv_label_set_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_recolor), MP_ROM_PTR(&mp_lv_label_set_recolor_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_body_draw), MP_ROM_PTR(&mp_lv_label_set_body_draw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_speed), MP_ROM_PTR(&mp_lv_label_set_anim_speed_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), MP_ROM_PTR(&mp_lv_label_get_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_long_mode), MP_ROM_PTR(&mp_lv_label_get_long_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_align), MP_ROM_PTR(&mp_lv_label_get_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_recolor), MP_ROM_PTR(&mp_lv_label_get_recolor_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_body_draw), MP_ROM_PTR(&mp_lv_label_get_body_draw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_speed), MP_ROM_PTR(&mp_lv_label_get_anim_speed_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_ins_text), MP_ROM_PTR(&mp_lv_label_ins_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_cut_text), MP_ROM_PTR(&mp_lv_label_cut_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(label_locals_dict, label_locals_dict_table);
@@ -2185,6 +2192,9 @@ STATIC mp_obj_t label_make_new(
     return make_new(&lv_label_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t label_type = {
     { &mp_type_type },
     .name = MP_QSTR_label,
@@ -2315,57 +2325,57 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_get_max_value_obj, 1, 1, mp_lv_bar
  */
 
 STATIC const mp_rom_map_elem_t bar_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), (mp_obj_t)&mp_lv_bar_set_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value_anim), (mp_obj_t)&mp_lv_bar_set_value_anim_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), (mp_obj_t)&mp_lv_bar_set_range_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), (mp_obj_t)&mp_lv_bar_get_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), (mp_obj_t)&mp_lv_bar_get_min_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), (mp_obj_t)&mp_lv_bar_get_max_value_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), MP_ROM_PTR(&mp_lv_bar_set_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value_anim), MP_ROM_PTR(&mp_lv_bar_set_value_anim_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_bar_set_range_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), MP_ROM_PTR(&mp_lv_bar_get_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), MP_ROM_PTR(&mp_lv_bar_get_min_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), MP_ROM_PTR(&mp_lv_bar_get_max_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(bar_locals_dict, bar_locals_dict_table);
@@ -2386,6 +2396,9 @@ STATIC mp_obj_t bar_make_new(
     return make_new(&lv_bar_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t bar_type = {
     { &mp_type_type },
     .name = MP_QSTR_bar,
@@ -2477,53 +2490,53 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_toggled_obj, 1, 1, mp_lv_btnm
  */
 
 STATIC const mp_rom_map_elem_t btnm_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_toggle), (mp_obj_t)&mp_lv_btnm_set_toggle_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_toggled), (mp_obj_t)&mp_lv_btnm_get_toggled_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_toggle), MP_ROM_PTR(&mp_lv_btnm_set_toggle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_toggled), MP_ROM_PTR(&mp_lv_btnm_get_toggled_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(btnm_locals_dict, btnm_locals_dict_table);
@@ -2544,6 +2557,9 @@ STATIC mp_obj_t btnm_make_new(
     return make_new(&lv_btnm_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t btnm_type = {
     { &mp_type_type },
     .name = MP_QSTR_btnm,
@@ -2669,56 +2685,56 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_get_text_obj, 1, 1, mp_lv_cb_get_te
  */
 
 STATIC const mp_rom_map_elem_t cb_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_checked), (mp_obj_t)&mp_lv_cb_set_checked_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_inactive), (mp_obj_t)&mp_lv_cb_set_inactive_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_checked), (mp_obj_t)&mp_lv_cb_is_checked_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), (mp_obj_t)&mp_lv_cb_set_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), (mp_obj_t)&mp_lv_cb_get_text_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_checked), MP_ROM_PTR(&mp_lv_cb_set_checked_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_inactive), MP_ROM_PTR(&mp_lv_cb_set_inactive_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_checked), MP_ROM_PTR(&mp_lv_cb_is_checked_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), MP_ROM_PTR(&mp_lv_cb_set_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), MP_ROM_PTR(&mp_lv_cb_get_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(cb_locals_dict, cb_locals_dict_table);
@@ -2739,6 +2755,9 @@ STATIC mp_obj_t cb_make_new(
     return make_new(&lv_cb_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t cb_type = {
     { &mp_type_type },
     .name = MP_QSTR_cb,
@@ -2874,57 +2893,57 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_get_y_inv_obj, 1, 1, mp_lv_line_g
  */
 
 STATIC const mp_rom_map_elem_t line_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_upscale), (mp_obj_t)&mp_lv_line_set_upscale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_upscale), (mp_obj_t)&mp_lv_line_get_upscale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_size), (mp_obj_t)&mp_lv_line_set_auto_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y_invert), (mp_obj_t)&mp_lv_line_set_y_invert_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_size), (mp_obj_t)&mp_lv_line_get_auto_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y_inv), (mp_obj_t)&mp_lv_line_get_y_inv_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_upscale), MP_ROM_PTR(&mp_lv_line_set_upscale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_upscale), MP_ROM_PTR(&mp_lv_line_get_upscale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_size), MP_ROM_PTR(&mp_lv_line_set_auto_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y_invert), MP_ROM_PTR(&mp_lv_line_set_y_invert_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_size), MP_ROM_PTR(&mp_lv_line_get_auto_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y_inv), MP_ROM_PTR(&mp_lv_line_get_y_inv_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(line_locals_dict, line_locals_dict_table);
@@ -2945,6 +2964,9 @@ STATIC mp_obj_t line_make_new(
     return make_new(&lv_line_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t line_type = {
     { &mp_type_type },
     .name = MP_QSTR_line,
@@ -3219,64 +3241,64 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_refresh_obj, 1, 1, mp_lv_chart_r
  */
 
 STATIC const mp_rom_map_elem_t chart_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_div_line_count), (mp_obj_t)&mp_lv_chart_set_div_line_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), (mp_obj_t)&mp_lv_chart_set_range_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_type), (mp_obj_t)&mp_lv_chart_set_type_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_point_count), (mp_obj_t)&mp_lv_chart_set_point_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_series_opa), (mp_obj_t)&mp_lv_chart_set_series_opa_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_series_width), (mp_obj_t)&mp_lv_chart_set_series_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_series_darking), (mp_obj_t)&mp_lv_chart_set_series_darking_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_type), (mp_obj_t)&mp_lv_chart_get_type_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_point_cnt), (mp_obj_t)&mp_lv_chart_get_point_cnt_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_series_opa), (mp_obj_t)&mp_lv_chart_get_series_opa_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_series_width), (mp_obj_t)&mp_lv_chart_get_series_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_series_darking), (mp_obj_t)&mp_lv_chart_get_series_darking_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh), (mp_obj_t)&mp_lv_chart_refresh_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_div_line_count), MP_ROM_PTR(&mp_lv_chart_set_div_line_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_chart_set_range_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_type), MP_ROM_PTR(&mp_lv_chart_set_type_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_point_count), MP_ROM_PTR(&mp_lv_chart_set_point_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_series_opa), MP_ROM_PTR(&mp_lv_chart_set_series_opa_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_series_width), MP_ROM_PTR(&mp_lv_chart_set_series_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_series_darking), MP_ROM_PTR(&mp_lv_chart_set_series_darking_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_type), MP_ROM_PTR(&mp_lv_chart_get_type_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_point_cnt), MP_ROM_PTR(&mp_lv_chart_get_point_cnt_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_series_opa), MP_ROM_PTR(&mp_lv_chart_get_series_opa_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_series_width), MP_ROM_PTR(&mp_lv_chart_get_series_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_series_darking), MP_ROM_PTR(&mp_lv_chart_get_series_darking_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh), MP_ROM_PTR(&mp_lv_chart_refresh_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(chart_locals_dict, chart_locals_dict_table);
@@ -3297,6 +3319,9 @@ STATIC mp_obj_t chart_make_new(
     return make_new(&lv_chart_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t chart_type = {
     { &mp_type_type },
     .name = MP_QSTR_chart,
@@ -3702,72 +3727,72 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_scroll_ver_obj, 2, 2, mp_lv_page_
  */
 
 STATIC const mp_rom_map_elem_t page_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_fit), (mp_obj_t)&mp_lv_page_set_scrl_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_width), (mp_obj_t)&mp_lv_page_set_scrl_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_height), (mp_obj_t)&mp_lv_page_set_scrl_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_layout), (mp_obj_t)&mp_lv_page_set_scrl_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_width), (mp_obj_t)&mp_lv_page_get_scrl_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_height), (mp_obj_t)&mp_lv_page_get_scrl_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_layout), (mp_obj_t)&mp_lv_page_get_scrl_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_hor_fit), (mp_obj_t)&mp_lv_page_get_scrl_hor_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_fit_ver), (mp_obj_t)&mp_lv_page_get_scrl_fit_ver_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_page_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl), (mp_obj_t)&mp_lv_page_get_scrl_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), (mp_obj_t)&mp_lv_page_set_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_arrow_scroll), (mp_obj_t)&mp_lv_page_set_arrow_scroll_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), (mp_obj_t)&mp_lv_page_get_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_arrow_scroll), (mp_obj_t)&mp_lv_page_get_arrow_scroll_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_width), (mp_obj_t)&mp_lv_page_get_fit_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_height), (mp_obj_t)&mp_lv_page_get_fit_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_glue_obj), (mp_obj_t)&mp_lv_page_glue_obj_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_focus), (mp_obj_t)&mp_lv_page_focus_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_hor), (mp_obj_t)&mp_lv_page_scroll_hor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_ver), (mp_obj_t)&mp_lv_page_scroll_ver_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_fit), MP_ROM_PTR(&mp_lv_page_set_scrl_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_width), MP_ROM_PTR(&mp_lv_page_set_scrl_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_height), MP_ROM_PTR(&mp_lv_page_set_scrl_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scrl_layout), MP_ROM_PTR(&mp_lv_page_set_scrl_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_width), MP_ROM_PTR(&mp_lv_page_get_scrl_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_height), MP_ROM_PTR(&mp_lv_page_get_scrl_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_layout), MP_ROM_PTR(&mp_lv_page_get_scrl_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_hor_fit), MP_ROM_PTR(&mp_lv_page_get_scrl_hor_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl_fit_ver), MP_ROM_PTR(&mp_lv_page_get_scrl_fit_ver_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_page_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scrl), MP_ROM_PTR(&mp_lv_page_get_scrl_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), MP_ROM_PTR(&mp_lv_page_set_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_arrow_scroll), MP_ROM_PTR(&mp_lv_page_set_arrow_scroll_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), MP_ROM_PTR(&mp_lv_page_get_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_arrow_scroll), MP_ROM_PTR(&mp_lv_page_get_arrow_scroll_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_width), MP_ROM_PTR(&mp_lv_page_get_fit_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fit_height), MP_ROM_PTR(&mp_lv_page_get_fit_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_glue_obj), MP_ROM_PTR(&mp_lv_page_glue_obj_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_focus), MP_ROM_PTR(&mp_lv_page_focus_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_hor), MP_ROM_PTR(&mp_lv_page_scroll_hor_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_ver), MP_ROM_PTR(&mp_lv_page_scroll_ver_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(page_locals_dict, page_locals_dict_table);
@@ -3788,6 +3813,9 @@ STATIC mp_obj_t page_make_new(
     return make_new(&lv_page_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t page_type = {
     { &mp_type_type },
     .name = MP_QSTR_page,
@@ -4064,65 +4092,65 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_close_obj, 2, 2, mp_lv_ddlist_c
  */
 
 STATIC const mp_rom_map_elem_t ddlist_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), (mp_obj_t)&mp_lv_ddlist_set_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), (mp_obj_t)&mp_lv_ddlist_get_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_options), (mp_obj_t)&mp_lv_ddlist_set_options_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_selected), (mp_obj_t)&mp_lv_ddlist_set_selected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_fix_height), (mp_obj_t)&mp_lv_ddlist_set_fix_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hor_fit), (mp_obj_t)&mp_lv_ddlist_set_hor_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), (mp_obj_t)&mp_lv_ddlist_set_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_options), (mp_obj_t)&mp_lv_ddlist_get_options_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected), (mp_obj_t)&mp_lv_ddlist_get_selected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected_str), (mp_obj_t)&mp_lv_ddlist_get_selected_str_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fix_height), (mp_obj_t)&mp_lv_ddlist_get_fix_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), (mp_obj_t)&mp_lv_ddlist_get_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_open), (mp_obj_t)&mp_lv_ddlist_open_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_close), (mp_obj_t)&mp_lv_ddlist_close_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), MP_ROM_PTR(&mp_lv_ddlist_set_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), MP_ROM_PTR(&mp_lv_ddlist_get_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_options), MP_ROM_PTR(&mp_lv_ddlist_set_options_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_selected), MP_ROM_PTR(&mp_lv_ddlist_set_selected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_fix_height), MP_ROM_PTR(&mp_lv_ddlist_set_fix_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hor_fit), MP_ROM_PTR(&mp_lv_ddlist_set_hor_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_ddlist_set_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_options), MP_ROM_PTR(&mp_lv_ddlist_get_options_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected), MP_ROM_PTR(&mp_lv_ddlist_get_selected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected_str), MP_ROM_PTR(&mp_lv_ddlist_get_selected_str_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_fix_height), MP_ROM_PTR(&mp_lv_ddlist_get_fix_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), MP_ROM_PTR(&mp_lv_ddlist_get_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_lv_ddlist_open_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_ddlist_close_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(ddlist_locals_dict, ddlist_locals_dict_table);
@@ -4143,6 +4171,9 @@ STATIC mp_obj_t ddlist_make_new(
     return make_new(&lv_ddlist_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t ddlist_type = {
     { &mp_type_type },
     .name = MP_QSTR_ddlist,
@@ -4305,59 +4336,59 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_scale_angle_obj, 1, 1, mp_l
  */
 
 STATIC const mp_rom_map_elem_t lmeter_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), (mp_obj_t)&mp_lv_lmeter_set_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), (mp_obj_t)&mp_lv_lmeter_set_range_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scale), (mp_obj_t)&mp_lv_lmeter_set_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), (mp_obj_t)&mp_lv_lmeter_get_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), (mp_obj_t)&mp_lv_lmeter_get_min_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), (mp_obj_t)&mp_lv_lmeter_get_max_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_line_count), (mp_obj_t)&mp_lv_lmeter_get_line_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scale_angle), (mp_obj_t)&mp_lv_lmeter_get_scale_angle_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), MP_ROM_PTR(&mp_lv_lmeter_set_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_lmeter_set_range_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scale), MP_ROM_PTR(&mp_lv_lmeter_set_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), MP_ROM_PTR(&mp_lv_lmeter_get_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), MP_ROM_PTR(&mp_lv_lmeter_get_min_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), MP_ROM_PTR(&mp_lv_lmeter_get_max_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_line_count), MP_ROM_PTR(&mp_lv_lmeter_get_line_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scale_angle), MP_ROM_PTR(&mp_lv_lmeter_get_scale_angle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(lmeter_locals_dict, lmeter_locals_dict_table);
@@ -4378,6 +4409,9 @@ STATIC mp_obj_t lmeter_make_new(
     return make_new(&lv_lmeter_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t lmeter_type = {
     { &mp_type_type },
     .name = MP_QSTR_lmeter,
@@ -4615,63 +4649,63 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_label_count_obj, 1, 1, mp_lv
  */
 
 STATIC const mp_rom_map_elem_t gauge_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), (mp_obj_t)&mp_lv_gauge_set_range_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_critical_value), (mp_obj_t)&mp_lv_gauge_set_critical_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), (mp_obj_t)&mp_lv_gauge_get_min_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), (mp_obj_t)&mp_lv_gauge_get_max_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_critical_value), (mp_obj_t)&mp_lv_gauge_get_critical_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_line_count), (mp_obj_t)&mp_lv_gauge_get_line_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scale_angle), (mp_obj_t)&mp_lv_gauge_get_scale_angle_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), (mp_obj_t)&mp_lv_gauge_set_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scale), (mp_obj_t)&mp_lv_gauge_set_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), (mp_obj_t)&mp_lv_gauge_get_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_needle_count), (mp_obj_t)&mp_lv_gauge_get_needle_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_label_count), (mp_obj_t)&mp_lv_gauge_get_label_count_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_gauge_set_range_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_critical_value), MP_ROM_PTR(&mp_lv_gauge_set_critical_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), MP_ROM_PTR(&mp_lv_gauge_get_min_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), MP_ROM_PTR(&mp_lv_gauge_get_max_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_critical_value), MP_ROM_PTR(&mp_lv_gauge_get_critical_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_line_count), MP_ROM_PTR(&mp_lv_gauge_get_line_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_scale_angle), MP_ROM_PTR(&mp_lv_gauge_get_scale_angle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), MP_ROM_PTR(&mp_lv_gauge_set_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_scale), MP_ROM_PTR(&mp_lv_gauge_set_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), MP_ROM_PTR(&mp_lv_gauge_get_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_needle_count), MP_ROM_PTR(&mp_lv_gauge_get_needle_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_label_count), MP_ROM_PTR(&mp_lv_gauge_get_label_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(gauge_locals_dict, gauge_locals_dict_table);
@@ -4692,6 +4726,9 @@ STATIC mp_obj_t gauge_make_new(
     return make_new(&lv_gauge_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t gauge_type = {
     { &mp_type_type },
     .name = MP_QSTR_gauge,
@@ -4903,60 +4940,60 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_auto_size_obj, 1, 1, mp_lv_img
  */
 
 STATIC const mp_rom_map_elem_t img_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_file), (mp_obj_t)&mp_lv_img_set_file_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_upscale), (mp_obj_t)&mp_lv_img_set_upscale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_upscale), (mp_obj_t)&mp_lv_img_get_upscale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_color_format_get_px_size), (mp_obj_t)&mp_lv_img_color_format_get_px_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_color_format_is_chroma_keyed), (mp_obj_t)&mp_lv_img_color_format_is_chroma_keyed_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_color_format_has_alpha), (mp_obj_t)&mp_lv_img_color_format_has_alpha_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_size), (mp_obj_t)&mp_lv_img_set_auto_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_file_name), (mp_obj_t)&mp_lv_img_get_file_name_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_size), (mp_obj_t)&mp_lv_img_get_auto_size_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_file), MP_ROM_PTR(&mp_lv_img_set_file_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_upscale), MP_ROM_PTR(&mp_lv_img_set_upscale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_upscale), MP_ROM_PTR(&mp_lv_img_get_upscale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_color_format_get_px_size), MP_ROM_PTR(&mp_lv_img_color_format_get_px_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_color_format_is_chroma_keyed), MP_ROM_PTR(&mp_lv_img_color_format_is_chroma_keyed_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_color_format_has_alpha), MP_ROM_PTR(&mp_lv_img_color_format_has_alpha_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_size), MP_ROM_PTR(&mp_lv_img_set_auto_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_file_name), MP_ROM_PTR(&mp_lv_img_get_file_name_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_size), MP_ROM_PTR(&mp_lv_img_get_auto_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(img_locals_dict, img_locals_dict_table);
@@ -4977,6 +5014,9 @@ STATIC mp_obj_t img_make_new(
     return make_new(&lv_img_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t img_type = {
     { &mp_type_type },
     .name = MP_QSTR_img,
@@ -5140,57 +5180,57 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_get_cursor_manage_obj, 1, 1, mp_lv_
  */
 
 STATIC const mp_rom_map_elem_t kb_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ta), (mp_obj_t)&mp_lv_kb_set_ta_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_mode), (mp_obj_t)&mp_lv_kb_set_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_cursor_manage), (mp_obj_t)&mp_lv_kb_set_cursor_manage_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ta), (mp_obj_t)&mp_lv_kb_get_ta_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_mode), (mp_obj_t)&mp_lv_kb_get_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_cursor_manage), (mp_obj_t)&mp_lv_kb_get_cursor_manage_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_ta), MP_ROM_PTR(&mp_lv_kb_set_ta_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_mode), MP_ROM_PTR(&mp_lv_kb_set_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_cursor_manage), MP_ROM_PTR(&mp_lv_kb_set_cursor_manage_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ta), MP_ROM_PTR(&mp_lv_kb_get_ta_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_mode), MP_ROM_PTR(&mp_lv_kb_get_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_cursor_manage), MP_ROM_PTR(&mp_lv_kb_get_cursor_manage_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(kb_locals_dict, kb_locals_dict_table);
@@ -5211,6 +5251,9 @@ STATIC mp_obj_t kb_make_new(
     return make_new(&lv_kb_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t kb_type = {
     { &mp_type_type },
     .name = MP_QSTR_kb,
@@ -5321,56 +5364,56 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_get_bright_obj, 1, 1, mp_lv_led_ge
  */
 
 STATIC const mp_rom_map_elem_t led_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_bright), (mp_obj_t)&mp_lv_led_set_bright_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_on), (mp_obj_t)&mp_lv_led_on_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_off), (mp_obj_t)&mp_lv_led_off_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_toggle), (mp_obj_t)&mp_lv_led_toggle_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_bright), (mp_obj_t)&mp_lv_led_get_bright_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_bright), MP_ROM_PTR(&mp_lv_led_set_bright_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_on), MP_ROM_PTR(&mp_lv_led_on_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_off), MP_ROM_PTR(&mp_lv_led_off_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_toggle), MP_ROM_PTR(&mp_lv_led_toggle_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_bright), MP_ROM_PTR(&mp_lv_led_get_bright_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(led_locals_dict, led_locals_dict_table);
@@ -5391,6 +5434,9 @@ STATIC mp_obj_t led_make_new(
     return make_new(&lv_led_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t led_type = {
     { &mp_type_type },
     .name = MP_QSTR_led,
@@ -5673,66 +5719,66 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_focus_obj, 2, 2, mp_lv_list_focus
  */
 
 STATIC const mp_rom_map_elem_t list_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), (mp_obj_t)&mp_lv_list_set_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), (mp_obj_t)&mp_lv_list_get_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_list_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_btn_selected), (mp_obj_t)&mp_lv_list_set_btn_selected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), (mp_obj_t)&mp_lv_list_set_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_text), (mp_obj_t)&mp_lv_list_get_btn_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_label), (mp_obj_t)&mp_lv_list_get_btn_label_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_img), (mp_obj_t)&mp_lv_list_get_btn_img_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_prev_btn), (mp_obj_t)&mp_lv_list_get_prev_btn_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_next_btn), (mp_obj_t)&mp_lv_list_get_next_btn_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_selected), (mp_obj_t)&mp_lv_list_get_btn_selected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), (mp_obj_t)&mp_lv_list_get_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_up), (mp_obj_t)&mp_lv_list_up_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_down), (mp_obj_t)&mp_lv_list_down_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_focus), (mp_obj_t)&mp_lv_list_focus_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), MP_ROM_PTR(&mp_lv_list_set_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), MP_ROM_PTR(&mp_lv_list_get_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_list_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_btn_selected), MP_ROM_PTR(&mp_lv_list_set_btn_selected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_list_set_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_text), MP_ROM_PTR(&mp_lv_list_get_btn_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_label), MP_ROM_PTR(&mp_lv_list_get_btn_label_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_img), MP_ROM_PTR(&mp_lv_list_get_btn_img_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_prev_btn), MP_ROM_PTR(&mp_lv_list_get_prev_btn_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_next_btn), MP_ROM_PTR(&mp_lv_list_get_next_btn_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_selected), MP_ROM_PTR(&mp_lv_list_get_btn_selected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), MP_ROM_PTR(&mp_lv_list_get_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_up), MP_ROM_PTR(&mp_lv_list_up_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_down), MP_ROM_PTR(&mp_lv_list_down_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_focus), MP_ROM_PTR(&mp_lv_list_focus_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(list_locals_dict, list_locals_dict_table);
@@ -5753,6 +5799,9 @@ STATIC mp_obj_t list_make_new(
     return make_new(&lv_list_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t list_type = {
     { &mp_type_type },
     .name = MP_QSTR_list,
@@ -5911,58 +5960,58 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_anim_time_obj, 1, 1, mp_lv_mb
  */
 
 STATIC const mp_rom_map_elem_t mbox_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), (mp_obj_t)&mp_lv_mbox_set_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), (mp_obj_t)&mp_lv_mbox_set_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_start_auto_close), (mp_obj_t)&mp_lv_mbox_start_auto_close_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_stop_auto_close), (mp_obj_t)&mp_lv_mbox_stop_auto_close_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), (mp_obj_t)&mp_lv_mbox_get_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_from_btn), (mp_obj_t)&mp_lv_mbox_get_from_btn_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), (mp_obj_t)&mp_lv_mbox_get_anim_time_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), MP_ROM_PTR(&mp_lv_mbox_set_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_mbox_set_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_start_auto_close), MP_ROM_PTR(&mp_lv_mbox_start_auto_close_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_stop_auto_close), MP_ROM_PTR(&mp_lv_mbox_stop_auto_close_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), MP_ROM_PTR(&mp_lv_mbox_get_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_from_btn), MP_ROM_PTR(&mp_lv_mbox_get_from_btn_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), MP_ROM_PTR(&mp_lv_mbox_get_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(mbox_locals_dict, mbox_locals_dict_table);
@@ -5983,6 +6032,9 @@ STATIC mp_obj_t mbox_make_new(
     return make_new(&lv_mbox_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t mbox_type = {
     { &mp_type_type },
     .name = MP_QSTR_mbox,
@@ -6085,55 +6137,55 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_get_spin_time_obj, 1, 1, mp_lv
  */
 
 STATIC const mp_rom_map_elem_t preload_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_arc_length), (mp_obj_t)&mp_lv_preload_set_arc_length_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_spin_time), (mp_obj_t)&mp_lv_preload_set_spin_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_arc_length), (mp_obj_t)&mp_lv_preload_get_arc_length_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_spin_time), (mp_obj_t)&mp_lv_preload_get_spin_time_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_arc_length), MP_ROM_PTR(&mp_lv_preload_set_arc_length_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_spin_time), MP_ROM_PTR(&mp_lv_preload_set_spin_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_arc_length), MP_ROM_PTR(&mp_lv_preload_get_arc_length_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_spin_time), MP_ROM_PTR(&mp_lv_preload_get_spin_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(preload_locals_dict, preload_locals_dict_table);
@@ -6154,6 +6206,9 @@ STATIC mp_obj_t preload_make_new(
     return make_new(&lv_preload_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t preload_type = {
     { &mp_type_type },
     .name = MP_QSTR_preload,
@@ -6364,61 +6419,61 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_hor_fit_obj, 1, 1, mp_lv_ro
  */
 
 STATIC const mp_rom_map_elem_t roller_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_options), (mp_obj_t)&mp_lv_roller_set_options_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hor_fit), (mp_obj_t)&mp_lv_roller_set_hor_fit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), (mp_obj_t)&mp_lv_roller_set_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_options), (mp_obj_t)&mp_lv_roller_get_options_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected), (mp_obj_t)&mp_lv_roller_get_selected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected_str), (mp_obj_t)&mp_lv_roller_get_selected_str_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), (mp_obj_t)&mp_lv_roller_get_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_selected), (mp_obj_t)&mp_lv_roller_set_selected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_visible_row_count), (mp_obj_t)&mp_lv_roller_set_visible_row_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hor_fit), (mp_obj_t)&mp_lv_roller_get_hor_fit_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_options), MP_ROM_PTR(&mp_lv_roller_set_options_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hor_fit), MP_ROM_PTR(&mp_lv_roller_set_hor_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_roller_set_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_options), MP_ROM_PTR(&mp_lv_roller_get_options_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected), MP_ROM_PTR(&mp_lv_roller_get_selected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_selected_str), MP_ROM_PTR(&mp_lv_roller_get_selected_str_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), MP_ROM_PTR(&mp_lv_roller_get_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_selected), MP_ROM_PTR(&mp_lv_roller_set_selected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_visible_row_count), MP_ROM_PTR(&mp_lv_roller_set_visible_row_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hor_fit), MP_ROM_PTR(&mp_lv_roller_get_hor_fit_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(roller_locals_dict, roller_locals_dict_table);
@@ -6439,6 +6494,9 @@ STATIC mp_obj_t roller_make_new(
     return make_new(&lv_roller_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t roller_type = {
     { &mp_type_type },
     .name = MP_QSTR_roller,
@@ -6632,60 +6690,60 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_get_knob_in_obj, 1, 1, mp_lv_sl
  */
 
 STATIC const mp_rom_map_elem_t slider_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), (mp_obj_t)&mp_lv_slider_set_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value_anim), (mp_obj_t)&mp_lv_slider_set_value_anim_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), (mp_obj_t)&mp_lv_slider_set_range_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), (mp_obj_t)&mp_lv_slider_get_min_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), (mp_obj_t)&mp_lv_slider_get_max_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_knob_in), (mp_obj_t)&mp_lv_slider_set_knob_in_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), (mp_obj_t)&mp_lv_slider_get_value_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_dragged), (mp_obj_t)&mp_lv_slider_is_dragged_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_knob_in), (mp_obj_t)&mp_lv_slider_get_knob_in_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value), MP_ROM_PTR(&mp_lv_slider_set_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_value_anim), MP_ROM_PTR(&mp_lv_slider_set_value_anim_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_slider_set_range_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_min_value), MP_ROM_PTR(&mp_lv_slider_get_min_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_value), MP_ROM_PTR(&mp_lv_slider_get_max_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_knob_in), MP_ROM_PTR(&mp_lv_slider_set_knob_in_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_value), MP_ROM_PTR(&mp_lv_slider_get_value_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_dragged), MP_ROM_PTR(&mp_lv_slider_is_dragged_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_knob_in), MP_ROM_PTR(&mp_lv_slider_get_knob_in_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(slider_locals_dict, slider_locals_dict_table);
@@ -6706,6 +6764,9 @@ STATIC mp_obj_t slider_make_new(
     return make_new(&lv_slider_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t slider_type = {
     { &mp_type_type },
     .name = MP_QSTR_slider,
@@ -6797,54 +6858,54 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_off_obj, 1, 1, mp_lv_sw_off);
  */
 
 STATIC const mp_rom_map_elem_t sw_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_state), (mp_obj_t)&mp_lv_sw_get_state_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_on), (mp_obj_t)&mp_lv_sw_on_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_off), (mp_obj_t)&mp_lv_sw_off_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_state), MP_ROM_PTR(&mp_lv_sw_get_state_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_on), MP_ROM_PTR(&mp_lv_sw_on_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_off), MP_ROM_PTR(&mp_lv_sw_off_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(sw_locals_dict, sw_locals_dict_table);
@@ -6865,6 +6926,9 @@ STATIC mp_obj_t sw_make_new(
     return make_new(&lv_sw_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t sw_type = {
     { &mp_type_type },
     .name = MP_QSTR_sw,
@@ -7165,67 +7229,67 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_focus_obj, 3, 3, mp_lv_win_focus);
  */
 
 STATIC const mp_rom_map_elem_t win_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_hor), (mp_obj_t)&mp_lv_win_scroll_hor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_ver), (mp_obj_t)&mp_lv_win_scroll_ver_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_win_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_close_action), (mp_obj_t)&mp_lv_win_close_action_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_title), (mp_obj_t)&mp_lv_win_set_title_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_btn_size), (mp_obj_t)&mp_lv_win_set_btn_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_layout), (mp_obj_t)&mp_lv_win_set_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), (mp_obj_t)&mp_lv_win_set_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_title), (mp_obj_t)&mp_lv_win_get_title_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_content), (mp_obj_t)&mp_lv_win_get_content_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_size), (mp_obj_t)&mp_lv_win_get_btn_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_from_btn), (mp_obj_t)&mp_lv_win_get_from_btn_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_layout), (mp_obj_t)&mp_lv_win_get_layout_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), (mp_obj_t)&mp_lv_win_get_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_win_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_focus), (mp_obj_t)&mp_lv_win_focus_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_hor), MP_ROM_PTR(&mp_lv_win_scroll_hor_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_scroll_ver), MP_ROM_PTR(&mp_lv_win_scroll_ver_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_win_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_close_action), MP_ROM_PTR(&mp_lv_win_close_action_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_title), MP_ROM_PTR(&mp_lv_win_set_title_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_btn_size), MP_ROM_PTR(&mp_lv_win_set_btn_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_layout), MP_ROM_PTR(&mp_lv_win_set_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), MP_ROM_PTR(&mp_lv_win_set_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_title), MP_ROM_PTR(&mp_lv_win_get_title_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_content), MP_ROM_PTR(&mp_lv_win_get_content_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btn_size), MP_ROM_PTR(&mp_lv_win_get_btn_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_from_btn), MP_ROM_PTR(&mp_lv_win_get_from_btn_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_layout), MP_ROM_PTR(&mp_lv_win_get_layout_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), MP_ROM_PTR(&mp_lv_win_get_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_win_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_focus), MP_ROM_PTR(&mp_lv_win_focus_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(win_locals_dict, win_locals_dict_table);
@@ -7246,6 +7310,9 @@ STATIC mp_obj_t win_make_new(
     return make_new(&lv_win_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t win_type = {
     { &mp_type_type },
     .name = MP_QSTR_win,
@@ -7488,63 +7555,63 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_btns_pos_obj, 1, 1, mp_lv_
  */
 
 STATIC const mp_rom_map_elem_t tabview_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_tabview_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_add_tab), (mp_obj_t)&mp_lv_tabview_add_tab_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_tab_act), (mp_obj_t)&mp_lv_tabview_set_tab_act_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sliding), (mp_obj_t)&mp_lv_tabview_set_sliding_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), (mp_obj_t)&mp_lv_tabview_set_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_btns_pos), (mp_obj_t)&mp_lv_tabview_set_btns_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_tab_act), (mp_obj_t)&mp_lv_tabview_get_tab_act_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_tab_count), (mp_obj_t)&mp_lv_tabview_get_tab_count_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_tab), (mp_obj_t)&mp_lv_tabview_get_tab_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sliding), (mp_obj_t)&mp_lv_tabview_get_sliding_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), (mp_obj_t)&mp_lv_tabview_get_anim_time_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btns_pos), (mp_obj_t)&mp_lv_tabview_get_btns_pos_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_tabview_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_add_tab), MP_ROM_PTR(&mp_lv_tabview_add_tab_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_tab_act), MP_ROM_PTR(&mp_lv_tabview_set_tab_act_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sliding), MP_ROM_PTR(&mp_lv_tabview_set_sliding_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_tabview_set_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_btns_pos), MP_ROM_PTR(&mp_lv_tabview_set_btns_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_tab_act), MP_ROM_PTR(&mp_lv_tabview_get_tab_act_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_tab_count), MP_ROM_PTR(&mp_lv_tabview_get_tab_count_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_tab), MP_ROM_PTR(&mp_lv_tabview_get_tab_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sliding), MP_ROM_PTR(&mp_lv_tabview_get_sliding_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_anim_time), MP_ROM_PTR(&mp_lv_tabview_get_anim_time_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_btns_pos), MP_ROM_PTR(&mp_lv_tabview_get_btns_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(tabview_locals_dict, tabview_locals_dict_table);
@@ -7565,6 +7632,9 @@ STATIC mp_obj_t tabview_make_new(
     return make_new(&lv_tabview_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t tabview_type = {
     { &mp_type_type },
     .name = MP_QSTR_tabview,
@@ -8019,76 +8089,76 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_cursor_up_obj, 1, 1, mp_lv_ta_curso
  */
 
 STATIC const mp_rom_map_elem_t ta_locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del), (mp_obj_t)&mp_lv_obj_del_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), (mp_obj_t)&mp_lv_obj_clean_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), (mp_obj_t)&mp_lv_obj_invalidate_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), (mp_obj_t)&mp_lv_obj_set_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), (mp_obj_t)&mp_lv_obj_set_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), (mp_obj_t)&mp_lv_obj_set_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), (mp_obj_t)&mp_lv_obj_set_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), (mp_obj_t)&mp_lv_obj_set_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), (mp_obj_t)&mp_lv_obj_set_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), (mp_obj_t)&mp_lv_obj_set_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_align), (mp_obj_t)&mp_lv_obj_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), (mp_obj_t)&mp_lv_obj_refresh_style_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), (mp_obj_t)&mp_lv_obj_set_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), (mp_obj_t)&mp_lv_obj_set_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), (mp_obj_t)&mp_lv_obj_set_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), (mp_obj_t)&mp_lv_obj_set_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), (mp_obj_t)&mp_lv_obj_set_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), (mp_obj_t)&mp_lv_obj_set_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), (mp_obj_t)&mp_lv_obj_set_opa_scale_enable_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), (mp_obj_t)&mp_lv_obj_set_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), (mp_obj_t)&mp_lv_obj_set_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), (mp_obj_t)&mp_lv_obj_clear_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), (mp_obj_t)&mp_lv_obj_refresh_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), (mp_obj_t)&mp_lv_obj_set_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), (mp_obj_t)&mp_lv_obj_get_screen_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), (mp_obj_t)&mp_lv_obj_get_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), (mp_obj_t)&mp_lv_obj_get_child_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), (mp_obj_t)&mp_lv_obj_get_child_back_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), (mp_obj_t)&mp_lv_obj_count_children_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), (mp_obj_t)&mp_lv_obj_get_x_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), (mp_obj_t)&mp_lv_obj_get_y_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), (mp_obj_t)&mp_lv_obj_get_width_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), (mp_obj_t)&mp_lv_obj_get_height_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), (mp_obj_t)&mp_lv_obj_get_ext_size_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), (mp_obj_t)&mp_lv_obj_get_hidden_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), (mp_obj_t)&mp_lv_obj_get_click_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), (mp_obj_t)&mp_lv_obj_get_top_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), (mp_obj_t)&mp_lv_obj_get_drag_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), (mp_obj_t)&mp_lv_obj_get_drag_throw_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), (mp_obj_t)&mp_lv_obj_get_drag_parent_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), (mp_obj_t)&mp_lv_obj_get_opa_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), (mp_obj_t)&mp_lv_obj_get_protect_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), (mp_obj_t)&mp_lv_obj_is_protected_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), (mp_obj_t)&mp_lv_obj_get_free_num_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), (mp_obj_t)&mp_lv_obj_is_focused_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), (mp_obj_t)&mp_lv_ta_set_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), (mp_obj_t)&mp_lv_ta_get_sb_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_add_char), (mp_obj_t)&mp_lv_ta_add_char_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_add_text), (mp_obj_t)&mp_lv_ta_add_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_del_char), (mp_obj_t)&mp_lv_ta_del_char_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), (mp_obj_t)&mp_lv_ta_set_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_cursor_pos), (mp_obj_t)&mp_lv_ta_set_cursor_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_cursor_type), (mp_obj_t)&mp_lv_ta_set_cursor_type_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pwd_mode), (mp_obj_t)&mp_lv_ta_set_pwd_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_one_line), (mp_obj_t)&mp_lv_ta_set_one_line_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text_align), (mp_obj_t)&mp_lv_ta_set_text_align_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_accepted_chars), (mp_obj_t)&mp_lv_ta_set_accepted_chars_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_set_max_length), (mp_obj_t)&mp_lv_ta_set_max_length_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), (mp_obj_t)&mp_lv_ta_get_text_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_label), (mp_obj_t)&mp_lv_ta_get_label_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_cursor_pos), (mp_obj_t)&mp_lv_ta_get_cursor_pos_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_cursor_type), (mp_obj_t)&mp_lv_ta_get_cursor_type_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_pwd_mode), (mp_obj_t)&mp_lv_ta_get_pwd_mode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_one_line), (mp_obj_t)&mp_lv_ta_get_one_line_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_accepted_chars), (mp_obj_t)&mp_lv_ta_get_accepted_chars_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_length), (mp_obj_t)&mp_lv_ta_get_max_length_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_right), (mp_obj_t)&mp_lv_ta_cursor_right_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_left), (mp_obj_t)&mp_lv_ta_cursor_left_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_down), (mp_obj_t)&mp_lv_ta_cursor_down_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_up), (mp_obj_t)&mp_lv_ta_cursor_up_obj}
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_sb_mode), MP_ROM_PTR(&mp_lv_ta_set_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_sb_mode), MP_ROM_PTR(&mp_lv_ta_get_sb_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_add_char), MP_ROM_PTR(&mp_lv_ta_add_char_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_add_text), MP_ROM_PTR(&mp_lv_ta_add_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del_char), MP_ROM_PTR(&mp_lv_ta_del_char_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text), MP_ROM_PTR(&mp_lv_ta_set_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_cursor_pos), MP_ROM_PTR(&mp_lv_ta_set_cursor_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_cursor_type), MP_ROM_PTR(&mp_lv_ta_set_cursor_type_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pwd_mode), MP_ROM_PTR(&mp_lv_ta_set_pwd_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_one_line), MP_ROM_PTR(&mp_lv_ta_set_one_line_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_text_align), MP_ROM_PTR(&mp_lv_ta_set_text_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_accepted_chars), MP_ROM_PTR(&mp_lv_ta_set_accepted_chars_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_max_length), MP_ROM_PTR(&mp_lv_ta_set_max_length_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_text), MP_ROM_PTR(&mp_lv_ta_get_text_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_label), MP_ROM_PTR(&mp_lv_ta_get_label_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_cursor_pos), MP_ROM_PTR(&mp_lv_ta_get_cursor_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_cursor_type), MP_ROM_PTR(&mp_lv_ta_get_cursor_type_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_pwd_mode), MP_ROM_PTR(&mp_lv_ta_get_pwd_mode_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_one_line), MP_ROM_PTR(&mp_lv_ta_get_one_line_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_accepted_chars), MP_ROM_PTR(&mp_lv_ta_get_accepted_chars_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_max_length), MP_ROM_PTR(&mp_lv_ta_get_max_length_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_right), MP_ROM_PTR(&mp_lv_ta_cursor_right_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_left), MP_ROM_PTR(&mp_lv_ta_cursor_left_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_down), MP_ROM_PTR(&mp_lv_ta_cursor_down_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_cursor_up), MP_ROM_PTR(&mp_lv_ta_cursor_up_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_del), MP_ROM_PTR(&mp_lv_obj_del_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invalidate), MP_ROM_PTR(&mp_lv_obj_invalidate_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_y), MP_ROM_PTR(&mp_lv_obj_set_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_obj_set_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_width), MP_ROM_PTR(&mp_lv_obj_set_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_height), MP_ROM_PTR(&mp_lv_obj_set_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_align), MP_ROM_PTR(&mp_lv_obj_align_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_style), MP_ROM_PTR(&mp_lv_obj_refresh_style_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_hidden), MP_ROM_PTR(&mp_lv_obj_set_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_click), MP_ROM_PTR(&mp_lv_obj_set_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_top), MP_ROM_PTR(&mp_lv_obj_set_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag), MP_ROM_PTR(&mp_lv_obj_set_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_throw), MP_ROM_PTR(&mp_lv_obj_set_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_drag_parent), MP_ROM_PTR(&mp_lv_obj_set_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale_enable), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_enable_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_opa_scale), MP_ROM_PTR(&mp_lv_obj_set_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_protect), MP_ROM_PTR(&mp_lv_obj_set_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear_protect), MP_ROM_PTR(&mp_lv_obj_clear_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_refresh_ext_size), MP_ROM_PTR(&mp_lv_obj_refresh_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_free_num), MP_ROM_PTR(&mp_lv_obj_set_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_ext_size), MP_ROM_PTR(&mp_lv_obj_get_ext_size_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_hidden), MP_ROM_PTR(&mp_lv_obj_get_hidden_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_click), MP_ROM_PTR(&mp_lv_obj_get_click_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_top), MP_ROM_PTR(&mp_lv_obj_get_top_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_obj_get_drag_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_throw), MP_ROM_PTR(&mp_lv_obj_get_drag_throw_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_drag_parent), MP_ROM_PTR(&mp_lv_obj_get_drag_parent_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_opa_scale), MP_ROM_PTR(&mp_lv_obj_get_opa_scale_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_protect), MP_ROM_PTR(&mp_lv_obj_get_protect_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_protected), MP_ROM_PTR(&mp_lv_obj_is_protected_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_free_num), MP_ROM_PTR(&mp_lv_obj_get_free_num_obj) },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_is_focused), MP_ROM_PTR(&mp_lv_obj_is_focused_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(ta_locals_dict, ta_locals_dict_table);
@@ -8109,6 +8179,9 @@ STATIC mp_obj_t ta_make_new(
     return make_new(&lv_ta_create, type, n_args, n_kw, args);           
 }
 
+
+STATIC const mp_obj_type_t obj_type;
+    
 STATIC const mp_obj_type_t ta_type = {
     { &mp_type_type },
     .name = MP_QSTR_ta,
@@ -8118,10 +8191,30 @@ STATIC const mp_obj_type_t ta_type = {
 };
     
 
+STATIC inline const mp_obj_type_t *get_BaseObj_type()
+{
+    return &obj_type;
+}
+
+
+/* 
+ *
+ * Global Module Functions
+ *
+ */
+
+
 /*
  * function NOT generated:
  * Missing conversion to lv_color_t
  * inline static uint8_t lv_color_to1(lv_color_t color)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_color_t
+ * inline static uint8_t lv_color_to8(lv_color_t color)
  */
     
 
@@ -8134,8 +8227,22 @@ STATIC const mp_obj_type_t ta_type = {
 
 /*
  * function NOT generated:
+ * Missing conversion to lv_color_t
+ * inline static uint32_t lv_color_to32(lv_color_t color)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing convertion from lv_color_t
  * inline static lv_color_t lv_color_mix(lv_color_t c1, lv_color_t c2, uint8_t mix)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_color_t
+ * inline static uint8_t lv_color_brightness(lv_color_t color)
  */
     
 
@@ -8149,7 +8256,21 @@ STATIC const mp_obj_type_t ta_type = {
 /*
  * function NOT generated:
  * Missing conversion to const lv_area_t*
+ * inline static lv_coord_t lv_area_get_width(const lv_area_t *area_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_area_t*
  * inline static lv_coord_t lv_area_get_height(const lv_area_t *area_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_font_t*
+ * inline static uint8_t lv_font_get_height(const lv_font_t *font_p)
  */
     
 
@@ -8157,6 +8278,13 @@ STATIC const mp_obj_type_t ta_type = {
  * function NOT generated:
  * Missing convertion from lv_color_t
  * lv_color_t lv_color_hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from lv_color_hsv_t
+ * lv_color_hsv_t lv_color_rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b)
  */
     
 
@@ -8170,7 +8298,21 @@ STATIC const mp_obj_type_t ta_type = {
 /*
  * function NOT generated:
  * Missing conversion to lv_area_t*
+ * void lv_area_set_width(lv_area_t *area_p, lv_coord_t w)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_area_t*
  * void lv_area_set_height(lv_area_t *area_p, lv_coord_t h)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_area_t*
+ * void lv_area_set_pos(lv_area_t *area_p, lv_coord_t x, lv_coord_t y)
  */
     
 
@@ -8184,6 +8326,13 @@ STATIC const mp_obj_type_t ta_type = {
 /*
  * function NOT generated:
  * Missing conversion to lv_area_t*
+ * bool lv_area_intersect(lv_area_t *res_p, const lv_area_t *a1_p, const lv_area_t *a2_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_area_t*
  * void lv_area_join(lv_area_t *a_res_p, const lv_area_t *a1_p, const lv_area_t *a2_p)
  */
     
@@ -8191,7 +8340,21 @@ STATIC const mp_obj_type_t ta_type = {
 /*
  * function NOT generated:
  * Missing conversion to const lv_area_t*
+ * bool lv_area_is_point_on(const lv_area_t *a_p, const lv_point_t *p_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_area_t*
  * bool lv_area_is_on(const lv_area_t *a1_p, const lv_area_t *a2_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_area_t*
+ * bool lv_area_is_in(const lv_area_t *ain_p, const lv_area_t *aholder_p)
  */
     
 
@@ -8213,8 +8376,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_init_obj, 0, 0, mp_lv_font_init);
 
 /*
  * function NOT generated:
+ * Missing conversion to lv_font_t*
+ * void lv_font_add(lv_font_t *child, lv_font_t *parent)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing conversion to const lv_font_t*
  * bool lv_font_is_monospace(const lv_font_t *font_p, uint32_t letter)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from const uint8_t*
+ * const uint8_t *lv_font_get_bitmap(const lv_font_t *font_p, uint32_t letter)
  */
     
 
@@ -8228,7 +8405,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_init_obj, 0, 0, mp_lv_font_init);
 /*
  * function NOT generated:
  * Missing conversion to const lv_font_t*
+ * uint8_t lv_font_get_real_width(const lv_font_t *font_p, uint32_t letter)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_font_t*
  * uint8_t lv_font_get_bpp(const lv_font_t *font, uint32_t letter)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from const uint8_t*
+ * const uint8_t *lv_font_get_bitmap_continuous(const lv_font_t *font, uint32_t unicode_letter)
  */
     
 
@@ -8242,9 +8433,32 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_init_obj, 0, 0, mp_lv_font_init);
 /*
  * function NOT generated:
  * Missing conversion to const lv_font_t*
+ * int16_t lv_font_get_width_continuous(const lv_font_t *font, uint32_t unicode_letter)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_font_t*
  * int16_t lv_font_get_width_sparse(const lv_font_t *font, uint32_t unicode_letter)
  */
     
+
+/*
+ * lvgl extension definition for:
+ * void lv_font_builtin_init(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_font_builtin_init(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_font_builtin_init();
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_builtin_init_obj, 0, 0, mp_lv_font_builtin_init);
+
+ 
 
 /*
  * lvgl extension definition for:
@@ -8264,10 +8478,35 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
 
 /*
  * function NOT generated:
+ * Missing conversion to lv_anim_t*
+ * void lv_anim_create(lv_anim_t *anim_p)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing conversion to void*
  * bool lv_anim_del(void *var, lv_anim_fp_t fp)
  */
     
+
+/*
+ * lvgl extension definition for:
+ * uint16_t lv_anim_speed_to_time(uint16_t speed, int32_t start, int32_t end)
+ */
+ 
+STATIC mp_obj_t mp_lv_anim_speed_to_time(size_t n_args, const mp_obj_t *args)
+{
+    uint16_t speed = (uint16_t)mp_obj_int_get_checked(args[0]);
+    int32_t start = (int32_t)mp_obj_int_get_checked(args[1]);
+    int32_t end = (int32_t)mp_obj_int_get_checked(args[2]);
+    uint16_t res = lv_anim_speed_to_time(speed, start, end);
+    return mp_obj_new_int_from_uint(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_speed_to_time_obj, 3, 3, mp_lv_anim_speed_to_time);
+
+ 
 
 /*
  * function NOT generated:
@@ -8279,14 +8518,44 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
 /*
  * function NOT generated:
  * Missing conversion to const lv_anim_t*
- * int32_t lv_anim_path_step(const lv_anim_t *a)
+ * int32_t lv_anim_path_ease_in_out(const lv_anim_t *a)
  */
     
 
 /*
  * function NOT generated:
+ * Missing conversion to const lv_anim_t*
+ * int32_t lv_anim_path_step(const lv_anim_t *a)
+ */
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_init(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_init(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_style_init();
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_init_obj, 0, 0, mp_lv_style_init);
+
+ 
+
+/*
+ * function NOT generated:
  * Missing conversion to lv_style_t*
  * void lv_style_copy(lv_style_t *dest, const lv_style_t *src)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_style_t*
+ * void lv_style_mix(const lv_style_t *start, const lv_style_t *end, lv_style_t *res, uint16_t ratio)
  */
     
 
@@ -8298,9 +8567,32 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
     
 
 /*
+ * lvgl extension definition for:
+ * void lv_mem_init(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_mem_init(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_mem_init();
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_init_obj, 0, 0, mp_lv_mem_init);
+
+ 
+
+/*
  * function NOT generated:
  * Missing convertion from void*
  * void *lv_mem_alloc(uint32_t size)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const void*
+ * void lv_mem_free(const void *data)
  */
     
 
@@ -8312,9 +8604,32 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
     
 
 /*
+ * lvgl extension definition for:
+ * void lv_mem_defrag(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_mem_defrag(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_mem_defrag();
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_defrag_obj, 0, 0, mp_lv_mem_defrag);
+
+ 
+
+/*
  * function NOT generated:
  * Missing conversion to lv_mem_monitor_t*
  * void lv_mem_monitor(lv_mem_monitor_t *mon_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const void*
+ * uint32_t lv_mem_get_size(const void *data)
  */
     
 
@@ -8328,7 +8643,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
 /*
  * function NOT generated:
  * Missing convertion from void*
+ * void *lv_ll_ins_head(lv_ll_t *ll_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from void*
  * void *lv_ll_ins_prev(lv_ll_t *ll_p, void *n_act)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from void*
+ * void *lv_ll_ins_tail(lv_ll_t *ll_p)
  */
     
 
@@ -8342,7 +8671,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
 /*
  * function NOT generated:
  * Missing conversion to lv_ll_t*
+ * void lv_ll_clear(lv_ll_t *ll_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_ll_t*
  * void lv_ll_chg_list(lv_ll_t *ll_ori_p, lv_ll_t *ll_new_p, void *node)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from void*
+ * void *lv_ll_get_head(const lv_ll_t *ll_p)
  */
     
 
@@ -8356,7 +8699,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
 /*
  * function NOT generated:
  * Missing convertion from void*
+ * void *lv_ll_get_next(const lv_ll_t *ll_p, const void *n_act)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from void*
  * void *lv_ll_get_prev(const lv_ll_t *ll_p, const void *n_act)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_ll_t*
+ * void lv_ll_move_before(lv_ll_t *ll_p, void *n_act, void *n_after)
  */
     
 
@@ -8378,6 +8735,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_init_obj, 0, 0, mp_lv_init);
 
 /*
  * lvgl extension definition for:
+ * void lv_scr_load(lv_obj_t *scr)
+ */
+ 
+STATIC mp_obj_t mp_lv_scr_load(size_t n_args, const mp_obj_t *args)
+{
+    lv_obj_t *scr = mp_to_lv(args[0]);
+    lv_scr_load(scr);
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_scr_load_obj, 1, 1, mp_lv_scr_load);
+
+ 
+
+/*
+ * lvgl extension definition for:
  * lv_obj_t *lv_scr_act(void)
  */
  
@@ -8389,6 +8762,22 @@ STATIC mp_obj_t mp_lv_scr_act(size_t n_args, const mp_obj_t *args)
 }
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_scr_act_obj, 0, 0, mp_lv_scr_act);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * lv_obj_t *lv_layer_top(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_layer_top(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_obj_t* res = lv_layer_top();
+    return lv_to_mp(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_top_obj, 0, 0, mp_lv_layer_top);
 
  
 
@@ -8410,8 +8799,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_sys_obj, 0, 0, mp_lv_layer_sys);
 
 /*
  * function NOT generated:
+ * Missing conversion to lv_disp_drv_t*
+ * void lv_disp_drv_init(lv_disp_drv_t *driver)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing convertion from lv_disp_t*
  * lv_disp_t *lv_disp_drv_register(lv_disp_drv_t *driver)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_disp_t*
+ * void lv_disp_set_active(lv_disp_t *disp)
  */
     
 
@@ -8424,8 +8827,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_sys_obj, 0, 0, mp_lv_layer_sys);
 
 /*
  * function NOT generated:
+ * Missing convertion from lv_disp_t*
+ * lv_disp_t *lv_disp_next(lv_disp_t *disp)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing conversion to lv_color_t*
  * void lv_disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t *color_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_color_t
+ * void lv_disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
  */
     
 
@@ -8439,9 +8856,32 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_sys_obj, 0, 0, mp_lv_layer_sys);
 /*
  * function NOT generated:
  * Missing conversion to lv_color_t*
+ * void lv_disp_mem_blend(lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_color_t*
  * void lv_disp_mem_fill(lv_color_t *dest, uint32_t length, lv_color_t color)
  */
     
+
+/*
+ * lvgl extension definition for:
+ * bool lv_disp_is_mem_blend_supported(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_disp_is_mem_blend_supported(size_t n_args, const mp_obj_t *args)
+{
+    
+    bool res = lv_disp_is_mem_blend_supported();
+    return convert_to_bool(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_is_mem_blend_supported_obj, 0, 0, mp_lv_disp_is_mem_blend_supported);
+
+ 
 
 /*
  * lvgl extension definition for:
@@ -8456,6 +8896,22 @@ STATIC mp_obj_t mp_lv_disp_is_mem_fill_supported(size_t n_args, const mp_obj_t *
 }
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_is_mem_fill_supported_obj, 0, 0, mp_lv_disp_is_mem_fill_supported);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * void lv_tick_inc(uint32_t tick_period)
+ */
+ 
+STATIC mp_obj_t mp_lv_tick_inc(size_t n_args, const mp_obj_t *args)
+{
+    uint32_t tick_period = (uint32_t)mp_obj_int_get_checked(args[0]);
+    lv_tick_inc(tick_period);
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_inc_obj, 1, 1, mp_lv_tick_inc);
 
  
 
@@ -8476,6 +8932,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_get_obj, 0, 0, mp_lv_tick_get);
  
 
 /*
+ * lvgl extension definition for:
+ * uint32_t lv_tick_elaps(uint32_t prev_tick)
+ */
+ 
+STATIC mp_obj_t mp_lv_tick_elaps(size_t n_args, const mp_obj_t *args)
+{
+    uint32_t prev_tick = (uint32_t)mp_obj_int_get_checked(args[0]);
+    uint32_t res = lv_tick_elaps(prev_tick);
+    return mp_obj_new_int_from_uint(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_elaps_obj, 1, 1, mp_lv_tick_elaps);
+
+ 
+
+/*
  * function NOT generated:
  * Missing conversion to lv_indev_drv_t*
  * void lv_indev_drv_init(lv_indev_drv_t *driver)
@@ -8485,7 +8957,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_get_obj, 0, 0, mp_lv_tick_get);
 /*
  * function NOT generated:
  * Missing convertion from lv_indev_t*
+ * lv_indev_t *lv_indev_drv_register(lv_indev_drv_t *driver)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from lv_indev_t*
  * lv_indev_t *lv_indev_next(lv_indev_t *indev)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_indev_t*
+ * bool lv_indev_read(lv_indev_t *indev, lv_indev_data_t *data)
  */
     
 
@@ -8499,9 +8985,32 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_get_obj, 0, 0, mp_lv_tick_get);
 /*
  * function NOT generated:
  * Missing conversion to lv_group_t*
+ * void lv_group_del(lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_group_t*
  * void lv_group_add_obj(lv_group_t *group, lv_obj_t *obj)
  */
     
+
+/*
+ * lvgl extension definition for:
+ * void lv_group_remove_obj(lv_obj_t *obj)
+ */
+ 
+STATIC mp_obj_t mp_lv_group_remove_obj(size_t n_args, const mp_obj_t *args)
+{
+    lv_obj_t *obj = mp_to_lv(args[0]);
+    lv_group_remove_obj(obj);
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_remove_obj_obj, 1, 1, mp_lv_group_remove_obj);
+
+ 
 
 /*
  * lvgl extension definition for:
@@ -8522,7 +9031,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group
 /*
  * function NOT generated:
  * Missing conversion to lv_group_t*
+ * void lv_group_focus_next(lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_group_t*
  * void lv_group_focus_prev(lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_group_t*
+ * void lv_group_focus_freeze(lv_group_t *group, bool en)
  */
     
 
@@ -8536,7 +9059,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group
 /*
  * function NOT generated:
  * Missing conversion to lv_group_t*
+ * void lv_group_set_style_mod_cb(lv_group_t *group, lv_group_style_mod_func_t style_mod_func)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_group_t*
  * void lv_group_set_style_mod_edit_cb(lv_group_t *group, lv_group_style_mod_func_t style_mod_func)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_group_t*
+ * void lv_group_set_focus_cb(lv_group_t *group, lv_group_focus_cb_t focus_cb)
  */
     
 
@@ -8549,6 +9086,13 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group
 
 /*
  * function NOT generated:
+ * Missing conversion to lv_group_t*
+ * void lv_group_set_click_focus(lv_group_t *group, bool en)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing convertion from lv_style_t*
  * lv_style_t *lv_group_mod_style(lv_group_t *group, const lv_style_t *style)
  */
@@ -8556,8 +9100,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group
 
 /*
  * function NOT generated:
+ * Missing conversion to const lv_group_t*
+ * lv_obj_t *lv_group_get_focused(const lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing convertion from lv_group_style_mod_func_t
  * lv_group_style_mod_func_t lv_group_get_style_mod_cb(const lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing convertion from lv_group_style_mod_func_t
+ * lv_group_style_mod_func_t lv_group_get_style_mod_edit_cb(const lv_group_t *group)
  */
     
 
@@ -8571,9 +9129,32 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group
 /*
  * function NOT generated:
  * Missing conversion to const lv_group_t*
+ * bool lv_group_get_editing(const lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_group_t*
  * bool lv_group_get_click_focus(const lv_group_t *group)
  */
     
+
+/*
+ * lvgl extension definition for:
+ * void lv_indev_init(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_indev_init(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_indev_init();
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_init_obj, 0, 0, mp_lv_indev_init);
+
+ 
 
 /*
  * function NOT generated:
@@ -8584,8 +9165,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group
 
 /*
  * function NOT generated:
+ * Missing conversion to const lv_indev_t*
+ * lv_hal_indev_type_t lv_indev_get_type(const lv_indev_t *indev)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing conversion to lv_indev_t*
  * void lv_indev_reset(lv_indev_t *indev)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_indev_t*
+ * void lv_indev_reset_lpr(lv_indev_t *indev)
  */
     
 
@@ -8609,7 +9204,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_enable_obj, 2, 2, mp_lv_indev_en
 /*
  * function NOT generated:
  * Missing conversion to lv_indev_t*
+ * void lv_indev_set_cursor(lv_indev_t *indev, lv_obj_t *cur_obj)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_indev_t*
  * void lv_indev_set_group(lv_indev_t *indev, lv_group_t *group)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_indev_t*
+ * void lv_indev_set_button_points(lv_indev_t *indev, lv_point_t *points)
  */
     
 
@@ -8623,6 +9232,13 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_enable_obj, 2, 2, mp_lv_indev_en
 /*
  * function NOT generated:
  * Missing conversion to const lv_indev_t*
+ * uint32_t lv_indev_get_key(const lv_indev_t *indev)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_indev_t*
  * bool lv_indev_is_dragging(const lv_indev_t *indev)
  */
     
@@ -8630,7 +9246,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_enable_obj, 2, 2, mp_lv_indev_en
 /*
  * function NOT generated:
  * Missing conversion to const lv_indev_t*
+ * void lv_indev_get_vect(const lv_indev_t *indev, lv_point_t *point)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_indev_t*
  * uint32_t lv_indev_get_inactive_time(const lv_indev_t *indev)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_indev_t*
+ * void lv_indev_wait_release(lv_indev_t *indev)
  */
     
 
@@ -8644,7 +9274,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_enable_obj, 2, 2, mp_lv_indev_en
 /*
  * function NOT generated:
  * Missing conversion to const lv_font_t*
+ * uint16_t lv_txt_get_next_line(const char *txt, const lv_font_t *font_p, lv_coord_t letter_space, lv_coord_t max_l, lv_txt_flag_t flag)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_font_t*
  * lv_coord_t lv_txt_get_width(const char *txt, uint16_t length, const lv_font_t *font, lv_coord_t letter_space, lv_txt_flag_t flag)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_txt_cmd_state_t*
+ * bool lv_txt_is_cmd(lv_txt_cmd_state_t *state, uint32_t c)
  */
     
 
@@ -8668,6 +9312,24 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_ins_obj, 3, 3, mp_lv_txt_ins);
 
 /*
  * lvgl extension definition for:
+ * void lv_txt_cut(char *txt, uint32_t pos, uint32_t len)
+ */
+ 
+STATIC mp_obj_t mp_lv_txt_cut(size_t n_args, const mp_obj_t *args)
+{
+    char *txt = (char*)mp_obj_str_get_str(args[0]);
+    uint32_t pos = (uint32_t)mp_obj_int_get_checked(args[1]);
+    uint32_t len = (uint32_t)mp_obj_int_get_checked(args[2]);
+    lv_txt_cut(txt, pos, len);
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_cut_obj, 3, 3, mp_lv_txt_cut);
+
+ 
+
+/*
+ * lvgl extension definition for:
  * void lv_fs_init(void)
  */
  
@@ -8684,8 +9346,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_init_obj, 0, 0, mp_lv_fs_init);
 
 /*
  * function NOT generated:
+ * Missing conversion to lv_fs_drv_t*
+ * void lv_fs_add_drv(lv_fs_drv_t *drv_p)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing conversion to lv_fs_file_t*
  * lv_fs_res_t lv_fs_open(lv_fs_file_t *file_p, const char *path, lv_fs_mode_t mode)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_fs_file_t*
+ * lv_fs_res_t lv_fs_close(lv_fs_file_t *file_p)
  */
     
 
@@ -8708,7 +9384,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_remove_obj, 1, 1, mp_lv_fs_remove);
 /*
  * function NOT generated:
  * Missing conversion to lv_fs_file_t*
+ * lv_fs_res_t lv_fs_read(lv_fs_file_t *file_p, void *buf, uint32_t btr, uint32_t *br)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_fs_file_t*
  * lv_fs_res_t lv_fs_write(lv_fs_file_t *file_p, const void *buf, uint32_t btw, uint32_t *bw)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_fs_file_t*
+ * lv_fs_res_t lv_fs_seek(lv_fs_file_t *file_p, uint32_t pos)
  */
     
 
@@ -8722,9 +9412,33 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_remove_obj, 1, 1, mp_lv_fs_remove);
 /*
  * function NOT generated:
  * Missing conversion to lv_fs_file_t*
+ * lv_fs_res_t lv_fs_trunc(lv_fs_file_t *file_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_fs_file_t*
  * lv_fs_res_t lv_fs_size(lv_fs_file_t *file_p, uint32_t *size)
  */
     
+
+/*
+ * lvgl extension definition for:
+ * lv_fs_res_t lv_fs_rename(const char *oldname, const char *newname)
+ */
+ 
+STATIC mp_obj_t mp_lv_fs_rename(size_t n_args, const mp_obj_t *args)
+{
+    const char *oldname = mp_obj_str_get_str(args[0]);
+    const char *newname = mp_obj_str_get_str(args[1]);
+    lv_fs_res_t res = lv_fs_rename(oldname, newname);
+    return mp_obj_new_int_from_uint(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_rename_obj, 2, 2, mp_lv_fs_rename);
+
+ 
 
 /*
  * function NOT generated:
@@ -8736,7 +9450,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_remove_obj, 1, 1, mp_lv_fs_remove);
 /*
  * function NOT generated:
  * Missing conversion to lv_fs_dir_t*
+ * lv_fs_res_t lv_fs_dir_read(lv_fs_dir_t *rddir_p, char *fn)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to lv_fs_dir_t*
  * lv_fs_res_t lv_fs_dir_close(lv_fs_dir_t *rddir_p)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to char
+ * lv_fs_res_t lv_fs_free(char letter, uint32_t *total_p, uint32_t *free_p)
  */
     
 
@@ -8758,6 +9486,22 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_get_letters_obj, 1, 1, mp_lv_fs_get
 
 /*
  * lvgl extension definition for:
+ * const char *lv_fs_get_ext(const char *fn)
+ */
+ 
+STATIC mp_obj_t mp_lv_fs_get_ext(size_t n_args, const mp_obj_t *args)
+{
+    const char *fn = mp_obj_str_get_str(args[0]);
+    const char* res = lv_fs_get_ext(fn);
+    return convert_to_str(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_get_ext_obj, 1, 1, mp_lv_fs_get_ext);
+
+ 
+
+/*
+ * lvgl extension definition for:
  * char *lv_fs_up(char *path)
  */
  
@@ -8769,6 +9513,22 @@ STATIC mp_obj_t mp_lv_fs_up(size_t n_args, const mp_obj_t *args)
 }
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_up_obj, 1, 1, mp_lv_fs_up);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * const char *lv_fs_get_last(const char *path)
+ */
+ 
+STATIC mp_obj_t mp_lv_fs_get_last(size_t n_args, const mp_obj_t *args)
+{
+    const char *path = mp_obj_str_get_str(args[0]);
+    const char* res = lv_fs_get_last(path);
+    return convert_to_str(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_get_last_obj, 1, 1, mp_lv_fs_get_last);
 
  
 
@@ -8793,7 +9553,21 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_aa_get_opa_obj, 3, 3, mp_lv_draw_
 /*
  * function NOT generated:
  * Missing conversion to const lv_area_t*
+ * void lv_draw_aa_ver_seg(lv_coord_t x, lv_coord_t y, lv_coord_t length, const lv_area_t *mask, lv_color_t color, lv_opa_t opa)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_area_t*
  * void lv_draw_aa_hor_seg(lv_coord_t x, lv_coord_t y, lv_coord_t length, const lv_area_t *mask, lv_color_t color, lv_opa_t opa)
+ */
+    
+
+/*
+ * function NOT generated:
+ * Missing conversion to const lv_area_t*
+ * void lv_draw_rect(const lv_area_t *coords, const lv_area_t *mask, const lv_style_t *style, lv_opa_t opa_scale)
  */
     
 
@@ -8806,96 +9580,24 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_aa_get_opa_obj, 3, 3, mp_lv_draw_
 
 /*
  * function NOT generated:
+ * Missing conversion to const lv_area_t*
+ * void lv_draw_img(const lv_area_t *coords, const lv_area_t *mask, const void *src, const lv_style_t *style, lv_opa_t opa_scale)
+ */
+    
+
+/*
+ * function NOT generated:
  * Missing conversion to const lv_point_t*
  * void lv_draw_line(const lv_point_t *point1, const lv_point_t *point2, const lv_area_t *mask, const lv_style_t *style, lv_opa_t opa_scale)
  */
     
 
 /*
- * Functions not generated:
- * lv_color_to8
- * lv_color_to32
- * lv_color_brightness
- * lv_area_get_width
- * lv_font_get_height
- * lv_color_rgb_to_hsv
- * lv_area_set_width
- * lv_area_set_pos
- * lv_area_intersect
- * lv_area_is_point_on
- * lv_area_is_in
- * lv_font_add
- * lv_font_get_bitmap
- * lv_font_get_real_width
- * lv_font_get_bitmap_continuous
- * lv_font_get_width_continuous
- * lv_font_builtin_init
- * lv_anim_create
- * lv_anim_speed_to_time
- * lv_anim_path_ease_in_out
- * lv_style_init
- * lv_style_mix
- * lv_mem_init
- * lv_mem_free
- * lv_mem_defrag
- * lv_mem_get_size
- * lv_ll_ins_head
- * lv_ll_ins_tail
- * lv_ll_clear
- * lv_ll_get_head
- * lv_ll_get_next
- * lv_ll_move_before
- * lv_scr_load
- * lv_layer_top
- * lv_disp_drv_init
- * lv_disp_set_active
- * lv_disp_next
- * lv_disp_fill
- * lv_disp_mem_blend
- * lv_disp_is_mem_blend_supported
- * lv_tick_inc
- * lv_tick_elaps
- * lv_indev_drv_register
- * lv_indev_read
- * lv_group_del
- * lv_group_remove_obj
- * lv_group_focus_next
- * lv_group_focus_freeze
- * lv_group_set_style_mod_cb
- * lv_group_set_focus_cb
- * lv_group_set_click_focus
- * lv_group_get_focused
- * lv_group_get_style_mod_edit_cb
- * lv_group_get_editing
- * lv_indev_init
- * lv_indev_get_type
- * lv_indev_reset_lpr
- * lv_indev_set_cursor
- * lv_indev_set_button_points
- * lv_indev_get_key
- * lv_indev_get_vect
- * lv_indev_wait_release
- * lv_txt_get_next_line
- * lv_txt_is_cmd
- * lv_txt_cut
- * lv_fs_add_drv
- * lv_fs_close
- * lv_fs_read
- * lv_fs_seek
- * lv_fs_trunc
- * lv_fs_rename
- * lv_fs_dir_read
- * lv_fs_free
- * lv_fs_get_ext
- * lv_fs_get_last
- * lv_draw_aa_ver_seg
- * lv_draw_rect
- * lv_draw_img
- * lv_draw_triangle
- *
+ * function NOT generated:
+ * Missing conversion to const lv_point_t*
+ * void lv_draw_triangle(const lv_point_t *points, const lv_area_t *mask, lv_color_t color)
  */
-
-
+    
 
 
 /*
@@ -8915,48 +9617,64 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(lv_mp_init_obj, _lv_mp_init);
 
 STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_lvgl) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR___init__), (mp_obj_t)&lv_mp_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_obj), (mp_obj_t)&obj_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_arc), (mp_obj_t)&arc_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_cont), (mp_obj_t)&cont_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_btn), (mp_obj_t)&btn_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_label), (mp_obj_t)&label_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_bar), (mp_obj_t)&bar_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_btnm), (mp_obj_t)&btnm_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_cb), (mp_obj_t)&cb_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_line), (mp_obj_t)&line_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_chart), (mp_obj_t)&chart_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_page), (mp_obj_t)&page_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_ddlist), (mp_obj_t)&ddlist_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_lmeter), (mp_obj_t)&lmeter_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_gauge), (mp_obj_t)&gauge_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_img), (mp_obj_t)&img_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_kb), (mp_obj_t)&kb_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_led), (mp_obj_t)&led_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_list), (mp_obj_t)&list_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_mbox), (mp_obj_t)&mbox_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_preload), (mp_obj_t)&preload_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_roller), (mp_obj_t)&roller_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_slider), (mp_obj_t)&slider_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_sw), (mp_obj_t)&sw_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_win), (mp_obj_t)&win_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_tabview), (mp_obj_t)&tabview_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_ta), (mp_obj_t)&ta_type },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_font_init), (mp_obj_t)&mp_lv_font_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_anim_init), (mp_obj_t)&mp_lv_anim_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init), (mp_obj_t)&mp_lv_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_scr_act), (mp_obj_t)&mp_lv_scr_act_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_layer_sys), (mp_obj_t)&mp_lv_layer_sys_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_disp_is_mem_fill_supported), (mp_obj_t)&mp_lv_disp_is_mem_fill_supported_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_tick_get), (mp_obj_t)&mp_lv_tick_get_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_group_focus_obj), (mp_obj_t)&mp_lv_group_focus_obj_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_indev_enable), (mp_obj_t)&mp_lv_indev_enable_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_txt_ins), (mp_obj_t)&mp_lv_txt_ins_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_init), (mp_obj_t)&mp_lv_fs_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_remove), (mp_obj_t)&mp_lv_fs_remove_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_get_letters), (mp_obj_t)&mp_lv_fs_get_letters_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_up), (mp_obj_t)&mp_lv_fs_up_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_draw_aa_get_opa), (mp_obj_t)&mp_lv_draw_aa_get_opa_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___init__), MP_ROM_PTR(&lv_mp_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_obj), MP_ROM_PTR(&obj_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_arc), MP_ROM_PTR(&arc_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_cont), MP_ROM_PTR(&cont_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_btn), MP_ROM_PTR(&btn_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_label), MP_ROM_PTR(&label_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_bar), MP_ROM_PTR(&bar_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_btnm), MP_ROM_PTR(&btnm_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_cb), MP_ROM_PTR(&cb_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_line), MP_ROM_PTR(&line_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_chart), MP_ROM_PTR(&chart_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_page), MP_ROM_PTR(&page_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ddlist), MP_ROM_PTR(&ddlist_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lmeter), MP_ROM_PTR(&lmeter_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_gauge), MP_ROM_PTR(&gauge_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_img), MP_ROM_PTR(&img_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_kb), MP_ROM_PTR(&kb_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_led), MP_ROM_PTR(&led_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_list), MP_ROM_PTR(&list_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mbox), MP_ROM_PTR(&mbox_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_preload), MP_ROM_PTR(&preload_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_roller), MP_ROM_PTR(&roller_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_slider), MP_ROM_PTR(&slider_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_sw), MP_ROM_PTR(&sw_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_win), MP_ROM_PTR(&win_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_tabview), MP_ROM_PTR(&tabview_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ta), MP_ROM_PTR(&ta_type) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_font_init), MP_ROM_PTR(&mp_lv_font_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_font_builtin_init), MP_ROM_PTR(&mp_lv_font_builtin_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_anim_init), MP_ROM_PTR(&mp_lv_anim_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_anim_speed_to_time), MP_ROM_PTR(&mp_lv_anim_speed_to_time_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_style_init), MP_ROM_PTR(&mp_lv_style_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mem_init), MP_ROM_PTR(&mp_lv_mem_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mem_defrag), MP_ROM_PTR(&mp_lv_mem_defrag_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_scr_load), MP_ROM_PTR(&mp_lv_scr_load_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_scr_act), MP_ROM_PTR(&mp_lv_scr_act_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_layer_top), MP_ROM_PTR(&mp_lv_layer_top_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_layer_sys), MP_ROM_PTR(&mp_lv_layer_sys_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disp_is_mem_blend_supported), MP_ROM_PTR(&mp_lv_disp_is_mem_blend_supported_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disp_is_mem_fill_supported), MP_ROM_PTR(&mp_lv_disp_is_mem_fill_supported_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_tick_inc), MP_ROM_PTR(&mp_lv_tick_inc_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_tick_get), MP_ROM_PTR(&mp_lv_tick_get_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_tick_elaps), MP_ROM_PTR(&mp_lv_tick_elaps_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_group_remove_obj), MP_ROM_PTR(&mp_lv_group_remove_obj_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_group_focus_obj), MP_ROM_PTR(&mp_lv_group_focus_obj_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_indev_init), MP_ROM_PTR(&mp_lv_indev_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_indev_enable), MP_ROM_PTR(&mp_lv_indev_enable_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_txt_ins), MP_ROM_PTR(&mp_lv_txt_ins_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_txt_cut), MP_ROM_PTR(&mp_lv_txt_cut_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_init), MP_ROM_PTR(&mp_lv_fs_init_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_remove), MP_ROM_PTR(&mp_lv_fs_remove_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_rename), MP_ROM_PTR(&mp_lv_fs_rename_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_get_letters), MP_ROM_PTR(&mp_lv_fs_get_letters_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_get_ext), MP_ROM_PTR(&mp_lv_fs_get_ext_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_up), MP_ROM_PTR(&mp_lv_fs_up_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fs_get_last), MP_ROM_PTR(&mp_lv_fs_get_last_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_draw_aa_get_opa), MP_ROM_PTR(&mp_lv_draw_aa_get_opa_obj) },
 };
 
 
