@@ -40,15 +40,23 @@ s = subprocess.check_output(pp_cmd.split())
 # lv text patterns
 # 
 
+lv_ext_pattern = re.compile('lv_([^_]+)_ext_t')
 lv_func_pattern = re.compile('lv_(.+)')
 create_obj_pattern = re.compile('lv_([^_]+)_create')
 base_obj_name = 'obj'
+lv_method_pattern = re.compile('lv_[^_]+_(.+)')
+
+def obj_name_from_ext_name(ext_name):
+    return re.match(lv_ext_pattern, ext_name).group(1)
 
 def ctor_name_from_obj_name(obj_name):
     return 'lv_%s_create' % obj_name
 
 def is_method_of(func_name, obj_name):
     return func_name.startswith('lv_%s_' % obj_name)
+    
+def method_name_from_func_name(func_name):
+    return re.match(lv_method_pattern, func_name).group(1)
 
 #
 # Initialization and data structures
@@ -77,7 +85,17 @@ def get_methods(obj_name):
 
 # By default all object (except base_obj) inherit from base_obj. Later we refine this according to hierarchy.
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
+parent_obj_names[base_obj_name] = None
 
+# Populate inheritance hierarchy according to lv_ext structures
+exts = {obj_name_from_ext_name(ext.name): ext for ext in ast.ext if hasattr(ext, 'name') and ext.name is not None and lv_ext_pattern.match(ext.name)}
+for obj_name, ext in exts.items():
+    try:
+        parent_ext_name = ext.type.type.decls[0].type.type.names[0]
+        if lv_ext_pattern.match(parent_ext_name):
+            parent_obj_names[obj_name] = obj_name_from_ext_name(parent_ext_name)
+    except AttributeError:
+        pass
 
 #
 # Type convertors
@@ -147,7 +165,7 @@ print ("""
 """.format(
         cmd_line=' '.join(argv),
         pp_cmd=pp_cmd,
-        objs=", ".join([objname for objname in obj_names]),
+        objs=", ".join(['%s(%s)' % (objname, parent_obj_names[objname]) for objname in obj_names]),
         lv_headers='\n'.join('#include "%s"' % header for header in args.input)))
 
 
@@ -330,9 +348,8 @@ def gen_func_error(method, exp):
 #
 
 def gen_obj_methods(obj_name):
-    method_prefix = "lv_%s_" % obj_name
     result = ["{{MP_OBJ_NEW_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".\
-                    format(method=method.name, method_name=method.name[len(method_prefix):]) for method in get_methods(obj_name)]
+                    format(method=method.name, method_name=method_name_from_func_name(method.name)) for method in get_methods(obj_name)]
     if obj_name in parent_obj_names:
         result += gen_obj_methods(parent_obj_names[obj_name])
     return result
