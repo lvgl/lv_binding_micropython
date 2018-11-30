@@ -14,6 +14,7 @@ from sys import argv
 from pycparser import c_parser, c_ast, c_generator
 from argparse import ArgumentParser
 import subprocess, re
+from os.path import commonprefix
 
 #
 # Argument parsing
@@ -38,28 +39,41 @@ s = subprocess.check_output(pp_cmd.split())
 
 #
 # lv text patterns
+# IGNORECASE and "lower" are used to match both function and enum names
 # 
 
-lv_ext_pattern = re.compile('lv_([^_]+)_ext_t')
-lv_func_pattern = re.compile('lv_(.+)')
-create_obj_pattern = re.compile('lv_([^_]+)_create')
+lv_ext_pattern = re.compile('^lv_([^_]+)_ext_t')
+lv_obj_pattern = re.compile('^lv_([^_]+)', re.IGNORECASE)
+lv_func_pattern = re.compile('^lv_(.+)', re.IGNORECASE)
+create_obj_pattern = re.compile('^lv_([^_]+)_create')
 base_obj_name = 'obj'
-lv_method_pattern = re.compile('lv_[^_]+_(.+)')
+lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
 
 def obj_name_from_ext_name(ext_name):
     return re.match(lv_ext_pattern, ext_name).group(1)
+
+def obj_name_from_func_name(func_name):
+    return re.match(lv_obj_pattern, func_name).group(1)
 
 def ctor_name_from_obj_name(obj_name):
     return 'lv_%s_create' % obj_name
 
 def is_method_of(func_name, obj_name):
-    return func_name.startswith('lv_%s_' % obj_name)
+    return func_name.lower().startswith(('lv_%s_' % obj_name).lower())
     
 def method_name_from_func_name(func_name):
     return re.match(lv_method_pattern, func_name).group(1)
 
+def get_enum_name(enum):
+    prefix = 'lv_'
+    return enum[len(prefix):]
+
+def get_enum_value(obj_name, enum_member):
+    return '%s_%s' % (obj_name, enum_member)
+
+
 #
-# Initialization and data structures
+# Initialization, data structures, helper functions
 #
 
 parser = c_parser.CParser()
@@ -75,6 +89,9 @@ for obj_ctor in obj_ctors:
     funcs.remove(obj_ctor)
 obj_names = [re.match(create_obj_pattern, ctor.name).group(1) for ctor in obj_ctors]
 
+def has_ctor(obj_name):
+    return ctor_name_from_obj_name(obj_name) in [ctor.name for ctor in obj_ctors]
+        
 def get_ctor(obj_name):
     global obj_ctors
     return next(ctor for ctor in obj_ctors if ctor.name == ctor_name_from_obj_name(obj_name))
@@ -83,6 +100,13 @@ def get_methods(obj_name):
     global funcs
     return [func for func in funcs if is_method_of(func.name,obj_name) and (not func.name == ctor_name_from_obj_name(obj_name))]
 
+def get_enum_members(obj_name):
+    global enums
+    if not obj_name in enums:
+        return []
+    prefix_len = len(obj_name)+1
+    return [enum_member_name[prefix_len:] for enum_member_name, value in enums[obj_name].items()]
+   
 # By default all object (except base_obj) inherit from base_obj. Later we refine this according to hierarchy.
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
 parent_obj_names[base_obj_name] = None
@@ -96,6 +120,27 @@ for obj_name, ext in exts.items():
             parent_obj_names[obj_name] = obj_name_from_ext_name(parent_ext_name)
     except AttributeError:
         pass
+
+# Parse Enums
+
+enum_defs = [x for x in ast.ext if hasattr(x,'type') and isinstance(x.type, c_ast.Enum)]
+enums = {}
+for enum_def in enum_defs:
+    member_names = [member.name for member in enum_def.type.values.enumerators]
+    enum_name = commonprefix(member_names)
+    enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
+    enum = {}
+    next_value = 0
+    for member in enum_def.type.values.enumerators:
+        if member.value == None:
+            value = next_value
+        else:
+            value = int(member.value.value, 0)
+        enum[member.name] = value
+        next_value = value + 1
+    enums[enum_name] = enum
+
+# eprint(enums)
 
 #
 # Type convertors
@@ -347,12 +392,26 @@ def gen_func_error(method, exp):
 # Emit Mpy objects definitions
 #
 
+enum_referenced = {}
+
 def gen_obj_methods(obj_name):
-    result = ["{{MP_OBJ_NEW_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".\
+    global enums
+    members = ["{{ MP_OBJ_NEW_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".
                     format(method=method.name, method_name=method_name_from_func_name(method.name)) for method in get_methods(obj_name)]
-    if obj_name in parent_obj_names:
-        result += gen_obj_methods(parent_obj_names[obj_name])
-    return result
+    # add parent methods
+    parent_members = []
+    if obj_name in parent_obj_names and parent_obj_names[obj_name] != None:
+        parent_members += gen_obj_methods(parent_obj_names[obj_name])
+    # add enum members
+    enum_members = ["{{ MP_OBJ_NEW_QSTR(MP_QSTR_{enum_member}), MP_ROM_PTR(MP_ROM_INT({enum_member_value})) }}".
+                    format(enum_member = enum_memebr_name, enum_member_value = get_enum_value(obj_name, enum_memebr_name)) for enum_memebr_name in get_enum_members(obj_name)]
+    # add enums that match object name
+    obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
+    enums_memebrs = ["{{ MP_OBJ_NEW_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
+                    format(name=method_name_from_func_name(enum_name), enum=enum_name) for enum_name in obj_enums]
+    for enum_name in obj_enums:
+        enum_referenced[enum_name] = True
+    return members + parent_members + enum_members + enums_memebrs
 
 def gen_obj(obj_name):
     should_add_base_methods = obj_name != 'obj'
@@ -363,6 +422,17 @@ def gen_obj(obj_name):
             gen_func_error(method, exp)
        
     # print([method.name for method in methods])
+    ctor = """
+STATIC mp_obj_t {obj}_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{{
+    return make_new(&lv_{obj}_create, type, n_args, n_kw, args);           
+}}
+"""
+
     print("""
     
 /*
@@ -382,28 +452,27 @@ STATIC void {obj}_print(const mp_print_t *print,
     mp_printf(print, "lvgl {obj}");
 }}
 
-STATIC mp_obj_t {obj}_make_new(
-    const mp_obj_type_t *type,
-    size_t n_args,
-    size_t n_kw,
-    const mp_obj_t *args)
-{{
-    return make_new(&lv_{obj}_create, type, n_args, n_kw, args);           
-}}
+{ctor}
 
-
-STATIC const mp_obj_type_t {base_obj}_type;
-    
-STATIC const mp_obj_type_t {obj}_type = {{
+STATIC const mp_obj_type_t mp_{obj}_type = {{
     {{ &mp_type_type }},
     .name = MP_QSTR_{obj},
     .print = {obj}_print,
-    .make_new = {obj}_make_new,
+    {make_new}
     .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
 }};
     """.format(obj = obj_name, base_obj = base_obj_name,
-            base_class = '&%s_type' % base_obj_name if should_add_base_methods else 'NULL',
-            locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name))))
+            base_class = '&mp_%s_type' % base_obj_name if should_add_base_methods else 'NULL',
+            locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
+            ctor = ctor.format(obj = obj_name) if has_ctor(obj_name) else '',
+            make_new = '.make_new = %s_make_new,' % obj_name if has_ctor(obj_name) else '',
+            ))
+
+
+# Generate Enum objects
+
+for enum_name in list(enums.keys()):
+    gen_obj(enum_name)
 
 
 # Generate all other objects. Generate parent objects first
@@ -426,7 +495,7 @@ for obj_name in obj_names:
 print ("""
 STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {{
-    return &{base_obj}_type;
+    return &mp_{base_obj}_type;
 }}
 """.format(base_obj=base_obj_name));
 
@@ -486,10 +555,16 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
     {{ MP_OBJ_NEW_QSTR(MP_QSTR___init__), MP_ROM_PTR(&lv_mp_init_obj) }},
     {objects},
     {functions},
+    {enums},
 }};
 """.format(
-        objects = ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&{obj}_type) }}'.format(obj = o) for o in obj_names]),
-        functions =  ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{func_name}), MP_ROM_PTR(&mp_{func}_obj) }}'.format(func = f.name, func_name = re.match(lv_func_pattern, f.name).group(1)) for f in module_funcs])))
+        objects = ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_{obj}_type) }}'.
+            format(obj = o) for o in obj_names]),
+        functions =  ',\n    '.join(['{{ MP_OBJ_NEW_QSTR(MP_QSTR_{func_name}), MP_ROM_PTR(&mp_{func}_obj) }}'.
+            format(func = f.name, func_name = re.match(lv_func_pattern, f.name).group(1)) for f in module_funcs]),
+        enums = ',\n    '.join(["{{ MP_OBJ_NEW_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
+            format(name=get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced])))
+        
 
 print("""
 STATIC MP_DEFINE_CONST_DICT (
