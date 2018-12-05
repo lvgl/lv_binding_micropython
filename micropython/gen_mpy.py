@@ -42,12 +42,13 @@ s = subprocess.check_output(pp_cmd.split())
 # IGNORECASE and "lower" are used to match both function and enum names
 # 
 
+base_obj_name = 'obj'
 lv_ext_pattern = re.compile('^lv_([^_]+)_ext_t')
 lv_obj_pattern = re.compile('^lv_([^_]+)', re.IGNORECASE)
 lv_func_pattern = re.compile('^lv_(.+)', re.IGNORECASE)
 create_obj_pattern = re.compile('^lv_([^_]+)_create')
-base_obj_name = 'obj'
 lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
+lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
 
 def obj_name_from_ext_name(ext_name):
     return re.match(lv_ext_pattern, ext_name).group(1)
@@ -142,39 +143,68 @@ for enum_def in enum_defs:
 
 # eprint(enums)
 
+# parse function pointers
+func_typedefs = [t for t in ast.ext if isinstance(t, c_ast.Typedef) and isinstance(t.type, c_ast.PtrDecl) and isinstance(t.type.type, c_ast.FuncDecl)]
+
+
 #
 # Type convertors
 #
+
+#action_index = {}
+#
+#def handle_lv_action(arg, index, func, obj_name):
+#    global action_index
+#    args = func.type.args.params
+#    if not obj_name in action_index:
+#        action_index[obj_name] = 0
+#    prev_arg_type = mp_to_lv[get_arg_type(args[index-1].type)] if index > 0 else None
+#    eprint("--> %s, %s" % (get_arg_type(args[index-1].type), mp_to_lv[get_arg_type(args[index-1].type)]))
+#    if prev_arg_type  in enums:
+#        variable_index = "%d + %s" % (action_index[obj_name], args[index-1].name)
+#        action_index[obj_name] += len(enums[prev_arg_type])
+#    else:
+#        variable_index = "{action_index}".format(action_index = action_index[obj_name])
+#        action_index[obj_name] += 1
+#    return """mp_lv_obj_t *mp_lb_obj = lv_obj_get_free_ptr(obj);
+#    {var} = mp_lb_obj.actions[{variable_index}];""".format(
+#        var = gen.visit(arg), variable_index = variable_index)
+
 
 class MissingConversionException(ValueError):
     pass
 
 mp_to_lv = {
-    'bool'                  : 'mp_obj_is_true',
-    'char*'                 : '(char*)mp_obj_str_get_str',
-    'const char*'           : 'mp_obj_str_get_str',
-    'lv_obj_t*'             : 'mp_to_lv',
-    'const lv_obj_t*'       : 'mp_to_lv',
-    'uint8_t'               : '(uint8_t)mp_obj_int_get_checked',
-    'uint16_t'              : '(uint16_t)mp_obj_int_get_checked',
-    'uint32_t'              : '(uint32_t)mp_obj_int_get_checked',
-    'int8_t'                : '(int8_t)mp_obj_int_get_checked',
-    'int16_t'               : '(int16_t)mp_obj_int_get_checked',
-    'int32_t'               : '(int32_t)mp_obj_int_get_checked',
+    'bool'                      : 'mp_obj_is_true',
+    'char*'                     : '(char*)mp_obj_str_get_str',
+    'const char*'               : 'mp_obj_str_get_str',
+    'lv_obj_t*'                 : 'mp_to_lv',
+    'const lv_obj_t*'           : 'mp_to_lv',
+    'struct _lv_obj_t*'         : 'mp_to_lv',
+    'const struct _lv_obj_t*'   : 'mp_to_lv',
+    'uint8_t'                   : '(uint8_t)mp_obj_int_get_checked',
+    'uint16_t'                  : '(uint16_t)mp_obj_int_get_checked',
+    'uint32_t'                  : '(uint32_t)mp_obj_int_get_checked',
+    'int8_t'                    : '(int8_t)mp_obj_int_get_checked',
+    'int16_t'                   : '(int16_t)mp_obj_int_get_checked',
+    'int32_t'                   : '(int32_t)mp_obj_int_get_checked',
+#    'lv_action_t'               : handle_lv_action
 }
 
 lv_to_mp = {
-    'bool'                  : 'convert_to_bool',
-    'char*'                 : 'convert_to_str',
-    'const char*'           : 'convert_to_str',
-    'lv_obj_t*'             : 'lv_to_mp',
-    'const lv_obj_t*'       : 'lv_to_mp',
-    'uint8_t'               : 'mp_obj_new_int_from_uint',
-    'uint16_t'              : 'mp_obj_new_int_from_uint',
-    'uint32_t'              : 'mp_obj_new_int_from_uint',
-    'int8_t'                : 'mp_obj_new_int',
-    'int16_t'               : 'mp_obj_new_int',
-    'int32_t'               : 'mp_obj_new_int',
+    'bool'                      : 'convert_to_bool',
+    'char*'                     : 'convert_to_str',
+    'const char*'               : 'convert_to_str',
+    'lv_obj_t*'                 : 'lv_to_mp',
+    'const lv_obj_t*'           : 'lv_to_mp',
+    'struct _lv_obj_t*'         : 'lv_to_mp',
+    'const struct _lv_obj_t*'   : 'lv_to_mp',
+    'uint8_t'                   : 'mp_obj_new_int_from_uint',
+    'uint16_t'                  : 'mp_obj_new_int_from_uint',
+    'uint32_t'                  : 'mp_obj_new_int_from_uint',
+    'int8_t'                    : 'mp_obj_new_int',
+    'int16_t'                   : 'mp_obj_new_int',
+    'int32_t'                   : 'mp_obj_new_int',
 }
 
 #
@@ -228,6 +258,7 @@ typedef lv_obj_t* (*lv_create)(lv_obj_t * par, const lv_obj_t * copy);
 typedef struct mp_lv_obj_t {
     mp_obj_base_t base;
     lv_obj_t *lv_obj;
+    mp_obj_t *action;
 } mp_lv_obj_t;
 
 STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
@@ -237,16 +268,35 @@ STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
     return mp_lv_obj->lv_obj;
 }
 
+STATIC inline mp_obj_t *mp_to_lv_action(mp_obj_t *mp_obj)
+{
+    if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
+    return mp_lv_obj->action;
+}
+
+STATIC inline void set_action(mp_obj_t *mp_obj, mp_obj_t *action)
+{
+    if (mp_obj == NULL || mp_obj == mp_const_none) return;
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
+    mp_lv_obj->action = action;
+}
+
 STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
 STATIC inline mp_obj_t *lv_to_mp(lv_obj_t *lv_obj)
 {
-    mp_lv_obj_t *result = m_new_obj(mp_lv_obj_t);
-    *result = (mp_lv_obj_t){
-        .base = {get_BaseObj_type()},
-        .lv_obj = lv_obj,
-    };
-    return MP_OBJ_FROM_PTR(result);
+    mp_lv_obj_t *self = lv_obj_get_free_ptr(lv_obj);
+    if (!self) 
+    {
+        self = m_new_obj(mp_lv_obj_t);
+        *self = (mp_lv_obj_t){
+            .base = {get_BaseObj_type()},
+            .lv_obj = lv_obj,
+            .action = NULL
+        };
+    }
+    return MP_OBJ_FROM_PTR(self);
 }
 
 STATIC mp_obj_t make_new(
@@ -262,8 +312,10 @@ STATIC mp_obj_t make_new(
     lv_obj_t *copy = n_args > 1? mp_to_lv(args[1]): NULL;
     *self = (mp_lv_obj_t){
         .base = {type}, 
-        .lv_obj = create(parent, copy)
+        .lv_obj = create(parent, copy),
+        .action = NULL
     };
+    lv_obj_set_free_ptr(self->lv_obj, self);
     return MP_OBJ_FROM_PTR(self);
 }
 
@@ -316,23 +368,90 @@ def try_generate_type(type):
   
 
 #
+# Emit C callback functions 
+#
+
+def build_callback_func_arg(arg, index, func):
+    arg_type = get_arg_type(arg.type)
+    if not arg_type in lv_to_mp:
+        try_generate_type(arg_type)
+        if not arg_type in lv_to_mp:
+            raise MissingConversionException("Missing conversion to %s" % arg_type)
+    return lv_to_mp[arg_type](arg, index, func, obj_name) if callable(lv_to_mp[arg_type]) else \
+        'args[{i}] = {convertor}(arg{i});'.format(
+            convertor = lv_to_mp[arg_type],
+            i = index) 
+
+
+def gen_callback_func(func):
+    global mp_to_lv
+    args = func.args.params
+    if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
+        raise MissingConversionException("First argument of callback function must be lv_obj_t")
+    func_name = get_arg_name(func.type)
+    return_type = get_arg_type(func.type)
+    if return_type == "void":        
+        build_result = ""
+        build_return_value = "" 
+    else:
+        if not return_type in mp_to_lv:
+            try_generate_type(return_type)
+            if not return_type in mp_to_lv:
+                raise MissingConversionException("Missing convertion from %s" % return_type)
+        build_result = "mp_obj_t res = "
+        build_return_value = mp_to_lv[return_type](func, obj_name) if callable(mp_to_lv[return_type]) else \
+            " %s(res)" % mp_to_lv[return_type]
+
+    print("""
+/*
+ * Callback function {func_name}
+ * {func_prototype}
+ */
+
+STATIC {return_type} {func_name}_callback({func_args})
+{{
+    mp_obj_t args[{num_args}];
+    {build_args}
+    mp_obj_t action = mp_to_lv_action(args[0]);
+    {build_result}mp_call_function_n_kw(action, {num_args}, 0, args);
+    return{build_return_value};
+}}
+""".format(
+        func_prototype = gen.visit(func),
+        return_type = get_arg_type(func.type.type),
+        func_name = func_name,
+        func_args = ', '.join(["%s arg%s" % (get_arg_type(arg.type), i) for i,arg in enumerate(args)]),
+        num_args=len(args),
+        build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]), 
+        build_result=build_result,
+        build_return_value=build_return_value))
+    def register_callback(arg, index, func, obj_name):
+        return """set_action(args[0], args[{i}]);
+    {arg} = &{func_name}_callback;""".format(
+            i = index,
+            arg = gen.visit(arg),
+            func_name = func_name)
+    mp_to_lv[func_name] = register_callback
+
+#
 # Emit Mpy function definitions
 #
 
 generated_funcs = {}
 
-def build_arg(arg, index):
+def build_mp_func_arg(arg, index, func, obj_name):
     arg_type = get_arg_type(arg.type)
     if not arg_type in mp_to_lv:
         try_generate_type(arg_type)
         if not arg_type in mp_to_lv:
             raise MissingConversionException("Missing conversion to %s" % arg_type)
-    return '{var} = {convertor}(args[{i}]);'.format(
-        var = gen.visit(arg),
-        convertor = mp_to_lv[arg_type],
-        i = index) 
+    return mp_to_lv[arg_type](arg, index, func, obj_name) if callable(mp_to_lv[arg_type]) else \
+        '{var} = {convertor}(args[{i}]);'.format(
+            var = gen.visit(arg),
+            convertor = mp_to_lv[arg_type],
+            i = index) 
 
-def gen_func(func):
+def gen_mp_func(func, obj_name):
     # print("/*\n{ast}\n*/").format(ast=func)
     args = func.type.args.params
     # Handle the case of a single function argument which is "void"
@@ -350,7 +469,8 @@ def gen_func(func):
             if not return_type in lv_to_mp:
                 raise MissingConversionException("Missing convertion from %s" % return_type)
         build_result = "%s res = " % return_type
-        build_return_value = "%s(res)" % lv_to_mp[return_type]
+        build_return_value = lv_to_mp[return_type](func, obj_name) if callable(lv_to_mp[return_type]) else \
+            "%s(res)" % lv_to_mp[return_type]
     print("""
 /*
  * lvgl extension definition for:
@@ -369,7 +489,7 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{func});
  """.format(func=func.name, 
              print_func=gen.visit(func),
              count=param_count, 
-             build_args="\n    ".join([build_arg(arg,i) for i,arg in enumerate(args) if arg.name]), 
+             build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerate(args) if arg.name]), 
              send_args=", ".join(arg.name for arg in args if arg.name),
              build_result=build_result,
              build_return_value=build_return_value))
@@ -380,12 +500,15 @@ def gen_func_error(method, exp):
     global funcs
     print("""
 /*
- * function NOT generated:
+ * Function NOT generated:
  * {problem}
  * {method}
  */
     """.format(method=gen.visit(method), problem=exp))
-    funcs.remove(method)
+    try:
+        funcs.remove(method)
+    except:
+        pass
                  
 
 #
@@ -417,7 +540,7 @@ def gen_obj(obj_name):
     should_add_base_methods = obj_name != 'obj'
     for method in get_methods(obj_name):
         try:
-            gen_func(method)
+            gen_mp_func(method, obj_name)
         except MissingConversionException as exp:
             gen_func_error(method, exp)
        
@@ -475,6 +598,15 @@ for enum_name in list(enums.keys()):
     gen_obj(enum_name)
 
 
+# Generate callback functions
+
+for func_typedef in func_typedefs:
+    func = func_typedef.type.type
+    try:
+        gen_callback_func(func)
+    except MissingConversionException as exp:
+        gen_func_error(func, exp)
+
 # Generate all other objects. Generate parent objects first
 
 generated_obj_names = {}
@@ -513,7 +645,7 @@ print("""
 module_funcs = [func for func in funcs if not func in generated_funcs]
 for module_func in module_funcs[:]:
     try:
-        gen_func(module_func)
+        gen_mp_func(module_func, None)
     except MissingConversionException as exp:
         gen_func_error(module_func, exp)
         module_funcs.remove(module_func)
