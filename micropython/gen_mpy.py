@@ -49,6 +49,8 @@ lv_func_pattern = re.compile('^lv_(.+)', re.IGNORECASE)
 create_obj_pattern = re.compile('^lv_([^_]+)_create')
 lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
+lv_callback_return_type_pattern = re.compile('^((void)|(lv_res_t))')
+
 
 def obj_name_from_ext_name(ext_name):
     return re.match(lv_ext_pattern, ext_name).group(1)
@@ -376,7 +378,7 @@ def build_callback_func_arg(arg, index, func):
     if not arg_type in lv_to_mp:
         try_generate_type(arg_type)
         if not arg_type in lv_to_mp:
-            raise MissingConversionException("Missing conversion to %s" % arg_type)
+            raise MissingConversionException("Callback: Missing conversion to %s" % arg_type)
     return lv_to_mp[arg_type](arg, index, func, obj_name) if callable(lv_to_mp[arg_type]) else \
         'args[{i}] = {convertor}(arg{i});'.format(
             convertor = lv_to_mp[arg_type],
@@ -387,21 +389,12 @@ def gen_callback_func(func):
     global mp_to_lv
     args = func.args.params
     if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
-        raise MissingConversionException("First argument of callback function must be lv_obj_t")
+        raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
     func_name = get_arg_name(func.type)
     return_type = get_arg_type(func.type)
-    if return_type == "void":        
-        build_result = ""
-        build_return_value = "" 
-    else:
-        if not return_type in mp_to_lv:
-            try_generate_type(return_type)
-            if not return_type in mp_to_lv:
-                raise MissingConversionException("Missing convertion from %s" % return_type)
-        build_result = "mp_obj_t res = "
-        build_return_value = mp_to_lv[return_type](func, obj_name) if callable(mp_to_lv[return_type]) else \
-            " %s(res)" % mp_to_lv[return_type]
-
+    if not lv_callback_return_type_pattern.match(return_type):
+        raise MissingConversionException("Callback: Can only handle callbaks that return lv_res_t or void")
+    
     print("""
 /*
  * Callback function {func_name}
@@ -413,18 +406,18 @@ STATIC {return_type} {func_name}_callback({func_args})
     mp_obj_t args[{num_args}];
     {build_args}
     mp_obj_t action = mp_to_lv_action(args[0]);
-    {build_result}mp_call_function_n_kw(action, {num_args}, 0, args);
-    return{build_return_value};
+    mp_obj_t arg_list = mp_obj_new_list({num_args}, args);
+    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    return{return_value};
 }}
 """.format(
         func_prototype = gen.visit(func),
-        return_type = get_arg_type(func.type.type),
         func_name = func_name,
+        return_type = return_type,
         func_args = ', '.join(["%s arg%s" % (get_arg_type(arg.type), i) for i,arg in enumerate(args)]),
         num_args=len(args),
-        build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]), 
-        build_result=build_result,
-        build_return_value=build_return_value))
+        build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]),
+        return_value='' if return_type=='void' else ' schedule_result? LV_RES_OK: LV_RES_INV'))
     def register_callback(arg, index, func, obj_name):
         return """set_action(args[0], args[{i}]);
     {arg} = &{func_name}_callback;""".format(
