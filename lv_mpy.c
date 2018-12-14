@@ -1608,35 +1608,35 @@ STATIC const mp_obj_type_t mp_LV_KB_STYLE_type = {
 
 /*
  * Function NOT generated:
- * Missing conversion to const struct _lv_anim_t*
+ * Callback: Can only handle callbaks that return lv_res_t or void
  * int32_t lv_anim_path_t(const struct _lv_anim_t *)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to void*
+ * Callback: Missing conversion to void*
  * void lv_anim_fp_t(void *, int32_t)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to void*
+ * Callback: Missing conversion to void*
  * void lv_anim_cb_t(void *)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to const lv_area_t*
+ * Callback: Can only handle callbaks that return lv_res_t or void
  * bool lv_design_func_t(struct _lv_obj_t *obj, const lv_area_t *mask_p, lv_design_mode_t mode)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to void*
+ * Callback: Missing conversion to void*
  * lv_res_t lv_signal_func_t(struct _lv_obj_t *obj, lv_signal_t sign, void *param)
  */
     
@@ -1651,21 +1651,22 @@ STATIC lv_res_t lv_action_t_callback(struct _lv_obj_t* arg0)
     mp_obj_t args[1];
     args[0] = lv_to_mp(arg0);
     mp_obj_t action = mp_to_lv_action(args[0]);
-    mp_obj_t res = mp_call_function_n_kw(action, 1, 0, args);
-    return (uint8_t)mp_obj_int_get_checked(res);
+    mp_obj_t arg_list = mp_obj_new_list(1, args);
+    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    return schedule_result? LV_RES_OK: LV_RES_INV;
 }
 
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_style_t*
+ * Callback: Missing conversion to lv_style_t*
  * void lv_group_style_mod_func_t(lv_style_t *)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to struct _lv_group_t*
+ * Callback: Missing conversion to struct _lv_group_t*
  * void lv_group_focus_cb_t(struct _lv_group_t *)
  */
     
@@ -1681,35 +1682,36 @@ STATIC lv_res_t lv_btnm_action_t_callback(lv_obj_t* arg0, const char* arg1)
     args[0] = lv_to_mp(arg0);
     args[1] = convert_to_str(arg1);
     mp_obj_t action = mp_to_lv_action(args[0]);
-    mp_obj_t res = mp_call_function_n_kw(action, 2, 0, args);
-    return (uint8_t)mp_obj_int_get_checked(res);
+    mp_obj_t arg_list = mp_obj_new_list(2, args);
+    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    return schedule_result? LV_RES_OK: LV_RES_INV;
 }
 
 
 /*
  * Function NOT generated:
- * Missing conversion to const void*
+ * Callback: Missing conversion to const void*
  * lv_res_t lv_img_decoder_info_f_t(const void *src, lv_img_header_t *header)
  */
     
 
 /*
  * Function NOT generated:
- * Missing convertion from const uint8_t*
+ * Callback: Can only handle callbaks that return lv_res_t or void
  * const uint8_t *lv_img_decoder_open_f_t(const void *src, const lv_style_t *style)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to uint8_t*
+ * Callback: Missing conversion to uint8_t*
  * lv_res_t lv_img_decoder_read_line_f_t(lv_coord_t x, lv_coord_t y, lv_coord_t len, uint8_t *buf)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to void
+ * Callback: Missing conversion to void
  * void lv_img_decoder_close_f_t(void)
  */
     
@@ -1725,8 +1727,9 @@ STATIC lv_res_t lv_tabview_action_t_callback(lv_obj_t* arg0, uint16_t arg1)
     args[0] = lv_to_mp(arg0);
     args[1] = mp_obj_new_int_from_uint(arg1);
     mp_obj_t action = mp_to_lv_action(args[0]);
-    mp_obj_t res = mp_call_function_n_kw(action, 2, 0, args);
-    return (uint8_t)mp_obj_int_get_checked(res);
+    mp_obj_t arg_list = mp_obj_new_list(2, args);
+    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    return schedule_result? LV_RES_OK: LV_RES_INV;
 }
 
 
