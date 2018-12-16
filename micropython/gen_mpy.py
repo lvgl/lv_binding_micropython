@@ -11,10 +11,12 @@ def eprint(*args, **kwargs):
     
     
 from sys import argv
-from pycparser import c_parser, c_ast, c_generator
 from argparse import ArgumentParser
 import subprocess, re
 from os.path import commonprefix
+
+sys.path.append('./pycparser')
+from pycparser import c_parser, c_ast, c_generator
 
 #
 # Argument parsing
@@ -407,7 +409,7 @@ STATIC {return_type} {func_name}_callback({func_args})
     {build_args}
     mp_obj_t action = mp_to_lv_action(args[0]);
     mp_obj_t arg_list = mp_obj_new_list({num_args}, args);
-    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    bool schedule_result = mp_sched_schedule(action, arg_list);
     return{return_value};
 }}
 """.format(

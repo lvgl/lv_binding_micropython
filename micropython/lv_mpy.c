@@ -1652,7 +1652,7 @@ STATIC lv_res_t lv_action_t_callback(struct _lv_obj_t* arg0)
     args[0] = lv_to_mp(arg0);
     mp_obj_t action = mp_to_lv_action(args[0]);
     mp_obj_t arg_list = mp_obj_new_list(1, args);
-    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    bool schedule_result = mp_sched_schedule(action, arg_list);
     return schedule_result? LV_RES_OK: LV_RES_INV;
 }
 
@@ -1683,7 +1683,7 @@ STATIC lv_res_t lv_btnm_action_t_callback(lv_obj_t* arg0, const char* arg1)
     args[1] = convert_to_str(arg1);
     mp_obj_t action = mp_to_lv_action(args[0]);
     mp_obj_t arg_list = mp_obj_new_list(2, args);
-    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    bool schedule_result = mp_sched_schedule(action, arg_list);
     return schedule_result? LV_RES_OK: LV_RES_INV;
 }
 
@@ -1728,7 +1728,7 @@ STATIC lv_res_t lv_tabview_action_t_callback(lv_obj_t* arg0, uint16_t arg1)
     args[1] = mp_obj_new_int_from_uint(arg1);
     mp_obj_t action = mp_to_lv_action(args[0]);
     mp_obj_t arg_list = mp_obj_new_list(2, args);
-    bool schedule_result = mp_sched_schedule(action, arg_list, NULL);
+    bool schedule_result = mp_sched_schedule(action, arg_list);
     return schedule_result? LV_RES_OK: LV_RES_INV;
 }
 
