@@ -167,6 +167,10 @@ STATIC mp_obj_t make_new_lv_struct(
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
     lv_obj_t *copy = n_args > 0? mp_to_lv(args[0]): NULL;
+    if (!MP_OBJ_IS_OBJ(copy)) nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, "Copy argument is not an object!"));
+
     *self = (mp_lv_struct_t){
         .base = {type}, 
         .allocated = true,
@@ -223,9 +227,9 @@ STATIC const mp_obj_type_t mp_blob_type = {
 STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = self_in;
-    if (self->base.type != &mp_blob_type){
+    if ((!MP_OBJ_IS_OBJ(self_in)) || self->base.type != &mp_blob_type){
         mp_obj_new_exception_msg(
-            &mp_type_SyntaxError, "Incompatible Blob!");
+            &mp_type_SyntaxError, "Incompatible data!");
     }
     return self->data;
 }
