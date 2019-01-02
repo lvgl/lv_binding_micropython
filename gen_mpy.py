@@ -229,6 +229,7 @@ print ("""
  * Mpy includes
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include "py/obj.h"
 #include "py/runtime.h"
@@ -518,25 +519,19 @@ def try_generate_struct(struct_name, struct):
             lv_to_mp_convertor = lv_to_mp['void*']
         
         cast = '(void*)' if isinstance(decl.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
-        write_cases.append('case MP_QSTR_{field}: self->data.{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
-        read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}self->data.{field}); break; // converting from {type_name}'.format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+        write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+        read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
     print('''
 /*
  * Struct {struct_name}
  */
 
-typedef struct mp_{struct_name}
-{{
-    mp_obj_base_t base;
-    {struct_name} data;
-}} mp_{struct_name};
-
 STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type();
 
 STATIC inline {struct_name}* mp_write_ptr_{struct_name}(mp_obj_t self_in)
 {{
-    mp_{struct_name} *self = MP_OBJ_TO_PTR(self_in);
-    return ({struct_name}*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return ({struct_name}*)self->data;
 }}
 
 #define mp_write_{struct_name}(struct_obj) *mp_write_ptr_{struct_name}(struct_obj)
@@ -550,7 +545,8 @@ STATIC inline mp_obj_t mp_read_ptr_{struct_name}({struct_name} *field)
 
 STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {{
-    mp_{struct_name} *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    {struct_name} *data = ({struct_name}*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {{
         // load attribute

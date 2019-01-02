@@ -15,6 +15,7 @@
  * Mpy includes
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include "py/obj.h"
 #include "py/runtime.h"
@@ -1793,18 +1794,12 @@ typedef typeof( ((lv_style_t*)(0))->body ) lv_style_body_t;
  * Struct lv_color16_t
  */
 
-typedef struct mp_lv_color16_t
-{
-    mp_obj_base_t base;
-    lv_color16_t data;
-} mp_lv_color16_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_color16_t_type();
 
 STATIC inline lv_color16_t* mp_write_ptr_lv_color16_t(mp_obj_t self_in)
 {
-    mp_lv_color16_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_color16_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_color16_t*)self->data;
 }
 
 #define mp_write_lv_color16_t(struct_obj) *mp_write_ptr_lv_color16_t(struct_obj)
@@ -1818,16 +1813,17 @@ STATIC inline mp_obj_t mp_read_ptr_lv_color16_t(lv_color16_t *field)
 
 STATIC void mp_lv_color16_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_color16_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_color16_t *data = (lv_color16_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_blue: dest[0] = mp_obj_new_int_from_uint(self->data.blue); break; // converting from uint16_t;
-            case MP_QSTR_green: dest[0] = mp_obj_new_int_from_uint(self->data.green); break; // converting from uint16_t;
-            case MP_QSTR_red: dest[0] = mp_obj_new_int_from_uint(self->data.red); break; // converting from uint16_t;
-            case MP_QSTR_full: dest[0] = mp_obj_new_int_from_uint(self->data.full); break; // converting from uint16_t;
+            case MP_QSTR_blue: dest[0] = mp_obj_new_int_from_uint(data->blue); break; // converting from uint16_t;
+            case MP_QSTR_green: dest[0] = mp_obj_new_int_from_uint(data->green); break; // converting from uint16_t;
+            case MP_QSTR_red: dest[0] = mp_obj_new_int_from_uint(data->red); break; // converting from uint16_t;
+            case MP_QSTR_full: dest[0] = mp_obj_new_int_from_uint(data->full); break; // converting from uint16_t;
             default: field_not_found(MP_QSTR_lv_color16_t, attr);
         }
     } else {
@@ -1836,10 +1832,10 @@ STATIC void mp_lv_color16_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_blue: self->data.blue = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_green: self->data.green = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_red: self->data.red = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_full: self->data.full = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_blue: data->blue = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_green: data->green = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_red: data->red = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_full: data->full = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
                 default: field_not_found(MP_QSTR_lv_color16_t, attr);
             }
 
@@ -1882,18 +1878,12 @@ typedef typeof( ((lv_style_body_t*)(0))->border ) lv_style_body_border_t;
  * Struct lv_style_body_border_t
  */
 
-typedef struct mp_lv_style_body_border_t
-{
-    mp_obj_base_t base;
-    lv_style_body_border_t data;
-} mp_lv_style_body_border_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_body_border_t_type();
 
 STATIC inline lv_style_body_border_t* mp_write_ptr_lv_style_body_border_t(mp_obj_t self_in)
 {
-    mp_lv_style_body_border_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_body_border_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_body_border_t*)self->data;
 }
 
 #define mp_write_lv_style_body_border_t(struct_obj) *mp_write_ptr_lv_style_body_border_t(struct_obj)
@@ -1907,16 +1897,17 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_border_t(lv_style_body_border_t
 
 STATIC void mp_lv_style_body_border_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_body_border_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_body_border_t *data = (lv_style_body_border_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(self->data.color); break; // converting from lv_color_t;
-            case MP_QSTR_width: dest[0] = mp_obj_new_int(self->data.width); break; // converting from lv_coord_t;
-            case MP_QSTR_part: dest[0] = mp_obj_new_int_from_uint(self->data.part); break; // converting from lv_border_part_t;
-            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(self->data.opa); break; // converting from lv_opa_t;
+            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(data->color); break; // converting from lv_color_t;
+            case MP_QSTR_width: dest[0] = mp_obj_new_int(data->width); break; // converting from lv_coord_t;
+            case MP_QSTR_part: dest[0] = mp_obj_new_int_from_uint(data->part); break; // converting from lv_border_part_t;
+            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
             default: field_not_found(MP_QSTR_lv_style_body_border_t, attr);
         }
     } else {
@@ -1925,10 +1916,10 @@ STATIC void mp_lv_style_body_border_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_color: self->data.color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_width: self->data.width = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_part: self->data.part = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_border_part_t;
-                case MP_QSTR_opa: self->data.opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
+                case MP_QSTR_color: data->color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_width: data->width = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_part: data->part = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_border_part_t;
+                case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
                 default: field_not_found(MP_QSTR_lv_style_body_border_t, attr);
             }
 
@@ -1971,18 +1962,12 @@ typedef typeof( ((lv_style_body_t*)(0))->shadow ) lv_style_body_shadow_t;
  * Struct lv_style_body_shadow_t
  */
 
-typedef struct mp_lv_style_body_shadow_t
-{
-    mp_obj_base_t base;
-    lv_style_body_shadow_t data;
-} mp_lv_style_body_shadow_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_body_shadow_t_type();
 
 STATIC inline lv_style_body_shadow_t* mp_write_ptr_lv_style_body_shadow_t(mp_obj_t self_in)
 {
-    mp_lv_style_body_shadow_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_body_shadow_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_body_shadow_t*)self->data;
 }
 
 #define mp_write_lv_style_body_shadow_t(struct_obj) *mp_write_ptr_lv_style_body_shadow_t(struct_obj)
@@ -1996,15 +1981,16 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_shadow_t(lv_style_body_shadow_t
 
 STATIC void mp_lv_style_body_shadow_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_body_shadow_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_body_shadow_t *data = (lv_style_body_shadow_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(self->data.color); break; // converting from lv_color_t;
-            case MP_QSTR_width: dest[0] = mp_obj_new_int(self->data.width); break; // converting from lv_coord_t;
-            case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(self->data.type); break; // converting from lv_shadow_type_t;
+            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(data->color); break; // converting from lv_color_t;
+            case MP_QSTR_width: dest[0] = mp_obj_new_int(data->width); break; // converting from lv_coord_t;
+            case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_shadow_type_t;
             default: field_not_found(MP_QSTR_lv_style_body_shadow_t, attr);
         }
     } else {
@@ -2013,9 +1999,9 @@ STATIC void mp_lv_style_body_shadow_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_color: self->data.color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_width: self->data.width = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_type: self->data.type = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_shadow_type_t;
+                case MP_QSTR_color: data->color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_width: data->width = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_type: data->type = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_shadow_type_t;
                 default: field_not_found(MP_QSTR_lv_style_body_shadow_t, attr);
             }
 
@@ -2058,18 +2044,12 @@ typedef typeof( ((lv_style_body_t*)(0))->padding ) lv_style_body_padding_t;
  * Struct lv_style_body_padding_t
  */
 
-typedef struct mp_lv_style_body_padding_t
-{
-    mp_obj_base_t base;
-    lv_style_body_padding_t data;
-} mp_lv_style_body_padding_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_body_padding_t_type();
 
 STATIC inline lv_style_body_padding_t* mp_write_ptr_lv_style_body_padding_t(mp_obj_t self_in)
 {
-    mp_lv_style_body_padding_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_body_padding_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_body_padding_t*)self->data;
 }
 
 #define mp_write_lv_style_body_padding_t(struct_obj) *mp_write_ptr_lv_style_body_padding_t(struct_obj)
@@ -2083,15 +2063,16 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_padding_t(lv_style_body_padding
 
 STATIC void mp_lv_style_body_padding_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_body_padding_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_body_padding_t *data = (lv_style_body_padding_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_ver: dest[0] = mp_obj_new_int(self->data.ver); break; // converting from lv_coord_t;
-            case MP_QSTR_hor: dest[0] = mp_obj_new_int(self->data.hor); break; // converting from lv_coord_t;
-            case MP_QSTR_inner: dest[0] = mp_obj_new_int(self->data.inner); break; // converting from lv_coord_t;
+            case MP_QSTR_ver: dest[0] = mp_obj_new_int(data->ver); break; // converting from lv_coord_t;
+            case MP_QSTR_hor: dest[0] = mp_obj_new_int(data->hor); break; // converting from lv_coord_t;
+            case MP_QSTR_inner: dest[0] = mp_obj_new_int(data->inner); break; // converting from lv_coord_t;
             default: field_not_found(MP_QSTR_lv_style_body_padding_t, attr);
         }
     } else {
@@ -2100,9 +2081,9 @@ STATIC void mp_lv_style_body_padding_t_attr(mp_obj_t self_in, qstr attr, mp_obj_
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_ver: self->data.ver = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_hor: self->data.hor = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_inner: self->data.inner = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_ver: data->ver = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_hor: data->hor = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_inner: data->inner = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
                 default: field_not_found(MP_QSTR_lv_style_body_padding_t, attr);
             }
 
@@ -2144,18 +2125,12 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_body_padding_t_type()
  * Struct lv_style_body_t
  */
 
-typedef struct mp_lv_style_body_t
-{
-    mp_obj_base_t base;
-    lv_style_body_t data;
-} mp_lv_style_body_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_body_t_type();
 
 STATIC inline lv_style_body_t* mp_write_ptr_lv_style_body_t(mp_obj_t self_in)
 {
-    mp_lv_style_body_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_body_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_body_t*)self->data;
 }
 
 #define mp_write_lv_style_body_t(struct_obj) *mp_write_ptr_lv_style_body_t(struct_obj)
@@ -2169,20 +2144,21 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_t(lv_style_body_t *field)
 
 STATIC void mp_lv_style_body_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_body_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_body_t *data = (lv_style_body_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_main_color: dest[0] = mp_read_lv_color16_t(self->data.main_color); break; // converting from lv_color_t;
-            case MP_QSTR_grad_color: dest[0] = mp_read_lv_color16_t(self->data.grad_color); break; // converting from lv_color_t;
-            case MP_QSTR_radius: dest[0] = mp_obj_new_int(self->data.radius); break; // converting from lv_coord_t;
-            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(self->data.opa); break; // converting from lv_opa_t;
-            case MP_QSTR_border: dest[0] = mp_read_lv_style_body_border_t(self->data.border); break; // converting from lv_style_body_border_t;
-            case MP_QSTR_shadow: dest[0] = mp_read_lv_style_body_shadow_t(self->data.shadow); break; // converting from lv_style_body_shadow_t;
-            case MP_QSTR_padding: dest[0] = mp_read_lv_style_body_padding_t(self->data.padding); break; // converting from lv_style_body_padding_t;
-            case MP_QSTR_empty: dest[0] = mp_obj_new_int_from_uint(self->data.empty); break; // converting from uint8_t;
+            case MP_QSTR_main_color: dest[0] = mp_read_lv_color16_t(data->main_color); break; // converting from lv_color_t;
+            case MP_QSTR_grad_color: dest[0] = mp_read_lv_color16_t(data->grad_color); break; // converting from lv_color_t;
+            case MP_QSTR_radius: dest[0] = mp_obj_new_int(data->radius); break; // converting from lv_coord_t;
+            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
+            case MP_QSTR_border: dest[0] = mp_read_lv_style_body_border_t(data->border); break; // converting from lv_style_body_border_t;
+            case MP_QSTR_shadow: dest[0] = mp_read_lv_style_body_shadow_t(data->shadow); break; // converting from lv_style_body_shadow_t;
+            case MP_QSTR_padding: dest[0] = mp_read_lv_style_body_padding_t(data->padding); break; // converting from lv_style_body_padding_t;
+            case MP_QSTR_empty: dest[0] = mp_obj_new_int_from_uint(data->empty); break; // converting from uint8_t;
             default: field_not_found(MP_QSTR_lv_style_body_t, attr);
         }
     } else {
@@ -2191,14 +2167,14 @@ STATIC void mp_lv_style_body_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_main_color: self->data.main_color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_grad_color: self->data.grad_color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_radius: self->data.radius = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_opa: self->data.opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
-                case MP_QSTR_border: self->data.border = mp_write_lv_style_body_border_t(dest[1]); break; // converting to lv_style_body_border_t;
-                case MP_QSTR_shadow: self->data.shadow = mp_write_lv_style_body_shadow_t(dest[1]); break; // converting to lv_style_body_shadow_t;
-                case MP_QSTR_padding: self->data.padding = mp_write_lv_style_body_padding_t(dest[1]); break; // converting to lv_style_body_padding_t;
-                case MP_QSTR_empty: self->data.empty = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_main_color: data->main_color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_grad_color: data->grad_color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_radius: data->radius = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
+                case MP_QSTR_border: data->border = mp_write_lv_style_body_border_t(dest[1]); break; // converting to lv_style_body_border_t;
+                case MP_QSTR_shadow: data->shadow = mp_write_lv_style_body_shadow_t(dest[1]); break; // converting to lv_style_body_shadow_t;
+                case MP_QSTR_padding: data->padding = mp_write_lv_style_body_padding_t(dest[1]); break; // converting to lv_style_body_padding_t;
+                case MP_QSTR_empty: data->empty = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
                 default: field_not_found(MP_QSTR_lv_style_body_t, attr);
             }
 
@@ -2241,18 +2217,12 @@ typedef typeof( ((lv_style_t*)(0))->text ) lv_style_text_t;
  * Struct lv_style_text_t
  */
 
-typedef struct mp_lv_style_text_t
-{
-    mp_obj_base_t base;
-    lv_style_text_t data;
-} mp_lv_style_text_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_text_t_type();
 
 STATIC inline lv_style_text_t* mp_write_ptr_lv_style_text_t(mp_obj_t self_in)
 {
-    mp_lv_style_text_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_text_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_text_t*)self->data;
 }
 
 #define mp_write_lv_style_text_t(struct_obj) *mp_write_ptr_lv_style_text_t(struct_obj)
@@ -2266,17 +2236,18 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_text_t(lv_style_text_t *field)
 
 STATIC void mp_lv_style_text_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_text_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_text_t *data = (lv_style_text_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(self->data.color); break; // converting from lv_color_t;
-            case MP_QSTR_font: dest[0] = ptr_to_mp((void*)self->data.font); break; // converting from lv_font_t*;
-            case MP_QSTR_letter_space: dest[0] = mp_obj_new_int(self->data.letter_space); break; // converting from lv_coord_t;
-            case MP_QSTR_line_space: dest[0] = mp_obj_new_int(self->data.line_space); break; // converting from lv_coord_t;
-            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(self->data.opa); break; // converting from lv_opa_t;
+            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(data->color); break; // converting from lv_color_t;
+            case MP_QSTR_font: dest[0] = ptr_to_mp((void*)data->font); break; // converting from lv_font_t*;
+            case MP_QSTR_letter_space: dest[0] = mp_obj_new_int(data->letter_space); break; // converting from lv_coord_t;
+            case MP_QSTR_line_space: dest[0] = mp_obj_new_int(data->line_space); break; // converting from lv_coord_t;
+            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
             default: field_not_found(MP_QSTR_lv_style_text_t, attr);
         }
     } else {
@@ -2285,11 +2256,11 @@ STATIC void mp_lv_style_text_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_color: self->data.color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_font: self->data.font = (void*)mp_to_ptr(dest[1]); break; // converting to lv_font_t*;
-                case MP_QSTR_letter_space: self->data.letter_space = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_line_space: self->data.line_space = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_opa: self->data.opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
+                case MP_QSTR_color: data->color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_font: data->font = (void*)mp_to_ptr(dest[1]); break; // converting to lv_font_t*;
+                case MP_QSTR_letter_space: data->letter_space = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_line_space: data->line_space = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
                 default: field_not_found(MP_QSTR_lv_style_text_t, attr);
             }
 
@@ -2332,18 +2303,12 @@ typedef typeof( ((lv_style_t*)(0))->image ) lv_style_image_t;
  * Struct lv_style_image_t
  */
 
-typedef struct mp_lv_style_image_t
-{
-    mp_obj_base_t base;
-    lv_style_image_t data;
-} mp_lv_style_image_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_image_t_type();
 
 STATIC inline lv_style_image_t* mp_write_ptr_lv_style_image_t(mp_obj_t self_in)
 {
-    mp_lv_style_image_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_image_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_image_t*)self->data;
 }
 
 #define mp_write_lv_style_image_t(struct_obj) *mp_write_ptr_lv_style_image_t(struct_obj)
@@ -2357,15 +2322,16 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_image_t(lv_style_image_t *field)
 
 STATIC void mp_lv_style_image_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_image_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_image_t *data = (lv_style_image_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(self->data.color); break; // converting from lv_color_t;
-            case MP_QSTR_intense: dest[0] = mp_obj_new_int_from_uint(self->data.intense); break; // converting from lv_opa_t;
-            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(self->data.opa); break; // converting from lv_opa_t;
+            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(data->color); break; // converting from lv_color_t;
+            case MP_QSTR_intense: dest[0] = mp_obj_new_int_from_uint(data->intense); break; // converting from lv_opa_t;
+            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
             default: field_not_found(MP_QSTR_lv_style_image_t, attr);
         }
     } else {
@@ -2374,9 +2340,9 @@ STATIC void mp_lv_style_image_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_color: self->data.color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_intense: self->data.intense = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
-                case MP_QSTR_opa: self->data.opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
+                case MP_QSTR_color: data->color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_intense: data->intense = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
+                case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
                 default: field_not_found(MP_QSTR_lv_style_image_t, attr);
             }
 
@@ -2419,18 +2385,12 @@ typedef typeof( ((lv_style_t*)(0))->line ) lv_style_line_t;
  * Struct lv_style_line_t
  */
 
-typedef struct mp_lv_style_line_t
-{
-    mp_obj_base_t base;
-    lv_style_line_t data;
-} mp_lv_style_line_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_line_t_type();
 
 STATIC inline lv_style_line_t* mp_write_ptr_lv_style_line_t(mp_obj_t self_in)
 {
-    mp_lv_style_line_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_line_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_line_t*)self->data;
 }
 
 #define mp_write_lv_style_line_t(struct_obj) *mp_write_ptr_lv_style_line_t(struct_obj)
@@ -2444,16 +2404,17 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_line_t(lv_style_line_t *field)
 
 STATIC void mp_lv_style_line_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_line_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_line_t *data = (lv_style_line_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(self->data.color); break; // converting from lv_color_t;
-            case MP_QSTR_width: dest[0] = mp_obj_new_int(self->data.width); break; // converting from lv_coord_t;
-            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(self->data.opa); break; // converting from lv_opa_t;
-            case MP_QSTR_rounded: dest[0] = mp_obj_new_int_from_uint(self->data.rounded); break; // converting from uint8_t;
+            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(data->color); break; // converting from lv_color_t;
+            case MP_QSTR_width: dest[0] = mp_obj_new_int(data->width); break; // converting from lv_coord_t;
+            case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
+            case MP_QSTR_rounded: dest[0] = mp_obj_new_int_from_uint(data->rounded); break; // converting from uint8_t;
             default: field_not_found(MP_QSTR_lv_style_line_t, attr);
         }
     } else {
@@ -2462,10 +2423,10 @@ STATIC void mp_lv_style_line_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_color: self->data.color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
-                case MP_QSTR_width: self->data.width = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_opa: self->data.opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
-                case MP_QSTR_rounded: self->data.rounded = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_color: data->color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_width: data->width = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_opa_t;
+                case MP_QSTR_rounded: data->rounded = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
                 default: field_not_found(MP_QSTR_lv_style_line_t, attr);
             }
 
@@ -2507,18 +2468,12 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_line_t_type()
  * Struct lv_style_t
  */
 
-typedef struct mp_lv_style_t
-{
-    mp_obj_base_t base;
-    lv_style_t data;
-} mp_lv_style_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_t_type();
 
 STATIC inline lv_style_t* mp_write_ptr_lv_style_t(mp_obj_t self_in)
 {
-    mp_lv_style_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_t*)self->data;
 }
 
 #define mp_write_lv_style_t(struct_obj) *mp_write_ptr_lv_style_t(struct_obj)
@@ -2532,17 +2487,18 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_t(lv_style_t *field)
 
 STATIC void mp_lv_style_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_t *data = (lv_style_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_glass: dest[0] = mp_obj_new_int_from_uint(self->data.glass); break; // converting from uint8_t;
-            case MP_QSTR_body: dest[0] = mp_read_lv_style_body_t(self->data.body); break; // converting from lv_style_body_t;
-            case MP_QSTR_text: dest[0] = mp_read_lv_style_text_t(self->data.text); break; // converting from lv_style_text_t;
-            case MP_QSTR_image: dest[0] = mp_read_lv_style_image_t(self->data.image); break; // converting from lv_style_image_t;
-            case MP_QSTR_line: dest[0] = mp_read_lv_style_line_t(self->data.line); break; // converting from lv_style_line_t;
+            case MP_QSTR_glass: dest[0] = mp_obj_new_int_from_uint(data->glass); break; // converting from uint8_t;
+            case MP_QSTR_body: dest[0] = mp_read_lv_style_body_t(data->body); break; // converting from lv_style_body_t;
+            case MP_QSTR_text: dest[0] = mp_read_lv_style_text_t(data->text); break; // converting from lv_style_text_t;
+            case MP_QSTR_image: dest[0] = mp_read_lv_style_image_t(data->image); break; // converting from lv_style_image_t;
+            case MP_QSTR_line: dest[0] = mp_read_lv_style_line_t(data->line); break; // converting from lv_style_line_t;
             default: field_not_found(MP_QSTR_lv_style_t, attr);
         }
     } else {
@@ -2551,11 +2507,11 @@ STATIC void mp_lv_style_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_glass: self->data.glass = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_body: self->data.body = mp_write_lv_style_body_t(dest[1]); break; // converting to lv_style_body_t;
-                case MP_QSTR_text: self->data.text = mp_write_lv_style_text_t(dest[1]); break; // converting to lv_style_text_t;
-                case MP_QSTR_image: self->data.image = mp_write_lv_style_image_t(dest[1]); break; // converting to lv_style_image_t;
-                case MP_QSTR_line: self->data.line = mp_write_lv_style_line_t(dest[1]); break; // converting to lv_style_line_t;
+                case MP_QSTR_glass: data->glass = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_body: data->body = mp_write_lv_style_body_t(dest[1]); break; // converting to lv_style_body_t;
+                case MP_QSTR_text: data->text = mp_write_lv_style_text_t(dest[1]); break; // converting to lv_style_text_t;
+                case MP_QSTR_image: data->image = mp_write_lv_style_image_t(dest[1]); break; // converting to lv_style_image_t;
+                case MP_QSTR_line: data->line = mp_write_lv_style_line_t(dest[1]); break; // converting to lv_style_line_t;
                 default: field_not_found(MP_QSTR_lv_style_t, attr);
             }
 
@@ -2637,18 +2593,12 @@ STATIC lv_res_t lv_btnm_action_t_callback(lv_obj_t* arg0, const char* arg1)
  * Struct lv_img_header_t
  */
 
-typedef struct mp_lv_img_header_t
-{
-    mp_obj_base_t base;
-    lv_img_header_t data;
-} mp_lv_img_header_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_img_header_t_type();
 
 STATIC inline lv_img_header_t* mp_write_ptr_lv_img_header_t(mp_obj_t self_in)
 {
-    mp_lv_img_header_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_img_header_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_img_header_t*)self->data;
 }
 
 #define mp_write_lv_img_header_t(struct_obj) *mp_write_ptr_lv_img_header_t(struct_obj)
@@ -2662,17 +2612,18 @@ STATIC inline mp_obj_t mp_read_ptr_lv_img_header_t(lv_img_header_t *field)
 
 STATIC void mp_lv_img_header_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_img_header_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_img_header_t *data = (lv_img_header_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_cf: dest[0] = mp_obj_new_int_from_uint(self->data.cf); break; // converting from uint32_t;
-            case MP_QSTR_always_zero: dest[0] = mp_obj_new_int_from_uint(self->data.always_zero); break; // converting from uint32_t;
-            case MP_QSTR_reserved: dest[0] = mp_obj_new_int_from_uint(self->data.reserved); break; // converting from uint32_t;
-            case MP_QSTR_w: dest[0] = mp_obj_new_int_from_uint(self->data.w); break; // converting from uint32_t;
-            case MP_QSTR_h: dest[0] = mp_obj_new_int_from_uint(self->data.h); break; // converting from uint32_t;
+            case MP_QSTR_cf: dest[0] = mp_obj_new_int_from_uint(data->cf); break; // converting from uint32_t;
+            case MP_QSTR_always_zero: dest[0] = mp_obj_new_int_from_uint(data->always_zero); break; // converting from uint32_t;
+            case MP_QSTR_reserved: dest[0] = mp_obj_new_int_from_uint(data->reserved); break; // converting from uint32_t;
+            case MP_QSTR_w: dest[0] = mp_obj_new_int_from_uint(data->w); break; // converting from uint32_t;
+            case MP_QSTR_h: dest[0] = mp_obj_new_int_from_uint(data->h); break; // converting from uint32_t;
             default: field_not_found(MP_QSTR_lv_img_header_t, attr);
         }
     } else {
@@ -2681,11 +2632,11 @@ STATIC void mp_lv_img_header_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_cf: self->data.cf = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_always_zero: self->data.always_zero = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_reserved: self->data.reserved = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_w: self->data.w = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_h: self->data.h = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_cf: data->cf = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_always_zero: data->always_zero = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_reserved: data->reserved = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_w: data->w = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_h: data->h = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
                 default: field_not_found(MP_QSTR_lv_img_header_t, attr);
             }
 
@@ -3381,18 +3332,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_count_children_obj, 1, 1, mp_lv_ob
  * Struct lv_area_t
  */
 
-typedef struct mp_lv_area_t
-{
-    mp_obj_base_t base;
-    lv_area_t data;
-} mp_lv_area_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_area_t_type();
 
 STATIC inline lv_area_t* mp_write_ptr_lv_area_t(mp_obj_t self_in)
 {
-    mp_lv_area_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_area_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_area_t*)self->data;
 }
 
 #define mp_write_lv_area_t(struct_obj) *mp_write_ptr_lv_area_t(struct_obj)
@@ -3406,16 +3351,17 @@ STATIC inline mp_obj_t mp_read_ptr_lv_area_t(lv_area_t *field)
 
 STATIC void mp_lv_area_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_area_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_area_t *data = (lv_area_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_x1: dest[0] = mp_obj_new_int(self->data.x1); break; // converting from lv_coord_t;
-            case MP_QSTR_y1: dest[0] = mp_obj_new_int(self->data.y1); break; // converting from lv_coord_t;
-            case MP_QSTR_x2: dest[0] = mp_obj_new_int(self->data.x2); break; // converting from lv_coord_t;
-            case MP_QSTR_y2: dest[0] = mp_obj_new_int(self->data.y2); break; // converting from lv_coord_t;
+            case MP_QSTR_x1: dest[0] = mp_obj_new_int(data->x1); break; // converting from lv_coord_t;
+            case MP_QSTR_y1: dest[0] = mp_obj_new_int(data->y1); break; // converting from lv_coord_t;
+            case MP_QSTR_x2: dest[0] = mp_obj_new_int(data->x2); break; // converting from lv_coord_t;
+            case MP_QSTR_y2: dest[0] = mp_obj_new_int(data->y2); break; // converting from lv_coord_t;
             default: field_not_found(MP_QSTR_lv_area_t, attr);
         }
     } else {
@@ -3424,10 +3370,10 @@ STATIC void mp_lv_area_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_x1: self->data.x1 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_y1: self->data.y1 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_x2: self->data.x2 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_y2: self->data.y2 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_x1: data->x1 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_y1: data->y1 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_x2: data->x2 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_y2: data->y2 = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
                 default: field_not_found(MP_QSTR_lv_area_t, attr);
             }
 
@@ -5107,18 +5053,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_anim_speed_obj, 1, 1, mp_lv_
  * Struct lv_point_t
  */
 
-typedef struct mp_lv_point_t
-{
-    mp_obj_base_t base;
-    lv_point_t data;
-} mp_lv_point_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_point_t_type();
 
 STATIC inline lv_point_t* mp_write_ptr_lv_point_t(mp_obj_t self_in)
 {
-    mp_lv_point_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_point_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_point_t*)self->data;
 }
 
 #define mp_write_lv_point_t(struct_obj) *mp_write_ptr_lv_point_t(struct_obj)
@@ -5132,14 +5072,15 @@ STATIC inline mp_obj_t mp_read_ptr_lv_point_t(lv_point_t *field)
 
 STATIC void mp_lv_point_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_point_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_point_t *data = (lv_point_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_x: dest[0] = mp_obj_new_int(self->data.x); break; // converting from lv_coord_t;
-            case MP_QSTR_y: dest[0] = mp_obj_new_int(self->data.y); break; // converting from lv_coord_t;
+            case MP_QSTR_x: dest[0] = mp_obj_new_int(data->x); break; // converting from lv_coord_t;
+            case MP_QSTR_y: dest[0] = mp_obj_new_int(data->y); break; // converting from lv_coord_t;
             default: field_not_found(MP_QSTR_lv_point_t, attr);
         }
     } else {
@@ -5148,8 +5089,8 @@ STATIC void mp_lv_point_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_x: self->data.x = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_y: self->data.y = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_x: data->x = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_y: data->y = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_coord_t;
                 default: field_not_found(MP_QSTR_lv_point_t, attr);
             }
 
@@ -6413,18 +6354,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_style_obj, 1, 1, mp_lv_chart
  * Struct lv_chart_series_t
  */
 
-typedef struct mp_lv_chart_series_t
-{
-    mp_obj_base_t base;
-    lv_chart_series_t data;
-} mp_lv_chart_series_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_chart_series_t_type();
 
 STATIC inline lv_chart_series_t* mp_write_ptr_lv_chart_series_t(mp_obj_t self_in)
 {
-    mp_lv_chart_series_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_chart_series_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_chart_series_t*)self->data;
 }
 
 #define mp_write_lv_chart_series_t(struct_obj) *mp_write_ptr_lv_chart_series_t(struct_obj)
@@ -6438,14 +6373,15 @@ STATIC inline mp_obj_t mp_read_ptr_lv_chart_series_t(lv_chart_series_t *field)
 
 STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_chart_series_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_chart_series_t *data = (lv_chart_series_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_points: dest[0] = ptr_to_mp((void*)self->data.points); break; // converting from lv_coord_t*;
-            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(self->data.color); break; // converting from lv_color_t;
+            case MP_QSTR_points: dest[0] = ptr_to_mp((void*)data->points); break; // converting from lv_coord_t*;
+            case MP_QSTR_color: dest[0] = mp_read_lv_color16_t(data->color); break; // converting from lv_color_t;
             default: field_not_found(MP_QSTR_lv_chart_series_t, attr);
         }
     } else {
@@ -6454,8 +6390,8 @@ STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_points: self->data.points = (void*)mp_to_ptr(dest[1]); break; // converting to lv_coord_t*;
-                case MP_QSTR_color: self->data.color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
+                case MP_QSTR_points: data->points = (void*)mp_to_ptr(dest[1]); break; // converting to lv_coord_t*;
+                case MP_QSTR_color: data->color = mp_write_lv_color16_t(dest[1]); break; // converting to lv_color_t;
                 default: field_not_found(MP_QSTR_lv_chart_series_t, attr);
             }
 
@@ -13459,18 +13395,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 0, 0, mp_lv_anim_init);
  * Struct lv_anim_t
  */
 
-typedef struct mp_lv_anim_t
-{
-    mp_obj_base_t base;
-    lv_anim_t data;
-} mp_lv_anim_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_anim_t_type();
 
 STATIC inline lv_anim_t* mp_write_ptr_lv_anim_t(mp_obj_t self_in)
 {
-    mp_lv_anim_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_anim_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_anim_t*)self->data;
 }
 
 #define mp_write_lv_anim_t(struct_obj) *mp_write_ptr_lv_anim_t(struct_obj)
@@ -13484,26 +13414,27 @@ STATIC inline mp_obj_t mp_read_ptr_lv_anim_t(lv_anim_t *field)
 
 STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_anim_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_anim_t *data = (lv_anim_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_var: dest[0] = ptr_to_mp((void*)self->data.var); break; // converting from void*;
-            case MP_QSTR_fp: dest[0] = ptr_to_mp(self->data.fp); break; // converting from lv_anim_fp_t;
-            case MP_QSTR_end_cb: dest[0] = ptr_to_mp(self->data.end_cb); break; // converting from lv_anim_cb_t;
-            case MP_QSTR_path: dest[0] = ptr_to_mp(self->data.path); break; // converting from lv_anim_path_t;
-            case MP_QSTR_start: dest[0] = mp_obj_new_int(self->data.start); break; // converting from int32_t;
-            case MP_QSTR_end: dest[0] = mp_obj_new_int(self->data.end); break; // converting from int32_t;
-            case MP_QSTR_time: dest[0] = mp_obj_new_int_from_uint(self->data.time); break; // converting from uint16_t;
-            case MP_QSTR_act_time: dest[0] = mp_obj_new_int(self->data.act_time); break; // converting from int16_t;
-            case MP_QSTR_playback_pause: dest[0] = mp_obj_new_int_from_uint(self->data.playback_pause); break; // converting from uint16_t;
-            case MP_QSTR_repeat_pause: dest[0] = mp_obj_new_int_from_uint(self->data.repeat_pause); break; // converting from uint16_t;
-            case MP_QSTR_playback: dest[0] = mp_obj_new_int_from_uint(self->data.playback); break; // converting from uint8_t;
-            case MP_QSTR_repeat: dest[0] = mp_obj_new_int_from_uint(self->data.repeat); break; // converting from uint8_t;
-            case MP_QSTR_playback_now: dest[0] = mp_obj_new_int_from_uint(self->data.playback_now); break; // converting from uint8_t;
-            case MP_QSTR_has_run: dest[0] = mp_obj_new_int_from_uint(self->data.has_run); break; // converting from uint32_t;
+            case MP_QSTR_var: dest[0] = ptr_to_mp((void*)data->var); break; // converting from void*;
+            case MP_QSTR_fp: dest[0] = ptr_to_mp(data->fp); break; // converting from lv_anim_fp_t;
+            case MP_QSTR_end_cb: dest[0] = ptr_to_mp(data->end_cb); break; // converting from lv_anim_cb_t;
+            case MP_QSTR_path: dest[0] = ptr_to_mp(data->path); break; // converting from lv_anim_path_t;
+            case MP_QSTR_start: dest[0] = mp_obj_new_int(data->start); break; // converting from int32_t;
+            case MP_QSTR_end: dest[0] = mp_obj_new_int(data->end); break; // converting from int32_t;
+            case MP_QSTR_time: dest[0] = mp_obj_new_int_from_uint(data->time); break; // converting from uint16_t;
+            case MP_QSTR_act_time: dest[0] = mp_obj_new_int(data->act_time); break; // converting from int16_t;
+            case MP_QSTR_playback_pause: dest[0] = mp_obj_new_int_from_uint(data->playback_pause); break; // converting from uint16_t;
+            case MP_QSTR_repeat_pause: dest[0] = mp_obj_new_int_from_uint(data->repeat_pause); break; // converting from uint16_t;
+            case MP_QSTR_playback: dest[0] = mp_obj_new_int_from_uint(data->playback); break; // converting from uint8_t;
+            case MP_QSTR_repeat: dest[0] = mp_obj_new_int_from_uint(data->repeat); break; // converting from uint8_t;
+            case MP_QSTR_playback_now: dest[0] = mp_obj_new_int_from_uint(data->playback_now); break; // converting from uint8_t;
+            case MP_QSTR_has_run: dest[0] = mp_obj_new_int_from_uint(data->has_run); break; // converting from uint32_t;
             default: field_not_found(MP_QSTR_lv_anim_t, attr);
         }
     } else {
@@ -13512,20 +13443,20 @@ STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_var: self->data.var = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
-                case MP_QSTR_fp: self->data.fp = mp_to_ptr(dest[1]); break; // converting to lv_anim_fp_t;
-                case MP_QSTR_end_cb: self->data.end_cb = mp_to_ptr(dest[1]); break; // converting to lv_anim_cb_t;
-                case MP_QSTR_path: self->data.path = mp_to_ptr(dest[1]); break; // converting to lv_anim_path_t;
-                case MP_QSTR_start: self->data.start = (int32_t)mp_obj_int_get_checked(dest[1]); break; // converting to int32_t;
-                case MP_QSTR_end: self->data.end = (int32_t)mp_obj_int_get_checked(dest[1]); break; // converting to int32_t;
-                case MP_QSTR_time: self->data.time = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_act_time: self->data.act_time = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to int16_t;
-                case MP_QSTR_playback_pause: self->data.playback_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_repeat_pause: self->data.repeat_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_playback: self->data.playback = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_repeat: self->data.repeat = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_playback_now: self->data.playback_now = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_has_run: self->data.has_run = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_var: data->var = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
+                case MP_QSTR_fp: data->fp = mp_to_ptr(dest[1]); break; // converting to lv_anim_fp_t;
+                case MP_QSTR_end_cb: data->end_cb = mp_to_ptr(dest[1]); break; // converting to lv_anim_cb_t;
+                case MP_QSTR_path: data->path = mp_to_ptr(dest[1]); break; // converting to lv_anim_path_t;
+                case MP_QSTR_start: data->start = (int32_t)mp_obj_int_get_checked(dest[1]); break; // converting to int32_t;
+                case MP_QSTR_end: data->end = (int32_t)mp_obj_int_get_checked(dest[1]); break; // converting to int32_t;
+                case MP_QSTR_time: data->time = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_act_time: data->act_time = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to int16_t;
+                case MP_QSTR_playback_pause: data->playback_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_repeat_pause: data->repeat_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_playback: data->playback = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_repeat: data->repeat = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_playback_now: data->playback_now = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_has_run: data->has_run = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
                 default: field_not_found(MP_QSTR_lv_anim_t, attr);
             }
 
@@ -13719,18 +13650,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_mix_obj, 4, 4, mp_lv_style_mix);
  * Struct lv_style_anim_t
  */
 
-typedef struct mp_lv_style_anim_t
-{
-    mp_obj_base_t base;
-    lv_style_anim_t data;
-} mp_lv_style_anim_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_style_anim_t_type();
 
 STATIC inline lv_style_anim_t* mp_write_ptr_lv_style_anim_t(mp_obj_t self_in)
 {
-    mp_lv_style_anim_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_style_anim_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_style_anim_t*)self->data;
 }
 
 #define mp_write_lv_style_anim_t(struct_obj) *mp_write_ptr_lv_style_anim_t(struct_obj)
@@ -13744,22 +13669,23 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_anim_t(lv_style_anim_t *field)
 
 STATIC void mp_lv_style_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_style_anim_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_style_anim_t *data = (lv_style_anim_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_style_start: dest[0] = ptr_to_mp((void*)self->data.style_start); break; // converting from lv_style_t*;
-            case MP_QSTR_style_end: dest[0] = ptr_to_mp((void*)self->data.style_end); break; // converting from lv_style_t*;
-            case MP_QSTR_style_anim: dest[0] = ptr_to_mp((void*)self->data.style_anim); break; // converting from lv_style_t*;
-            case MP_QSTR_end_cb: dest[0] = ptr_to_mp(self->data.end_cb); break; // converting from lv_anim_cb_t;
-            case MP_QSTR_time: dest[0] = mp_obj_new_int(self->data.time); break; // converting from int16_t;
-            case MP_QSTR_act_time: dest[0] = mp_obj_new_int(self->data.act_time); break; // converting from int16_t;
-            case MP_QSTR_playback_pause: dest[0] = mp_obj_new_int_from_uint(self->data.playback_pause); break; // converting from uint16_t;
-            case MP_QSTR_repeat_pause: dest[0] = mp_obj_new_int_from_uint(self->data.repeat_pause); break; // converting from uint16_t;
-            case MP_QSTR_playback: dest[0] = mp_obj_new_int_from_uint(self->data.playback); break; // converting from uint8_t;
-            case MP_QSTR_repeat: dest[0] = mp_obj_new_int_from_uint(self->data.repeat); break; // converting from uint8_t;
+            case MP_QSTR_style_start: dest[0] = ptr_to_mp((void*)data->style_start); break; // converting from lv_style_t*;
+            case MP_QSTR_style_end: dest[0] = ptr_to_mp((void*)data->style_end); break; // converting from lv_style_t*;
+            case MP_QSTR_style_anim: dest[0] = ptr_to_mp((void*)data->style_anim); break; // converting from lv_style_t*;
+            case MP_QSTR_end_cb: dest[0] = ptr_to_mp(data->end_cb); break; // converting from lv_anim_cb_t;
+            case MP_QSTR_time: dest[0] = mp_obj_new_int(data->time); break; // converting from int16_t;
+            case MP_QSTR_act_time: dest[0] = mp_obj_new_int(data->act_time); break; // converting from int16_t;
+            case MP_QSTR_playback_pause: dest[0] = mp_obj_new_int_from_uint(data->playback_pause); break; // converting from uint16_t;
+            case MP_QSTR_repeat_pause: dest[0] = mp_obj_new_int_from_uint(data->repeat_pause); break; // converting from uint16_t;
+            case MP_QSTR_playback: dest[0] = mp_obj_new_int_from_uint(data->playback); break; // converting from uint8_t;
+            case MP_QSTR_repeat: dest[0] = mp_obj_new_int_from_uint(data->repeat); break; // converting from uint8_t;
             default: field_not_found(MP_QSTR_lv_style_anim_t, attr);
         }
     } else {
@@ -13768,16 +13694,16 @@ STATIC void mp_lv_style_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_style_start: self->data.style_start = (void*)mp_to_ptr(dest[1]); break; // converting to lv_style_t*;
-                case MP_QSTR_style_end: self->data.style_end = (void*)mp_to_ptr(dest[1]); break; // converting to lv_style_t*;
-                case MP_QSTR_style_anim: self->data.style_anim = (void*)mp_to_ptr(dest[1]); break; // converting to lv_style_t*;
-                case MP_QSTR_end_cb: self->data.end_cb = mp_to_ptr(dest[1]); break; // converting to lv_anim_cb_t;
-                case MP_QSTR_time: self->data.time = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to int16_t;
-                case MP_QSTR_act_time: self->data.act_time = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to int16_t;
-                case MP_QSTR_playback_pause: self->data.playback_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_repeat_pause: self->data.repeat_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_playback: self->data.playback = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_repeat: self->data.repeat = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_style_start: data->style_start = (void*)mp_to_ptr(dest[1]); break; // converting to lv_style_t*;
+                case MP_QSTR_style_end: data->style_end = (void*)mp_to_ptr(dest[1]); break; // converting to lv_style_t*;
+                case MP_QSTR_style_anim: data->style_anim = (void*)mp_to_ptr(dest[1]); break; // converting to lv_style_t*;
+                case MP_QSTR_end_cb: data->end_cb = mp_to_ptr(dest[1]); break; // converting to lv_anim_cb_t;
+                case MP_QSTR_time: data->time = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to int16_t;
+                case MP_QSTR_act_time: data->act_time = (int16_t)mp_obj_int_get_checked(dest[1]); break; // converting to int16_t;
+                case MP_QSTR_playback_pause: data->playback_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_repeat_pause: data->repeat_pause = (uint16_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_playback: data->playback = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_repeat: data->repeat = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
                 default: field_not_found(MP_QSTR_lv_style_anim_t, attr);
             }
 
@@ -13916,18 +13842,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_defrag_obj, 0, 0, mp_lv_mem_defrag
  * Struct lv_mem_monitor_t
  */
 
-typedef struct mp_lv_mem_monitor_t
-{
-    mp_obj_base_t base;
-    lv_mem_monitor_t data;
-} mp_lv_mem_monitor_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_mem_monitor_t_type();
 
 STATIC inline lv_mem_monitor_t* mp_write_ptr_lv_mem_monitor_t(mp_obj_t self_in)
 {
-    mp_lv_mem_monitor_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_mem_monitor_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_mem_monitor_t*)self->data;
 }
 
 #define mp_write_lv_mem_monitor_t(struct_obj) *mp_write_ptr_lv_mem_monitor_t(struct_obj)
@@ -13941,19 +13861,20 @@ STATIC inline mp_obj_t mp_read_ptr_lv_mem_monitor_t(lv_mem_monitor_t *field)
 
 STATIC void mp_lv_mem_monitor_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_mem_monitor_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_mem_monitor_t *data = (lv_mem_monitor_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_total_size: dest[0] = mp_obj_new_int_from_uint(self->data.total_size); break; // converting from uint32_t;
-            case MP_QSTR_free_cnt: dest[0] = mp_obj_new_int_from_uint(self->data.free_cnt); break; // converting from uint32_t;
-            case MP_QSTR_free_size: dest[0] = mp_obj_new_int_from_uint(self->data.free_size); break; // converting from uint32_t;
-            case MP_QSTR_free_biggest_size: dest[0] = mp_obj_new_int_from_uint(self->data.free_biggest_size); break; // converting from uint32_t;
-            case MP_QSTR_used_cnt: dest[0] = mp_obj_new_int_from_uint(self->data.used_cnt); break; // converting from uint32_t;
-            case MP_QSTR_used_pct: dest[0] = mp_obj_new_int_from_uint(self->data.used_pct); break; // converting from uint8_t;
-            case MP_QSTR_frag_pct: dest[0] = mp_obj_new_int_from_uint(self->data.frag_pct); break; // converting from uint8_t;
+            case MP_QSTR_total_size: dest[0] = mp_obj_new_int_from_uint(data->total_size); break; // converting from uint32_t;
+            case MP_QSTR_free_cnt: dest[0] = mp_obj_new_int_from_uint(data->free_cnt); break; // converting from uint32_t;
+            case MP_QSTR_free_size: dest[0] = mp_obj_new_int_from_uint(data->free_size); break; // converting from uint32_t;
+            case MP_QSTR_free_biggest_size: dest[0] = mp_obj_new_int_from_uint(data->free_biggest_size); break; // converting from uint32_t;
+            case MP_QSTR_used_cnt: dest[0] = mp_obj_new_int_from_uint(data->used_cnt); break; // converting from uint32_t;
+            case MP_QSTR_used_pct: dest[0] = mp_obj_new_int_from_uint(data->used_pct); break; // converting from uint8_t;
+            case MP_QSTR_frag_pct: dest[0] = mp_obj_new_int_from_uint(data->frag_pct); break; // converting from uint8_t;
             default: field_not_found(MP_QSTR_lv_mem_monitor_t, attr);
         }
     } else {
@@ -13962,13 +13883,13 @@ STATIC void mp_lv_mem_monitor_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_total_size: self->data.total_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_free_cnt: self->data.free_cnt = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_free_size: self->data.free_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_free_biggest_size: self->data.free_biggest_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_used_cnt: self->data.used_cnt = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_used_pct: self->data.used_pct = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_frag_pct: self->data.frag_pct = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_total_size: data->total_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_free_cnt: data->free_cnt = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_free_size: data->free_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_free_biggest_size: data->free_biggest_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_used_cnt: data->used_cnt = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_used_pct: data->used_pct = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_frag_pct: data->frag_pct = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
                 default: field_not_found(MP_QSTR_lv_mem_monitor_t, attr);
             }
 
@@ -14042,18 +13963,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_get_size_obj, 1, 1, mp_lv_mem_get_
  * Struct lv_ll_t
  */
 
-typedef struct mp_lv_ll_t
-{
-    mp_obj_base_t base;
-    lv_ll_t data;
-} mp_lv_ll_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_ll_t_type();
 
 STATIC inline lv_ll_t* mp_write_ptr_lv_ll_t(mp_obj_t self_in)
 {
-    mp_lv_ll_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_ll_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_ll_t*)self->data;
 }
 
 #define mp_write_lv_ll_t(struct_obj) *mp_write_ptr_lv_ll_t(struct_obj)
@@ -14067,15 +13982,16 @@ STATIC inline mp_obj_t mp_read_ptr_lv_ll_t(lv_ll_t *field)
 
 STATIC void mp_lv_ll_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_ll_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_ll_t *data = (lv_ll_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_n_size: dest[0] = mp_obj_new_int_from_uint(self->data.n_size); break; // converting from uint32_t;
-            case MP_QSTR_head: dest[0] = ptr_to_mp((void*)self->data.head); break; // converting from lv_ll_node_t*;
-            case MP_QSTR_tail: dest[0] = ptr_to_mp((void*)self->data.tail); break; // converting from lv_ll_node_t*;
+            case MP_QSTR_n_size: dest[0] = mp_obj_new_int_from_uint(data->n_size); break; // converting from uint32_t;
+            case MP_QSTR_head: dest[0] = ptr_to_mp((void*)data->head); break; // converting from lv_ll_node_t*;
+            case MP_QSTR_tail: dest[0] = ptr_to_mp((void*)data->tail); break; // converting from lv_ll_node_t*;
             default: field_not_found(MP_QSTR_lv_ll_t, attr);
         }
     } else {
@@ -14084,9 +14000,9 @@ STATIC void mp_lv_ll_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_n_size: self->data.n_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_head: self->data.head = (void*)mp_to_ptr(dest[1]); break; // converting to lv_ll_node_t*;
-                case MP_QSTR_tail: self->data.tail = (void*)mp_to_ptr(dest[1]); break; // converting to lv_ll_node_t*;
+                case MP_QSTR_n_size: data->n_size = (uint32_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_head: data->head = (void*)mp_to_ptr(dest[1]); break; // converting to lv_ll_node_t*;
+                case MP_QSTR_tail: data->tail = (void*)mp_to_ptr(dest[1]); break; // converting to lv_ll_node_t*;
                 default: field_not_found(MP_QSTR_lv_ll_t, attr);
             }
 
@@ -14409,18 +14325,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_sys_obj, 0, 0, mp_lv_layer_sys);
  * Struct lv_disp_drv_t
  */
 
-typedef struct mp_lv_disp_drv_t
-{
-    mp_obj_base_t base;
-    lv_disp_drv_t data;
-} mp_lv_disp_drv_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_drv_t_type();
 
 STATIC inline lv_disp_drv_t* mp_write_ptr_lv_disp_drv_t(mp_obj_t self_in)
 {
-    mp_lv_disp_drv_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_disp_drv_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_disp_drv_t*)self->data;
 }
 
 #define mp_write_lv_disp_drv_t(struct_obj) *mp_write_ptr_lv_disp_drv_t(struct_obj)
@@ -14434,18 +14344,19 @@ STATIC inline mp_obj_t mp_read_ptr_lv_disp_drv_t(lv_disp_drv_t *field)
 
 STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_disp_drv_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_disp_drv_t *data = (lv_disp_drv_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_disp_flush: dest[0] = ptr_to_mp((void*)self->data.disp_flush); break; // converting from void disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
-            case MP_QSTR_disp_fill: dest[0] = ptr_to_mp((void*)self->data.disp_fill); break; // converting from void disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)*;
-            case MP_QSTR_disp_map: dest[0] = ptr_to_mp((void*)self->data.disp_map); break; // converting from void disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
-            case MP_QSTR_mem_blend: dest[0] = ptr_to_mp((void*)self->data.mem_blend); break; // converting from void mem_blend(lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa)*;
-            case MP_QSTR_mem_fill: dest[0] = ptr_to_mp((void*)self->data.mem_fill); break; // converting from void mem_fill(lv_color_t *dest, uint32_t length, lv_color_t color)*;
-            case MP_QSTR_vdb_wr: dest[0] = ptr_to_mp((void*)self->data.vdb_wr); break; // converting from void vdb_wr(uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)*;
+            case MP_QSTR_disp_flush: dest[0] = ptr_to_mp((void*)data->disp_flush); break; // converting from void disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
+            case MP_QSTR_disp_fill: dest[0] = ptr_to_mp((void*)data->disp_fill); break; // converting from void disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)*;
+            case MP_QSTR_disp_map: dest[0] = ptr_to_mp((void*)data->disp_map); break; // converting from void disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
+            case MP_QSTR_mem_blend: dest[0] = ptr_to_mp((void*)data->mem_blend); break; // converting from void mem_blend(lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa)*;
+            case MP_QSTR_mem_fill: dest[0] = ptr_to_mp((void*)data->mem_fill); break; // converting from void mem_fill(lv_color_t *dest, uint32_t length, lv_color_t color)*;
+            case MP_QSTR_vdb_wr: dest[0] = ptr_to_mp((void*)data->vdb_wr); break; // converting from void vdb_wr(uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)*;
             default: field_not_found(MP_QSTR_lv_disp_drv_t, attr);
         }
     } else {
@@ -14454,12 +14365,12 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_disp_flush: self->data.disp_flush = (void*)mp_to_ptr(dest[1]); break; // converting to void disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
-                case MP_QSTR_disp_fill: self->data.disp_fill = (void*)mp_to_ptr(dest[1]); break; // converting to void disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)*;
-                case MP_QSTR_disp_map: self->data.disp_map = (void*)mp_to_ptr(dest[1]); break; // converting to void disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
-                case MP_QSTR_mem_blend: self->data.mem_blend = (void*)mp_to_ptr(dest[1]); break; // converting to void mem_blend(lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa)*;
-                case MP_QSTR_mem_fill: self->data.mem_fill = (void*)mp_to_ptr(dest[1]); break; // converting to void mem_fill(lv_color_t *dest, uint32_t length, lv_color_t color)*;
-                case MP_QSTR_vdb_wr: self->data.vdb_wr = (void*)mp_to_ptr(dest[1]); break; // converting to void vdb_wr(uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)*;
+                case MP_QSTR_disp_flush: data->disp_flush = (void*)mp_to_ptr(dest[1]); break; // converting to void disp_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
+                case MP_QSTR_disp_fill: data->disp_fill = (void*)mp_to_ptr(dest[1]); break; // converting to void disp_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)*;
+                case MP_QSTR_disp_map: data->disp_map = (void*)mp_to_ptr(dest[1]); break; // converting to void disp_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t *color_p)*;
+                case MP_QSTR_mem_blend: data->mem_blend = (void*)mp_to_ptr(dest[1]); break; // converting to void mem_blend(lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa)*;
+                case MP_QSTR_mem_fill: data->mem_fill = (void*)mp_to_ptr(dest[1]); break; // converting to void mem_fill(lv_color_t *dest, uint32_t length, lv_color_t color)*;
+                case MP_QSTR_vdb_wr: data->vdb_wr = (void*)mp_to_ptr(dest[1]); break; // converting to void vdb_wr(uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)*;
                 default: field_not_found(MP_QSTR_lv_disp_drv_t, attr);
             }
 
@@ -14517,18 +14428,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_drv_init_obj, 1, 1, mp_lv_disp_dr
  * Struct lv_disp_t
  */
 
-typedef struct mp_lv_disp_t
-{
-    mp_obj_base_t base;
-    lv_disp_t data;
-} mp_lv_disp_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_t_type();
 
 STATIC inline lv_disp_t* mp_write_ptr_lv_disp_t(mp_obj_t self_in)
 {
-    mp_lv_disp_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_disp_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_disp_t*)self->data;
 }
 
 #define mp_write_lv_disp_t(struct_obj) *mp_write_ptr_lv_disp_t(struct_obj)
@@ -14542,14 +14447,15 @@ STATIC inline mp_obj_t mp_read_ptr_lv_disp_t(lv_disp_t *field)
 
 STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_disp_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_disp_t *data = (lv_disp_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_driver: dest[0] = mp_read_lv_disp_drv_t(self->data.driver); break; // converting from lv_disp_drv_t;
-            case MP_QSTR_next: dest[0] = ptr_to_mp((void*)self->data.next); break; // converting from struct _disp_t*;
+            case MP_QSTR_driver: dest[0] = mp_read_lv_disp_drv_t(data->driver); break; // converting from lv_disp_drv_t;
+            case MP_QSTR_next: dest[0] = ptr_to_mp((void*)data->next); break; // converting from struct _disp_t*;
             default: field_not_found(MP_QSTR_lv_disp_t, attr);
         }
     } else {
@@ -14558,8 +14464,8 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_driver: self->data.driver = mp_write_lv_disp_drv_t(dest[1]); break; // converting to lv_disp_drv_t;
-                case MP_QSTR_next: self->data.next = (void*)mp_to_ptr(dest[1]); break; // converting to struct _disp_t*;
+                case MP_QSTR_driver: data->driver = mp_write_lv_disp_drv_t(dest[1]); break; // converting to lv_disp_drv_t;
+                case MP_QSTR_next: data->next = (void*)mp_to_ptr(dest[1]); break; // converting to struct _disp_t*;
                 default: field_not_found(MP_QSTR_lv_disp_t, attr);
             }
 
@@ -14793,18 +14699,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_elaps_obj, 1, 1, mp_lv_tick_elaps
  * Struct lv_indev_drv_t
  */
 
-typedef struct mp_lv_indev_drv_t
-{
-    mp_obj_base_t base;
-    lv_indev_drv_t data;
-} mp_lv_indev_drv_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_drv_t_type();
 
 STATIC inline lv_indev_drv_t* mp_write_ptr_lv_indev_drv_t(mp_obj_t self_in)
 {
-    mp_lv_indev_drv_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_indev_drv_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_indev_drv_t*)self->data;
 }
 
 #define mp_write_lv_indev_drv_t(struct_obj) *mp_write_ptr_lv_indev_drv_t(struct_obj)
@@ -14818,15 +14718,16 @@ STATIC inline mp_obj_t mp_read_ptr_lv_indev_drv_t(lv_indev_drv_t *field)
 
 STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_indev_drv_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_indev_drv_t *data = (lv_indev_drv_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(self->data.type); break; // converting from lv_hal_indev_type_t;
-            case MP_QSTR_read: dest[0] = ptr_to_mp((void*)self->data.read); break; // converting from bool read(lv_indev_data_t *data)*;
-            case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)self->data.user_data); break; // converting from void*;
+            case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_hal_indev_type_t;
+            case MP_QSTR_read: dest[0] = ptr_to_mp((void*)data->read); break; // converting from bool read(lv_indev_data_t *data)*;
+            case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void*;
             default: field_not_found(MP_QSTR_lv_indev_drv_t, attr);
         }
     } else {
@@ -14835,9 +14736,9 @@ STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_type: self->data.type = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_hal_indev_type_t;
-                case MP_QSTR_read: self->data.read = (void*)mp_to_ptr(dest[1]); break; // converting to bool read(lv_indev_data_t *data)*;
-                case MP_QSTR_user_data: self->data.user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
+                case MP_QSTR_type: data->type = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to lv_hal_indev_type_t;
+                case MP_QSTR_read: data->read = (void*)mp_to_ptr(dest[1]); break; // converting to bool read(lv_indev_data_t *data)*;
+                case MP_QSTR_user_data: data->user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
                 default: field_not_found(MP_QSTR_lv_indev_drv_t, attr);
             }
 
@@ -14916,18 +14817,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_drv_init_obj, 1, 1, mp_lv_indev_
  * Struct lv_group_t
  */
 
-typedef struct mp_lv_group_t
-{
-    mp_obj_base_t base;
-    lv_group_t data;
-} mp_lv_group_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_group_t_type();
 
 STATIC inline lv_group_t* mp_write_ptr_lv_group_t(mp_obj_t self_in)
 {
-    mp_lv_group_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_group_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_group_t*)self->data;
 }
 
 #define mp_write_lv_group_t(struct_obj) *mp_write_ptr_lv_group_t(struct_obj)
@@ -14941,21 +14836,22 @@ STATIC inline mp_obj_t mp_read_ptr_lv_group_t(lv_group_t *field)
 
 STATIC void mp_lv_group_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_group_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_group_t *data = (lv_group_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_obj_ll: dest[0] = mp_read_lv_ll_t(self->data.obj_ll); break; // converting from lv_ll_t;
-            case MP_QSTR_obj_focus: dest[0] = ptr_to_mp((void*)self->data.obj_focus); break; // converting from lv_obj_t**;
-            case MP_QSTR_style_mod: dest[0] = ptr_to_mp(self->data.style_mod); break; // converting from lv_group_style_mod_func_t;
-            case MP_QSTR_style_mod_edit: dest[0] = ptr_to_mp(self->data.style_mod_edit); break; // converting from lv_group_style_mod_func_t;
-            case MP_QSTR_focus_cb: dest[0] = ptr_to_mp(self->data.focus_cb); break; // converting from lv_group_focus_cb_t;
-            case MP_QSTR_style_tmp: dest[0] = mp_read_lv_style_t(self->data.style_tmp); break; // converting from lv_style_t;
-            case MP_QSTR_frozen: dest[0] = mp_obj_new_int_from_uint(self->data.frozen); break; // converting from uint8_t;
-            case MP_QSTR_editing: dest[0] = mp_obj_new_int_from_uint(self->data.editing); break; // converting from uint8_t;
-            case MP_QSTR_click_focus: dest[0] = mp_obj_new_int_from_uint(self->data.click_focus); break; // converting from uint8_t;
+            case MP_QSTR_obj_ll: dest[0] = mp_read_lv_ll_t(data->obj_ll); break; // converting from lv_ll_t;
+            case MP_QSTR_obj_focus: dest[0] = ptr_to_mp((void*)data->obj_focus); break; // converting from lv_obj_t**;
+            case MP_QSTR_style_mod: dest[0] = ptr_to_mp(data->style_mod); break; // converting from lv_group_style_mod_func_t;
+            case MP_QSTR_style_mod_edit: dest[0] = ptr_to_mp(data->style_mod_edit); break; // converting from lv_group_style_mod_func_t;
+            case MP_QSTR_focus_cb: dest[0] = ptr_to_mp(data->focus_cb); break; // converting from lv_group_focus_cb_t;
+            case MP_QSTR_style_tmp: dest[0] = mp_read_lv_style_t(data->style_tmp); break; // converting from lv_style_t;
+            case MP_QSTR_frozen: dest[0] = mp_obj_new_int_from_uint(data->frozen); break; // converting from uint8_t;
+            case MP_QSTR_editing: dest[0] = mp_obj_new_int_from_uint(data->editing); break; // converting from uint8_t;
+            case MP_QSTR_click_focus: dest[0] = mp_obj_new_int_from_uint(data->click_focus); break; // converting from uint8_t;
             default: field_not_found(MP_QSTR_lv_group_t, attr);
         }
     } else {
@@ -14964,15 +14860,15 @@ STATIC void mp_lv_group_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_obj_ll: self->data.obj_ll = mp_write_lv_ll_t(dest[1]); break; // converting to lv_ll_t;
-                case MP_QSTR_obj_focus: self->data.obj_focus = (void*)mp_to_ptr(dest[1]); break; // converting to lv_obj_t**;
-                case MP_QSTR_style_mod: self->data.style_mod = mp_to_ptr(dest[1]); break; // converting to lv_group_style_mod_func_t;
-                case MP_QSTR_style_mod_edit: self->data.style_mod_edit = mp_to_ptr(dest[1]); break; // converting to lv_group_style_mod_func_t;
-                case MP_QSTR_focus_cb: self->data.focus_cb = mp_to_ptr(dest[1]); break; // converting to lv_group_focus_cb_t;
-                case MP_QSTR_style_tmp: self->data.style_tmp = mp_write_lv_style_t(dest[1]); break; // converting to lv_style_t;
-                case MP_QSTR_frozen: self->data.frozen = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_editing: self->data.editing = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_click_focus: self->data.click_focus = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_obj_ll: data->obj_ll = mp_write_lv_ll_t(dest[1]); break; // converting to lv_ll_t;
+                case MP_QSTR_obj_focus: data->obj_focus = (void*)mp_to_ptr(dest[1]); break; // converting to lv_obj_t**;
+                case MP_QSTR_style_mod: data->style_mod = mp_to_ptr(dest[1]); break; // converting to lv_group_style_mod_func_t;
+                case MP_QSTR_style_mod_edit: data->style_mod_edit = mp_to_ptr(dest[1]); break; // converting to lv_group_style_mod_func_t;
+                case MP_QSTR_focus_cb: data->focus_cb = mp_to_ptr(dest[1]); break; // converting to lv_group_focus_cb_t;
+                case MP_QSTR_style_tmp: data->style_tmp = mp_write_lv_style_t(dest[1]); break; // converting to lv_style_t;
+                case MP_QSTR_frozen: data->frozen = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_editing: data->editing = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_click_focus: data->click_focus = (uint8_t)mp_obj_int_get_checked(dest[1]); break; // converting to uint8_t;
                 default: field_not_found(MP_QSTR_lv_group_t, attr);
             }
 
@@ -15613,18 +15509,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_init_obj, 0, 0, mp_lv_fs_init);
  * Struct lv_fs_file_t
  */
 
-typedef struct mp_lv_fs_file_t
-{
-    mp_obj_base_t base;
-    lv_fs_file_t data;
-} mp_lv_fs_file_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_file_t_type();
 
 STATIC inline lv_fs_file_t* mp_write_ptr_lv_fs_file_t(mp_obj_t self_in)
 {
-    mp_lv_fs_file_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_fs_file_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_fs_file_t*)self->data;
 }
 
 #define mp_write_lv_fs_file_t(struct_obj) *mp_write_ptr_lv_fs_file_t(struct_obj)
@@ -15638,14 +15528,15 @@ STATIC inline mp_obj_t mp_read_ptr_lv_fs_file_t(lv_fs_file_t *field)
 
 STATIC void mp_lv_fs_file_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_fs_file_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_fs_file_t *data = (lv_fs_file_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_file_d: dest[0] = ptr_to_mp((void*)self->data.file_d); break; // converting from void*;
-            case MP_QSTR_drv: dest[0] = ptr_to_mp((void*)self->data.drv); break; // converting from struct __lv_fs_drv_t*;
+            case MP_QSTR_file_d: dest[0] = ptr_to_mp((void*)data->file_d); break; // converting from void*;
+            case MP_QSTR_drv: dest[0] = ptr_to_mp((void*)data->drv); break; // converting from struct __lv_fs_drv_t*;
             default: field_not_found(MP_QSTR_lv_fs_file_t, attr);
         }
     } else {
@@ -15654,8 +15545,8 @@ STATIC void mp_lv_fs_file_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_file_d: self->data.file_d = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
-                case MP_QSTR_drv: self->data.drv = (void*)mp_to_ptr(dest[1]); break; // converting to struct __lv_fs_drv_t*;
+                case MP_QSTR_file_d: data->file_d = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
+                case MP_QSTR_drv: data->drv = (void*)mp_to_ptr(dest[1]); break; // converting to struct __lv_fs_drv_t*;
                 default: field_not_found(MP_QSTR_lv_fs_file_t, attr);
             }
 
@@ -15825,18 +15716,12 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_rename_obj, 2, 2, mp_lv_fs_rename);
  * Struct lv_fs_dir_t
  */
 
-typedef struct mp_lv_fs_dir_t
-{
-    mp_obj_base_t base;
-    lv_fs_dir_t data;
-} mp_lv_fs_dir_t;
-
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_dir_t_type();
 
 STATIC inline lv_fs_dir_t* mp_write_ptr_lv_fs_dir_t(mp_obj_t self_in)
 {
-    mp_lv_fs_dir_t *self = MP_OBJ_TO_PTR(self_in);
-    return (lv_fs_dir_t*)&self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    return (lv_fs_dir_t*)self->data;
 }
 
 #define mp_write_lv_fs_dir_t(struct_obj) *mp_write_ptr_lv_fs_dir_t(struct_obj)
@@ -15850,14 +15735,15 @@ STATIC inline mp_obj_t mp_read_ptr_lv_fs_dir_t(lv_fs_dir_t *field)
 
 STATIC void mp_lv_fs_dir_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_lv_fs_dir_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_fs_dir_t *data = (lv_fs_dir_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_dir_d: dest[0] = ptr_to_mp((void*)self->data.dir_d); break; // converting from void*;
-            case MP_QSTR_drv: dest[0] = ptr_to_mp((void*)self->data.drv); break; // converting from struct __lv_fs_drv_t*;
+            case MP_QSTR_dir_d: dest[0] = ptr_to_mp((void*)data->dir_d); break; // converting from void*;
+            case MP_QSTR_drv: dest[0] = ptr_to_mp((void*)data->drv); break; // converting from struct __lv_fs_drv_t*;
             default: field_not_found(MP_QSTR_lv_fs_dir_t, attr);
         }
     } else {
@@ -15866,8 +15752,8 @@ STATIC void mp_lv_fs_dir_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_dir_d: self->data.dir_d = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
-                case MP_QSTR_drv: self->data.drv = (void*)mp_to_ptr(dest[1]); break; // converting to struct __lv_fs_drv_t*;
+                case MP_QSTR_dir_d: data->dir_d = (void*)mp_to_ptr(dest[1]); break; // converting to void*;
+                case MP_QSTR_drv: data->drv = (void*)mp_to_ptr(dest[1]); break; // converting to struct __lv_fs_drv_t*;
                 default: field_not_found(MP_QSTR_lv_fs_dir_t, attr);
             }
 
