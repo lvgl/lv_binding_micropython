@@ -3,6 +3,7 @@
 # - Verify that when mp_obj is given it is indeed the right type (mp_lv_obj_t). Report error if not. can be added to mp_to_lv.
 # - Implement inheritance instead of embed base methods (how? seems it's not supported, see https://github.com/micropython/micropython/issues/1159)
 # - Prevent writing to const fields, but allow reading
+# - When converting mp to ptr (and vice versa), verify that types are compatible. Now all pointers are casted to void*.
 
 from __future__ import print_function
 import sys
@@ -425,7 +426,7 @@ STATIC const mp_obj_type_t mp_blob_type = {
 STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = self_in;
-    if ((!MP_OBJ_IS_OBJ(self_in)) || self->base.type != &mp_blob_type){
+    if ((!MP_OBJ_IS_OBJ(self_in))/* || self->base.type != &mp_blob_type */){
         nlr_raise(
             mp_obj_new_exception_msg(
                 &mp_type_SyntaxError, "Incompatible type!"));
