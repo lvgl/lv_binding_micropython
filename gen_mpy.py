@@ -96,6 +96,7 @@ structs = {typedef.declname : typedef.type for typedef in typedefs if is_struct(
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
+# eprint('... %s' % ',\n'.join(sorted('%s' % func.name for func in funcs)))
 excluded_ctors = [ctor_name_from_obj_name(obj) for obj in args.exclude]
 obj_ctors = [func for func in funcs if create_obj_pattern.match(func.name) and not func.name in excluded_ctors]
 for obj_ctor in obj_ctors:
@@ -425,8 +426,9 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = self_in;
     if ((!MP_OBJ_IS_OBJ(self_in)) || self->base.type != &mp_blob_type){
-        mp_obj_new_exception_msg(
-            &mp_type_SyntaxError, "Incompatible data!");
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, "Incompatible type!"));
     }
     return self->data;
 }
@@ -641,13 +643,22 @@ def try_generate_type(type):
         return mp_to_lv[type]
     if isinstance(type, str) and type.endswith('*') and type[:-1] in structs: 
         return try_generate_struct(type[:-1], structs[type[:-1]])
+    if type in structs:
+        if try_generate_struct(type, structs[type]):
+            return mp_to_lv[type]
     for new_type in [get_type(x) for x in typedefs if get_arg_name(x) == type]:
         if new_type in structs:
             try_generate_struct(new_type, structs[new_type])
         if try_generate_type(new_type):
            mp_to_lv[type] = mp_to_lv[new_type]
+           type_ptr = '%s*' % type
+           new_type_ptr = '%s*' % new_type
+           if new_type_ptr in mp_to_lv:
+               mp_to_lv[type_ptr] = mp_to_lv[new_type_ptr]
            if new_type in lv_to_mp:
                lv_to_mp[type] = lv_to_mp[new_type]
+               if new_type_ptr in lv_to_mp:
+                   lv_to_mp[type_ptr] = lv_to_mp[new_type_ptr]
            # print("// %s = (%s)" % (type, new_type))
            return mp_to_lv[type] 
     return None
