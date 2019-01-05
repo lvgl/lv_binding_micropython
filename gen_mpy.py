@@ -265,24 +265,32 @@ typedef struct mp_lv_obj_t {
     mp_obj_t *action;
 } mp_lv_obj_t;
 
+STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
+{
+    const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
+    if (native_type->parent == NULL) return mp_obj;
+    while (native_type->parent) native_type = native_type->parent;
+    return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
+}
+
 STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
     return mp_lv_obj->lv_obj;
 }
 
 STATIC inline mp_obj_t *mp_to_lv_action(mp_obj_t *mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
     return mp_lv_obj->action;
 }
 
 STATIC inline void set_action(mp_obj_t *mp_obj, mp_obj_t *action)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
     mp_lv_obj->action = action;
 }
 
