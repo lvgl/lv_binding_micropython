@@ -15,9 +15,11 @@ def eprint(*args, **kwargs):
 from sys import argv
 from argparse import ArgumentParser
 import subprocess, re
+from os.path import dirname, abspath
 from os.path import commonprefix
 
-sys.path.append('./pycparser')
+script_path = dirname(abspath(__file__))
+sys.path.append('%s/pycparser' % script_path)
 from pycparser import c_parser, c_ast, c_generator
 
 #
