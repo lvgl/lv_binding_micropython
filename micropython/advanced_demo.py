@@ -35,7 +35,7 @@ class Page_Buttons:
         self.label.align(self.btn1, lvgl.ALIGN.OUT_BOTTOM_LEFT, 0, 10)
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.set_action(lvgl.btn.ACTION.CLICK, lambda action: self.label.set_text('%s click' % name))
+            btn.set_action(lvgl.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name))
             # btn.set_action(lvgl.BTN.ACTION.PR, lambda name=name: self.label.set_text(name + ' press'))
             # btn.set_action(lvgl.BTN.ACTION.LONG_PR, lambda name=name: self.label.set_text(name + ' long press'))
             # btn.set_action(lvgl.BTN.ACTION.LONG_PR_REPEAT, lambda name=name: self.label.set_text(name + ' long press repeat'))
