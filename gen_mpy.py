@@ -36,7 +36,7 @@ args = argParser.parse_args()
 # C proceprocessing
 # 
 
-pp_cmd = 'gcc -E -std=c99 {include} {input} {first_input}'.format(
+pp_cmd = 'gcc -E -std=c99 -DPYCPARSER {include} {input} {first_input}'.format(
     input=' '.join('-include %s' % inp for inp in args.input), 
     first_input= '%s' % args.input[0],
     include=' '.join('-I %s' % inc for inc in args.include))
@@ -285,14 +285,14 @@ STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
 STATIC inline mp_obj_t *mp_to_lv_action(mp_obj_t *mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
     return mp_lv_obj->action;
 }
 
 STATIC inline void set_action(mp_obj_t *mp_obj, mp_obj_t *action)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
     mp_lv_obj->action = action;
 }
 
