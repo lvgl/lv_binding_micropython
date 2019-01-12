@@ -360,6 +360,16 @@ typedef struct mp_lv_struct_t
     void *data;
 } mp_lv_struct_t;
 
+STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t *mp_obj)
+{
+    if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
+    if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, "Struct argument is not an object!"));
+    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+    return mp_lv_struct;
+}
+
 STATIC inline size_t get_lv_struct_size(const mp_obj_type_t *type)
 {
     mp_obj_t size_obj = mp_obj_dict_get(type->locals_dict, MP_OBJ_NEW_QSTR(MP_QSTR_SIZE));
@@ -375,18 +385,13 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
-    lv_obj_t *copy = n_args > 0? mp_to_lv(args[0]): NULL;
-    if (!MP_OBJ_IS_OBJ(copy)) nlr_raise(
-            mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Copy argument is not an object!"));
-
     *self = (mp_lv_struct_t){
         .base = {type}, 
         .allocated = true,
         .data = malloc(size)
     };
-    if (copy) {
-        mp_lv_struct_t *other = MP_OBJ_TO_PTR(copy);
+    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(args[0]): NULL;
+    if (other) {
         if (self->base.type != other->base.type) nlr_raise(
             mp_obj_new_exception_msg(
                 &mp_type_SyntaxError, "Incompatible lv_struct!"));
@@ -435,12 +440,7 @@ STATIC const mp_obj_type_t mp_blob_type = {
 
 STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
-    mp_lv_struct_t *self = self_in;
-    if ((!MP_OBJ_IS_OBJ(self_in))/* || self->base.type != &mp_blob_type */){
-        nlr_raise(
-            mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Incompatible type!"));
-    }
+    mp_lv_struct_t *self = mp_to_lv_struct(self_in);
     return self->data;
 }
 
@@ -997,7 +997,7 @@ STATIC mp_obj_t make_new_{blob_name}(
     const mp_obj_t *args)
 {{
     mp_arg_check_num(n_args, n_kw, 0, 0, false);
-    return lv_to_mp_struct(type, &{blob_name});
+    return lv_to_mp_struct(&mp_{struct_name}_type, &{blob_name});
 }}
 
 STATIC const mp_obj_type_t mp_{blob_name}_type = {{
