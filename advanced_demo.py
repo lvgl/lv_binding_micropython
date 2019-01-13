@@ -6,8 +6,8 @@ symbolstyle.text.color.red = 0xff
 symbolstyle.text.color.green = 0xff
 symbolstyle.text.color.blue = 0xff
 
-SYMBOL_PLAY = "\xEF\x80\x92"
-SYMBOL_PAUSE = "\xEF\x80\x93"
+SYMBOL_PLAY = b"\xEF\xA0\x92"
+SYMBOL_PAUSE = b"\xEF\xA0\x93"
 
 class SymbolButton(lvgl.btn):
     def __init__(self, parent, symbol, text):
