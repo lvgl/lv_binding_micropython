@@ -186,12 +186,12 @@ mp_to_lv = {
     'const lv_obj_t*'           : 'mp_to_lv',
     'struct _lv_obj_t*'         : 'mp_to_lv',
     'const struct _lv_obj_t*'   : 'mp_to_lv',
-    'uint8_t'                   : '(uint8_t)mp_obj_int_get_checked',
-    'uint16_t'                  : '(uint16_t)mp_obj_int_get_checked',
-    'uint32_t'                  : '(uint32_t)mp_obj_int_get_checked',
-    'int8_t'                    : '(int8_t)mp_obj_int_get_checked',
-    'int16_t'                   : '(int16_t)mp_obj_int_get_checked',
-    'int32_t'                   : '(int32_t)mp_obj_int_get_checked',
+    'uint8_t'                   : '(uint8_t)mp_obj_get_int',
+    'uint16_t'                  : '(uint16_t)mp_obj_get_int',
+    'uint32_t'                  : '(uint32_t)mp_obj_get_int',
+    'int8_t'                    : '(int8_t)mp_obj_get_int',
+    'int16_t'                   : '(int16_t)mp_obj_get_int',
+    'int32_t'                   : '(int32_t)mp_obj_get_int',
 }
 
 lv_to_mp = {
@@ -273,6 +273,22 @@ STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
     if (native_type->parent == NULL) return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
     return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
+}
+
+STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
+{
+    mp_obj_t *res = NULL;
+    if (MP_OBJ_IS_OBJ(mp_obj)){
+        res = get_native_obj(mp_obj);
+        if (res){
+            const mp_obj_type_t *res_type = ((mp_obj_base_t*)res)->type;
+            if (res_type != mp_type) res = NULL;
+        }
+    }
+    if (res == NULL) nlr_raise(
+        mp_obj_new_exception_msg_varg(
+            &mp_type_SyntaxError, "Can't convert %s to %s!", mp_obj_get_type_str(mp_obj), qstr_str(mp_type->name)));
+    return res;
 }
 
 STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
@@ -373,7 +389,7 @@ STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t *mp_obj)
 STATIC inline size_t get_lv_struct_size(const mp_obj_type_t *type)
 {
     mp_obj_t size_obj = mp_obj_dict_get(type->locals_dict, MP_OBJ_NEW_QSTR(MP_QSTR_SIZE));
-    return (size_t)mp_obj_int_get_checked(size_obj);
+    return (size_t)mp_obj_get_int(size_obj);
 }
 
 STATIC mp_obj_t make_new_lv_struct(
@@ -390,11 +406,8 @@ STATIC mp_obj_t make_new_lv_struct(
         .allocated = true,
         .data = malloc(size)
     };
-    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(args[0]): NULL;
+    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
     if (other) {
-        if (self->base.type != other->base.type) nlr_raise(
-            mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Incompatible lv_struct!"));
         memcpy(self->data, other->data, size);
     }
     return MP_OBJ_FROM_PTR(self);
@@ -448,6 +461,15 @@ STATIC inline mp_obj_t ptr_to_mp(void *data)
 {
     return lv_to_mp_struct(&mp_blob_type, data);
 }
+
+STATIC mp_obj_t delete_lv_obj(mp_obj_t self_in) 
+{
+    mp_lv_obj_t *self = self_in;
+    lv_obj_del(self->lv_obj);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(delete_lv_obj_obj, delete_lv_obj);
 
 """)
 
@@ -547,7 +569,7 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type();
 
 STATIC inline {struct_name}* mp_write_ptr_{struct_name}(mp_obj_t self_in)
 {{
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_{struct_name}_type()));
     return ({struct_name}*)self->data;
 }}
 
@@ -596,7 +618,7 @@ STATIC void mp_{struct_name}_print(const mp_print_t *print,
 
 STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
-    {{ MP_OBJ_NEW_QSTR(MP_QSTR___del__), (mp_obj_t)&delete_lv_struct_obj }},
+    {{ MP_ROM_QSTR(MP_QSTR___del__), (mp_obj_t)&delete_lv_struct_obj }},
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_locals_dict_table);
@@ -866,7 +888,8 @@ STATIC mp_obj_t {obj}_make_new(
  */
 
 STATIC const mp_rom_map_elem_t {obj}_locals_dict_table[] = {{
-    {locals_dict_entries}
+    {locals_dict_entries},
+    {{ MP_ROM_QSTR(MP_QSTR___del__), (mp_obj_t)&delete_lv_obj_obj }}
 }};
 
 STATIC MP_DEFINE_CONST_DICT({obj}_locals_dict, {obj}_locals_dict_table);

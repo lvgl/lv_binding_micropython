@@ -55,7 +55,7 @@ class Page_Simple:
         self.on_slider_changed(0)
         
         # style selector
-        self.styles = [('Plain', lvgl.lv_style_plain), ('Plain color', lvgl.lv_style_plain_color), ('Pretty', lvgl.lv_style_pretty), ('Pretty color', lvgl.lv_style_pretty_color)]
+        self.styles = [('Plain', lvgl.lv_style_plain()), ('Plain color', lvgl.lv_style_plain_color()), ('Pretty', lvgl.lv_style_pretty()), ('Pretty color', lvgl.lv_style_pretty_color())]
     
         self.style_selector = lvgl.ddlist(page)
         self.style_selector.align(self.slider, lvgl.ALIGN.IN_BOTTOM_LEFT, 0, 40)
