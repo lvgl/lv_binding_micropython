@@ -71,7 +71,8 @@ def is_method_of(func_name, obj_name):
     return func_name.lower().startswith(('lv_%s_' % obj_name).lower())
     
 def method_name_from_func_name(func_name):
-    return re.match(lv_method_pattern, func_name).group(1)
+    res = re.match(lv_method_pattern, func_name).group(1)
+    return res if res != "del" else "delete" # del is a resrved name, don't use it
 
 def get_enum_name(enum):
     prefix = 'lv_'
@@ -372,7 +373,6 @@ STATIC void field_not_found(qstr struct_name, qstr field_name)
 typedef struct mp_lv_struct_t
 {
     mp_obj_base_t base;
-    bool allocated;
     void *data;
 } mp_lv_struct_t;
 
@@ -403,7 +403,6 @@ STATIC mp_obj_t make_new_lv_struct(
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
     *self = (mp_lv_struct_t){
         .base = {type}, 
-        .allocated = true,
         .data = malloc(size)
     };
     mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
@@ -420,20 +419,10 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
     *self = (mp_lv_struct_t){
         .base = {type},
-        .allocated = false,
         .data = lv_struct
     };
     return MP_OBJ_FROM_PTR(self);
 }
-
-STATIC mp_obj_t delete_lv_struct(mp_obj_t self_in) 
-{
-    mp_lv_struct_t *self = self_in;
-    if (self->allocated) free(self->data);
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(delete_lv_struct_obj, delete_lv_struct);
 
 STATIC void mp_blob_print(const mp_print_t *print,
     mp_obj_t self_in,
@@ -461,15 +450,6 @@ STATIC inline mp_obj_t ptr_to_mp(void *data)
 {
     return lv_to_mp_struct(&mp_blob_type, data);
 }
-
-STATIC mp_obj_t delete_lv_obj(mp_obj_t self_in) 
-{
-    mp_lv_obj_t *self = self_in;
-    lv_obj_del(self->lv_obj);
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(delete_lv_obj_obj, delete_lv_obj);
 
 """)
 
@@ -617,8 +597,7 @@ STATIC void mp_{struct_name}_print(const mp_print_t *print,
 }}
 
 STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
-    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
-    {{ MP_ROM_QSTR(MP_QSTR___del__), (mp_obj_t)&delete_lv_struct_obj }},
+    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }}
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_locals_dict_table);
@@ -888,8 +867,7 @@ STATIC mp_obj_t {obj}_make_new(
  */
 
 STATIC const mp_rom_map_elem_t {obj}_locals_dict_table[] = {{
-    {locals_dict_entries},
-    {{ MP_ROM_QSTR(MP_QSTR___del__), (mp_obj_t)&delete_lv_obj_obj }}
+    {locals_dict_entries}
 }};
 
 STATIC MP_DEFINE_CONST_DICT({obj}_locals_dict, {obj}_locals_dict_table);
