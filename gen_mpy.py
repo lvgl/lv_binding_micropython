@@ -1,4 +1,5 @@
 # TODO
+# - Implement array. Convert python list to C pointer throught struct object. Useful lv_line_set_points or for setting "points" on lv_chart_series_t for example.
 # - On print extensions, print the reflected internal representation of the object
 # - Verify that when mp_obj is given it is indeed the right type (mp_lv_obj_t). Report error if not. can be added to mp_to_lv.
 # - Implement inheritance instead of embed base methods (how? seems it's not supported, see https://github.com/micropython/micropython/issues/1159)
@@ -7,10 +8,10 @@
 
 from __future__ import print_function
 import sys
+import struct
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
-    
     
 from sys import argv
 from argparse import ArgumentParser
@@ -40,7 +41,7 @@ pp_cmd = 'gcc -E -std=c99 -DPYCPARSER {include} {input} {first_input}'.format(
     input=' '.join('-include %s' % inp for inp in args.input), 
     first_input= '%s' % args.input[0],
     include=' '.join('-I %s' % inc for inc in args.include))
-s = subprocess.check_output(pp_cmd.split())
+s = subprocess.check_output(pp_cmd.split()).decode()
 
 
 #
@@ -56,7 +57,10 @@ create_obj_pattern = re.compile('^lv_([^_]+)_create')
 lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
 lv_callback_return_type_pattern = re.compile('^((void)|(lv_res_t))')
+lv_numstr_pattern = re.compile('^(.*)_NUMSTR')
 
+def simplify_identifier(id):
+    return re.match(lv_func_pattern, id).group(1)
 
 def obj_name_from_ext_name(ext_name):
     return re.match(lv_ext_pattern, ext_name).group(1)
@@ -77,10 +81,6 @@ def method_name_from_func_name(func_name):
 def get_enum_name(enum):
     prefix = 'lv_'
     return enum[len(prefix):]
-
-def get_enum_value(obj_name, enum_member):
-    return '%s_%s' % (obj_name, enum_member)
-
 
 #
 # Initialization, data structures, helper functions
@@ -157,6 +157,26 @@ for enum_def in enum_defs:
         enum[member.name] = value
         next_value = value + 1
     enums[enum_name] = enum
+
+# Enum member access functions.
+# Also supports the numstr convention, which allows defining enums of short strings (up to 4 characters).
+# On lvgl numstr are used for declaring Symbols UTF8 encodings
+
+def get_enum_member_name(enum_member):
+    match = re.match(lv_numstr_pattern, enum_member)
+    return match.group(1) if match else enum_member
+
+def get_enum_value(obj_name, enum_member):
+    fullname = '%s_%s' % (obj_name, enum_member)
+    match = re.match(lv_numstr_pattern, enum_member)
+    if match:
+        enum = enums[obj_name]
+        enum_member_name = '%s_%s' % (obj_name, enum_member)
+        numstr = struct.pack('<i', enum[enum_member_name]).encode('string_escape')
+        print('MP_DEFINE_STR_OBJ(mp_%s, "%s");' % (enum_member_name, numstr))
+        return "&mp_%s_%s" % (obj_name, enum_member)
+    else:
+        return "MP_ROM_INT(%s_%s)" % (obj_name, enum_member)
 
 # eprint(enums)
 
@@ -237,6 +257,7 @@ print ("""
 #include <stdlib.h>
 #include <string.h>
 #include "py/obj.h"
+#include "py/objstr.h"
 #include "py/runtime.h"
 
 /*
@@ -830,8 +851,8 @@ def gen_obj_methods(obj_name):
     if obj_name in parent_obj_names and parent_obj_names[obj_name] != None:
         parent_members += gen_obj_methods(parent_obj_names[obj_name])
     # add enum members
-    enum_members = ["{{ MP_ROM_QSTR(MP_QSTR_{enum_member}), MP_ROM_PTR(MP_ROM_INT({enum_member_value})) }}".
-                    format(enum_member = enum_memebr_name, enum_member_value = get_enum_value(obj_name, enum_memebr_name)) for enum_memebr_name in get_enum_members(obj_name)]
+    enum_members = ["{{ MP_ROM_QSTR(MP_QSTR_{enum_member}), MP_ROM_PTR({enum_member_value}) }}".
+                    format(enum_member = get_enum_member_name(enum_memebr_name), enum_member_value = get_enum_value(obj_name, enum_memebr_name)) for enum_memebr_name in get_enum_members(obj_name)]
     # add enums that match object name
     obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
     enums_memebrs = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
@@ -861,11 +882,12 @@ STATIC mp_obj_t {obj}_make_new(
 """
 
     print("""
-    
 /*
  * lvgl {obj} object definitions
  */
+    """.format(obj = obj_name))
 
+    print("""
 STATIC const mp_rom_map_elem_t {obj}_locals_dict_table[] = {{
     {locals_dict_entries}
 }};
@@ -895,14 +917,16 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
             make_new = '.make_new = %s_make_new,' % obj_name if has_ctor(obj_name) else '',
             ))
 
-
+#
 # Generate Enum objects
+#
 
 for enum_name in list(enums.keys()):
     gen_obj(enum_name)
 
-
+#
 # Generate callback functions
+#
 
 for func_typedef in func_typedefs:
     func = func_typedef.type.type
@@ -914,8 +938,9 @@ for func_typedef in func_typedefs:
         lv_to_mp[func_name] = lv_to_mp['void*']
         mp_to_lv[func_name] = mp_to_lv['void*']
 
-
+#
 # Generate all other objects. Generate parent objects first
+#
 
 generated_obj_names = {}
 for obj_name in obj_names:
@@ -939,8 +964,9 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type()
 }}
 """.format(base_obj=base_obj_name));
 
-
+#
 # Generate all module functions (not including method functions which were already generated)
+#
 
 print("""
 /* 
@@ -969,67 +995,35 @@ if len(functions_not_generated) > 0:
 
 """.format(funcs = "\n * ".join(functions_not_generated)))
 
-#Generate globals
+#
+# Generate globals
+#
 
-def gen_global(blob_name, blob_type):
-    try_generate_type(blob_type)
-    if not blob_type in generated_structs:
-        print("""
-#define mp_{struct_name}_attr NULL
-#define mp_{struct_name}_locals_dict *(mp_obj_dict_t*)NULL
-        """.format(struct_name = blob_type))
+def gen_global(global_name, global_type):
+    try_generate_type(global_type)
+    if not global_type in generated_structs:
+        raise MissingConversionException('Missing conversion to %s when generating global %s' % (global_type, global_name))
 
     print("""
 /*
- * lvgl {blob_name} global definitions
+ * lvgl {global_name} global definitions
  */
 
-STATIC void mp_{blob_name}_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{{
-    mp_printf(print, "lvgl global {blob_name}");
-}}
-
-STATIC mp_obj_t make_new_{blob_name}(
-    const mp_obj_type_t *type,
-    size_t n_args,
-    size_t n_kw,
-    const mp_obj_t *args)
-{{
-    mp_arg_check_num(n_args, n_kw, 0, 0, false);
-    return lv_to_mp_struct(&mp_{struct_name}_type, &{blob_name});
-}}
-
-STATIC const mp_obj_type_t mp_{blob_name}_type = {{
-    {{ &mp_type_type }},
-    .name = MP_QSTR_{blob_name},
-    .print = mp_{blob_name}_print,
-    .make_new = make_new_{blob_name},
-    .attr = mp_{struct_name}_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_{struct_name}_locals_dict
+STATIC const mp_lv_struct_t mp_{global_name} = {{
+    {{ &mp_{struct_name}_type }},
+    &{global_name}
 }};
     """.format(
-        blob_name = blob_name,
-        struct_name = blob_type,
-        struct_def = generated_structs))
+        global_name = global_name,
+        struct_name = global_type))
 
-print("""
-/*
- *
- * Globals definitions
- *
- */
-""")
-
-generated_blobs = []
-for blob_name in blobs:
+generated_globals = []
+for global_name in blobs:
     try:
-        gen_global(blob_name, get_type(blobs[blob_name]))
-        generated_blobs.append(blob_name)
+        gen_global(global_name, get_type(blobs[global_name]))
+        generated_globals.append(global_name)
     except MissingConversionException as exp:
-        gen_func_error(blob_name, exp)
-
+        gen_func_error(global_name, exp)
 
 
 #
@@ -1065,14 +1059,14 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
 """.format(
         objects = ',\n    '.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_{obj}_type) }}'.
             format(obj = o) for o in obj_names]),
-        functions =  ',\n    '.join(['{{ MP_ROM_QSTR(MP_QSTR_{func_name}), MP_ROM_PTR(&mp_{func}_obj) }}'.
-            format(func = f.name, func_name = re.match(lv_func_pattern, f.name).group(1)) for f in module_funcs]),
+        functions =  ',\n    '.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }}'.
+            format(name = simplify_identifier(f.name), func = f.name) for f in module_funcs]),
         enums = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
-            format(name=get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
-        structs = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{struct_name}), MP_ROM_PTR(&mp_{struct_name}_type) }}".
-            format(struct_name = struct_name) for struct_name in structs.keys() if struct_name in generated_structs]),
-        blobs = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{blob_name}), MP_ROM_PTR(&mp_{blob_name}_type) }}".
-            format(blob_name = blob_name) for blob_name in generated_blobs])))
+            format(name = get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
+        structs = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }}".
+            format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in structs.keys() if struct_name in generated_structs]),
+        blobs = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{global_name}) }}".
+            format(name = simplify_identifier(global_name), global_name = global_name) for global_name in generated_globals])))
         
 
 print("""
