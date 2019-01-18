@@ -487,6 +487,8 @@ def get_name(type):
         return type.names[0]
     if isinstance(type, c_ast.FuncDecl):
         return type.type.declname
+    if isinstance(type, c_ast.PtrDecl): 
+        return get_type(type, remove_quals=True)
     else:
         return type
 
@@ -661,21 +663,22 @@ def get_arg_name(arg):
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
 
 def try_generate_type(type):
-    # print('--> try_generate_type %s: %s' % (get_name(type), type))
+    # eprint('--> try_generate_type %s: %s' % (get_name(type), type))
     # Handle the case of a pointer 
-    if isinstance(type, c_ast.PtrDecl): 
-        # print("[PTR]--> %s: %s" % (get_type(type), type))
-        type = get_type(type, remove_quals=True)
-        mp_to_lv[type] = mp_to_lv['void*']
-        lv_to_mp[type] = lv_to_mp['void*']
-        return mp_to_lv[type]
     if isinstance(type, c_ast.TypeDecl): 
         return try_generate_type(type.type)
     type = get_name(type)
+    if isinstance(type, c_ast.Node):
+        return None
     if type in mp_to_lv:
         return mp_to_lv[type]
-    if isinstance(type, str) and type.endswith('*') and type[:-1] in structs: 
-        return try_generate_struct(type[:-1], structs[type[:-1]])
+    if type.endswith('*'): 
+        generated_struct = try_generate_struct(type[:-1], structs[type[:-1]]) if type[:-1] in structs else None
+        if generated_struct:
+            return generated_struct
+        mp_to_lv[type] = mp_to_lv['void*']
+        lv_to_mp[type] = lv_to_mp['void*']
+        return mp_to_lv[type]
     if type in structs:
         if try_generate_struct(type, structs[type]):
             return mp_to_lv[type]
@@ -829,7 +832,7 @@ def gen_func_error(method, exp):
  * {problem}
  * {method}
  */
-    """.format(method=gen.visit(method), problem=exp))
+    """.format(method=gen.visit(method) if isinstance(method, c_ast.Node) else method, problem=exp))
     try:
         funcs.remove(method)
     except:
