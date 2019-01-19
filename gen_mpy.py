@@ -163,8 +163,10 @@ for enum_def in enum_defs:
 # On lvgl numstr are used for declaring Symbols UTF8 encodings
 
 def get_enum_member_name(enum_member):
+    if enum_member[0].isdigit():
+        enum_member = '_' + enum_member # needs to be a valid attribute name
     match = re.match(lv_numstr_pattern, enum_member)
-    return match.group(1) if match else enum_member
+    return match.group(1) if match else enum_member # remove NUMSTR suffix if present
 
 def get_enum_value(obj_name, enum_member):
     fullname = '%s_%s' % (obj_name, enum_member)
@@ -433,6 +435,13 @@ STATIC mp_obj_t make_new_lv_struct(
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC void *copy_buffer(const void *buffer, size_t size)
+{
+    void *new_buffer = malloc(size);
+    memcpy(new_buffer, buffer, size);
+    return new_buffer;
+}
+
 // Reference an existing lv struct (or part of it)
 
 STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
@@ -583,7 +592,7 @@ STATIC inline mp_obj_t mp_read_ptr_{struct_name}({struct_name} *field)
     return lv_to_mp_struct(get_mp_{struct_name}_type(), field);
 }}
 
-#define mp_read_{struct_name}(field) mp_read_ptr_{struct_name}(&field)
+#define mp_read_{struct_name}(field) mp_read_ptr_{struct_name}(copy_buffer(&field, sizeof({struct_name})))
 
 STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {{

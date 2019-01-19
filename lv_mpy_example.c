@@ -211,6 +211,13 @@ STATIC mp_obj_t make_new_lv_struct(
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC void *copy_buffer(const void *buffer, size_t size)
+{
+    void *new_buffer = malloc(size);
+    memcpy(new_buffer, buffer, size);
+    return new_buffer;
+}
+
 // Reference an existing lv struct (or part of it)
 
 STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
@@ -375,6 +382,41 @@ STATIC const mp_obj_type_t mp_LV_DDLIST_STYLE_type = {
     .print = LV_DDLIST_STYLE_print,
     
     .locals_dict = (mp_obj_dict_t*)&LV_DDLIST_STYLE_locals_dict,
+};
+    
+
+/*
+ * lvgl LV_TABVIEW_STYLE object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t LV_TABVIEW_STYLE_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_BG), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BG)) },
+    { MP_ROM_QSTR(MP_QSTR_BTN_TGL_PR), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_TGL_PR)) },
+    { MP_ROM_QSTR(MP_QSTR_BTN_TGL_REL), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_TGL_REL)) },
+    { MP_ROM_QSTR(MP_QSTR_BTN_BG), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_BG)) },
+    { MP_ROM_QSTR(MP_QSTR_BTN_REL), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_REL)) },
+    { MP_ROM_QSTR(MP_QSTR_INDIC), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_INDIC)) },
+    { MP_ROM_QSTR(MP_QSTR_BTN_PR), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_PR)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(LV_TABVIEW_STYLE_locals_dict, LV_TABVIEW_STYLE_locals_dict_table);
+
+STATIC void LV_TABVIEW_STYLE_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl LV_TABVIEW_STYLE");
+}
+
+
+
+STATIC const mp_obj_type_t mp_LV_TABVIEW_STYLE_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_LV_TABVIEW_STYLE,
+    .print = LV_TABVIEW_STYLE_print,
+    
+    .locals_dict = (mp_obj_dict_t*)&LV_TABVIEW_STYLE_locals_dict,
 };
     
 
@@ -1148,37 +1190,45 @@ STATIC const mp_obj_type_t mp_LV_SHADOW_type = {
     
 
 /*
- * lvgl LV_TABVIEW_STYLE object definitions
+ * lvgl LV_OPA object definitions
  */
     
 
-STATIC const mp_rom_map_elem_t LV_TABVIEW_STYLE_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_BG), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BG)) },
-    { MP_ROM_QSTR(MP_QSTR_BTN_TGL_PR), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_TGL_PR)) },
-    { MP_ROM_QSTR(MP_QSTR_BTN_TGL_REL), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_TGL_REL)) },
-    { MP_ROM_QSTR(MP_QSTR_BTN_BG), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_BG)) },
-    { MP_ROM_QSTR(MP_QSTR_BTN_REL), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_REL)) },
-    { MP_ROM_QSTR(MP_QSTR_INDIC), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_INDIC)) },
-    { MP_ROM_QSTR(MP_QSTR_BTN_PR), MP_ROM_PTR(MP_ROM_INT(LV_TABVIEW_STYLE_BTN_PR)) }
+STATIC const mp_rom_map_elem_t LV_OPA_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR__80), MP_ROM_PTR(MP_ROM_INT(LV_OPA_80)) },
+    { MP_ROM_QSTR(MP_QSTR__90), MP_ROM_PTR(MP_ROM_INT(LV_OPA_90)) },
+    { MP_ROM_QSTR(MP_QSTR__100), MP_ROM_PTR(MP_ROM_INT(LV_OPA_100)) },
+    { MP_ROM_QSTR(MP_QSTR_COVER), MP_ROM_PTR(MP_ROM_INT(LV_OPA_COVER)) },
+    { MP_ROM_QSTR(MP_QSTR__0), MP_ROM_PTR(MP_ROM_INT(LV_OPA_0)) },
+    { MP_ROM_QSTR(MP_QSTR__60), MP_ROM_PTR(MP_ROM_INT(LV_OPA_60)) },
+    { MP_ROM_QSTR(MP_QSTR__70), MP_ROM_PTR(MP_ROM_INT(LV_OPA_70)) },
+    { MP_ROM_QSTR(MP_QSTR_MAX), MP_ROM_PTR(MP_ROM_INT(LV_OPA_MAX)) },
+    { MP_ROM_QSTR(MP_QSTR__30), MP_ROM_PTR(MP_ROM_INT(LV_OPA_30)) },
+    { MP_ROM_QSTR(MP_QSTR__40), MP_ROM_PTR(MP_ROM_INT(LV_OPA_40)) },
+    { MP_ROM_QSTR(MP_QSTR__50), MP_ROM_PTR(MP_ROM_INT(LV_OPA_50)) },
+    { MP_ROM_QSTR(MP_QSTR_TRANSP), MP_ROM_PTR(MP_ROM_INT(LV_OPA_TRANSP)) },
+    { MP_ROM_QSTR(MP_QSTR__10), MP_ROM_PTR(MP_ROM_INT(LV_OPA_10)) },
+    { MP_ROM_QSTR(MP_QSTR_MIN), MP_ROM_PTR(MP_ROM_INT(LV_OPA_MIN)) },
+    { MP_ROM_QSTR(MP_QSTR__20), MP_ROM_PTR(MP_ROM_INT(LV_OPA_20)) }
 };
 
-STATIC MP_DEFINE_CONST_DICT(LV_TABVIEW_STYLE_locals_dict, LV_TABVIEW_STYLE_locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(LV_OPA_locals_dict, LV_OPA_locals_dict_table);
 
-STATIC void LV_TABVIEW_STYLE_print(const mp_print_t *print,
+STATIC void LV_OPA_print(const mp_print_t *print,
     mp_obj_t self_in,
     mp_print_kind_t kind)
 {
-    mp_printf(print, "lvgl LV_TABVIEW_STYLE");
+    mp_printf(print, "lvgl LV_OPA");
 }
 
 
 
-STATIC const mp_obj_type_t mp_LV_TABVIEW_STYLE_type = {
+STATIC const mp_obj_type_t mp_LV_OPA_type = {
     { &mp_type_type },
-    .name = MP_QSTR_LV_TABVIEW_STYLE,
-    .print = LV_TABVIEW_STYLE_print,
+    .name = MP_QSTR_LV_OPA,
+    .print = LV_OPA_print,
     
-    .locals_dict = (mp_obj_dict_t*)&LV_TABVIEW_STYLE_locals_dict,
+    .locals_dict = (mp_obj_dict_t*)&LV_OPA_locals_dict,
 };
     
 
@@ -2023,7 +2073,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_color32_t(lv_color32_t *field)
     return lv_to_mp_struct(get_mp_lv_color32_t_type(), field);
 }
 
-#define mp_read_lv_color32_t(field) mp_read_ptr_lv_color32_t(&field)
+#define mp_read_lv_color32_t(field) mp_read_ptr_lv_color32_t(copy_buffer(&field, sizeof(lv_color32_t)))
 
 STATIC void mp_lv_color32_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2108,7 +2158,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_border_t(lv_style_body_border_t
     return lv_to_mp_struct(get_mp_lv_style_body_border_t_type(), field);
 }
 
-#define mp_read_lv_style_body_border_t(field) mp_read_ptr_lv_style_body_border_t(&field)
+#define mp_read_lv_style_body_border_t(field) mp_read_ptr_lv_style_body_border_t(copy_buffer(&field, sizeof(lv_style_body_border_t)))
 
 STATIC void mp_lv_style_body_border_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2191,7 +2241,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_shadow_t(lv_style_body_shadow_t
     return lv_to_mp_struct(get_mp_lv_style_body_shadow_t_type(), field);
 }
 
-#define mp_read_lv_style_body_shadow_t(field) mp_read_ptr_lv_style_body_shadow_t(&field)
+#define mp_read_lv_style_body_shadow_t(field) mp_read_ptr_lv_style_body_shadow_t(copy_buffer(&field, sizeof(lv_style_body_shadow_t)))
 
 STATIC void mp_lv_style_body_shadow_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2272,7 +2322,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_padding_t(lv_style_body_padding
     return lv_to_mp_struct(get_mp_lv_style_body_padding_t_type(), field);
 }
 
-#define mp_read_lv_style_body_padding_t(field) mp_read_ptr_lv_style_body_padding_t(&field)
+#define mp_read_lv_style_body_padding_t(field) mp_read_ptr_lv_style_body_padding_t(copy_buffer(&field, sizeof(lv_style_body_padding_t)))
 
 STATIC void mp_lv_style_body_padding_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2352,7 +2402,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_body_t(lv_style_body_t *field)
     return lv_to_mp_struct(get_mp_lv_style_body_t_type(), field);
 }
 
-#define mp_read_lv_style_body_t(field) mp_read_ptr_lv_style_body_t(&field)
+#define mp_read_lv_style_body_t(field) mp_read_ptr_lv_style_body_t(copy_buffer(&field, sizeof(lv_style_body_t)))
 
 STATIC void mp_lv_style_body_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2443,7 +2493,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_font_glyph_dsc_t(lv_font_glyph_dsc_t *fiel
     return lv_to_mp_struct(get_mp_lv_font_glyph_dsc_t_type(), field);
 }
 
-#define mp_read_lv_font_glyph_dsc_t(field) mp_read_ptr_lv_font_glyph_dsc_t(&field)
+#define mp_read_lv_font_glyph_dsc_t(field) mp_read_ptr_lv_font_glyph_dsc_t(copy_buffer(&field, sizeof(lv_font_glyph_dsc_t)))
 
 STATIC void mp_lv_font_glyph_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2521,7 +2571,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_font_t(lv_font_t *field)
     return lv_to_mp_struct(get_mp_lv_font_t_type(), field);
 }
 
-#define mp_read_lv_font_t(field) mp_read_ptr_lv_font_t(&field)
+#define mp_read_lv_font_t(field) mp_read_ptr_lv_font_t(copy_buffer(&field, sizeof(lv_font_t)))
 
 STATIC void mp_lv_font_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2619,7 +2669,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_text_t(lv_style_text_t *field)
     return lv_to_mp_struct(get_mp_lv_style_text_t_type(), field);
 }
 
-#define mp_read_lv_style_text_t(field) mp_read_ptr_lv_style_text_t(&field)
+#define mp_read_lv_style_text_t(field) mp_read_ptr_lv_style_text_t(copy_buffer(&field, sizeof(lv_style_text_t)))
 
 STATIC void mp_lv_style_text_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2704,7 +2754,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_image_t(lv_style_image_t *field)
     return lv_to_mp_struct(get_mp_lv_style_image_t_type(), field);
 }
 
-#define mp_read_lv_style_image_t(field) mp_read_ptr_lv_style_image_t(&field)
+#define mp_read_lv_style_image_t(field) mp_read_ptr_lv_style_image_t(copy_buffer(&field, sizeof(lv_style_image_t)))
 
 STATIC void mp_lv_style_image_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2785,7 +2835,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_line_t(lv_style_line_t *field)
     return lv_to_mp_struct(get_mp_lv_style_line_t_type(), field);
 }
 
-#define mp_read_lv_style_line_t(field) mp_read_ptr_lv_style_line_t(&field)
+#define mp_read_lv_style_line_t(field) mp_read_ptr_lv_style_line_t(copy_buffer(&field, sizeof(lv_style_line_t)))
 
 STATIC void mp_lv_style_line_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -2867,7 +2917,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_t(lv_style_t *field)
     return lv_to_mp_struct(get_mp_lv_style_t_type(), field);
 }
 
-#define mp_read_lv_style_t(field) mp_read_ptr_lv_style_t(&field)
+#define mp_read_lv_style_t(field) mp_read_ptr_lv_style_t(copy_buffer(&field, sizeof(lv_style_t)))
 
 STATIC void mp_lv_style_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -3000,7 +3050,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_img_header_t(lv_img_header_t *field)
     return lv_to_mp_struct(get_mp_lv_img_header_t_type(), field);
 }
 
-#define mp_read_lv_img_header_t(field) mp_read_ptr_lv_img_header_t(&field)
+#define mp_read_lv_img_header_t(field) mp_read_ptr_lv_img_header_t(copy_buffer(&field, sizeof(lv_img_header_t)))
 
 STATIC void mp_lv_img_header_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -3763,7 +3813,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_area_t(lv_area_t *field)
     return lv_to_mp_struct(get_mp_lv_area_t_type(), field);
 }
 
-#define mp_read_lv_area_t(field) mp_read_ptr_lv_area_t(&field)
+#define mp_read_lv_area_t(field) mp_read_ptr_lv_area_t(copy_buffer(&field, sizeof(lv_area_t)))
 
 STATIC void mp_lv_area_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -5487,7 +5537,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_point_t(lv_point_t *field)
     return lv_to_mp_struct(get_mp_lv_point_t_type(), field);
 }
 
-#define mp_read_lv_point_t(field) mp_read_ptr_lv_point_t(&field)
+#define mp_read_lv_point_t(field) mp_read_ptr_lv_point_t(copy_buffer(&field, sizeof(lv_point_t)))
 
 STATIC void mp_lv_point_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -6236,7 +6286,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_calendar_date_t(lv_calendar_date_t *field)
     return lv_to_mp_struct(get_mp_lv_calendar_date_t_type(), field);
 }
 
-#define mp_read_lv_calendar_date_t(field) mp_read_ptr_lv_calendar_date_t(&field)
+#define mp_read_lv_calendar_date_t(field) mp_read_ptr_lv_calendar_date_t(copy_buffer(&field, sizeof(lv_calendar_date_t)))
 
 STATIC void mp_lv_calendar_date_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -7220,7 +7270,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_chart_series_t(lv_chart_series_t *field)
     return lv_to_mp_struct(get_mp_lv_chart_series_t_type(), field);
 }
 
-#define mp_read_lv_chart_series_t(field) mp_read_ptr_lv_chart_series_t(&field)
+#define mp_read_lv_chart_series_t(field) mp_read_ptr_lv_chart_series_t(copy_buffer(&field, sizeof(lv_chart_series_t)))
 
 STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -14174,6 +14224,38 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_brightness_obj, 1, 1, mp_lv_colo
 
 /*
  * lvgl extension definition for:
+ * inline static lv_color_t LV_COLOR_HEX(uint32_t c)
+ */
+ 
+STATIC mp_obj_t mp_LV_COLOR_HEX(size_t n_args, const mp_obj_t *args)
+{
+    uint32_t c = (uint32_t)mp_obj_get_int(args[0]);
+    lv_color_t res = LV_COLOR_HEX(c);
+    return mp_read_lv_color32_t(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_LV_COLOR_HEX_obj, 1, 1, mp_LV_COLOR_HEX);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_color_t LV_COLOR_HEX3(uint32_t c)
+ */
+ 
+STATIC mp_obj_t mp_LV_COLOR_HEX3(size_t n_args, const mp_obj_t *args)
+{
+    uint32_t c = (uint32_t)mp_obj_get_int(args[0]);
+    lv_color_t res = LV_COLOR_HEX3(c);
+    return mp_read_lv_color32_t(res);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_LV_COLOR_HEX3_obj, 1, 1, mp_LV_COLOR_HEX3);
+
+ 
+
+/*
+ * lvgl extension definition for:
  * inline static void lv_area_copy(lv_area_t *dest, const lv_area_t *src)
  */
  
@@ -14281,7 +14363,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_color_hsv_t(lv_color_hsv_t *field)
     return lv_to_mp_struct(get_mp_lv_color_hsv_t_type(), field);
 }
 
-#define mp_read_lv_color_hsv_t(field) mp_read_ptr_lv_color_hsv_t(&field)
+#define mp_read_lv_color_hsv_t(field) mp_read_ptr_lv_color_hsv_t(copy_buffer(&field, sizeof(lv_color_hsv_t)))
 
 STATIC void mp_lv_color_hsv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -14772,7 +14854,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_anim_t(lv_anim_t *field)
     return lv_to_mp_struct(get_mp_lv_anim_t_type(), field);
 }
 
-#define mp_read_lv_anim_t(field) mp_read_ptr_lv_anim_t(&field)
+#define mp_read_lv_anim_t(field) mp_read_ptr_lv_anim_t(copy_buffer(&field, sizeof(lv_anim_t)))
 
 STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -15026,7 +15108,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_style_anim_t(lv_style_anim_t *field)
     return lv_to_mp_struct(get_mp_lv_style_anim_t_type(), field);
 }
 
-#define mp_read_lv_style_anim_t(field) mp_read_ptr_lv_style_anim_t(&field)
+#define mp_read_lv_style_anim_t(field) mp_read_ptr_lv_style_anim_t(copy_buffer(&field, sizeof(lv_style_anim_t)))
 
 STATIC void mp_lv_style_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -15243,7 +15325,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_mem_monitor_t(lv_mem_monitor_t *field)
     return lv_to_mp_struct(get_mp_lv_mem_monitor_t_type(), field);
 }
 
-#define mp_read_lv_mem_monitor_t(field) mp_read_ptr_lv_mem_monitor_t(&field)
+#define mp_read_lv_mem_monitor_t(field) mp_read_ptr_lv_mem_monitor_t(copy_buffer(&field, sizeof(lv_mem_monitor_t)))
 
 STATIC void mp_lv_mem_monitor_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -15363,7 +15445,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_ll_t(lv_ll_t *field)
     return lv_to_mp_struct(get_mp_lv_ll_t_type(), field);
 }
 
-#define mp_read_lv_ll_t(field) mp_read_ptr_lv_ll_t(&field)
+#define mp_read_lv_ll_t(field) mp_read_ptr_lv_ll_t(copy_buffer(&field, sizeof(lv_ll_t)))
 
 STATIC void mp_lv_ll_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -15724,7 +15806,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_disp_drv_t(lv_disp_drv_t *field)
     return lv_to_mp_struct(get_mp_lv_disp_drv_t_type(), field);
 }
 
-#define mp_read_lv_disp_drv_t(field) mp_read_ptr_lv_disp_drv_t(&field)
+#define mp_read_lv_disp_drv_t(field) mp_read_ptr_lv_disp_drv_t(copy_buffer(&field, sizeof(lv_disp_drv_t)))
 
 STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -15826,7 +15908,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_disp_t(lv_disp_t *field)
     return lv_to_mp_struct(get_mp_lv_disp_t_type(), field);
 }
 
-#define mp_read_lv_disp_t(field) mp_read_ptr_lv_disp_t(&field)
+#define mp_read_lv_disp_t(field) mp_read_ptr_lv_disp_t(copy_buffer(&field, sizeof(lv_disp_t)))
 
 STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -16145,7 +16227,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_indev_drv_t(lv_indev_drv_t *field)
     return lv_to_mp_struct(get_mp_lv_indev_drv_t_type(), field);
 }
 
-#define mp_read_lv_indev_drv_t(field) mp_read_ptr_lv_indev_drv_t(&field)
+#define mp_read_lv_indev_drv_t(field) mp_read_ptr_lv_indev_drv_t(copy_buffer(&field, sizeof(lv_indev_drv_t)))
 
 STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -16241,7 +16323,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_indev_proc_t(lv_indev_proc_t *field)
     return lv_to_mp_struct(get_mp_lv_indev_proc_t_type(), field);
 }
 
-#define mp_read_lv_indev_proc_t(field) mp_read_ptr_lv_indev_proc_t(&field)
+#define mp_read_lv_indev_proc_t(field) mp_read_ptr_lv_indev_proc_t(copy_buffer(&field, sizeof(lv_indev_proc_t)))
 
 STATIC void mp_lv_indev_proc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -16349,7 +16431,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_indev_t(lv_indev_t *field)
     return lv_to_mp_struct(get_mp_lv_indev_t_type(), field);
 }
 
-#define mp_read_lv_indev_t(field) mp_read_ptr_lv_indev_t(&field)
+#define mp_read_lv_indev_t(field) mp_read_ptr_lv_indev_t(copy_buffer(&field, sizeof(lv_indev_t)))
 
 STATIC void mp_lv_indev_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -16469,7 +16551,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_indev_data_t(lv_indev_data_t *field)
     return lv_to_mp_struct(get_mp_lv_indev_data_t_type(), field);
 }
 
-#define mp_read_lv_indev_data_t(field) mp_read_ptr_lv_indev_data_t(&field)
+#define mp_read_lv_indev_data_t(field) mp_read_ptr_lv_indev_data_t(copy_buffer(&field, sizeof(lv_indev_data_t)))
 
 STATIC void mp_lv_indev_data_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -16572,7 +16654,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_group_t(lv_group_t *field)
     return lv_to_mp_struct(get_mp_lv_group_t_type(), field);
 }
 
-#define mp_read_lv_group_t(field) mp_read_ptr_lv_group_t(&field)
+#define mp_read_lv_group_t(field) mp_read_ptr_lv_group_t(copy_buffer(&field, sizeof(lv_group_t)))
 
 STATIC void mp_lv_group_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -17555,7 +17637,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_fs_file_t(lv_fs_file_t *field)
     return lv_to_mp_struct(get_mp_lv_fs_file_t_type(), field);
 }
 
-#define mp_read_lv_fs_file_t(field) mp_read_ptr_lv_fs_file_t(&field)
+#define mp_read_lv_fs_file_t(field) mp_read_ptr_lv_fs_file_t(copy_buffer(&field, sizeof(lv_fs_file_t)))
 
 STATIC void mp_lv_fs_file_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -17805,7 +17887,7 @@ STATIC inline mp_obj_t mp_read_ptr_lv_fs_dir_t(lv_fs_dir_t *field)
     return lv_to_mp_struct(get_mp_lv_fs_dir_t_type(), field);
 }
 
-#define mp_read_lv_fs_dir_t(field) mp_read_ptr_lv_fs_dir_t(&field)
+#define mp_read_lv_fs_dir_t(field) mp_read_ptr_lv_fs_dir_t(copy_buffer(&field, sizeof(lv_fs_dir_t)))
 
 STATIC void mp_lv_fs_dir_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
@@ -18338,6 +18420,8 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_color_to32), MP_ROM_PTR(&mp_lv_color_to32_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_mix), MP_ROM_PTR(&mp_lv_color_mix_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_brightness), MP_ROM_PTR(&mp_lv_color_brightness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_COLOR_HEX), MP_ROM_PTR(&mp_LV_COLOR_HEX_obj) },
+    { MP_ROM_QSTR(MP_QSTR_COLOR_HEX3), MP_ROM_PTR(&mp_LV_COLOR_HEX3_obj) },
     { MP_ROM_QSTR(MP_QSTR_area_copy), MP_ROM_PTR(&mp_lv_area_copy_obj) },
     { MP_ROM_QSTR(MP_QSTR_area_get_width), MP_ROM_PTR(&mp_lv_area_get_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_area_get_height), MP_ROM_PTR(&mp_lv_area_get_height_obj) },
@@ -18500,6 +18584,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_INDEV_STATE), MP_ROM_PTR(&mp_LV_INDEV_STATE_type) },
     { MP_ROM_QSTR(MP_QSTR_CURSOR), MP_ROM_PTR(&mp_LV_CURSOR_type) },
     { MP_ROM_QSTR(MP_QSTR_SHADOW), MP_ROM_PTR(&mp_LV_SHADOW_type) },
+    { MP_ROM_QSTR(MP_QSTR_OPA), MP_ROM_PTR(&mp_LV_OPA_type) },
     { MP_ROM_QSTR(MP_QSTR_RES), MP_ROM_PTR(&mp_LV_RES_type) },
     { MP_ROM_QSTR(MP_QSTR_FS_MODE), MP_ROM_PTR(&mp_LV_FS_MODE_type) },
     { MP_ROM_QSTR(MP_QSTR_TXT_CMD_STATE), MP_ROM_PTR(&mp_LV_TXT_CMD_STATE_type) },
