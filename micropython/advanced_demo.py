@@ -2,9 +2,11 @@ import lvgl as lv
 
 symbolstyle = lv.style_t(lv.style_plain)
 symbolstyle.text.font = lv.font_symbol_40
-symbolstyle.text.color.red = 0xff
-symbolstyle.text.color.green = 0xff
-symbolstyle.text.color.blue = 0xff
+
+# The following two lines do the same thing.
+# They show how to initialize struct either directly or through a dict
+symbolstyle.text.color = lv.COLOR_HEX(0xffffff)
+symbolstyle.text.color = {"red":0xff, "green":0xff, "blue":0xff}
 
 class SymbolButton(lv.btn):
     def __init__(self, parent, symbol, text):

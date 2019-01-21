@@ -235,6 +235,8 @@ lv_to_mp = {
     'int32_t'                   : 'mp_obj_new_int',
 }
 
+lv_to_mp_byref = {}
+
 #
 # Emit Header
 #
@@ -299,6 +301,8 @@ STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
     return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
 
+STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type);
+
 STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
 {
     mp_obj_t *res = NULL;
@@ -306,7 +310,10 @@ STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
         res = get_native_obj(mp_obj);
         if (res){
             const mp_obj_type_t *res_type = ((mp_obj_base_t*)res)->type;
-            if (res_type != mp_type) res = NULL;
+            if (res_type != mp_type){
+                if (res_type == &mp_type_dict) res = dict_to_struct(res, mp_type);
+                else res = NULL;
+            }
         }
     }
     if (res == NULL) nlr_raise(
@@ -454,6 +461,27 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     return MP_OBJ_FROM_PTR(self);
 }
 
+// Convert dict to struct
+
+STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
+{
+    mp_obj_t mp_struct = make_new_lv_struct(type, 0, 0, NULL);
+    mp_obj_t *native_dict = cast(dict, &mp_type_dict);
+    mp_map_t *map = mp_obj_dict_get_map(native_dict);
+    if (map == NULL) return mp_const_none;
+    for (uint i = 0; i < map->alloc; i++) {
+        mp_obj_t key = map->table[i].key;
+        mp_obj_t value = map->table[i].value;
+        if (key != MP_OBJ_NULL) {
+            type->attr(mp_struct, mp_obj_str_get_qstr(key), (mp_obj_t[]){MP_OBJ_SENTINEL, value});
+        }
+    }
+    return mp_struct;
+}
+
+
+// Blob is a wrapper for void* 
+
 STATIC void mp_blob_print(const mp_print_t *print,
     mp_obj_t self_in,
     mp_print_kind_t kind)
@@ -521,6 +549,7 @@ def get_type(arg, **kwargs):
 #
 
 generated_structs = {}
+struct_aliases = {}
 
 def flatten_struct(struct_decls):
     result = []
@@ -565,7 +594,7 @@ def try_generate_struct(struct_name, struct):
         mp_to_lv_convertor = mp_to_lv[type_name]
         if callable(mp_to_lv_convertor):
              mp_to_lv_convertor = mp_to_lv['void*']
-        lv_to_mp_convertor = lv_to_mp[type_name]
+        lv_to_mp_convertor = lv_to_mp_byref[type_name] if type_name in lv_to_mp_byref else lv_to_mp[type_name]
         if callable(lv_to_mp_convertor):
             lv_to_mp_convertor = lv_to_mp['void*']
         
@@ -593,6 +622,7 @@ STATIC inline mp_obj_t mp_read_ptr_{struct_name}({struct_name} *field)
 }}
 
 #define mp_read_{struct_name}(field) mp_read_ptr_{struct_name}(copy_buffer(&field, sizeof({struct_name})))
+#define mp_read_byref_{struct_name}(field) mp_read_ptr_{struct_name}(&field)
 
 STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {{
@@ -653,6 +683,7 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
             read_cases  = ';\n            '.join(read_cases)));
 
     lv_to_mp[struct_name] = 'mp_read_%s' % struct_name
+    lv_to_mp_byref[struct_name] = 'mp_read_byref_%s' % struct_name
     mp_to_lv[struct_name] = 'mp_write_%s' % struct_name
     lv_to_mp['%s*' % struct_name] = 'mp_read_ptr_%s' % struct_name
     mp_to_lv['%s*' % struct_name] = 'mp_write_ptr_%s' % struct_name
@@ -693,7 +724,8 @@ def try_generate_type(type):
             return mp_to_lv[type]
     for new_type in [get_type(x) for x in typedefs if get_arg_name(x) == type]:
         if new_type in structs:
-            try_generate_struct(new_type, structs[new_type])
+            if (try_generate_struct(new_type, structs[new_type])):
+                struct_aliases[new_type] = type
         if try_generate_type(new_type):
            mp_to_lv[type] = mp_to_lv[new_type]
            type_ptr = '%s*' % type
@@ -702,6 +734,8 @@ def try_generate_type(type):
                mp_to_lv[type_ptr] = mp_to_lv[new_type_ptr]
            if new_type in lv_to_mp:
                lv_to_mp[type] = lv_to_mp[new_type]
+               if new_type in lv_to_mp_byref:
+                   lv_to_mp_byref[type] = lv_to_mp_byref[new_type]
                if new_type_ptr in lv_to_mp:
                    lv_to_mp[type_ptr] = lv_to_mp[new_type_ptr]
            # print("// %s = (%s)" % (type, new_type))
@@ -1066,6 +1100,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
     {functions},
     {enums},
     {structs},
+    {struct_aliases},
     {blobs}
 }};
 """.format(
@@ -1077,6 +1112,8 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
             format(name = get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
         structs = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }}".
             format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in structs.keys() if struct_name in generated_structs]),
+        struct_aliases = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{alias_name}), MP_ROM_PTR(&mp_{struct_name}_type) }}".
+            format(struct_name = struct_name, alias_name = simplify_identifier(struct_aliases[struct_name])) for struct_name in struct_aliases.keys()]),
         blobs = ',\n    '.join(["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{global_name}) }}".
             format(name = simplify_identifier(global_name), global_name = global_name) for global_name in generated_globals])))
         
