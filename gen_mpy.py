@@ -144,12 +144,14 @@ for obj_name, ext in exts.items():
 enum_defs = [x for x in ast.ext if hasattr(x,'type') and isinstance(x.type, c_ast.Enum)]
 enums = {}
 for enum_def in enum_defs:
-    member_names = [member.name for member in enum_def.type.values.enumerators]
+    member_names = [member.name for member in enum_def.type.values.enumerators if not member.name.startswith('_')]
     enum_name = commonprefix(member_names)
     enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
     enum = {}
     next_value = 0
     for member in enum_def.type.values.enumerators:
+        if member.name.startswith('_'):
+            continue
         if member.value == None:
             value = next_value
         else:
