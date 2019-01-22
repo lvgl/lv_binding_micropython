@@ -5,7 +5,7 @@ symbolstyle.text.font = lv.font_symbol_40
 
 # The following two lines do the same thing.
 # They show how to initialize struct either directly or through a dict
-symbolstyle.text.color = lv.COLOR_HEX(0xffffff)
+symbolstyle.text.color = lv.color_hex(0xffffff)
 symbolstyle.text.color = {"red":0xff, "green":0xff, "blue":0xff}
 
 class SymbolButton(lv.btn):
