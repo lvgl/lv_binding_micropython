@@ -1,2 +1,5 @@
-# lv_bindings
-LittlevGL bindings to other languages
+# Bindings for LittelvGL
+
+## Micropython
+
+TODO
