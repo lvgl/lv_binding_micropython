@@ -2,5 +2,5 @@
 	path = lvgl
 	url = https://github.com/littlevgl/lvgl.git
 [submodule "micropython/pycparser"]
-	path = micropython/pycparser
+	path = pycparser
 	url = https://github.com/eliben/pycparser.git
