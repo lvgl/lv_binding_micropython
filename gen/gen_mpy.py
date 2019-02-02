@@ -265,6 +265,7 @@ print ("""
 #include "py/obj.h"
 #include "py/objstr.h"
 #include "py/runtime.h"
+#include "py/binary.h"
 
 /*
  * lvgl includes
@@ -491,6 +492,16 @@ STATIC void mp_blob_print(const mp_print_t *print,
     mp_printf(print, "lvgl Blob");
 }
 
+STATIC mp_int_t mp_blob_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
+    (void)flags;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+
+    bufinfo->buf = &self->data;
+    bufinfo->len = sizeof(self->data);
+    bufinfo->typecode = BYTEARRAY_TYPECODE;
+    return 0;
+}
+
 STATIC const mp_obj_type_t mp_blob_type = {
     { &mp_type_type },
     .name = MP_QSTR_Blob,
@@ -498,12 +509,21 @@ STATIC const mp_obj_type_t mp_blob_type = {
     //.make_new = make_new_blob,
     //.attr = mp_blob_attr,
     //.locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer }
 };
 
 STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
-    mp_lv_struct_t *self = mp_to_lv_struct(self_in);
-    return self->data;
+    void *result;
+    mp_buffer_info_t buffer_info;
+    mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
+    if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
+        nlr_raise(
+            mp_obj_new_exception_msg_varg(
+                &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(self_in)));
+    }
+    memcpy(&result, buffer_info.buf, sizeof(result));
+    return result;
 }
 
 STATIC inline mp_obj_t ptr_to_mp(void *data)
