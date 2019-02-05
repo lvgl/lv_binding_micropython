@@ -1102,22 +1102,10 @@ print("""
 
 /*
  * lvgl module definitions
- * User should implement lv_mp_init. Display can be initialized there, if needed.
  */
-
-extern void lv_mp_init();
-
-STATIC mp_obj_t _lv_mp_init()
-{{
-    lv_mp_init();
-    return mp_const_none;
-}}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(lv_mp_init_obj, _lv_mp_init);
 
 STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_lvgl) }},
-    {{ MP_ROM_QSTR(MP_QSTR___init__), MP_ROM_PTR(&lv_mp_init_obj) }},
     {objects},
     {functions},
     {enums},

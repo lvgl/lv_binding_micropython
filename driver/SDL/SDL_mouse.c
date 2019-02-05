@@ -6,7 +6,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "mouse.h"
+#include "SDL_mouse.h"
 #if USE_MOUSE != 0
 
 /*********************

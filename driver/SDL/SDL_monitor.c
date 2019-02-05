@@ -6,7 +6,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "monitor.h"
+#include "SDL_monitor.h"
 #if USE_MONITOR
 
 #ifndef MONITOR_SDL_INCLUDE_PATH
@@ -18,12 +18,12 @@
 #include <string.h>
 #include MONITOR_SDL_INCLUDE_PATH
 #include "lv_core/lv_vdb.h"
-#include "mouse.h"
+#include "SDL_mouse.h"
 
 /*********************
  *      DEFINES
  *********************/
-#define SDL_REFR_PERIOD     50  /*ms*/
+#define SDL_REFR_PERIOD     1  /*ms*/
 
 #ifndef MONITOR_ZOOM
 #define MONITOR_ZOOM        1

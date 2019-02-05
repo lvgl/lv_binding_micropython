@@ -1,4 +1,5 @@
 import lvgl as lv
+import SDL
 
 symbolstyle = lv.style_t(lv.style_plain)
 symbolstyle.text.font = lv.font_symbol_40
@@ -84,6 +85,26 @@ class Screen_Main():
 
 class AdvancedDemoApplication():
     def init_gui(self):
+
+        lv.init()
+
+        # Register SDL display driver.
+
+        disp_drv = lv.disp_drv_t()
+        lv.disp_drv_init(disp_drv)
+        disp_drv.disp_flush = SDL.monitor_flush
+        disp_drv.disp_fill = SDL.monitor_fill
+        disp_drv.disp_map = SDL.monitor_map
+        lv.disp_drv_register(disp_drv)
+
+        # Regsiter SDL mouse driver
+
+        indev_drv = lv.indev_drv_t()
+        lv.indev_drv_init(indev_drv) 
+        indev_drv.type = lv.INDEV_TYPE.POINTER;
+        indev_drv.read = SDL.mouse_read;
+        lv.indev_drv_register(indev_drv);
+
         self.screen_main = Screen_Main(self)
         # lv.scr_load(self.screen_main)
 
