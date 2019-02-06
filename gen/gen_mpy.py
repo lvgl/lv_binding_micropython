@@ -370,9 +370,9 @@ STATIC mp_obj_t make_new(
     size_t n_kw,
     const mp_obj_t *args)
 {
-    mp_arg_check_num(n_args, n_kw, 1, 2, false);
+    mp_arg_check_num(n_args, n_kw, 0, 2, false);
     mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
-    lv_obj_t *parent = mp_to_lv(args[0]);
+    lv_obj_t *parent = n_args > 0? mp_to_lv(args[0]): NULL;
     lv_obj_t *copy = n_args > 1? mp_to_lv(args[1]): NULL;
     *self = (mp_lv_obj_t){
         .base = {type}, 

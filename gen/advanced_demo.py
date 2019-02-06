@@ -1,11 +1,18 @@
 import lvgl as lv
 import SDL
 
+# lvgl must be initialized before any lvgl function is called or object/struct is constructed!
+
+lv.init()
+
+# Create a style based on style_plain but with a symbol font
+
 symbolstyle = lv.style_t(lv.style_plain)
 symbolstyle.text.font = lv.font_symbol_40
 
 # The following two lines do the same thing.
 # They show how to initialize struct either directly or through a dict
+
 symbolstyle.text.color = lv.color_hex(0xffffff)
 symbolstyle.text.color = {"red":0xff, "green":0xff, "blue":0xff}
 
@@ -33,6 +40,8 @@ class Page_Buttons:
     
         self.label = lv.label(page)
         self.label.align(self.btn1, lv.ALIGN.OUT_BOTTOM_LEFT, 0, 10)
+
+        # Currently only single callback per object is supported
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
             btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name))
@@ -70,23 +79,18 @@ class Page_Simple:
         self.app.screen_main.tabview.set_style(lv.tabview.STYLE.BG, self.styles[selected][1])   
 
 
-
-
-
-class Screen_Main():
+class Screen_Main(lv.obj):
     def __init__(self, app, *args, **kwds):
         self.app = app
         super().__init__(*args, **kwds)
         
-        self.tabview = lv.tabview(lv.scr_act())
+        self.tabview = lv.tabview(self)
         self.page_simple = Page_Simple(self.app, self.tabview.add_tab('Simple'))
         self.page_buttons = Page_Buttons(self.app, self.tabview.add_tab('Buttons'))
 
 
 class AdvancedDemoApplication():
     def init_gui(self):
-
-        lv.init()
 
         # Register SDL display driver.
 
@@ -104,9 +108,11 @@ class AdvancedDemoApplication():
         indev_drv.type = lv.INDEV_TYPE.POINTER;
         indev_drv.read = SDL.mouse_read;
         lv.indev_drv_register(indev_drv);
+        
+        # Create the main screen and load it.
 
         self.screen_main = Screen_Main(self)
-        # lv.scr_load(self.screen_main)
+        lv.scr_load(self.screen_main)
 
 
 app = AdvancedDemoApplication()
