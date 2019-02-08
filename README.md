@@ -40,8 +40,8 @@ With REPL (interactive console), when waiting for the user input, asynchronous e
 ### Display and Input Drivers
 
 LittlevGL can be configured to use different displays and different input devices. More information is available on [LittlevGL documentation](https://docs.littlevgl.com/#Porting).  
-Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameters. The function pointer is used to access the actual display / input device.  
-When using LittlevGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registaration is perfomed in the Micropython script**.  
+Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameter (actually a struct that contains function pointers). The function pointer is used to access the actual display / input device.  
+When using LittlevGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registration is perfomed in the Micropython script** to make is easy for the user to select and replace drivers without building the project and changing C files.  
 
 Example:
 
@@ -69,7 +69,7 @@ indev_drv.read = SDL.mouse_read;
 lv.indev_drv_register(indev_drv);
 ```
 
-In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as SDL.monitor_flush and SDL.monitor_fill, which are wrappers around function pointers and can be registerd to LittlevGL display and input driver.  
+In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush` and `SDL.monitor_fill`, which are wrappers around function pointers and can be registerd as LittlevGL display and input driver.  
 Behind the scences these objects implement the buffer protocol to give access to the function pointer bytes.
 
 ### Adding Micropython Bindings to a project
@@ -109,7 +109,7 @@ python ../../lib/lv_bindings/micropython/gen_mpy.py -X anim -X group -X task -I.
 
 ## Micropython Bindings Usage
 
-A simple example: [`advanced_demo.py`](https://github.com/littlevgl/lv_bindings/blob/master/micropython/advanced_demo.py).
+A simple example: [`advanced_demo.py`](https://github.com/littlevgl/lv_binding_micropython/blob/master/gen/advanced_demo.py).
 
 #### Importing and Initializing LittlelvGL
 ```python
@@ -140,7 +140,7 @@ lv.indev_drv_register(indev_drv);
 In this example, SDL display and input drivers are registered on a unix port of Micropython.
 
 ### Creating a screen with a button and a label
-```
+```python
 scr = lv.obj()
 btn = lv.btn(scr)
 btn.align(lv.scr_act(), lv.ALIGN.CENTER, 0, 0)
