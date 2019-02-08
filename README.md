@@ -37,6 +37,41 @@ Here is [an example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f3976
 
 With REPL (interactive console), when waiting for the user input, asynchronous events can also happen. In [this example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/unix_mphal.c#L176) we just call `mp_handle_pending` periodically when waiting for a keypress. `mp_handle_pending` takes care of dispatching asynchronous events registered with `mp_sched_schedule`.
 
+### Display and Input Drivers
+
+LittlevGL can be configured to use different displays and different input devices. More information is available on [LittlevGL documentation](https://docs.littlevgl.com/#Porting).  
+Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameters. The function pointer is used to access the actual display / input device.  
+When using LittlevGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registaration is perfomed in the Micropython script**.  
+
+Example:
+
+```python
+import lvgl as lv
+lv.init()
+
+import SDL
+
+# Register SDL display driver.
+
+disp_drv = lv.disp_drv_t()
+lv.disp_drv_init(disp_drv)
+disp_drv.disp_flush = SDL.monitor_flush
+disp_drv.disp_fill = SDL.monitor_fill
+disp_drv.disp_map = SDL.monitor_map
+lv.disp_drv_register(disp_drv)
+
+# Regsiter SDL mouse driver
+
+indev_drv = lv.indev_drv_t()
+lv.indev_drv_init(indev_drv) 
+indev_drv.type = lv.INDEV_TYPE.POINTER;
+indev_drv.read = SDL.mouse_read;
+lv.indev_drv_register(indev_drv);
+```
+
+In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as SDL.monitor_flush and SDL.monitor_fill, which are wrappers around function pointers and can be registerd to LittlevGL display and input driver.  
+Behind the scences these objects implement the buffer protocol to give access to the function pointer bytes.
+
 ### Adding Micropython Bindings to a project
 
 An example project of "Micropython + lvgl + Bindings" is [`lv_mpy`](https://github.com/littlevgl/lv_mpy).  
@@ -47,7 +82,6 @@ The following examples are taken from there:
 - Edit the Makefile to run `gen_mpy.py` and build its product automatically. Here is [an example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/py/py.mk#L122).
 - Register lvgl module in Micropython as a builtin module. [An example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/mpconfigport.h#L233).
 - Add lvgl roots to gc roots. [An example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/mpconfigport.h#L301). Configure lvgl to use *Garbage Collection* by setting several `LV_MEM_CUSTOM_*` and `LV_GC_*` macros [example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/lib/lv_conf.h#L28)
-- Implement `lv_mp_init`. This function is called right after `import lvgl` and allows you to initialize the screen hardware (if you need to) and do some lvgl initializations such as registering a tick handler and schedule a call to `lv_task_handler`. [An example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/lv_mpy_hal.c#L71)
 - Something I forgot? Please let me know.
 
 
@@ -77,9 +111,46 @@ python ../../lib/lv_bindings/micropython/gen_mpy.py -X anim -X group -X task -I.
 
 A simple example: [`advanced_demo.py`](https://github.com/littlevgl/lv_bindings/blob/master/micropython/advanced_demo.py).
 
-#### Importing LittlelvGL
+#### Importing and Initializing LittlelvGL
 ```python
 import lvgl as lv
+lv.init()
+```
+#### Registering Display and Input drivers
+```python
+import SDL
+
+# Register SDL display driver.
+
+disp_drv = lv.disp_drv_t()
+lv.disp_drv_init(disp_drv)
+disp_drv.disp_flush = SDL.monitor_flush
+disp_drv.disp_fill = SDL.monitor_fill
+disp_drv.disp_map = SDL.monitor_map
+lv.disp_drv_register(disp_drv)
+
+# Regsiter SDL mouse driver
+
+indev_drv = lv.indev_drv_t()
+lv.indev_drv_init(indev_drv) 
+indev_drv.type = lv.INDEV_TYPE.POINTER;
+indev_drv.read = SDL.mouse_read;
+lv.indev_drv_register(indev_drv);
+```
+In this example, SDL display and input drivers are registered on a unix port of Micropython.
+
+### Creating a screen with a button and a label
+```
+scr = lv.obj()
+btn = lv.btn(scr)
+btn.align(lv.scr_act(), lv.ALIGN.CENTER, 0, 0)
+label = lv.label(btn)
+label.set_text("Button")
+
+# Load the screen
+
+lv.scr_load(scr)
+
 ```
 
 #### Creating an instance of a struct
