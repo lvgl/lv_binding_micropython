@@ -72,6 +72,12 @@ lv.indev_drv_register(indev_drv);
 In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush` and `SDL.monitor_fill`, which are wrappers around function pointers and can be registerd as LittlevGL display and input driver.  
 Behind the scences these objects implement the buffer protocol to give access to the function pointer bytes.
 
+On current LittlevGL version the display settings (width, length, color depth) is defined using macros. It cannot change on runtime.  
+This means, unfortunately, that **LittlevGL needs to be rebuilt when changing display driver** since different displays have different settings. This will be fixed on the next LittlevGL version (`v6.0`).
+
+Currently supported drivers for Micropyton are SDL unix drivers and ILI9341 driver for ESP32.  
+Driver code is under `/driver` directory.
+
 ### Adding Micropython Bindings to a project
 
 An example project of "Micropython + lvgl + Bindings" is [`lv_mpy`](https://github.com/littlevgl/lv_mpy).  
@@ -138,6 +144,25 @@ indev_drv.read = SDL.mouse_read;
 lv.indev_drv_register(indev_drv);
 ```
 In this example, SDL display and input drivers are registered on a unix port of Micropython.
+
+Here is an alternative example for ESP32 + ILI9341 drivers:
+
+```python
+# Import ESP32 driver 
+
+import lvesp32
+
+#Import ILI9341, initialize it and register it with LittlevGL
+
+import ILI9341 as ili
+d = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
+d.init()
+disp_drv = lv.disp_drv_t()
+lv.disp_drv_init(disp_drv)
+disp_drv.disp_flush = d.flush
+disp_drv.disp_fill = d.fill
+lv.disp_drv_register(disp_drv)
+```
 
 ### Creating a screen with a button and a label
 ```python
