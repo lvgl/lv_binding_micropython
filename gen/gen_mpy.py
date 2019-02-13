@@ -30,19 +30,28 @@ from pycparser import c_parser, c_ast, c_generator
 argParser = ArgumentParser()
 argParser.add_argument('-I', '--include', dest='include', help='Preprocesor include path', metavar='<Include Path>', action='append')
 argParser.add_argument('-X', '--exclude', dest='exclude', help='Exclude lvgl object', metavar='<Object Name>', action='append')
+argParser.add_argument('-D', '--define', dest='define', help='Define preprocessor macro', metavar='<Macro Name>', action='append')
+argParser.add_argument('-E', '--external-preprocessing', dest='ep', help='Prevent preprocessing. Assume input file is already preprocessed', metavar='<Preprocessed File>', action='store')
 argParser.add_argument('input', nargs='+')
+argParser.set_defaults(include=[], exclude=[], define=[], ep=None, input=[])
 args = argParser.parse_args()
 
 # 
-# C proceprocessing
+# C proceprocessing, if needed, or just read the input files.
 # 
 
-pp_cmd = 'gcc -E -std=c99 -DPYCPARSER {include} {input} {first_input}'.format(
-    input=' '.join('-include %s' % inp for inp in args.input), 
-    first_input= '%s' % args.input[0],
-    include=' '.join('-I %s' % inc for inc in args.include))
-s = subprocess.check_output(pp_cmd.split()).decode()
-
+if not args.ep:
+    pp_cmd = 'gcc -E -std=c99 -DPYCPARSER {macros} {include} {input} {first_input}'.format(
+        input=' '.join('-include %s' % inp for inp in args.input), 
+        first_input= '%s' % args.input[0],
+        macros = ' '.join('-D%s' % define for define in args.define),
+        include=' '.join('-I %s' % inc for inc in args.include))
+    s = subprocess.check_output(pp_cmd.split()).decode()
+else:
+    pp_cmd = 'Preprocessing was disabled.'
+    s = ''
+    with open(args.ep, 'r') as f:
+        s += f.read()
 
 #
 # lv text patterns

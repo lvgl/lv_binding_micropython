@@ -1,5 +1,4 @@
 import lvgl as lv
-import SDL
 
 # lvgl must be initialized before any lvgl function is called or object/struct is constructed!
 
@@ -90,7 +89,9 @@ class Screen_Main(lv.obj):
 
 
 class AdvancedDemoApplication():
-    def init_gui(self):
+    def init_gui_SDL(self):
+
+        import SDL
 
         # Register SDL display driver.
 
@@ -109,15 +110,46 @@ class AdvancedDemoApplication():
         indev_drv.read = SDL.mouse_read;
         lv.indev_drv_register(indev_drv);
         
+    def init_gui_esp32(self):
+
+        import lvesp32
+        import ILI9341 as ili
+
+        # Initialize ILI9341 display
+
+        disp = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
+        disp.init()
+
+        # Register display driver 
+
+        disp_drv = lv.disp_drv_t()
+        lv.disp_drv_init(disp_drv)
+        disp_drv.disp_flush = disp.flush
+        disp_drv.disp_fill = disp.fill
+        lv.disp_drv_register(disp_drv)
+
+    
+    def init_gui(self):
+        
+        # Identify platform and initialize it
+
+        try:
+            self.init_gui_esp32()
+        except ImportError:
+            pass
+    
+        try:
+            self.init_gui_SDL()
+        except ImportError:
+            pass
+
         # Create the main screen and load it.
 
         self.screen_main = Screen_Main(self)
         lv.scr_load(self.screen_main)
 
-
 app = AdvancedDemoApplication()
 app.init_gui()
-
 
 
 
