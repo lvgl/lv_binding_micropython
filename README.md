@@ -75,7 +75,12 @@ Behind the scences these objects implement the buffer protocol to give access to
 On current LittlevGL version the display settings (width, length, color depth) is defined using macros. It cannot change on runtime.  
 This means, unfortunately, that **LittlevGL needs to be rebuilt when changing display driver** since different displays have different settings. This will be fixed on the next LittlevGL version (`v6.0`).
 
-Currently supported drivers for Micropyton are SDL unix drivers and ILI9341 driver for ESP32.  
+Currently supported drivers for Micropyton are 
+
+- SDL unix drivers (display and mouse)
+- ILI9341 driver for ESP32.  
+- Raw Resistive Touch for ESP32 (ADC connected to screen directly, no touch IC)
+
 Driver code is under `/driver` directory.
 
 ### Adding Micropython Bindings to a project

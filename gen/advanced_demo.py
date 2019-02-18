@@ -128,6 +128,17 @@ class AdvancedDemoApplication():
         disp_drv.disp_fill = disp.fill
         lv.disp_drv_register(disp_drv)
 
+        # Register raw resistive touch driver
+
+        import rtch
+        touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33)
+        touch.init()
+        indev_drv = lv.indev_drv_t()
+        lv.indev_drv_init(indev_drv) 
+        indev_drv.type = lv.INDEV_TYPE.POINTER;
+        indev_drv.read = touch.read;
+        lv.indev_drv_register(indev_drv);
+
     
     def init_gui(self):
         
