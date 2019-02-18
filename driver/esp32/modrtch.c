@@ -101,8 +101,10 @@ STATIC rtch_t *g_rtch = NULL;
 STATIC bool touch_read(lv_indev_data_t *data)
 {
     rtch_info_t *touch_info = &g_rtch->rtch_info;
+    xSemaphoreTake(g_rtch->rtch_info_mutex, portMAX_DELAY);
     data->point = (lv_point_t){touch_info->x, touch_info->y};
     data->state = touch_info->touched? LV_INDEV_STATE_PR: LV_INDEV_STATE_REL;
+    xSemaphoreGive(g_rtch->rtch_info_mutex);
     return false;
 }
 
