@@ -1,6 +1,8 @@
 
 # Bindings for LittelvGL
 
+See also [Micropython + LittlevGL](https://blog.littlevgl.com/2019-02-20/micropython-bindings) blog post.
+
 ## Micropython
 
 Micropython Binding for lvgl (LittlelvGL) provides an automatically generated Micropython module with classes and functions that allow the user access much of the lvgl library.  
