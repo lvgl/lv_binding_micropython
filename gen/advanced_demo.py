@@ -21,18 +21,19 @@ class SymbolButton(lv.btn):
         self.symbol = lv.label(self)
         self.symbol.set_text(symbol)
         self.symbol.set_style(symbolstyle)
-        self.symbol.align(self, lv.ALIGN.CENTER,0,0)
         
         self.label = lv.label(self)
         self.label.set_text(text)
-        self.label.align(self, lv.ALIGN.CENTER,20,0)
         
 class Page_Buttons:
     def __init__(self, app, page):
         self.app = app
         self.page = page
+
         self.btn1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
         self.btn1.set_size(140,100)
+        self.btn1.align(None, lv.ALIGN.IN_TOP_LEFT, 20, 0)
+        
         self.btn2 = SymbolButton(page, lv.SYMBOL.PAUSE, "Pause")
         self.btn2.set_size(140,100)
         self.btn2.align(self.btn1, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
