@@ -540,6 +540,21 @@ STATIC inline mp_obj_t ptr_to_mp(void *data)
     return lv_to_mp_struct(&mp_blob_type, data);
 }
 
+// Cast pointer to struct
+
+STATIC mp_obj_t mp_lv_cast(mp_obj_t type_obj, mp_obj_t ptr_obj)
+{
+    mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
+    *self = (mp_lv_struct_t){
+        .base = {(const mp_obj_type_t*)type_obj}, 
+        .data = mp_to_ptr(ptr_obj)
+    };
+    return self;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_lv_cast_obj, mp_lv_cast);
+STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_lv_cast_obj));
+
 """)
 
 # 
@@ -690,7 +705,8 @@ STATIC void mp_{struct_name}_print(const mp_print_t *print,
 }}
 
 STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
-    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }}
+    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
+    {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_locals_dict_table);
@@ -701,7 +717,8 @@ STATIC const mp_obj_type_t mp_{struct_name}_type = {{
     .print = mp_{struct_name}_print,
     .make_new = make_new_lv_struct,
     .attr = mp_{struct_name}_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_{struct_name}_locals_dict
+    .locals_dict = (mp_obj_dict_t*)&mp_{struct_name}_locals_dict,
+    .buffer_p = {{ .get_buffer = mp_blob_get_buffer }}
 }};
 
 STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
@@ -886,7 +903,7 @@ STATIC mp_obj_t mp_{func}(size_t n_args, const mp_obj_t *args)
     return {build_return_value};
 }}
 
-MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{func});
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{func});
 
  """.format(func=func.name, 
              print_func=gen.visit(func),
