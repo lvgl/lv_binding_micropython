@@ -35,7 +35,7 @@ This is achieved by using the internal Micropython scheduler (that must be enabl
 
 - When a callback is fired, within lv_mpy.c
 - When screen need to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/littlevgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting). This will ususally be handled in the display device driver.
-Here is [an example](https://github.com/littlevgl/lv_binding_micropython/blob/6c33a61f2d99a55361725dcfd070d06648f6a738/driver/SDL/modSDL.c#L63) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing lvgl.  
+Here is [an example](https://github.com/littlevgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L23) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing lvgl. [`mp_lv_task_handler`](https://github.com/littlevgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L7) is scheduled to run on the same thread Micropython is running, and it calls both `lv_task_handler` for lvgl task handling and `monitor_sdl_refr_core` for refreshing the display and handling mouse events.  
 
 With REPL (interactive console), when waiting for the user input, asynchronous events can also happen. In [this example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/unix_mphal.c#L176) we just call `mp_handle_pending` periodically when waiting for a keypress. `mp_handle_pending` takes care of dispatching asynchronous events registered with `mp_sched_schedule`.
 
@@ -52,6 +52,7 @@ import lvgl as lv
 lv.init()
 
 import SDL
+SDL.init()
 
 # Register SDL display driver.
 
