@@ -93,6 +93,7 @@ class AdvancedDemoApplication():
     def init_gui_SDL(self):
 
         import SDL
+        SDL.init()
 
         # Register SDL display driver.
 

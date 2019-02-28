@@ -40,14 +40,6 @@ static int16_t last_y = 0;
  **********************/
 
 /**
- * Initialize the mouse
- */
-void mouse_init(void)
-{
-
-}
-
-/**
  * Get the current position and state of the mouse
  * @param data store the mouse data here
  * @return false: because the points are not buffered, so no more data to be read

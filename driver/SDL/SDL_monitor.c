@@ -23,27 +23,10 @@
 /*********************
  *      DEFINES
  *********************/
-#define SDL_REFR_PERIOD     1  /*ms*/
 
 #ifndef MONITOR_ZOOM
 #define MONITOR_ZOOM        1
 #endif
-
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
-# if __APPLE__ && TARGET_OS_MAC
-#define MONITOR_APPLE
-# endif
-#endif
-
-/**********************
- *      TYPEDEFS
- **********************/
-
-/**********************
- *  STATIC PROTOTYPES
- **********************/
-static int monitor_sdl_refr_thread(void * param);
-
 
 /***********************
  *   GLOBAL PROTOTYPES
@@ -60,33 +43,16 @@ static volatile bool sdl_inited = false;
 static volatile bool sdl_refr_qry = false;
 static volatile bool sdl_quit_qry = false;
 
-int quit_filter(void * userdata, SDL_Event * event);
-static void monitor_sdl_clean_up(void);
-static void monitor_sdl_init(void);
-static void monitor_sdl_refr_core(void);
-
-/**********************
- *      MACROS
- **********************/
+static int quit_filter(void * userdata, SDL_Event * event);
 
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
 
-/**
- * Initialize the monitor
- */
-void monitor_init(void)
+bool monitor_active(void)
 {
-    /*OSX needs to initialize SDL here*/
-#ifdef MONITOR_APPLE
-    monitor_sdl_init();
-#endif
-
-    SDL_CreateThread(monitor_sdl_refr_thread, "sdl_refr", NULL);
-    while(sdl_inited == false); /*Wait until 'sdl_refr' initializes the SDL*/
+    return sdl_inited && !sdl_quit_qry;
 }
-
 
 /**
  * Flush a buffer to the display. Calls 'lv_flush_ready()' when finished
@@ -202,37 +168,10 @@ void monitor_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
     sdl_refr_qry = true;
 }
 
-/**********************
- *   STATIC FUNCTIONS
- **********************/
-
 /**
- * SDL main thread. All SDL related task have to be handled here!
- * It initializes SDL, handles drawing and the mouse.
+ * Handle "quit" event
  */
-
-static int monitor_sdl_refr_thread(void * param)
-{
-    (void)param;
-
-    /*If not OSX initialize SDL in the Thread*/
-#ifndef MONITOR_APPLE
-    monitor_sdl_init();
-#endif
-
-    /*Run until quit event not arrives*/
-    while(sdl_quit_qry == false) {
-        /*Refresh handling*/
-        monitor_sdl_refr_core();
-    }
-
-    monitor_sdl_clean_up();
-    exit(0);
-
-    return 0;
-}
-
-int quit_filter(void * userdata, SDL_Event * event)
+static int quit_filter(void * userdata, SDL_Event * event)
 {
     (void)userdata;
 
@@ -243,19 +182,16 @@ int quit_filter(void * userdata, SDL_Event * event)
     return 1;
 }
 
-static void monitor_sdl_clean_up(void)
+/**
+ * Initialize the monitor
+ */
+void monitor_init(void)
 {
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-}
+    sdl_refr_qry = false;
+    sdl_quit_qry = false;
 
-static void monitor_sdl_init(void)
-{
     /*Initialize the SDL*/
     SDL_Init(SDL_INIT_VIDEO);
-
     SDL_SetEventFilter(quit_filter, NULL);
 
     window = SDL_CreateWindow("TFT Simulator",
@@ -278,11 +214,25 @@ static void monitor_sdl_init(void)
     sdl_inited = true;
 }
 
-void lv_task_handler(void);
-
-static void monitor_sdl_refr_core(void)
+/**
+ * Deinit the monitor and close SDL
+ */
+void monitor_deinit(void)
 {
-//  lv_task_handler() ;   
+    sdl_quit_qry = true;
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+}
+
+/**
+ * This is SDL main loop. It draws the screen and handle mouse events.
+ * It should be called periodically, from the same thread Micropython is running
+ * This is done by schduling it using mp_sched_schedule
+ */
+void monitor_sdl_refr_core(void)
+{
     if(sdl_refr_qry != false) {
         sdl_refr_qry = false;
         SDL_UpdateTexture(texture, NULL, tft_fb, MONITOR_HOR_RES * sizeof(uint32_t));
@@ -297,9 +247,9 @@ static void monitor_sdl_refr_core(void)
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
     }
-#ifndef MONITOR_APPLE 
+    
     SDL_Event event;
-    while(SDL_PollEvent(&event)) {
+    while(monitor_active() && SDL_PollEvent(&event)) {
 #if USE_MOUSE != 0
         mouse_handler(&event);
 #endif
@@ -327,11 +277,10 @@ static void monitor_sdl_refr_core(void)
             }
         }
     }
-#endif /*MONITOR_APPLE*/
 
-    /*Sleep some time*/
-    SDL_Delay(SDL_REFR_PERIOD);
-
+    if (sdl_quit_qry) {
+        monitor_deinit();
+    }
 }
 
 #endif /*USE_MONITOR*/

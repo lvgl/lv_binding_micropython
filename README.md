@@ -132,6 +132,7 @@ lv.init()
 #### Registering Display and Input drivers
 ```python
 import SDL
+SDL.init()
 
 # Register SDL display driver.
 
