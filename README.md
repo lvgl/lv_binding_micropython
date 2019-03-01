@@ -218,7 +218,8 @@ In this example `lv.ALIGN` is an enum and `lv.ALIGN.CENTER` is an enum member (a
 
 #### Using callbacks
 ```python
-btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name))
+for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
+            btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name) or lv.RES.OK)
 ```
 Currently the binding is limited to one callback per object.
 

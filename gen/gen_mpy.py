@@ -226,6 +226,8 @@ mp_to_lv = {
     'int8_t'                    : '(int8_t)mp_obj_get_int',
     'int16_t'                   : '(int16_t)mp_obj_get_int',
     'int32_t'                   : '(int32_t)mp_obj_get_int',
+    'size_t'                    : '(size_t)mp_obj_get_int',
+    'int'                       : '(int)mp_obj_get_int',
 }
 
 lv_to_mp = {
@@ -244,6 +246,8 @@ lv_to_mp = {
     'int8_t'                    : 'mp_obj_new_int',
     'int16_t'                   : 'mp_obj_new_int',
     'int32_t'                   : 'mp_obj_new_int',
+    'size_t'                    : 'mp_obj_new_int_from_uint',
+    'int'                       : 'mp_obj_new_int',
 }
 
 lv_to_mp_byref = {}
@@ -815,8 +819,13 @@ def gen_callback_func(func):
         raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
     func_name = get_arg_name(func.type)
     return_type = get_type(func.type)
-    if not lv_callback_return_type_pattern.match(return_type):
-        raise MissingConversionException("Callback: Can only handle callbaks that return lv_res_t or void")
+    if return_type != 'void' and not return_type in mp_to_lv:
+        try_generate_type(return_type)
+        if not return_type in mp_to_lv:
+            raise MissingConversionException("Callback return value: Missing conversion to %s" % return_type)
+
+    #if not lv_callback_return_type_pattern.match(return_type):
+    #    raise MissingConversionException("Callback: Can only handle callbaks that return lv_res_t or void")
     
     print("""
 /*
@@ -829,8 +838,7 @@ STATIC {return_type} {func_name}_callback({func_args})
     mp_obj_t args[{num_args}];
     {build_args}
     mp_obj_t action = mp_to_lv_action(args[0]);
-    mp_obj_t arg_list = mp_obj_new_list({num_args}, args);
-    {return_value_assignment}mp_sched_schedule(action, arg_list);
+    {return_value_assignment}mp_call_function_n_kw(action, {num_args}, 0, args);
     return{return_value};
 }}
 """.format(
@@ -840,8 +848,8 @@ STATIC {return_type} {func_name}_callback({func_args})
         func_args = ', '.join(["%s arg%s" % (get_type(arg.type), i) for i,arg in enumerate(args)]),
         num_args=len(args),
         build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]),
-        return_value_assignment = '' if return_type == 'void' else 'bool schedule_result = ',
-        return_value='' if return_type == 'void' else ' schedule_result? LV_RES_OK: LV_RES_INV'))
+        return_value_assignment = '' if return_type == 'void' else 'mp_obj_t callback_result = ',
+        return_value='' if return_type == 'void' else ' %s(callback_result)' % mp_to_lv[return_type]))
     def register_callback(arg, index, func, obj_name):
         return """set_action(args[0], args[{i}]);
     {arg} = &{func_name}_callback;""".format(
@@ -875,6 +883,7 @@ def gen_mp_func(func, obj_name):
     # Handle the case of a single function argument which is "void"
     if len(args)==1 and get_type(args[0].type) == "void":
         param_count = 0
+        args = []
     else:
         param_count = len(args)
     return_type = get_type(func.type.type)

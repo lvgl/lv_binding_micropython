@@ -44,7 +44,7 @@ class Page_Buttons:
         # Currently only single callback per object is supported
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name))
+            btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name) or lv.RES.OK)
             # btn.set_action(lv.BTN.ACTION.PR, lambda name=name: self.label.set_text(name + ' press'))
             # btn.set_action(lv.BTN.ACTION.LONG_PR, lambda name=name: self.label.set_text(name + ' long press'))
             # btn.set_action(lv.BTN.ACTION.LONG_PR_REPEAT, lambda name=name: self.label.set_text(name + ' long press repeat'))
@@ -73,10 +73,12 @@ class Page_Simple:
     
     def on_slider_changed(self, action):
         self.slider_label.set_text(str(self.slider.get_value()))
+        return lv.RES.OK
 
     def on_style_selector_changed(self, action):
         selected = self.style_selector.get_selected()
         self.app.screen_main.tabview.set_style(lv.tabview.STYLE.BG, self.styles[selected][1])   
+        return lv.RES.OK
 
 
 class Screen_Main(lv.obj):
