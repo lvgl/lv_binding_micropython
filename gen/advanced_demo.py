@@ -166,5 +166,9 @@ class AdvancedDemoApplication():
 app = AdvancedDemoApplication()
 app.init_gui()
 
+import utime
 
+if __name__ == '__main__':
+    while True:
+        pass
 
