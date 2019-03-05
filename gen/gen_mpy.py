@@ -185,7 +185,7 @@ def get_enum_value(obj_name, enum_member):
     if match:
         enum = enums[obj_name]
         enum_member_name = '%s_%s' % (obj_name, enum_member)
-        numstr = struct.pack('<i', enum[enum_member_name]).encode('string_escape')
+        numstr = ''.join("\\x%0.2x" % (ord(x) if isinstance(x, str) else x) for x in struct.pack('<i', enum[enum_member_name]))
         print('MP_DEFINE_STR_OBJ(mp_%s, "%s");' % (enum_member_name, numstr))
         return "&mp_%s_%s" % (obj_name, enum_member)
     else:
