@@ -7,6 +7,7 @@
 # - When converting mp to ptr (and vice versa), verify that types are compatible. Now all pointers are casted to void*.
 
 from __future__ import print_function
+import collections
 import sys
 import struct
 
@@ -104,7 +105,7 @@ gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
 # print('... %s' % str(typedefs))
-structs = {typedef.declname : typedef.type for typedef in typedefs if is_struct(typedef.type) and not typedef.declname in args.exclude}
+structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in typedefs if is_struct(typedef.type) and not typedef.declname in args.exclude)
 # eprint('... %s' % ',\n'.join(sorted(struct_name for struct_name in structs)))
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
@@ -151,12 +152,12 @@ for obj_name, ext in exts.items():
 # Parse Enums
 
 enum_defs = [x for x in ast.ext if hasattr(x,'type') and isinstance(x.type, c_ast.Enum)]
-enums = {}
+enums = collections.OrderedDict()
 for enum_def in enum_defs:
     member_names = [member.name for member in enum_def.type.values.enumerators if not member.name.startswith('_')]
     enum_name = commonprefix(member_names)
     enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
-    enum = {}
+    enum = collections.OrderedDict()
     next_value = 0
     for member in enum_def.type.values.enumerators:
         if member.name.startswith('_'):
@@ -197,11 +198,11 @@ def get_enum_value(obj_name, enum_member):
 func_typedefs = [t for t in ast.ext if isinstance(t, c_ast.Typedef) and isinstance(t.type, c_ast.PtrDecl) and isinstance(t.type.type, c_ast.FuncDecl)]
 
 # Global blobs
-blobs = {decl.name : decl.type.type for decl in ast.ext \
+blobs = collections.OrderedDict((decl.name, decl.type.type) for decl in ast.ext \
     if isinstance(decl, c_ast.Decl) \
         and 'extern' in decl.storage \
         and hasattr(decl, 'type') \
-        and isinstance(decl.type, c_ast.TypeDecl)}
+        and isinstance(decl.type, c_ast.TypeDecl))
 
 #
 # Type convertors
@@ -598,8 +599,8 @@ def get_type(arg, **kwargs):
 # Generate structs when needed
 #
 
-generated_structs = {}
-struct_aliases = {}
+generated_structs = collections.OrderedDict()
+struct_aliases = collections.OrderedDict()
 
 def flatten_struct(struct_decls):
     result = []
@@ -863,7 +864,7 @@ STATIC {return_type} {func_name}_callback({func_args})
 # Emit Mpy function definitions
 #
 
-generated_funcs = {}
+generated_funcs = collections.OrderedDict()
 
 def build_mp_func_arg(arg, index, func, obj_name):
     arg_type = get_type(arg.type, remove_quals = True)
@@ -943,7 +944,7 @@ def gen_func_error(method, exp):
 # Emit Mpy objects definitions
 #
 
-enum_referenced = {}
+enum_referenced = collections.OrderedDict()
 
 def gen_obj_methods(obj_name):
     global enums
@@ -1045,7 +1046,7 @@ for func_typedef in func_typedefs:
 # Generate all other objects. Generate parent objects first
 #
 
-generated_obj_names = {}
+generated_obj_names = collections.OrderedDict()
 for obj_name in obj_names:
     # eprint("--> %s [%s]" % (obj_name, ", ".join([name for name in generated_obj_names])))
     parent_obj_name = parent_obj_names[obj_name] if obj_name in parent_obj_names else None
