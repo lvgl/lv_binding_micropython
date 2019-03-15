@@ -135,19 +135,19 @@ def get_enum_members(obj_name):
     prefix_len = len(obj_name)+1
     return [enum_member_name[prefix_len:] for enum_member_name, value in enums[obj_name].items()]
    
-# By default all object (except base_obj) inherit from base_obj. Later we refine this according to hierarchy.
+# All object should inherit directly from base_obj, and not according to lv_ext, as disccussed on https://github.com/littlevgl/lv_binding_micropython/issues/19
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
 parent_obj_names[base_obj_name] = None
 
 # Populate inheritance hierarchy according to lv_ext structures
-exts = {obj_name_from_ext_name(ext.name): ext for ext in ast.ext if hasattr(ext, 'name') and ext.name is not None and lv_ext_pattern.match(ext.name)}
-for obj_name, ext in exts.items():
-    try:
-        parent_ext_name = ext.type.type.decls[0].type.type.names[0]
-        if lv_ext_pattern.match(parent_ext_name):
-            parent_obj_names[obj_name] = obj_name_from_ext_name(parent_ext_name)
-    except AttributeError:
-        pass
+# exts = {obj_name_from_ext_name(ext.name): ext for ext in ast.ext if hasattr(ext, 'name') and ext.name is not None and lv_ext_pattern.match(ext.name)}
+# for obj_name, ext in exts.items():
+#     try:
+#         parent_ext_name = ext.type.type.decls[0].type.type.names[0]
+#         if lv_ext_pattern.match(parent_ext_name):
+#             parent_obj_names[obj_name] = obj_name_from_ext_name(parent_ext_name)
+#     except AttributeError:
+#         pass
 
 # Parse Enums
 
