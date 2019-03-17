@@ -17,7 +17,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include MONITOR_SDL_INCLUDE_PATH
-#include "lv_core/lv_vdb.h"
 #include "SDL_mouse.h"
 
 /*********************
@@ -56,34 +55,29 @@ bool monitor_active(void)
 
 /**
  * Flush a buffer to the display. Calls 'lv_flush_ready()' when finished
- * @param x1 left coordinate
- * @param y1 top coordinate
- * @param x2 right coordinate
- * @param y2 bottom coordinate
- * @param color_p array of colors to be flushed
  */
-void monitor_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
+void monitor_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     /*Return if the area is out the screen*/
-    if(x2 < 0 || y2 < 0 || x1 > MONITOR_HOR_RES - 1 || y1 > MONITOR_VER_RES - 1) {
-        lv_flush_ready();
+    if(area->x2 < 0 || area->y2 < 0 || area->x1 > MONITOR_HOR_RES - 1 || area->y1 > MONITOR_VER_RES - 1) {
+        lv_disp_flush_ready(disp_drv);
         return;
     }
 
     int32_t y;
 #if LV_COLOR_DEPTH != 24 && LV_COLOR_DEPTH != 32    /*32 is valid but support 24 for backward compatibility too*/
     int32_t x;
-    for(y = y1; y <= y2; y++) {
-        for(x = x1; x <= x2; x++) {
+    for(y = area->y1; y <= area->y2; y++) {
+        for(x = area->x1; x <= area->x2; x++) {
             tft_fb[y * MONITOR_HOR_RES + x] = lv_color_to32(*color_p);
             color_p++;
         }
 
     }
 #else
-    uint32_t w = x2 - x1 + 1;
-    for(y = y1; y <= y2; y++) {
-        memcpy(&tft_fb[y * MONITOR_HOR_RES + x1], color_p, w * sizeof(lv_color_t));
+    uint32_t w = area->x2 - area->x1 + 1;
+    for(y = area->y1; y <= area->y2; y++) {
+        memcpy(&tft_fb[y * MONITOR_HOR_RES + area->x1], color_p, w * sizeof(lv_color_t));
 
         color_p += w;
     }
@@ -92,80 +86,7 @@ void monitor_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_colo
     sdl_refr_qry = true;
 
     /*IMPORTANT! It must be called to tell the system the flush is ready*/
-    lv_flush_ready();
-}
-
-
-/**
- * Fill out the marked area with a color
- * @param x1 left coordinate
- * @param y1 top coordinate
- * @param x2 right coordinate
- * @param y2 bottom coordinate
- * @param color fill color
- */
-void monitor_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
-{
-    /*Return if the area is out the screen*/
-    if(x2 < 0) return;
-    if(y2 < 0) return;
-    if(x1 > MONITOR_HOR_RES - 1) return;
-    if(y1 > MONITOR_VER_RES - 1) return;
-
-    /*Truncate the area to the screen*/
-    int32_t act_x1 = x1 < 0 ? 0 : x1;
-    int32_t act_y1 = y1 < 0 ? 0 : y1;
-    int32_t act_x2 = x2 > MONITOR_HOR_RES - 1 ? MONITOR_HOR_RES - 1 : x2;
-    int32_t act_y2 = y2 > MONITOR_VER_RES - 1 ? MONITOR_VER_RES - 1 : y2;
-
-    int32_t x;
-    int32_t y;
-    uint32_t color32 = lv_color_to32(color);
-
-    for(x = act_x1; x <= act_x2; x++) {
-        for(y = act_y1; y <= act_y2; y++) {
-            tft_fb[y * MONITOR_HOR_RES + x] = color32;
-        }
-    }
-
-    sdl_refr_qry = true;
-}
-
-/**
- * Put a color map to the marked area
- * @param x1 left coordinate
- * @param y1 top coordinate
- * @param x2 right coordinate
- * @param y2 bottom coordinate
- * @param color_p an array of colors
- */
-void monitor_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
-{
-    /*Return if the area is out the screen*/
-    if(x2 < 0) return;
-    if(y2 < 0) return;
-    if(x1 > MONITOR_HOR_RES - 1) return;
-    if(y1 > MONITOR_VER_RES - 1) return;
-
-    /*Truncate the area to the screen*/
-    int32_t act_x1 = x1 < 0 ? 0 : x1;
-    int32_t act_y1 = y1 < 0 ? 0 : y1;
-    int32_t act_x2 = x2 > MONITOR_HOR_RES - 1 ? MONITOR_HOR_RES - 1 : x2;
-    int32_t act_y2 = y2 > MONITOR_VER_RES - 1 ? MONITOR_VER_RES - 1 : y2;
-
-    int32_t x;
-    int32_t y;
-
-    for(y = act_y1; y <= act_y2; y++) {
-        for(x = act_x1; x <= act_x2; x++) {
-            tft_fb[y * MONITOR_HOR_RES + x] = lv_color_to32(*color_p);
-            color_p++;
-        }
-
-        color_p += x2 - act_x2;
-    }
-
-    sdl_refr_qry = true;
+    lv_disp_flush_ready(disp_drv);
 }
 
 /**

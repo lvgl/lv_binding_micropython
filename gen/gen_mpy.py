@@ -364,7 +364,7 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
 STATIC inline mp_obj_t *lv_to_mp(lv_obj_t *lv_obj)
 {
-    mp_lv_obj_t *self = lv_obj_get_free_ptr(lv_obj);
+    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->event_user_data;
     if (!self) 
     {
         self = m_new_obj(mp_lv_obj_t);
@@ -393,7 +393,7 @@ STATIC mp_obj_t make_new(
         .lv_obj = create(parent, copy),
         .action = NULL
     };
-    lv_obj_set_free_ptr(self->lv_obj, self);
+    self->lv_obj->event_user_data = self;
     return MP_OBJ_FROM_PTR(self);
 }
 

@@ -13,7 +13,7 @@ symbolstyle.text.font = lv.font_symbol_40
 # They show how to initialize struct either directly or through a dict
 
 symbolstyle.text.color = lv.color_hex(0xffffff)
-symbolstyle.text.color = {"red":0xff, "green":0xff, "blue":0xff}
+symbolstyle.text.color = {"ch": {"red":0xff, "green":0xff, "blue":0xff}}
 
 class SymbolButton(lv.btn):
     def __init__(self, parent, symbol, text):
@@ -101,9 +101,7 @@ class AdvancedDemoApplication():
 
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
-        disp_drv.disp_flush = SDL.monitor_flush
-        disp_drv.disp_fill = SDL.monitor_fill
-        disp_drv.disp_map = SDL.monitor_map
+        disp_drv.flush_cb = SDL.monitor_flush
         lv.disp_drv_register(disp_drv)
 
         # Regsiter SDL mouse driver
@@ -128,8 +126,7 @@ class AdvancedDemoApplication():
 
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
-        disp_drv.disp_flush = disp.flush
-        disp_drv.disp_fill = disp.fill
+        disp_drv.flush_cb = disp.flush
         lv.disp_drv_register(disp_drv)
 
         # Register raw resistive touch driver

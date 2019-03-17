@@ -83,8 +83,8 @@
  *-------------------*/
 #define USE_MONITOR         1
 #if USE_MONITOR
-#define MONITOR_HOR_RES     LV_HOR_RES
-#define MONITOR_VER_RES     LV_VER_RES
+#define MONITOR_HOR_RES     LV_HOR_RES_MAX
+#define MONITOR_VER_RES     LV_VER_RES_MAX
 #define MONITOR_ZOOM        1                       /* Scale window by this factor (useful when simulating small screens) */
 #define MONITOR_SDL_INCLUDE_PATH    <SDL2/SDL.h>    /*Eclipse: <SDL2/SDL.h>    Visual Studio: <SDL.h>*/
 #define MONITOR_VIRTUAL_MACHINE 0                   /*Different rendering should be used if running in a Virtual machine*/

@@ -14,7 +14,6 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
-#include "lv_core/lv_vdb.h"
 
 /*********************
  *      DEFINES
@@ -30,9 +29,7 @@
 
 bool fbdev_init(void);
 void fbdev_deinit(void);
-void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p);
-void fbdev_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color);
-void fbdev_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p);
+void fbdev_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
 
 /**********************
  *  STATIC VARIABLES
@@ -94,16 +91,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_init_fb_obj, mp_init_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_fb_obj, mp_deinit_fb);
 
 DEFINE_PTR_OBJ(fbdev_flush);
-DEFINE_PTR_OBJ(fbdev_fill);
-DEFINE_PTR_OBJ(fbdev_map);
 
 STATIC const mp_rom_map_elem_t fb_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_fb) },
         { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_init_fb_obj) },
         { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_deinit_fb_obj) },
         { MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&PTR_OBJ(fbdev_flush))},
-        { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&PTR_OBJ(fbdev_fill))},
-        { MP_ROM_QSTR(MP_QSTR_map), MP_ROM_PTR(&PTR_OBJ(fbdev_map))},
 };
          
 
@@ -167,28 +160,28 @@ void fbdev_deinit(void)
 
 /**
  * Flush a buffer to the marked area
- * @param x1 left coordinate
- * @param y1 top coordinate
- * @param x2 right coordinate
- * @param y2 bottom coordinate
+ * @param area->x1 left coordinate
+ * @param area->y1 top coordinate
+ * @param area->x2 right coordinate
+ * @param area->y2 bottom coordinate
  * @param color_p an array of colors
  */
-void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
+void fbdev_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     if(fbp == NULL ||
-            x2 < 0 ||
-            y2 < 0 ||
-            x1 > (int32_t)vinfo.xres - 1 ||
-            y1 > (int32_t)vinfo.yres - 1) {
-        lv_flush_ready();
+            area->x2 < 0 ||
+            area->y2 < 0 ||
+            area->x1 > (int32_t)vinfo.xres - 1 ||
+            area->y1 > (int32_t)vinfo.yres - 1) {
+        lv_disp_flush_ready(disp_drv);
         return;
     }
 
     /*Truncate the area to the screen*/
-    int32_t act_x1 = x1 < 0 ? 0 : x1;
-    int32_t act_y1 = y1 < 0 ? 0 : y1;
-    int32_t act_x2 = x2 > (int32_t)vinfo.xres - 1 ? (int32_t)vinfo.xres - 1 : x2;
-    int32_t act_y2 = y2 > (int32_t)vinfo.yres - 1 ? (int32_t)vinfo.yres - 1 : y2;
+    int32_t act_x1 = area->x1 < 0 ? 0 : area->x1;
+    int32_t act_y1 = area->y1 < 0 ? 0 : area->y1;
+    int32_t act_x2 = area->x2 > (int32_t)vinfo.xres - 1 ? (int32_t)vinfo.xres - 1 : area->x2;
+    int32_t act_y2 = area->y2 > (int32_t)vinfo.yres - 1 ? (int32_t)vinfo.yres - 1 : area->y2;
 
     long int location = 0;
     long int byte_location = 0;
@@ -206,7 +199,7 @@ void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
                 color_p++;
             }
 
-            color_p += x2 - act_x2;
+            color_p += area->x2 - act_x2;
         }
     }
     /*16 bit per pixel*/
@@ -221,7 +214,7 @@ void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
                 color_p++;
             }
 
-            color_p += x2 - act_x2;
+            color_p += area->x2 - act_x2;
         }
     }
     /*8 bit per pixel*/
@@ -236,7 +229,7 @@ void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
                 color_p++;
             }
 
-            color_p += x2 - act_x2;
+            color_p += area->x2 - act_x2;
         }
     }
     /*1 bit per pixel*/
@@ -254,7 +247,7 @@ void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
                 color_p++;
             }
 
-            color_p += x2 - act_x2;
+            color_p += area->x2 - act_x2;
         }
     } else {
         /*Not supported bit per pixel*/
@@ -263,191 +256,6 @@ void fbdev_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_
     //May be some direct update command is required
     //ret = ioctl(state->fd, FBIO_UPDATE, (unsigned long)((uintptr_t)rect));
 
-    lv_flush_ready();
+    lv_disp_flush_ready(disp_drv);
 }
-
-/**
- * Fill out the marked area with a color
- * @param x1 left coordinate
- * @param y1 top coordinate
- * @param x2 right coordinate
- * @param y2 bottom coordinate
- * @param color fill color
- */
-void fbdev_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
-{
-    if(fbp == NULL) return;
-
-    /*Return if the area is out the screen*/
-    if(x2 < 0) return;
-    if(y2 < 0) return;
-    if(x1 > (int32_t)vinfo.xres - 1) return;
-    if(y1 > (int32_t)vinfo.yres - 1) return;
-
-    /*Truncate the area to the screen*/
-    int32_t act_x1 = x1 < 0 ? 0 : x1;
-    int32_t act_y1 = y1 < 0 ? 0 : y1;
-    int32_t act_x2 = x2 > (int32_t)vinfo.xres - 1 ? (int32_t)vinfo.xres - 1 : x2;
-    int32_t act_y2 = y2 > (int32_t)vinfo.yres - 1 ? (int32_t)vinfo.yres - 1 : y2;
-
-    int32_t x;
-    int32_t y;
-
-    long int location = 0;
-    long int byte_location = 0;
-    unsigned char bit_location = 0;
-
-    /*32 or 24 bit per pixel*/
-    if(vinfo.bits_per_pixel == 32 || vinfo.bits_per_pixel == 24) {
-        uint32_t * fbp32 = (uint32_t *)fbp;
-        for(x = act_x1; x <= act_x2; x++) {
-            for(y = act_y1; y <= act_y2; y++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                fbp32[location] = color.full;
-            }
-        }
-    } else if(vinfo.bits_per_pixel == 16) {
-        uint16_t * fbp16 = (uint16_t *)fbp;
-        for(x = act_x1; x <= act_x2; x++) {
-            for(y = act_y1; y <= act_y2; y++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                fbp16[location] = color.full;
-            }
-        }
-    } else if(vinfo.bits_per_pixel == 8) {
-        uint8_t * fbp8 = (uint8_t *)fbp;
-        for(x = act_x1; x <= act_x2; x++) {
-            for(y = act_y1; y <= act_y2; y++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                fbp8[location] = color.full;
-            }
-        }
-    }
-    /*1 bit per pixel*/
-    else if(vinfo.bits_per_pixel == 1) {
-        uint8_t * fbp8 = (uint8_t *)fbp;
-        for(y = act_y1; y <= act_y2; y++) {
-            for(x = act_x1; x <= act_x2; x++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                byte_location = location / 8; /* find the byte we need to change */
-                bit_location = location % 8; /* inside the byte found, find the bit we need to change */
-                fbp8[byte_location] &= ~(((uint8_t)(1)) << bit_location);
-                fbp8[byte_location] |= ((uint8_t)(color.full)) << bit_location;
-            }
-        }
-    } else {
-        /*Not supported bit per pixel*/
-    }
-
-    //May be some direct update command is required
-    //ret = ioctl(state->fd, FBIO_UPDATE, (unsigned long)((uintptr_t)rect));
-
-}
-
-/**
- * Put a color map to the marked area
- * @param x1 left coordinate
- * @param y1 top coordinate
- * @param x2 right coordinate
- * @param y2 bottom coordinate
- * @param color_p an array of colors
- */
-void fbdev_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
-{
-
-    if(fbp == NULL) return;
-
-    /*Return if the area is out the screen*/
-    if(x2 < 0) return;
-    if(y2 < 0) return;
-    if(x1 > (int32_t)vinfo.xres - 1) return;
-    if(y1 > (int32_t)vinfo.yres - 1) return;
-
-    /*Truncate the area to the screen*/
-    int32_t act_x1 = x1 < 0 ? 0 : x1;
-    int32_t act_y1 = y1 < 0 ? 0 : y1;
-    int32_t act_x2 = x2 > (int32_t)vinfo.xres - 1 ? (int32_t)vinfo.xres - 1 : x2;
-    int32_t act_y2 = y2 > (int32_t)vinfo.yres - 1 ? (int32_t)vinfo.yres - 1 : y2;
-
-    long int location = 0;
-    long int byte_location = 0;
-    unsigned char bit_location = 0;
-
-    /*32 or 24 bit per pixel*/
-    if(vinfo.bits_per_pixel == 32 || vinfo.bits_per_pixel == 24) {
-        uint32_t * fbp32 = (uint32_t *)fbp;
-        int32_t x;
-        int32_t y;
-        for(y = act_y1; y <= act_y2; y++) {
-            for(x = act_x1; x <= act_x2; x++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                fbp32[location] = color_p->full;
-                color_p++;
-            }
-
-            color_p += x2 - act_x2;
-        }
-    }
-    /*16 bit per pixel*/
-    else if(vinfo.bits_per_pixel == 16) {
-        uint16_t * fbp16 = (uint16_t *)fbp;
-        int32_t x;
-        int32_t y;
-        for(y = act_y1; y <= act_y2; y++) {
-            for(x = act_x1; x <= act_x2; x++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                fbp16[location] = color_p->full;
-                color_p++;
-            }
-
-            color_p += x2 - act_x2;
-        }
-    }
-    /*8 bit per pixel*/
-    else if(vinfo.bits_per_pixel == 8) {
-        uint8_t * fbp8 = (uint8_t *)fbp;
-        int32_t x;
-        int32_t y;
-        for(y = act_y1; y <= act_y2; y++) {
-            for(x = act_x1; x <= act_x2; x++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                fbp8[location] = color_p->full;
-                color_p++;
-            }
-
-            color_p += x2 - act_x2;
-        }
-    }
-    /*1 bit per pixel*/
-    else if(vinfo.bits_per_pixel == 1) {
-        uint8_t * fbp8 = (uint8_t *)fbp;
-        int32_t x;
-        int32_t y;
-        for(y = act_y1; y <= act_y2; y++) {
-            for(x = act_x1; x <= act_x2; x++) {
-                location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * vinfo.xres;
-                byte_location = location / 8; /* find the byte we need to change */
-                bit_location = location % 8; /* inside the byte found, find the bit we need to change */
-                fbp8[byte_location] &= ~(((uint8_t)(1)) << bit_location);
-                fbp8[byte_location] |= ((uint8_t)(color_p->full)) << bit_location;
-                color_p++;
-            }
-
-            color_p += x2 - act_x2;
-        }
-    } else {
-        /*Not supported bit per pixel*/
-    }
-
-    //May be some direct update command is required
-    //ret = ioctl(state->fd, FBIO_UPDATE, (unsigned long)((uintptr_t)rect));
-}
-
-
-/**********************
- *   STATIC FUNCTIONS
- **********************/
-
-
-
 
