@@ -1,6 +1,7 @@
 #ifndef __LVMP_DRV_COMMON_H
 #define __LVMP_DRV_COMMON_H
 
+#include <string.h>
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "py/binary.h"
@@ -50,10 +51,24 @@ STATIC const mp_ptr_t PTR_OBJ(ptr_global) = {\
 #define NEW_PTR_OBJ(name, value)\
 ({\
     DEFINE_PTR_OBJ_TYPE(ptr_obj_type, MP_QSTR_ ## name);\
-    mp_ptr_t *self = m_new_obj(mp_ptr_t);\
-    self->base.type = &ptr_obj_type;\
-    self->ptr = value;\
-    MP_OBJ_FROM_PTR(self);\
+    mp_ptr_t *ptr_obj = m_new_obj(mp_ptr_t);\
+    ptr_obj->base.type = &ptr_obj_type;\
+    ptr_obj->ptr = value;\
+    MP_OBJ_FROM_PTR(ptr_obj);\
 })
+
+STATIC inline void *PTR_FROM_OBJ(mp_obj_t obj)
+{
+    void *result;
+    mp_buffer_info_t buffer_info;
+    mp_get_buffer_raise(obj, &buffer_info, MP_BUFFER_READ);
+    if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
+        nlr_raise(
+            mp_obj_new_exception_msg_varg(
+                &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(obj)));
+    }
+    memcpy(&result, buffer_info.buf, sizeof(result));
+    return result;
+}
 
 #endif // __LVMP_DRV_COMMON_H
