@@ -115,7 +115,7 @@ STATIC mp_obj_t ILI9341_make_new(const mp_obj_type_t *type,
     };
 
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=40}},
+        { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=20}},
         { MP_QSTR_spihost,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=HSPI_HOST}},
         { MP_QSTR_miso,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},             
         { MP_QSTR_mosi,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},

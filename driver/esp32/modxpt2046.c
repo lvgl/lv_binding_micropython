@@ -26,7 +26,8 @@ typedef struct _xpt2046_obj_t
 {
     mp_obj_base_t base;
 
-    spi_device_handle_t spi_device;
+    uint8_t mhz;
+    uint8_t spihost;
     uint8_t cs;
     uint8_t irq;
 
@@ -38,6 +39,7 @@ typedef struct _xpt2046_obj_t
     bool y_inv;    
     bool xy_swap;
 
+    spi_device_handle_t spi;
     int16_t avg_buf_x[XPT2046_AVG];
     int16_t avg_buf_y[XPT2046_AVG];
     uint8_t avg_last;
@@ -61,9 +63,11 @@ STATIC mp_obj_t xpt2046_make_new(const mp_obj_type_t *type,
                                const mp_obj_t *all_args)
 {
     enum{
-        ARG_spi_device,
+        ARG_mhz,
+        ARG_spihost,
         ARG_cs,
         ARG_irq,
+
         ARG_x_min,
         ARG_y_min,
         ARG_x_max,
@@ -74,9 +78,11 @@ STATIC mp_obj_t xpt2046_make_new(const mp_obj_type_t *type,
     };
 
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_spi_device, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_obj = NULL}},
+        { MP_QSTR_mhz, MP_ARG_INT, {.u_int = 20}},
+        { MP_QSTR_spihost, MP_ARG_INT, {.u_int = HSPI_HOST}},
         { MP_QSTR_cs, MP_ARG_INT, {.u_int = 33}},
         { MP_QSTR_irq, MP_ARG_INT, {.u_int = 25}},
+
         { MP_QSTR_x_min, MP_ARG_INT, {.u_int = 1000}},
         { MP_QSTR_y_min, MP_ARG_INT, {.u_int = 1000}},
         { MP_QSTR_x_max, MP_ARG_INT, {.u_int = 3200}},
@@ -90,9 +96,12 @@ STATIC mp_obj_t xpt2046_make_new(const mp_obj_type_t *type,
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
     xpt2046_obj_t *self = m_new_obj(xpt2046_obj_t);
     self->base.type = type;
-    self->spi_device = (spi_device_handle_t)PTR_FROM_OBJ(args[ARG_spi_device].u_obj);
+
+    self->mhz = args[ARG_mhz].u_int;
+    self->spihost = args[ARG_spihost].u_int;
     self->cs = args[ARG_cs].u_int;
     self->irq = args[ARG_irq].u_int;
+
     self->x_min = args[ARG_x_min].u_int;
     self->y_min = args[ARG_y_min].u_int;
     self->x_max = args[ARG_x_max].u_int;
@@ -151,12 +160,31 @@ const mp_obj_module_t mp_module_xpt2046 = {
 
 STATIC mp_obj_t mp_xpt2046_init(mp_obj_t self_in)
 {
+    esp_err_t ret;
+
     xpt2046_obj_t *self = MP_OBJ_TO_PTR(self_in);
     mp_activate_xpt2046(self_in);
+
+    spi_device_interface_config_t devcfg={
+		.clock_speed_hz=self->mhz*1000*1000, //Clock out at DISP_SPI_MHZ MHz
+		.mode=0,                             //SPI mode 0
+		.spics_io_num=-1,                    //CS pin is set manually
+		.queue_size=1,
+		.pre_cb=NULL,
+		.post_cb=NULL,
+		.flags=SPI_DEVICE_HALFDUPLEX,
+		.duty_cycle_pos=128,
+	};
+
 
     gpio_set_direction(self->irq, GPIO_MODE_INPUT);
     gpio_set_direction(self->cs, GPIO_MODE_OUTPUT);
     gpio_set_level(self->cs, 1);
+
+    //Attach the touch controller to the SPI bus
+    ret=spi_bus_add_device(self->spihost, &devcfg, &self->spi);
+    if (ret != ESP_OK) nlr_raise(
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed adding SPI device"));
 
     return mp_const_none;
 }
@@ -180,7 +208,7 @@ static uint8_t tp_spi_xchg(xpt2046_obj_t *self, uint8_t data_send);
 static bool xpt2046_read(lv_indev_data_t * data)
 {
     xpt2046_obj_t *self = MP_OBJ_TO_PTR(g_xpt2046 );
-    if (!self || (!self->spi_device)) nlr_raise(
+    if (!self || (!self->spi)) nlr_raise(
             mp_obj_new_exception_msg(
                 &mp_type_RuntimeError, "xpt2046 instance needs to be created before callback is called!"));
     static int16_t last_x = 0;
@@ -245,10 +273,10 @@ static uint8_t tp_spi_xchg(xpt2046_obj_t *self, uint8_t data_send)
 	t.tx_buffer = &data_send;  //Data
 	t.rx_buffer = &data_rec;
 
-	spi_device_queue_trans(self->spi_device, &t, portMAX_DELAY);
+	spi_device_queue_trans(self->spi, &t, portMAX_DELAY);
 
 	spi_transaction_t * rt;
-	spi_device_get_trans_result(self->spi_device, &rt, portMAX_DELAY);
+	spi_device_get_trans_result(self->spi, &rt, portMAX_DELAY);
 
 	return data_rec;
 }

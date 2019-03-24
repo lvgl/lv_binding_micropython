@@ -60,6 +60,7 @@ STATIC const mp_ptr_t PTR_OBJ(ptr_global) = {\
 STATIC inline void *PTR_FROM_OBJ(mp_obj_t obj)
 {
     void *result;
+    if (!obj) return NULL;
     mp_buffer_info_t buffer_info;
     mp_get_buffer_raise(obj, &buffer_info, MP_BUFFER_READ);
     if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
