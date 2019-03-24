@@ -4479,7 +4479,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_ll_t_type()
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_disp_t *lv_obj_get_disp(const lv_obj_t *obj)
  */
     
@@ -4938,7 +4938,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_ext_attr_obj, 1, 1, mp_
 
 /*
  * Function NOT generated:
- * Missing conversion to char8 when generating struct lv_obj_type_t.type
+ * Missing conversion to char[8] when generating struct lv_obj_type_t.type
  * void lv_obj_get_type(lv_obj_t *obj, lv_obj_type_t *buf)
  */
     
@@ -18134,42 +18134,42 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_buf_init_obj, 4, 4, mp_lv_
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_disp_t *lv_disp_drv_register(lv_disp_drv_t *driver)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * void lv_disp_remove(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * void lv_disp_set_default(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_disp_t *lv_disp_get_default(void)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_coord_t lv_disp_get_hor_res(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_coord_t lv_disp_get_ver_res(lv_disp_t *disp)
  */
     
@@ -18192,42 +18192,42 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_flush_ready_obj, 1, 1, mp_
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_disp_t *lv_disp_get_next(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_disp_buf_t *lv_disp_get_buf(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * uint16_t lv_disp_get_inv_buf_size(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * void lv_disp_pop_from_inv_buf(lv_disp_t *disp, uint16_t num)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * bool lv_disp_is_double_buf(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * bool lv_disp_is_true_double_buf(lv_disp_t *disp)
  */
     
@@ -20223,21 +20223,21 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_refr_now_obj, 0, 0, mp_lv_refr_
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * void lv_inv_area(lv_disp_t *disp, const lv_area_t *area_p)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_disp_t *lv_refr_get_disp_refreshing(void)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_obj_t *lv_disp_get_scr_act(lv_disp_t *disp)
  */
     
@@ -20260,21 +20260,21 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_set_scr_act_obj, 1, 1, mp_
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_obj_t *lv_disp_get_layer_top(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * lv_obj_t *lv_disp_get_layer_sys(lv_disp_t *disp)
  */
     
 
 /*
  * Function NOT generated:
- * Missing conversion to lv_area_t32 when generating struct lv_disp_t.inv_areas
+ * Missing conversion to lv_area_t[32] when generating struct lv_disp_t.inv_areas
  * void lv_disp_assign_screen(lv_disp_t *disp, lv_obj_t *scr)
  */
     
