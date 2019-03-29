@@ -530,6 +530,7 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
     void *result;
     mp_buffer_info_t buffer_info;
+    if (self_in == mp_const_none) return NULL;
     mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
     if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
         nlr_raise(
