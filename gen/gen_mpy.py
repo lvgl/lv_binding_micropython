@@ -10,6 +10,8 @@ from __future__ import print_function
 import collections
 import sys
 import struct
+import copy
+from itertools import chain
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -105,8 +107,11 @@ gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
 # print('... %s' % str(typedefs))
-structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in typedefs if is_struct(typedef.type) and not typedef.declname in args.exclude)
-# eprint('... %s' % ',\n'.join(sorted(struct_name for struct_name in structs)))
+struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
+structs = collections.OrderedDict(chain(
+        ((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname), 
+        ((typedef.type.name, typedef.type) for typedef in struct_typedefs if typedef.type.name)))
+print('/* --> structs:\n%s */' % ',\n'.join(sorted(struct_name for struct_name in structs)))
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
@@ -212,15 +217,15 @@ class MissingConversionException(ValueError):
     pass
 
 mp_to_lv = {
-    'void*'                     : 'mp_to_ptr',
-    'const void*'               : 'mp_to_ptr',
+    'void *'                     : 'mp_to_ptr',
+    'const void *'               : 'mp_to_ptr',
     'bool'                      : 'mp_obj_is_true',
-    'char*'                     : '(char*)mp_obj_str_get_str',
-    'const char*'               : 'mp_obj_str_get_str',
-    'lv_obj_t*'                 : 'mp_to_lv',
-    'const lv_obj_t*'           : 'mp_to_lv',
-    'struct _lv_obj_t*'         : 'mp_to_lv',
-    'const struct _lv_obj_t*'   : 'mp_to_lv',
+    'char *'                     : '(char*)mp_obj_str_get_str',
+    'const char *'               : 'mp_obj_str_get_str',
+    'lv_obj_t *'                 : 'mp_to_lv',
+    'const lv_obj_t *'           : 'mp_to_lv',
+    'struct _lv_obj_t *'         : 'mp_to_lv',
+    'const struct _lv_obj_t *'   : 'mp_to_lv',
     'uint8_t'                   : '(uint8_t)mp_obj_get_int',
     'uint16_t'                  : '(uint16_t)mp_obj_get_int',
     'uint32_t'                  : '(uint32_t)mp_obj_get_int',
@@ -232,15 +237,15 @@ mp_to_lv = {
 }
 
 lv_to_mp = {
-    'void*'                     : 'ptr_to_mp',
-    'const void*'               : 'ptr_to_mp',
+    'void *'                     : 'ptr_to_mp',
+    'const void *'               : 'ptr_to_mp',
     'bool'                      : 'convert_to_bool',
-    'char*'                     : 'convert_to_str',
-    'const char*'               : 'convert_to_str',
-    'lv_obj_t*'                 : 'lv_to_mp',
-    'const lv_obj_t*'           : 'lv_to_mp',
-    'struct _lv_obj_t*'         : 'lv_to_mp',
-    'const struct _lv_obj_t*'   : 'lv_to_mp',
+    'char *'                     : 'convert_to_str',
+    'const char *'               : 'convert_to_str',
+    'lv_obj_t *'                 : 'lv_to_mp',
+    'const lv_obj_t *'           : 'lv_to_mp',
+    'struct _lv_obj_t *'         : 'lv_to_mp',
+    'const struct _lv_obj_t *'   : 'lv_to_mp',
     'uint8_t'                   : 'mp_obj_new_int_from_uint',
     'uint16_t'                  : 'mp_obj_new_int_from_uint',
     'uint32_t'                  : 'mp_obj_new_int_from_uint',
@@ -566,8 +571,18 @@ STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_l
 # AST parsing helper functions
 #
 
+def remove_quals(ast):
+    if hasattr(ast,'quals'):
+        ast.quals = []
+    if hasattr(ast,'dim_quals'):
+        ast.dim_quals = []
+    if isinstance(ast, tuple):
+        return remove_quals(ast[1])
+    for i, c1 in enumerate(ast.children()):
+        remove_quals(ast.children()[i])
+
 def get_name(type):
-    if isinstance(type, c_ast.Decl):
+    if isinstance(type, (c_ast.Decl, c_ast.Struct)):
         return type.name
     if isinstance(type, c_ast.TypeDecl):
         return type.declname
@@ -583,14 +598,10 @@ def get_name(type):
 def get_type(arg, **kwargs):
     if isinstance(arg, str): 
         return arg
-    remove_quals = 'remove_quals' in kwargs and kwargs['remove_quals']
-    indirection_level = kwargs['indirection_level'] if 'indirection_level' in kwargs else 0
-    if isinstance(arg, c_ast.PtrDecl):
-        return get_type(arg.type, **dict(kwargs, indirection_level = indirection_level + 1))
-    return '{quals}{type}{indirection}'.format(
-        quals=''.join('%s ' % qual for qual in arg.quals) if hasattr(arg, 'quals') and not remove_quals else '',
-        type=gen.visit(arg),
-        indirection='*' * indirection_level)
+    remove_quals_arg = 'remove_quals' in kwargs and kwargs['remove_quals']
+    arg_ast = copy.deepcopy(arg)
+    if remove_quals_arg: remove_quals(arg_ast)
+    return gen.visit(arg_ast)
 
 
 # eprint(',\n'.join(sorted('%s : %s' % (name, get_type(blobs[name])) for name in blobs)))
@@ -616,7 +627,7 @@ def try_generate_struct(struct_name, struct):
     global mp_to_lv
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
-    # print('try_generate_struct %s: %s' % (struct_name, gen.visit(struct)))
+    print('/* try_generate_struct %s: %s */' % (struct_name, gen.visit(struct)))
     flatten_struct_decls = flatten_struct(struct.decls)
     # Go over fields and try to generate type convertors for each
     # print('!! %s' % struct)
@@ -624,9 +635,10 @@ def try_generate_struct(struct_name, struct):
     write_cases = []
     read_cases = []
     for decl in flatten_struct_decls:
-        # print('==> decl %s: %s' % (gen.visit(decl), decl))
-        type_name = get_type(decl.type, remove_quals = True)
+        # print('/* ==> decl %s: %s */' % (gen.visit(decl), decl))
         converted = try_generate_type(decl.type)
+        type_name = get_type(decl.type, remove_quals = True)
+        print('/* --> %s: %s (%s)*/' % (decl.name, type_name, mp_to_lv[type_name] if type_name in mp_to_lv else '---'))
         # Handle the case of nested struct
         if not converted and is_struct(decl.type.type):
             parent_name = struct_name
@@ -644,10 +656,10 @@ def try_generate_struct(struct_name, struct):
 
         mp_to_lv_convertor = mp_to_lv[type_name]
         if callable(mp_to_lv_convertor):
-             mp_to_lv_convertor = mp_to_lv['void*']
+             mp_to_lv_convertor = mp_to_lv['void *']
         lv_to_mp_convertor = lv_to_mp_byref[type_name] if type_name in lv_to_mp_byref else lv_to_mp[type_name]
         if callable(lv_to_mp_convertor):
-            lv_to_mp_convertor = lv_to_mp['void*']
+            lv_to_mp_convertor = lv_to_mp['void *']
         
         cast = '(void*)' if isinstance(decl.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
         write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
@@ -738,8 +750,8 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     lv_to_mp[struct_name] = 'mp_read_%s' % struct_name
     lv_to_mp_byref[struct_name] = 'mp_read_byref_%s' % struct_name
     mp_to_lv[struct_name] = 'mp_write_%s' % struct_name
-    lv_to_mp['%s*' % struct_name] = 'mp_read_ptr_%s' % struct_name
-    mp_to_lv['%s*' % struct_name] = 'mp_write_ptr_%s' % struct_name
+    lv_to_mp['%s *' % struct_name] = 'mp_read_ptr_%s' % struct_name
+    mp_to_lv['%s *' % struct_name] = 'mp_write_ptr_%s' % struct_name
     generated_structs[struct_name] = True
     return struct_name
 
@@ -755,23 +767,26 @@ def get_arg_name(arg):
 
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
 
-def try_generate_type(type):
-    # eprint('--> try_generate_type %s: %s' % (get_name(type), type))
+def try_generate_type(type_ast):
+    print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
     # Handle the case of a pointer 
-    if isinstance(type, c_ast.TypeDecl): 
-        return try_generate_type(type.type)
-    type = get_name(type)
+    if isinstance(type_ast, c_ast.TypeDecl): 
+        return try_generate_type(type_ast.type)
+    type = get_name(type_ast)
     if isinstance(type, c_ast.Node):
         return None
     if type in mp_to_lv:
         return mp_to_lv[type]
-    if type.endswith('*'): 
-        generated_struct = try_generate_struct(type[:-1], structs[type[:-1]]) if type[:-1] in structs else None
-        if generated_struct:
-            return generated_struct
-        mp_to_lv[type] = mp_to_lv['void*']
-        lv_to_mp[type] = lv_to_mp['void*']
-        return mp_to_lv[type]
+    if isinstance(type_ast, c_ast.PtrDecl): 
+        type = get_name(type_ast.type.type)
+        print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
+        if type in structs:
+            generated_struct = try_generate_struct(type, structs[type]) if type in structs else None
+            if generated_struct:
+                return generated_struct
+            mp_to_lv[type] = mp_to_lv['void *']
+            lv_to_mp[type] = lv_to_mp['void *']
+            return mp_to_lv[type]
     if type in structs:
         if try_generate_struct(type, structs[type]):
             return mp_to_lv[type]
@@ -780,9 +795,10 @@ def try_generate_type(type):
             if (try_generate_struct(new_type, structs[new_type])):
                 struct_aliases[new_type] = type
         if try_generate_type(new_type):
+           print('/* --> try_generate_type TYPEDEF!! %s: %s */' % (type, mp_to_lv[new_type]))
            mp_to_lv[type] = mp_to_lv[new_type]
-           type_ptr = '%s*' % type
-           new_type_ptr = '%s*' % new_type
+           type_ptr = '%s *' % type
+           new_type_ptr = '%s *' % new_type
            if new_type_ptr in mp_to_lv:
                mp_to_lv[type_ptr] = mp_to_lv[new_type_ptr]
            if new_type in lv_to_mp:
@@ -791,7 +807,7 @@ def try_generate_type(type):
                    lv_to_mp_byref[type] = lv_to_mp_byref[new_type]
                if new_type_ptr in lv_to_mp:
                    lv_to_mp[type_ptr] = lv_to_mp[new_type_ptr]
-           # print("// %s = (%s)" % (type, new_type))
+           print('/* %s = (%s) */' % (type, new_type))
            return mp_to_lv[type] 
     return None
   
@@ -804,7 +820,7 @@ def build_callback_func_arg(arg, index, func):
     arg_type = get_type(arg.type)
     cast = '(void*)' if isinstance(arg.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
     if not arg_type in lv_to_mp:
-        try_generate_type(arg_type)
+        try_generate_type(arg.type)
         if not arg_type in lv_to_mp:
             raise MissingConversionException("Callback: Missing conversion to %s" % arg_type)
     return lv_to_mp[arg_type](arg, index, func, obj_name) if callable(lv_to_mp[arg_type]) else \
@@ -821,7 +837,7 @@ def gen_callback_func(func):
     func_name = get_arg_name(func.type)
     return_type = get_type(func.type)
     if return_type != 'void' and not return_type in mp_to_lv:
-        try_generate_type(return_type)
+        try_generate_type(func.type)
         if not return_type in mp_to_lv:
             raise MissingConversionException("Callback return value: Missing conversion to %s" % return_type)
 
@@ -858,7 +874,7 @@ STATIC {return_type} {func_name}_callback({func_args})
             arg = gen.visit(arg),
             func_name = func_name)
     mp_to_lv[func_name] = register_callback
-    lv_to_mp[func_name] = lv_to_mp['void*']
+    lv_to_mp[func_name] = lv_to_mp['void *']
 
 #
 # Emit Mpy function definitions
@@ -1039,8 +1055,8 @@ for func_typedef in func_typedefs:
     except MissingConversionException as exp:
         gen_func_error(func, exp)
         func_name = get_arg_name(func.type)
-        lv_to_mp[func_name] = lv_to_mp['void*']
-        mp_to_lv[func_name] = mp_to_lv['void*']
+        lv_to_mp[func_name] = lv_to_mp['void *']
+        mp_to_lv[func_name] = mp_to_lv['void *']
 
 #
 # Generate all other objects. Generate parent objects first
