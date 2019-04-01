@@ -64,7 +64,7 @@ else:
 base_obj_name = 'obj'
 lv_ext_pattern = re.compile('^lv_([^_]+)_ext_t')
 lv_obj_pattern = re.compile('^lv_([^_]+)', re.IGNORECASE)
-lv_func_pattern = re.compile('^lv_(.+)', re.IGNORECASE)
+lv_func_pattern = re.compile('^(struct _){0,1}lv_(.+)', re.IGNORECASE)
 create_obj_pattern = re.compile('^lv_([^_]+)_create')
 lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
@@ -108,9 +108,8 @@ ast = parser.parse(s, filename='<none>')
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
 # print('... %s' % str(typedefs))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
-structs = collections.OrderedDict(chain(
-        ((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname), 
-        ((typedef.type.name, typedef.type) for typedef in struct_typedefs if typedef.type.name)))
+structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname) 
+explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name)
 print('/* --> structs:\n%s */' % ',\n'.join(sorted(struct_name for struct_name in structs)))
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
@@ -582,8 +581,10 @@ def remove_quals(ast):
         remove_quals(ast.children()[i])
 
 def get_name(type):
-    if isinstance(type, (c_ast.Decl, c_ast.Struct)):
+    if isinstance(type, c_ast.Decl):
         return type.name
+    if isinstance(type, c_ast.Struct) and type.name:
+        return explicit_structs[type.name]
     if isinstance(type, c_ast.TypeDecl):
         return type.declname
     if isinstance(type, c_ast.IdentifierType):
@@ -622,9 +623,11 @@ def flatten_struct(struct_decls):
             result.append(decl)
     return result
     
-def try_generate_struct(struct_name, struct):
+def try_generate_struct(struct_name, struct, structs_in_progress = None):
     global lv_to_mp
     global mp_to_lv
+    if not structs_in_progress: structs_in_progress = collections.OrderedDict()
+    structs_in_progress[struct_name] = True
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
     print('/* try_generate_struct %s: %s */' % (struct_name, gen.visit(struct)))
@@ -636,7 +639,7 @@ def try_generate_struct(struct_name, struct):
     read_cases = []
     for decl in flatten_struct_decls:
         # print('/* ==> decl %s: %s */' % (gen.visit(decl), decl))
-        converted = try_generate_type(decl.type)
+        converted = try_generate_type(decl.type, structs_in_progress)
         type_name = get_type(decl.type, remove_quals = True)
         print('/* --> %s: %s (%s)*/' % (decl.name, type_name, mp_to_lv[type_name] if type_name in mp_to_lv else '---'))
         # Handle the case of nested struct
@@ -767,11 +770,12 @@ def get_arg_name(arg):
 
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
 
-def try_generate_type(type_ast):
+def try_generate_type(type_ast, structs_in_progress = None):
     print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
+    if isinstance(type_ast, basestring): raise SyntaxError('!!!')
     # Handle the case of a pointer 
     if isinstance(type_ast, c_ast.TypeDecl): 
-        return try_generate_type(type_ast.type)
+        return try_generate_type(type_ast.type, structs_in_progress)
     type = get_name(type_ast)
     if isinstance(type, c_ast.Node):
         return None
@@ -780,21 +784,28 @@ def try_generate_type(type_ast):
     if isinstance(type_ast, c_ast.PtrDecl): 
         type = get_name(type_ast.type.type)
         print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
-        if type in structs:
-            generated_struct = try_generate_struct(type, structs[type]) if type in structs else None
+        if type in structs and ((not structs_in_progress) or type not in structs_in_progress): # prevent recursion
+            generated_struct = try_generate_struct(type, structs[type], structs_in_progress) if type in structs else None
             if generated_struct:
                 return generated_struct
-            mp_to_lv[type] = mp_to_lv['void *']
-            lv_to_mp[type] = lv_to_mp['void *']
-            return mp_to_lv[type]
+            # mp_to_lv[type] = mp_to_lv['void *']
+            # lv_to_mp[type] = lv_to_mp['void *']
+            # return mp_to_lv[type]
+        # else:
+        ptr_type = get_type(type_ast, remove_quals=True)
+        print('/* --> PTR %s */' % ptr_type)
+        mp_to_lv[ptr_type] = mp_to_lv['void *']
+        lv_to_mp[ptr_type] = lv_to_mp['void *']
+        return mp_to_lv[ptr_type]
     if type in structs:
         if try_generate_struct(type, structs[type]):
             return mp_to_lv[type]
-    for new_type in [get_type(x) for x in typedefs if get_arg_name(x) == type]:
+    for new_type_ast in [x for x in typedefs if get_arg_name(x) == type]:
+        new_type = get_type(new_type_ast, remove_quals=True)
         if new_type in structs:
             if (try_generate_struct(new_type, structs[new_type])):
                 struct_aliases[new_type] = type
-        if try_generate_type(new_type):
+        if try_generate_type(new_type_ast, structs_in_progress):
            print('/* --> try_generate_type TYPEDEF!! %s: %s */' % (type, mp_to_lv[new_type]))
            mp_to_lv[type] = mp_to_lv[new_type]
            type_ptr = '%s *' % type
@@ -885,7 +896,7 @@ generated_funcs = collections.OrderedDict()
 def build_mp_func_arg(arg, index, func, obj_name):
     arg_type = get_type(arg.type, remove_quals = True)
     if not arg_type in mp_to_lv:
-        try_generate_type(arg_type)
+        try_generate_type(arg.type)
         if not arg_type in mp_to_lv:
             raise MissingConversionException("Missing conversion to %s" % arg_type)
     return mp_to_lv[arg_type](arg, index, func, obj_name) if callable(mp_to_lv[arg_type]) else \
@@ -909,7 +920,7 @@ def gen_mp_func(func, obj_name):
         build_return_value = "mp_const_none" 
     else:
         if not return_type in lv_to_mp:
-            try_generate_type(return_type)
+            try_generate_type(func.type.type)
             if not return_type in lv_to_mp:
                 raise MissingConversionException("Missing convertion from %s" % return_type)
         build_result = "%s res = " % return_type
@@ -1119,8 +1130,9 @@ if len(functions_not_generated) > 0:
 # Generate globals
 #
 
-def gen_global(global_name, global_type):
-    try_generate_type(global_type)
+def gen_global(global_name, global_type_ast):
+    global_type = get_type(global_type_ast, remove_quals=True)
+    try_generate_type(global_type_ast)
     if not global_type in generated_structs:
         raise MissingConversionException('Missing conversion to %s when generating global %s' % (global_type, global_name))
 
@@ -1140,7 +1152,7 @@ STATIC const mp_lv_struct_t mp_{global_name} = {{
 generated_globals = []
 for global_name in blobs:
     try:
-        gen_global(global_name, get_type(blobs[global_name]))
+        gen_global(global_name, blobs[global_name])
         generated_globals.append(global_name)
     except MissingConversionException as exp:
         gen_func_error(global_name, exp)
