@@ -578,7 +578,21 @@ def remove_quals(ast):
     if isinstance(ast, tuple):
         return remove_quals(ast[1])
     for i, c1 in enumerate(ast.children()):
-        remove_quals(ast.children()[i])
+        child = ast.children()[i]
+        if not isinstance(child, c_ast.FuncDecl): # Don't remove quals which change function prorotype
+            remove_quals(child)
+
+def remove_explicit_struct(ast):
+    if isinstance(ast, c_ast.TypeDecl) and isinstance(ast.type, c_ast.Struct):
+        explicit_struct_name = ast.type.name
+        # eprint('--> replace %s by %s in:\n%s' % (explicit_struct_name, explicit_structs[explicit_struct_name] if explicit_struct_name in explicit_structs else '???', ast))
+        if explicit_struct_name and explicit_struct_name in explicit_structs:
+            ast.type = c_ast.IdentifierType([explicit_structs[explicit_struct_name]])
+    if isinstance(ast, tuple):
+        return remove_explicit_struct(ast[1])
+    for i, c1 in enumerate(ast.children()):
+        child = ast.children()[i]
+        remove_explicit_struct(child)
 
 def get_name(type):
     if isinstance(type, c_ast.Decl):
@@ -591,7 +605,7 @@ def get_name(type):
         return type.names[0]
     if isinstance(type, c_ast.FuncDecl):
         return type.type.declname
-    if isinstance(type, c_ast.PtrDecl): 
+    if isinstance(type, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         return get_type(type, remove_quals=True)
     else:
         return type
@@ -601,6 +615,7 @@ def get_type(arg, **kwargs):
         return arg
     remove_quals_arg = 'remove_quals' in kwargs and kwargs['remove_quals']
     arg_ast = copy.deepcopy(arg)
+    remove_explicit_struct(arg_ast)
     if remove_quals_arg: remove_quals(arg_ast)
     return gen.visit(arg_ast)
 
@@ -781,7 +796,7 @@ def try_generate_type(type_ast, structs_in_progress = None):
         return None
     if type in mp_to_lv:
         return mp_to_lv[type]
-    if isinstance(type_ast, c_ast.PtrDecl): 
+    if isinstance(type_ast, (c_ast.PtrDecl)): 
         type = get_name(type_ast.type.type)
         print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
         if type in structs and ((not structs_in_progress) or type not in structs_in_progress): # prevent recursion
@@ -828,7 +843,7 @@ def try_generate_type(type_ast, structs_in_progress = None):
 #
 
 def build_callback_func_arg(arg, index, func):
-    arg_type = get_type(arg.type)
+    arg_type = get_type(arg.type, remove_quals = True)
     cast = '(void*)' if isinstance(arg.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
     if not arg_type in lv_to_mp:
         try_generate_type(arg.type)
@@ -846,7 +861,7 @@ def gen_callback_func(func):
     if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
         raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
     func_name = get_arg_name(func.type)
-    return_type = get_type(func.type)
+    return_type = get_type(func.type, remove_quals = False)
     if return_type != 'void' and not return_type in mp_to_lv:
         try_generate_type(func.type)
         if not return_type in mp_to_lv:
@@ -873,7 +888,7 @@ STATIC {return_type} {func_name}_callback({func_args})
         func_prototype = gen.visit(func),
         func_name = func_name,
         return_type = return_type,
-        func_args = ', '.join(["%s arg%s" % (get_type(arg.type), i) for i,arg in enumerate(args)]),
+        func_args = ', '.join(["%s arg%s" % (get_type(arg.type, remove_quals = False), i) for i,arg in enumerate(args)]),
         num_args=len(args),
         build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]),
         return_value_assignment = '' if return_type == 'void' else 'mp_obj_t callback_result = ',
@@ -909,12 +924,12 @@ def gen_mp_func(func, obj_name):
     # print("/*\n{ast}\n*/").format(ast=func)
     args = func.type.args.params
     # Handle the case of a single function argument which is "void"
-    if len(args)==1 and get_type(args[0].type) == "void":
+    if len(args)==1 and get_type(args[0].type, remove_quals = True) == "void":
         param_count = 0
         args = []
     else:
         param_count = len(args)
-    return_type = get_type(func.type.type)
+    return_type = get_type(func.type.type, remove_quals = False)
     if return_type == "void":        
         build_result = ""
         build_return_value = "mp_const_none" 
