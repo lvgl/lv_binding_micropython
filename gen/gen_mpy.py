@@ -64,7 +64,7 @@ else:
 base_obj_name = 'obj'
 lv_ext_pattern = re.compile('^lv_([^_]+)_ext_t')
 lv_obj_pattern = re.compile('^lv_([^_]+)', re.IGNORECASE)
-lv_func_pattern = re.compile('^(struct _){0,1}lv_(.+)', re.IGNORECASE)
+lv_func_pattern = re.compile('^lv_(.+)', re.IGNORECASE)
 create_obj_pattern = re.compile('^lv_([^_]+)_create')
 lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
