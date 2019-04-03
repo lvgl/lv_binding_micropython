@@ -570,6 +570,15 @@ STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_l
 # AST parsing helper functions
 #
 
+def convert_array_to_ptr(ast):
+    if hasattr(ast, 'type') and isinstance(ast.type, c_ast.ArrayDecl):
+        ast.type = c_ast.PtrDecl(ast.type.quals if hasattr(ast.type, 'quals') else [], ast.type.type)
+    if isinstance(ast, tuple):
+        return remove_explicit_struct(ast[1])
+    for i, c1 in enumerate(ast.children()):
+        child = ast.children()[i]
+        remove_explicit_struct(child)
+
 def remove_quals(ast):
     if hasattr(ast,'quals'):
         ast.quals = []
@@ -680,8 +689,19 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
             lv_to_mp_convertor = lv_to_mp['void *']
         
         cast = '(void*)' if isinstance(decl.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
-        write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
-        read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+
+        # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
+        if isinstance(decl.type, c_ast.ArrayDecl):
+            memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), decl.type.dim.value)
+            write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
+                format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
+            read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}&data->{field}); break; // converting from {type_name}'.
+                format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+        else:
+            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
+                format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+            read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
+                format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
     print('''
 /*
  * Struct {struct_name}
@@ -796,13 +816,13 @@ def try_generate_type(type_ast, structs_in_progress = None):
         return None
     if type in mp_to_lv:
         return mp_to_lv[type]
-    if isinstance(type_ast, (c_ast.PtrDecl)): 
+    if isinstance(type_ast, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         type = get_name(type_ast.type.type)
         print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
         if type in structs and ((not structs_in_progress) or type not in structs_in_progress): # prevent recursion
             generated_struct = try_generate_struct(type, structs[type], structs_in_progress) if type in structs else None
-            if generated_struct:
-                return generated_struct
+            # if generated_struct:
+            #    return generated_struct
             # mp_to_lv[type] = mp_to_lv['void *']
             # lv_to_mp[type] = lv_to_mp['void *']
             # return mp_to_lv[type]
@@ -910,13 +930,15 @@ generated_funcs = collections.OrderedDict()
 
 def build_mp_func_arg(arg, index, func, obj_name):
     arg_type = get_type(arg.type, remove_quals = True)
+    fixed_arg = copy.deepcopy(arg)
+    convert_array_to_ptr(fixed_arg)
     if not arg_type in mp_to_lv:
         try_generate_type(arg.type)
         if not arg_type in mp_to_lv:
             raise MissingConversionException("Missing conversion to %s" % arg_type)
     return mp_to_lv[arg_type](arg, index, func, obj_name) if callable(mp_to_lv[arg_type]) else \
         '{var} = {convertor}(args[{i}]);'.format(
-            var = gen.visit(arg),
+            var = gen.visit(fixed_arg),
             convertor = mp_to_lv[arg_type],
             i = index) 
 
