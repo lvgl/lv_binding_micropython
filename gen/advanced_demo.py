@@ -99,8 +99,12 @@ class AdvancedDemoApplication():
 
         # Register SDL display driver.
 
+        disp_buf1 = lv.disp_buf_t()
+        buf1_1 = bytes(480*10)
+        lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1))
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
+        disp_drv.buffer = disp_buf1
         disp_drv.flush_cb = SDL.monitor_flush
         lv.disp_drv_register(disp_drv)
 
@@ -109,7 +113,7 @@ class AdvancedDemoApplication():
         indev_drv = lv.indev_drv_t()
         lv.indev_drv_init(indev_drv) 
         indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read = SDL.mouse_read;
+        indev_drv.read_cb = SDL.mouse_read;
         lv.indev_drv_register(indev_drv);
         
     def init_gui_esp32(self):
@@ -137,7 +141,7 @@ class AdvancedDemoApplication():
         indev_drv = lv.indev_drv_t()
         lv.indev_drv_init(indev_drv) 
         indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read = touch.read;
+        indev_drv.read_cb = touch.read;
         lv.indev_drv_register(indev_drv);
 
     

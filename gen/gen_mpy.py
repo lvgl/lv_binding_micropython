@@ -216,15 +216,13 @@ class MissingConversionException(ValueError):
     pass
 
 mp_to_lv = {
-    'void *'                     : 'mp_to_ptr',
-    'const void *'               : 'mp_to_ptr',
+    'void *'                    : 'mp_to_ptr',
+    'const uint8_t *'           : 'mp_to_ptr',
+    'const void *'              : 'mp_to_ptr',
     'bool'                      : 'mp_obj_is_true',
-    'char *'                     : '(char*)mp_obj_str_get_str',
-    'const char *'               : 'mp_obj_str_get_str',
-    'lv_obj_t *'                 : 'mp_to_lv',
-    'const lv_obj_t *'           : 'mp_to_lv',
-    'struct _lv_obj_t *'         : 'mp_to_lv',
-    'const struct _lv_obj_t *'   : 'mp_to_lv',
+    'char *'                    : '(char*)mp_obj_str_get_str',
+    'const char *'              : 'mp_obj_str_get_str',
+    'lv_obj_t *'                : 'mp_to_lv',
     'uint8_t'                   : '(uint8_t)mp_obj_get_int',
     'uint16_t'                  : '(uint16_t)mp_obj_get_int',
     'uint32_t'                  : '(uint32_t)mp_obj_get_int',
@@ -236,15 +234,13 @@ mp_to_lv = {
 }
 
 lv_to_mp = {
-    'void *'                     : 'ptr_to_mp',
-    'const void *'               : 'ptr_to_mp',
+    'void *'                    : 'ptr_to_mp',
+    'const uint8_t *'           : 'ptr_to_mp',
+    'const void *'              : 'ptr_to_mp',
     'bool'                      : 'convert_to_bool',
-    'char *'                     : 'convert_to_str',
-    'const char *'               : 'convert_to_str',
-    'lv_obj_t *'                 : 'lv_to_mp',
-    'const lv_obj_t *'           : 'lv_to_mp',
-    'struct _lv_obj_t *'         : 'lv_to_mp',
-    'const struct _lv_obj_t *'   : 'lv_to_mp',
+    'char *'                    : 'convert_to_str',
+    'const char *'              : 'convert_to_str',
+    'lv_obj_t *'                : 'lv_to_mp',
     'uint8_t'                   : 'mp_obj_new_int_from_uint',
     'uint16_t'                  : 'mp_obj_new_int_from_uint',
     'uint32_t'                  : 'mp_obj_new_int_from_uint',
@@ -532,20 +528,32 @@ STATIC const mp_obj_type_t mp_blob_type = {
 
 STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
-    void *result;
     mp_buffer_info_t buffer_info;
+    if (self_in == mp_const_none)
+        return NULL;
     mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
-    if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
-        nlr_raise(
-            mp_obj_new_exception_msg_varg(
-                &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(self_in)));
+    const mp_obj_type_t *self_in_type = ((mp_obj_base_t*)self_in)->type;
+    if (self_in_type == &mp_type_bytes || 
+        self_in_type == &mp_type_bytearray ||
+        self_in_type == &mp_type_memoryview ||
+        self_in_type == &mp_type_str)
+            return buffer_info.buf;
+    else
+    {
+        void *result;
+        if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
+            nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(self_in)));
+        }
+        memcpy(&result, buffer_info.buf, sizeof(result));
+        return result;
     }
-    memcpy(&result, buffer_info.buf, sizeof(result));
-    return result;
 }
 
 STATIC inline mp_obj_t ptr_to_mp(void *data)
 {
+    if (data == NULL) return mp_const_none;
     return lv_to_mp_struct(&mp_blob_type, data);
 }
 

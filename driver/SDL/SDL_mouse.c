@@ -44,7 +44,7 @@ static int16_t last_y = 0;
  * @param data store the mouse data here
  * @return false: because the points are not buffered, so no more data to be read
  */
-bool mouse_read(lv_indev_data_t * data)
+bool mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     /*Store the collected data*/
     data->point.x = last_x;

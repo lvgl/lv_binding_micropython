@@ -43,12 +43,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_init_SDL_obj, mp_init_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_SDL_obj, mp_deinit_SDL);
 
 DEFINE_PTR_OBJ(monitor_flush);
+DEFINE_PTR_OBJ(mouse_read);
 
 STATIC const mp_rom_map_elem_t SDL_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_SDL) },
         { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_init_SDL_obj) },
         { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_deinit_SDL_obj) },
         { MP_ROM_QSTR(MP_QSTR_monitor_flush), MP_ROM_PTR(&PTR_OBJ(monitor_flush))},
+        { MP_ROM_QSTR(MP_QSTR_mouse_read), MP_ROM_PTR(&PTR_OBJ(mouse_read))},
 };
          
 
