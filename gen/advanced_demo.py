@@ -15,6 +15,11 @@ symbolstyle.text.font = lv.font_symbol_40
 symbolstyle.text.color = lv.color_hex(0xffffff)
 symbolstyle.text.color = {"ch": {"red":0xff, "green":0xff, "blue":0xff}}
 
+def get_member_name(obj, value):
+    for member in dir(obj):
+        if getattr(obj, member) == value:
+            return member
+
 class SymbolButton(lv.btn):
     def __init__(self, parent, symbol, text):
         super().__init__(parent)
@@ -44,10 +49,7 @@ class Page_Buttons:
         # Currently only single callback per object is supported
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name) or lv.RES.OK)
-            # btn.set_action(lv.BTN.ACTION.PR, lambda name=name: self.label.set_text(name + ' press'))
-            # btn.set_action(lv.BTN.ACTION.LONG_PR, lambda name=name: self.label.set_text(name + ' long press'))
-            # btn.set_action(lv.BTN.ACTION.LONG_PR_REPEAT, lambda name=name: self.label.set_text(name + ' long press repeat'))
+            btn.set_event_cb(lambda self, event, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
 
 
 class Page_Simple:
@@ -60,8 +62,8 @@ class Page_Simple:
         self.slider.align(page, lv.ALIGN.IN_TOP_LEFT, 20, 0)
         self.slider_label = lv.label(page)
         self.slider_label.align(self.slider, lv.ALIGN.OUT_RIGHT_MID, 15, 0)
-        self.slider.set_action(self.on_slider_changed)
-        self.on_slider_changed(0)
+        self.slider.set_event_cb(self.on_slider_changed)
+        self.on_slider_changed(None)
         
         # style selector
         self.styles = [('Plain', lv.style_plain), ('Plain color', lv.style_plain_color), ('Pretty', lv.style_pretty), ('Pretty color', lv.style_pretty_color)]
@@ -69,16 +71,14 @@ class Page_Simple:
         self.style_selector = lv.ddlist(page)
         self.style_selector.align(self.slider, lv.ALIGN.IN_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
-        self.style_selector.set_action(self.on_style_selector_changed)
+        self.style_selector.set_event_cb(self.on_style_selector_changed)
     
-    def on_slider_changed(self, action):
+    def on_slider_changed(self, event):
         self.slider_label.set_text(str(self.slider.get_value()))
-        return lv.RES.OK
 
-    def on_style_selector_changed(self, action):
+    def on_style_selector_changed(self, event):
         selected = self.style_selector.get_selected()
         self.app.screen_main.tabview.set_style(lv.tabview.STYLE.BG, self.styles[selected][1])   
-        return lv.RES.OK
 
 
 class Screen_Main(lv.obj):

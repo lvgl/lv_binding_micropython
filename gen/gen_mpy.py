@@ -70,6 +70,7 @@ lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
 lv_callback_return_type_pattern = re.compile('^((void)|(lv_res_t))')
 lv_numstr_pattern = re.compile('^(.*)_NUMSTR')
+lv_str_enum_pattern = re.compile('^_LV_STR_(.+)')
 
 def simplify_identifier(id):
     return re.match(lv_func_pattern, id).group(1)
@@ -94,6 +95,10 @@ def get_enum_name(enum):
     prefix = 'lv_'
     return enum[len(prefix):]
 
+def str_enum_to_str(str_enum):
+    res = re.match(lv_str_enum_pattern, str_enum).group(1)
+    return 'LV_' + res
+
 #
 # Initialization, data structures, helper functions
 #
@@ -110,7 +115,7 @@ typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
 structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname) 
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name)
-print('/* --> structs:\n%s */' % ',\n'.join(sorted(struct_name for struct_name in structs)))
+# print('/* --> structs:\n%s */' % ',\n'.join(sorted(struct_name for struct_name in structs)))
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
@@ -132,13 +137,7 @@ def get_methods(obj_name):
     global funcs
     return [func for func in funcs if is_method_of(func.name,obj_name) and (not func.name == ctor_name_from_obj_name(obj_name))]
 
-def get_enum_members(obj_name):
-    global enums
-    if not obj_name in enums:
-        return []
-    prefix_len = len(obj_name)+1
-    return [enum_member_name[prefix_len:] for enum_member_name, value in enums[obj_name].items()]
-   
+  
 # All object should inherit directly from base_obj, and not according to lv_ext, as disccussed on https://github.com/littlevgl/lv_binding_micropython/issues/19
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
 parent_obj_names[base_obj_name] = None
@@ -156,45 +155,22 @@ parent_obj_names[base_obj_name] = None
 # Parse Enums
 
 enum_defs = [x for x in ast.ext if hasattr(x,'type') and isinstance(x.type, c_ast.Enum)]
-enums = collections.OrderedDict()
-for enum_def in enum_defs:
-    member_names = [member.name for member in enum_def.type.values.enumerators if not member.name.startswith('_')]
-    enum_name = commonprefix(member_names)
-    enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
-    enum = collections.OrderedDict()
-    next_value = 0
-    for member in enum_def.type.values.enumerators:
-        if member.name.startswith('_'):
-            continue
-        if member.value == None:
-            value = next_value
-        else:
-            value = int(member.value.value, 0)
-        enum[member.name] = value
-        next_value = value + 1
-    enums[enum_name] = enum
 
 # Enum member access functions.
-# Also supports the numstr convention, which allows defining enums of short strings (up to 4 characters).
-# On lvgl numstr are used for declaring Symbols UTF8 encodings
 
+def get_enum_members(obj_name):
+    global enums
+    if not obj_name in enums:
+        return []
+    return [enum_member_name for enum_member_name, value in enums[obj_name].items()]
+ 
 def get_enum_member_name(enum_member):
     if enum_member[0].isdigit():
         enum_member = '_' + enum_member # needs to be a valid attribute name
-    match = re.match(lv_numstr_pattern, enum_member)
-    return match.group(1) if match else enum_member # remove NUMSTR suffix if present
+    return enum_member
 
 def get_enum_value(obj_name, enum_member):
-    fullname = '%s_%s' % (obj_name, enum_member)
-    match = re.match(lv_numstr_pattern, enum_member)
-    if match:
-        enum = enums[obj_name]
-        enum_member_name = '%s_%s' % (obj_name, enum_member)
-        numstr = ''.join("\\x%0.2x" % (ord(x) if isinstance(x, str) else x) for x in struct.pack('<i', enum[enum_member_name]))
-        print('MP_DEFINE_STR_OBJ(mp_%s, "%s");' % (enum_member_name, numstr))
-        return "&mp_%s_%s" % (obj_name, enum_member)
-    else:
-        return "MP_ROM_INT(%s_%s)" % (obj_name, enum_member)
+    return enums[obj_name][enum_member]
 
 # eprint(enums)
 
@@ -574,6 +550,47 @@ STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_l
 
 """)
 
+#
+# Add regular enums with integer values
+#
+
+enums = collections.OrderedDict()
+for enum_def in enum_defs:
+    member_names = [member.name for member in enum_def.type.values.enumerators if not member.name.startswith('_')]
+    enum_name = commonprefix(member_names)
+    enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
+    enum = collections.OrderedDict()
+    for member in enum_def.type.values.enumerators:
+        if member.name.startswith('_'):
+            continue
+        member_name = member.name[len(enum_name)+1:]
+        enum[member_name] = 'MP_ROM_INT(%s_%s)' % (enum_name, member_name)
+    if len(enum) > 0: enums[enum_name] = enum
+
+# Add special string enums
+
+print ('''
+/*
+ * LVGL string constants
+ */
+''')
+
+for enum_def in enum_defs:
+    member_names = [str_enum_to_str(member.name) for member in enum_def.type.values.enumerators if lv_str_enum_pattern.match(member.name)]
+    enum_name = commonprefix(member_names)
+    enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
+    enum = collections.OrderedDict()
+    if enum_name:
+        for member in enum_def.type.values.enumerators:
+            full_name = str_enum_to_str(member.name)
+            member_name = full_name[len(enum_name)+1:]
+            print('MP_DEFINE_STR_OBJ(mp_%s, %s);' % (full_name, full_name))
+            enum[member_name] = '&mp_%s' % full_name
+        if len(enum) > 0: enums[enum_name] = enum
+
+# eprint('-->\n%s' % enums)
+
+
 # 
 # AST parsing helper functions
 #
@@ -662,7 +679,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
     structs_in_progress[struct_name] = True
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
-    print('/* try_generate_struct %s: %s */' % (struct_name, gen.visit(struct)))
+    # print('/* --> try_generate_struct %s: %s */' % (struct_name, gen.visit(struct)))
     flatten_struct_decls = flatten_struct(struct.decls)
     # Go over fields and try to generate type convertors for each
     # print('!! %s' % struct)
@@ -673,7 +690,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
         # print('/* ==> decl %s: %s */' % (gen.visit(decl), decl))
         converted = try_generate_type(decl.type, structs_in_progress)
         type_name = get_type(decl.type, remove_quals = True)
-        print('/* --> %s: %s (%s)*/' % (decl.name, type_name, mp_to_lv[type_name] if type_name in mp_to_lv else '---'))
+        # print('/* --> %s: %s (%s)*/' % (decl.name, type_name, mp_to_lv[type_name] if type_name in mp_to_lv else '---'))
         # Handle the case of nested struct
         if not converted and is_struct(decl.type.type):
             parent_name = struct_name
@@ -814,7 +831,7 @@ def get_arg_name(arg):
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
 
 def try_generate_type(type_ast, structs_in_progress = None):
-    print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
+    # print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
     if isinstance(type_ast, basestring): raise SyntaxError('!!!')
     # Handle the case of a pointer 
     if isinstance(type_ast, c_ast.TypeDecl): 
@@ -826,17 +843,11 @@ def try_generate_type(type_ast, structs_in_progress = None):
         return mp_to_lv[type]
     if isinstance(type_ast, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         type = get_name(type_ast.type.type)
-        print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
+        # print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
         if type in structs and ((not structs_in_progress) or type not in structs_in_progress): # prevent recursion
             generated_struct = try_generate_struct(type, structs[type], structs_in_progress) if type in structs else None
-            # if generated_struct:
-            #    return generated_struct
-            # mp_to_lv[type] = mp_to_lv['void *']
-            # lv_to_mp[type] = lv_to_mp['void *']
-            # return mp_to_lv[type]
-        # else:
         ptr_type = get_type(type_ast, remove_quals=True)
-        print('/* --> PTR %s */' % ptr_type)
+        # print('/* --> PTR %s */' % ptr_type)
         mp_to_lv[ptr_type] = mp_to_lv['void *']
         lv_to_mp[ptr_type] = lv_to_mp['void *']
         return mp_to_lv[ptr_type]
@@ -849,7 +860,7 @@ def try_generate_type(type_ast, structs_in_progress = None):
             if (try_generate_struct(new_type, structs[new_type])):
                 struct_aliases[new_type] = type
         if try_generate_type(new_type_ast, structs_in_progress):
-           print('/* --> try_generate_type TYPEDEF!! %s: %s */' % (type, mp_to_lv[new_type]))
+           # print('/* --> try_generate_type TYPEDEF!! %s: %s */' % (type, mp_to_lv[new_type]))
            mp_to_lv[type] = mp_to_lv[new_type]
            type_ptr = '%s *' % type
            new_type_ptr = '%s *' % new_type
@@ -861,7 +872,7 @@ def try_generate_type(type_ast, structs_in_progress = None):
                    lv_to_mp_byref[type] = lv_to_mp_byref[new_type]
                if new_type_ptr in lv_to_mp:
                    lv_to_mp[type_ptr] = lv_to_mp[new_type_ptr]
-           print('/* %s = (%s) */' % (type, new_type))
+           # print('/* --> %s = (%s) */' % (type, new_type))
            return mp_to_lv[type] 
     return None
   
