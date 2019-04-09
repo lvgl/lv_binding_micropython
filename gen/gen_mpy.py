@@ -599,10 +599,10 @@ def convert_array_to_ptr(ast):
     if hasattr(ast, 'type') and isinstance(ast.type, c_ast.ArrayDecl):
         ast.type = c_ast.PtrDecl(ast.type.quals if hasattr(ast.type, 'quals') else [], ast.type.type)
     if isinstance(ast, tuple):
-        return remove_explicit_struct(ast[1])
+        return convert_array_to_ptr(ast[1])
     for i, c1 in enumerate(ast.children()):
         child = ast.children()[i]
-        remove_explicit_struct(child)
+        convert_array_to_ptr(child)
 
 def remove_quals(ast):
     if hasattr(ast,'quals'):
@@ -832,7 +832,7 @@ def get_arg_name(arg):
 
 def try_generate_type(type_ast, structs_in_progress = None):
     # print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
-    if isinstance(type_ast, basestring): raise SyntaxError('!!!')
+    if isinstance(type_ast, basestring): raise SyntaxError('Internal error! try_generate_type argument is a string.')
     # Handle the case of a pointer 
     if isinstance(type_ast, c_ast.TypeDecl): 
         return try_generate_type(type_ast.type, structs_in_progress)
