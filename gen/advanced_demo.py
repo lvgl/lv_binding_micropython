@@ -49,7 +49,7 @@ class Page_Buttons:
         # Currently only single callback per object is supported
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.set_event_cb(lambda self, event, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
+            btn.set_event_cb(lambda btn, obj=None, event=-1, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
 
 
 class Page_Simple:
@@ -73,10 +73,10 @@ class Page_Simple:
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
         self.style_selector.set_event_cb(self.on_style_selector_changed)
     
-    def on_slider_changed(self, event):
+    def on_slider_changed(self, obj=None, event=-1):
         self.slider_label.set_text(str(self.slider.get_value()))
 
-    def on_style_selector_changed(self, event):
+    def on_style_selector_changed(self, obj=None, event=-1):
         selected = self.style_selector.get_selected()
         self.app.screen_main.tabview.set_style(lv.tabview.STYLE.BG, self.styles[selected][1])   
 
@@ -101,11 +101,13 @@ class AdvancedDemoApplication():
 
         disp_buf1 = lv.disp_buf_t()
         buf1_1 = bytes(480*10)
-        lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1))
+        lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
         disp_drv.buffer = disp_buf1
         disp_drv.flush_cb = SDL.monitor_flush
+        disp_drv.hor_res = 480
+        disp_drv.ver_res = 320
         lv.disp_drv_register(disp_drv)
 
         # Regsiter SDL mouse driver
@@ -169,7 +171,7 @@ app.init_gui()
 
 import utime
 
-if __name__ == '__main__':
-    while True:
-        pass
-
+#if __name__ == '__main__':
+#    while True:
+#        pass
+#
