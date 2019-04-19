@@ -1,6 +1,9 @@
 #include "../include/common.h"
 #include "SDL_monitor.h"
 #include "SDL_mouse.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -13,6 +16,7 @@ STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_task_handler_obj, mp_lv_task_handler);
 
+#ifndef __EMSCRIPTEN__
 STATIC int tick_thread(void * data)
 {
     (void)data;
@@ -25,11 +29,22 @@ STATIC int tick_thread(void * data)
 
     return 0;
 }
+#else
+STATIC void mp_lv_main_loop(void)
+{
+        mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+        lv_tick_inc(2);
+}
+#endif
 
 STATIC mp_obj_t mp_init_SDL()
 {
     monitor_init();
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(mp_lv_main_loop, 500, 0);
+#else
     SDL_CreateThread(tick_thread, "tick", NULL);
+#endif
     return mp_const_none;
 }
 
