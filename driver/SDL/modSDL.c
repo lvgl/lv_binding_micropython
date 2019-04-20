@@ -1,4 +1,4 @@
-[B#include "../include/common.h"
+#include "../include/common.h"
 #include "SDL_monitor.h"
 #include "SDL_mouse.h"
 #ifdef __EMSCRIPTEN__
@@ -47,6 +47,10 @@ STATIC mp_obj_t mp_init_SDL()
     monitor_init();
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
+    /* Required for HTML input elements to work */
+    SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
+    SDL_EventState(SDL_KEYDOWN, SDL_DISABLE);
+    SDL_EventState(SDL_KEYUP, SDL_DISABLE);
 #else
     SDL_CreateThread(tick_thread, "tick", NULL);
 #endif
