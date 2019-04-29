@@ -71,6 +71,7 @@ lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
 lv_callback_return_type_pattern = re.compile('^((void)|(lv_res_t))')
 lv_numstr_pattern = re.compile('^(.*)_NUMSTR')
 lv_str_enum_pattern = re.compile('^_LV_STR_(.+)')
+lv_callback_type_pattern = re.compile('(lv_){0,1}(.+)_cb(_t){0,1}')
 
 def simplify_identifier(id):
     return re.match(lv_func_pattern, id).group(1)
@@ -99,6 +100,10 @@ def str_enum_to_str(str_enum):
     res = re.match(lv_str_enum_pattern, str_enum).group(1)
     return 'LV_' + res
 
+def user_data_from_callback_func(callback_func_name):
+    res = re.match(lv_callback_type_pattern, callback_func_name)
+    return res.group(2) + '_user_data' if res and res.group(2) else None
+
 #
 # Initialization, data structures, helper functions
 #
@@ -110,12 +115,6 @@ def is_struct(type):
 parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
-typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)]
-# print('... %s' % str(typedefs))
-struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
-structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname) 
-explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name)
-# print('/* --> structs:\n%s */' % ',\n'.join(sorted(struct_name for struct_name in structs)))
 func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
@@ -125,6 +124,12 @@ obj_ctors = [func for func in funcs if create_obj_pattern.match(func.name) and n
 for obj_ctor in obj_ctors:
     funcs.remove(obj_ctor)
 obj_names = [re.match(create_obj_pattern, ctor.name).group(1) for ctor in obj_ctors]
+typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
+# print('... %s' % str(typedefs))
+struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
+structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname) # and not lv_base_obj_pattern.match(typedef.declname)) 
+explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
+# print('/* --> structs:\n%s */' % ',\n'.join(sorted(struct_name for struct_name in structs)))
 
 def has_ctor(obj_name):
     return ctor_name_from_obj_name(obj_name) in [ctor.name for ctor in obj_ctors]
@@ -175,7 +180,7 @@ def get_enum_value(obj_name, enum_member):
 # eprint(enums)
 
 # parse function pointers
-func_typedefs = [t for t in ast.ext if isinstance(t, c_ast.Typedef) and isinstance(t.type, c_ast.PtrDecl) and isinstance(t.type.type, c_ast.FuncDecl)]
+func_typedefs = collections.OrderedDict((t.name, t) for t in ast.ext if isinstance(t, c_ast.Typedef) and isinstance(t.type, c_ast.PtrDecl) and isinstance(t.type.type, c_ast.FuncDecl))
 
 # Global blobs
 blobs = collections.OrderedDict((decl.name, decl.type.type) for decl in ast.ext \
@@ -548,6 +553,20 @@ STATIC mp_obj_t mp_lv_cast(mp_obj_t type_obj, mp_obj_t ptr_obj)
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_lv_cast_obj, mp_lv_cast);
 STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_lv_cast_obj));
 
+STATIC const mp_obj_type_t mp_obj_type;
+
+// Callback function handling
+// Callback is either a callable object or a pointer. If it's a callable object, set user_data to the callback.
+
+STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, void **user_data_ptr)
+{
+    if (lv_callback && mp_obj_is_callable(mp_callback)){
+        if (user_data_ptr) *user_data_ptr = mp_callback;
+        return lv_callback;
+    } else {
+        return mp_to_ptr(mp_callback);
+    }
+}
 """)
 
 #
@@ -657,11 +676,56 @@ def get_type(arg, **kwargs):
 # eprint(',\n'.join(sorted('%s : %s' % (name, get_type(blobs[name])) for name in blobs)))
 
 #
+# Callbacks helper functions
+#
+
+def decl_to_callback(decl):
+    if (isinstance(decl.type, c_ast.PtrDecl) and isinstance(decl.type.type, c_ast.FuncDecl)):
+        return (decl.name, decl.type.type)
+        # print('/* callback: ADDED CALLBACK: %s\n%s */' % (gen.visit(decl.type.type), decl.type.type))
+    elif isinstance(decl.type, c_ast.FuncDecl):
+        return (decl.name, decl.type)
+        # print('/* callback: ADDED CALLBACK: %s\n%s */' % (gen.visit(decl.type.type), decl.type.type))
+    elif isinstance(decl.type, c_ast.TypeDecl) and hasattr(decl.type.type,'names'):
+        func_typedef_name = decl.type.type.names[0]
+        # print('/* --> callback: TYPEDEF CALLBACK: %s: %s */' % (decl.name, func_typedef_name))
+        if func_typedef_name in func_typedefs:
+            return (decl.name, func_typedefs[func_typedef_name].type.type)
+            # print('/* callback: ADDED CALLBACK: %s\n%s */' % (func_typedef_name, func_typedefs[func_typedef_name]))
+    else: return None
+
+def get_user_data(func, func_name = None, containing_struct = None, containing_struct_name = None):
+    args = func.args.params
+    if not func_name: func_name = get_arg_name(func.type)
+    # print('/* --> callback: func_name = %s */' % func_name)
+    user_data_found = False
+    user_data = 'None'
+    if len(args) > 0 and isinstance(args[0].type, c_ast.PtrDecl):
+        struct_arg_type_name = get_type(args[0].type.type, remove_quals = True)
+        if containing_struct_name and struct_arg_type_name != containing_struct_name:
+            return None
+        if not containing_struct:
+            try_generate_type(args[0].type)
+            if struct_arg_type_name in structs: containing_struct = structs[struct_arg_type_name] 
+            #if struct_arg_type_name in mp_to_lv:
+            #    print('/* --> callback: %s First argument is %s */' % (gen.visit(func), struct_arg_type_name))
+        if containing_struct:
+            flatten_struct_decls = flatten_struct(containing_struct.decls)
+            user_data = user_data_from_callback_func(func_name)
+            user_data_found = user_data in [decl.name for decl in flatten_struct_decls]
+            # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
+               
+    if user_data_found: return user_data
+    else: return None
+
+
+#
 # Generate structs when needed
 #
 
 generated_structs = collections.OrderedDict()
 struct_aliases = collections.OrderedDict()
+callbacks_used_on_structs = []
 
 def flatten_struct(struct_decls):
     result = []
@@ -715,18 +779,36 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
         
         cast = '(void*)' if isinstance(decl.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
 
-        # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
-        if isinstance(decl.type, c_ast.ArrayDecl):
-            memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), decl.type.dim.value)
-            write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
-                format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
-            read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}&data->{field}); break; // converting from {type_name}'.
-                format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
-        else:
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
-                format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+        callback = decl_to_callback(decl)
+        user_data = get_user_data(callback[1], func_name = callback[0], containing_struct = struct, containing_struct_name = struct_name) if callback else None
+
+        if callback:
+            callbacks_used_on_structs.append(callback)
+            # Emit callback forward decl.
+            print('STATIC %s %s_callback(%s);' % (get_type(callback[1].type, remove_quals = False), callback[0], gen.visit(callback[1].args)))
+            if user_data in [user_data_decl.name for user_data_decl in flatten_struct_decls]:
+               full_user_data = '&data->%s' % user_data
+               lv_callback = '%s_callback' % callback[0]
+            else:
+               full_user_data = 'NULL'
+               lv_callback = 'NULL'
+            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback}, {user_data}); break; // converting to {type_name}'.
+                format(field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
             read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
                 format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+        else:
+            # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
+            if isinstance(decl.type, c_ast.ArrayDecl):
+                memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), decl.type.dim.value)
+                write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
+                    format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}&data->{field}); break; // converting from {type_name}'.
+                    format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+            else:
+                write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
+                    format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
+                    format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
     print('''
 /*
  * Struct {struct_name}
@@ -881,6 +963,8 @@ def try_generate_type(type_ast, structs_in_progress = None):
 # Emit C callback functions 
 #
 
+generated_callbacks = collections.OrderedDict()
+
 def build_callback_func_arg(arg, index, func):
     arg_type = get_type(arg.type, remove_quals = True)
     cast = '(void*)' if isinstance(arg.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
@@ -894,12 +978,21 @@ def build_callback_func_arg(arg, index, func):
             i = index, cast = cast) 
 
 
-def gen_callback_func(func):
+def gen_callback_func(func, func_name = None):
     global mp_to_lv
+    if func_name in generated_callbacks:
+        return
+    print('/* --> callback: %s */' % (gen.visit(func)))
     args = func.args.params
+    if not func_name: func_name = get_arg_name(func.type)
+    print('/* --> callback: func_name = %s */' % func_name)
+    user_data = get_user_data(func, func_name)
+    # if user_data: print('/* --> callback: %s user_data found!! %s */' %(gen.visit(func), user_data))
+    # else: print('/* --> callback: user_data NOT FOUND !! %s */' % (gen.visit(func)))
+    if not user_data:
+        raise MissingConversionException("Callback: user_data NOT FOUND! %s" % (gen.visit(func)))
     if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
         raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
-    func_name = get_arg_name(func.type)
     return_type = get_type(func.type, remove_quals = False)
     if return_type != 'void' and not return_type in mp_to_lv:
         try_generate_type(func.type)
@@ -940,6 +1033,7 @@ STATIC {return_type} {func_name}_callback({func_args})
             func_name = func_name)
     mp_to_lv[func_name] = register_callback
     lv_to_mp[func_name] = lv_to_mp['void *']
+    generated_callbacks[func_name] = True
 
 #
 # Emit Mpy function definitions
@@ -948,6 +1042,10 @@ STATIC {return_type} {func_name}_callback({func_args})
 generated_funcs = collections.OrderedDict()
 
 def build_mp_func_arg(arg, index, func, obj_name):
+    #print('/* --> ARG: %s */' % arg)
+    callback = decl_to_callback(arg)
+    if callback:
+        gen_callback_func(callback[1], func_name = callback[0])
     arg_type = get_type(arg.type, remove_quals = True)
     fixed_arg = copy.deepcopy(arg)
     convert_array_to_ptr(fixed_arg)
@@ -1096,12 +1194,14 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
     .print = {obj}_print,
     {make_new}
     .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
+    .parent = {parent},
 }};
     """.format(obj = obj_name, base_obj = base_obj_name,
             base_class = '&mp_%s_type' % base_obj_name if should_add_base_methods else 'NULL',
             locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
             ctor = ctor.format(obj = obj_name) if has_ctor(obj_name) else '',
             make_new = '.make_new = %s_make_new,' % obj_name if has_ctor(obj_name) else '',
+            parent = 'NULL' # parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
             ))
 
 #
@@ -1110,20 +1210,6 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
 
 for enum_name in list(enums.keys()):
     gen_obj(enum_name)
-
-#
-# Generate callback functions
-#
-
-for func_typedef in func_typedefs:
-    func = func_typedef.type.type
-    try:
-        gen_callback_func(func)
-    except MissingConversionException as exp:
-        gen_func_error(func, exp)
-        func_name = get_arg_name(func.type)
-        lv_to_mp[func_name] = lv_to_mp['void *']
-        mp_to_lv[func_name] = mp_to_lv['void *']
 
 #
 # Generate all other objects. Generate parent objects first
@@ -1213,6 +1299,28 @@ for global_name in blobs:
     except MissingConversionException as exp:
         gen_func_error(global_name, exp)
 
+#
+# Generate callback functions
+#
+
+# for func_typedef in func_typedefs:
+#     func = func_typedef.type.type
+#     try:
+#         gen_callback_func(func)
+#     except MissingConversionException as exp:
+#         gen_func_error(func, exp)
+#         func_name = get_arg_name(func.type)
+#         lv_to_mp[func_name] = lv_to_mp['void *']
+#         mp_to_lv[func_name] = mp_to_lv['void *']
+
+for (func_name, func) in callbacks_used_on_structs:
+    try:
+        gen_callback_func(func, func_name = func_name)
+    except MissingConversionException as exp:
+        gen_func_error(func, exp)
+        # func_name = get_arg_name(func.type)
+        # lv_to_mp[func_name] = lv_to_mp['void *']
+        # mp_to_lv[func_name] = mp_to_lv['void *']
 
 #
 # Emit Mpy Module definition
