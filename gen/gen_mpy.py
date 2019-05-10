@@ -912,6 +912,8 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     mp_to_lv[struct_name] = 'mp_write_%s' % struct_name
     lv_to_mp['%s *' % struct_name] = 'mp_read_ptr_%s' % struct_name
     mp_to_lv['%s *' % struct_name] = 'mp_write_ptr_%s' % struct_name
+    lv_to_mp['const %s *' % struct_name] = 'mp_read_ptr_%s' % struct_name
+    mp_to_lv['const %s *' % struct_name] = 'mp_write_ptr_%s' % struct_name
     generated_structs[struct_name] = True
     return struct_name
 
