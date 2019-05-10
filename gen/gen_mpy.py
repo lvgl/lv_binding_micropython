@@ -101,8 +101,9 @@ def str_enum_to_str(str_enum):
     return 'LV_' + res
 
 def user_data_from_callback_func(callback_func_name):
-    res = re.match(lv_callback_type_pattern, callback_func_name)
-    return res.group(2) + '_user_data' if res and res.group(2) else None
+    return 'user_data'
+    # res = re.match(lv_callback_type_pattern, callback_func_name)
+    # return res.group(2) + '_user_data' if res and res.group(2) else None
 
 #
 # Initialization, data structures, helper functions
@@ -288,7 +289,7 @@ typedef lv_obj_t* (*lv_create)(lv_obj_t * par, const lv_obj_t * copy);
 typedef struct mp_lv_obj_t {
     mp_obj_base_t base;
     lv_obj_t *lv_obj;
-    mp_obj_t *action;
+    lv_obj_t *callbacks;
 } mp_lv_obj_t;
 
 STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
@@ -327,33 +328,28 @@ STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
     return mp_lv_obj->lv_obj;
 }
 
-STATIC inline mp_obj_t *mp_to_lv_action(mp_obj_t *mp_obj)
+STATIC inline lv_obj_t *mp_get_callbacks(mp_obj_t *mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
-    return mp_lv_obj->action;
-}
-
-STATIC inline void set_action(mp_obj_t *mp_obj, mp_obj_t *action)
-{
-    if (mp_obj == NULL || mp_obj == mp_const_none) return;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
-    mp_lv_obj->action = action;
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+    if (!mp_lv_obj->callbacks) mp_lv_obj->callbacks = mp_obj_new_dict(0);
+    return mp_lv_obj->callbacks;
 }
 
 STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
 STATIC inline mp_obj_t *lv_to_mp(lv_obj_t *lv_obj)
 {
-    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->event_user_data;
+    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
     if (!self) 
     {
         self = m_new_obj(mp_lv_obj_t);
         *self = (mp_lv_obj_t){
             .base = {get_BaseObj_type()},
             .lv_obj = lv_obj,
-            .action = NULL
+            .callbacks = NULL,
         };
+        lv_obj->user_data = self;
     }
     return MP_OBJ_FROM_PTR(self);
 }
@@ -372,9 +368,9 @@ STATIC mp_obj_t make_new(
     *self = (mp_lv_obj_t){
         .base = {type}, 
         .lv_obj = create(parent, copy),
-        .action = NULL
+        .callbacks = NULL,
     };
-    self->lv_obj->event_user_data = self;
+    self->lv_obj->user_data = self;
     return MP_OBJ_FROM_PTR(self);
 }
 
@@ -557,11 +553,30 @@ STATIC const mp_obj_type_t mp_obj_type;
 
 // Callback function handling
 // Callback is either a callable object or a pointer. If it's a callable object, set user_data to the callback.
+// Multiple callbacks are kept per object/struct using a dict that associate callback name with callback object
+// In case of an lv_obj_t, user_data is mp_lv_obj_t which contains a member "callbacks" for that dict.
+// In case of a struct, user_data is a pointer to that dict directly
 
-STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, void **user_data_ptr)
+STATIC mp_obj_t get_callback_dict_from_user_data(void *user_data)
+{
+    if (user_data){
+        mp_obj_t obj = MP_OBJ_FROM_PTR(user_data);
+        return 
+            MP_OBJ_IS_TYPE(obj, &mp_type_dict)? obj: // Handle the case of dict for a struct
+            mp_get_callbacks(obj); // Handle the case of mp_lv_obj_t for an lv_obj_t
+    }
+    return NULL;
+}
+
+STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callback_name, void **user_data_ptr)
 {
     if (lv_callback && mp_obj_is_callable(mp_callback)){
-        if (user_data_ptr) *user_data_ptr = mp_callback;
+        if (user_data_ptr){
+            // user_data is either a dict of callbacks in case of struct, or a pointer to mp_lv_obj_t in case of lv_obj_t
+            if (! (*user_data_ptr) ) *user_data_ptr = MP_OBJ_TO_PTR(mp_obj_new_dict(0)); // if it's NULL - it's a dict for a struct
+            mp_obj_t callbacks = get_callback_dict_from_user_data(*user_data_ptr);
+            mp_obj_dict_store(callbacks, MP_OBJ_NEW_QSTR(callback_name), mp_callback);
+        }
         return lv_callback;
     } else {
         return mp_to_ptr(mp_callback);
@@ -792,7 +807,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
             else:
                full_user_data = 'NULL'
                lv_callback = 'NULL'
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback}, {user_data}); break; // converting to {type_name}'.
+            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{field}, {user_data}); break; // converting to {type_name}'.
                 format(field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
             read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
                 format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
@@ -982,10 +997,10 @@ def gen_callback_func(func, func_name = None):
     global mp_to_lv
     if func_name in generated_callbacks:
         return
-    print('/* --> callback: %s */' % (gen.visit(func)))
+    # print('/* --> callback: %s */' % (gen.visit(func)))
     args = func.args.params
     if not func_name: func_name = get_arg_name(func.type)
-    print('/* --> callback: func_name = %s */' % func_name)
+    # print('/* --> callback: func_name = %s */' % func_name)
     user_data = get_user_data(func, func_name)
     # if user_data: print('/* --> callback: %s user_data found!! %s */' %(gen.visit(func), user_data))
     # else: print('/* --> callback: user_data NOT FOUND !! %s */' % (gen.visit(func)))
@@ -1012,8 +1027,8 @@ STATIC {return_type} {func_name}_callback({func_args})
 {{
     mp_obj_t args[{num_args}];
     {build_args}
-    mp_obj_t action = mp_to_lv_action(args[0]);
-    {return_value_assignment}mp_call_function_n_kw(action, {num_args}, 0, args);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->{user_data});
+    {return_value_assignment}mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_{func_name})) , {num_args}, 0, args);
     return{return_value};
 }}
 """.format(
@@ -1023,14 +1038,16 @@ STATIC {return_type} {func_name}_callback({func_args})
         func_args = ', '.join(["%s arg%s" % (get_type(arg.type, remove_quals = False), i) for i,arg in enumerate(args)]),
         num_args=len(args),
         build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]),
+        user_data=user_data,
         return_value_assignment = '' if return_type == 'void' else 'mp_obj_t callback_result = ',
         return_value='' if return_type == 'void' else ' %s(callback_result)' % mp_to_lv[return_type]))
     def register_callback(arg, index, func, obj_name):
-        return """set_action(args[0], args[{i}]);
-    {arg} = &{func_name}_callback;""".format(
+        return """{arg} = mp_lv_callback(args[{i}], &{func_name}_callback, MP_QSTR_{func_name}, &{obj}->{user_data});""".format(
             i = index,
             arg = gen.visit(arg),
-            func_name = func_name)
+            func_name = func_name,
+            obj = obj_name,
+            user_data = user_data)
     mp_to_lv[func_name] = register_callback
     lv_to_mp[func_name] = lv_to_mp['void *']
     generated_callbacks[func_name] = True
@@ -1041,19 +1058,24 @@ STATIC {return_type} {func_name}_callback({func_args})
 
 generated_funcs = collections.OrderedDict()
 
-def build_mp_func_arg(arg, index, func, obj_name):
-    #print('/* --> ARG: %s */' % arg)
+def build_mp_func_arg(arg, index, func, obj_name, first_arg):
+    # print('/* --> ARG: %s */' % arg)
     callback = decl_to_callback(arg)
     if callback:
+        if index == 0:
+            raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
         gen_callback_func(callback[1], func_name = callback[0])
-    arg_type = get_type(arg.type, remove_quals = True)
+        arg_type = callback[0]
+    else:
+        arg_type = get_type(arg.type, remove_quals = True)
+    # print('/* --> arg = %s, arg_type = %s */' %(gen.visit(arg), arg_type))
     fixed_arg = copy.deepcopy(arg)
     convert_array_to_ptr(fixed_arg)
     if not arg_type in mp_to_lv:
         try_generate_type(arg.type)
         if not arg_type in mp_to_lv:
             raise MissingConversionException("Missing conversion to %s" % arg_type)
-    return mp_to_lv[arg_type](arg, index, func, obj_name) if callable(mp_to_lv[arg_type]) else \
+    return mp_to_lv[arg_type](arg, index, func, first_arg.name) if callable(mp_to_lv[arg_type]) else \
         '{var} = {convertor}(args[{i}]);'.format(
             var = gen.visit(fixed_arg),
             convertor = mp_to_lv[arg_type],
@@ -1099,7 +1121,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{
  """.format(func=func.name, 
              print_func=gen.visit(func),
              count=param_count, 
-             build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerate(args) if arg.name]), 
+             build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name, args[0]) for i,arg in enumerate(args) if arg.name]), 
              send_args=", ".join(arg.name for arg in args if arg.name),
              build_result=build_result,
              build_return_value=build_return_value))

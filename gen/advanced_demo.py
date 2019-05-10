@@ -49,7 +49,7 @@ class Page_Buttons:
         # Currently only single callback per object is supported
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.set_event_cb(lambda btn, obj=None, event=-1, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
+            btn.set_event_cb(lambda obj=None, event=-1, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
 
 
 class Page_Simple:
