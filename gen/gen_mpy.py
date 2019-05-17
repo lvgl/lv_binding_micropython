@@ -32,11 +32,10 @@ from pycparser import c_parser, c_ast, c_generator
 
 argParser = ArgumentParser()
 argParser.add_argument('-I', '--include', dest='include', help='Preprocesor include path', metavar='<Include Path>', action='append')
-argParser.add_argument('-X', '--exclude', dest='exclude', help='Exclude lvgl object', metavar='<Object Name>', action='append')
 argParser.add_argument('-D', '--define', dest='define', help='Define preprocessor macro', metavar='<Macro Name>', action='append')
 argParser.add_argument('-E', '--external-preprocessing', dest='ep', help='Prevent preprocessing. Assume input file is already preprocessed', metavar='<Preprocessed File>', action='store')
 argParser.add_argument('input', nargs='+')
-argParser.set_defaults(include=[], exclude=[], define=[], ep=None, input=[])
+argParser.set_defaults(include=[], define=[], ep=None, input=[])
 args = argParser.parse_args()
 
 # 
@@ -55,6 +54,67 @@ else:
     s = ''
     with open(args.ep, 'r') as f:
         s += f.read()
+# 
+# AST parsing helper functions
+#
+
+def convert_array_to_ptr(ast):
+    if hasattr(ast, 'type') and isinstance(ast.type, c_ast.ArrayDecl):
+        ast.type = c_ast.PtrDecl(ast.type.quals if hasattr(ast.type, 'quals') else [], ast.type.type)
+    if isinstance(ast, tuple):
+        return convert_array_to_ptr(ast[1])
+    for i, c1 in enumerate(ast.children()):
+        child = ast.children()[i]
+        convert_array_to_ptr(child)
+
+def remove_quals(ast):
+    if hasattr(ast,'quals'):
+        ast.quals = []
+    if hasattr(ast,'dim_quals'):
+        ast.dim_quals = []
+    if isinstance(ast, tuple):
+        return remove_quals(ast[1])
+    for i, c1 in enumerate(ast.children()):
+        child = ast.children()[i]
+        if not isinstance(child, c_ast.FuncDecl): # Don't remove quals which change function prorotype
+            remove_quals(child)
+
+def remove_explicit_struct(ast):
+    if isinstance(ast, c_ast.TypeDecl) and isinstance(ast.type, c_ast.Struct):
+        explicit_struct_name = ast.type.name
+        # eprint('--> replace %s by %s in:\n%s' % (explicit_struct_name, explicit_structs[explicit_struct_name] if explicit_struct_name in explicit_structs else '???', ast))
+        if explicit_struct_name and explicit_struct_name in explicit_structs:
+            ast.type = c_ast.IdentifierType([explicit_structs[explicit_struct_name]])
+    if isinstance(ast, tuple):
+        return remove_explicit_struct(ast[1])
+    for i, c1 in enumerate(ast.children()):
+        child = ast.children()[i]
+        remove_explicit_struct(child)
+
+def get_type(arg, **kwargs):
+    if isinstance(arg, str): 
+        return arg
+    remove_quals_arg = 'remove_quals' in kwargs and kwargs['remove_quals']
+    arg_ast = copy.deepcopy(arg)
+    remove_explicit_struct(arg_ast)
+    if remove_quals_arg: remove_quals(arg_ast)
+    return gen.visit(arg_ast)
+
+def get_name(type):
+    if isinstance(type, c_ast.Decl):
+        return type.name
+    if isinstance(type, c_ast.Struct) and type.name:
+        return explicit_structs[type.name]
+    if isinstance(type, c_ast.TypeDecl):
+        return type.declname
+    if isinstance(type, c_ast.IdentifierType):
+        return type.names[0]
+    if isinstance(type, c_ast.FuncDecl):
+        return type.type.declname
+    if isinstance(type, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
+        return get_type(type, remove_quals=True)
+    else:
+        return type
 
 #
 # lv text patterns
@@ -67,7 +127,7 @@ lv_obj_pattern = re.compile('^lv_([^_]+)', re.IGNORECASE)
 lv_func_pattern = re.compile('^lv_(.+)', re.IGNORECASE)
 create_obj_pattern = re.compile('^lv_([^_]+)_create')
 lv_method_pattern = re.compile('^lv_[^_]+_(.+)', re.IGNORECASE)
-lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t' % (base_obj_name))
+lv_base_obj_pattern = re.compile('^(struct _){0,1}lv_%s_t( \*){0,1}' % (base_obj_name))
 lv_callback_return_type_pattern = re.compile('^((void)|(lv_res_t))')
 lv_numstr_pattern = re.compile('^(.*)_NUMSTR')
 lv_str_enum_pattern = re.compile('^_LV_STR_(.+)')
@@ -105,6 +165,18 @@ def user_data_from_callback_func(callback_func_name):
     # res = re.match(lv_callback_type_pattern, callback_func_name)
     # return res.group(2) + '_user_data' if res and res.group(2) else None
 
+def is_obj_ctor(func):
+    # ctor name must match pattern
+    if not create_obj_pattern.match(func.name): return False
+    # ctor must return a base_obj type
+    if not lv_base_obj_pattern.match(get_type(func.type.type, remove_quals=True)): return False
+    # ctor must receive (at least) two base obj parameters
+    args = func.type.args.params
+    if len(args) < 2: return False
+    if not lv_base_obj_pattern.match(get_type(args[0].type, remove_quals=True)): return False
+    if not lv_base_obj_pattern.match(get_type(args[1].type, remove_quals=True)): return False
+    return True
+
 #
 # Initialization, data structures, helper functions
 #
@@ -120,8 +192,7 @@ func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
 func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
 funcs = func_defs + func_decls
 # eprint('... %s' % ',\n'.join(sorted('%s' % func.name for func in funcs)))
-excluded_ctors = [ctor_name_from_obj_name(obj) for obj in args.exclude]
-obj_ctors = [func for func in funcs if create_obj_pattern.match(func.name) and not func.name in excluded_ctors]
+obj_ctors = [func for func in funcs if is_obj_ctor(func)]
 for obj_ctor in obj_ctors:
     funcs.remove(obj_ctor)
 obj_names = [re.match(create_obj_pattern, ctor.name).group(1) for ctor in obj_ctors]
@@ -625,68 +696,6 @@ for enum_def in enum_defs:
 # eprint('-->\n%s' % enums)
 
 
-# 
-# AST parsing helper functions
-#
-
-def convert_array_to_ptr(ast):
-    if hasattr(ast, 'type') and isinstance(ast.type, c_ast.ArrayDecl):
-        ast.type = c_ast.PtrDecl(ast.type.quals if hasattr(ast.type, 'quals') else [], ast.type.type)
-    if isinstance(ast, tuple):
-        return convert_array_to_ptr(ast[1])
-    for i, c1 in enumerate(ast.children()):
-        child = ast.children()[i]
-        convert_array_to_ptr(child)
-
-def remove_quals(ast):
-    if hasattr(ast,'quals'):
-        ast.quals = []
-    if hasattr(ast,'dim_quals'):
-        ast.dim_quals = []
-    if isinstance(ast, tuple):
-        return remove_quals(ast[1])
-    for i, c1 in enumerate(ast.children()):
-        child = ast.children()[i]
-        if not isinstance(child, c_ast.FuncDecl): # Don't remove quals which change function prorotype
-            remove_quals(child)
-
-def remove_explicit_struct(ast):
-    if isinstance(ast, c_ast.TypeDecl) and isinstance(ast.type, c_ast.Struct):
-        explicit_struct_name = ast.type.name
-        # eprint('--> replace %s by %s in:\n%s' % (explicit_struct_name, explicit_structs[explicit_struct_name] if explicit_struct_name in explicit_structs else '???', ast))
-        if explicit_struct_name and explicit_struct_name in explicit_structs:
-            ast.type = c_ast.IdentifierType([explicit_structs[explicit_struct_name]])
-    if isinstance(ast, tuple):
-        return remove_explicit_struct(ast[1])
-    for i, c1 in enumerate(ast.children()):
-        child = ast.children()[i]
-        remove_explicit_struct(child)
-
-def get_name(type):
-    if isinstance(type, c_ast.Decl):
-        return type.name
-    if isinstance(type, c_ast.Struct) and type.name:
-        return explicit_structs[type.name]
-    if isinstance(type, c_ast.TypeDecl):
-        return type.declname
-    if isinstance(type, c_ast.IdentifierType):
-        return type.names[0]
-    if isinstance(type, c_ast.FuncDecl):
-        return type.type.declname
-    if isinstance(type, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
-        return get_type(type, remove_quals=True)
-    else:
-        return type
-
-def get_type(arg, **kwargs):
-    if isinstance(arg, str): 
-        return arg
-    remove_quals_arg = 'remove_quals' in kwargs and kwargs['remove_quals']
-    arg_ast = copy.deepcopy(arg)
-    remove_explicit_struct(arg_ast)
-    if remove_quals_arg: remove_quals(arg_ast)
-    return gen.visit(arg_ast)
-
 
 # eprint(',\n'.join(sorted('%s : %s' % (name, get_type(blobs[name])) for name in blobs)))
 
@@ -796,17 +805,17 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
         if callback:
             callbacks_used_on_structs.append(callback)
             # Emit callback forward decl.
-            print('STATIC %s %s_callback(%s);' % (get_type(callback[1].type, remove_quals = False), callback[0], gen.visit(callback[1].args)))
             if user_data in [user_data_decl.name for user_data_decl in flatten_struct_decls]:
-               full_user_data = '&data->%s' % user_data
-               lv_callback = '%s_callback' % callback[0]
+                full_user_data = '&data->%s' % user_data
+                lv_callback = '%s_callback' % callback[0]
+                print('STATIC %s %s_callback(%s);' % (get_type(callback[1].type, remove_quals = False), callback[0], gen.visit(callback[1].args)))
             else:
-               full_user_data = 'NULL'
-               lv_callback = 'NULL'
-               if not user_data:
-                   gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_callback'" % callback[0])
-               else:
-                   gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
+                full_user_data = 'NULL'
+                lv_callback = 'NULL'
+                if not user_data:
+                    gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_callback'" % callback[0])
+                else:
+                    gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
             write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{field}, {user_data}); break; // converting to {type_name}'.
                 format(field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
             read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
@@ -1062,6 +1071,8 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
             if index == 0:
                 raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
             user_data = get_user_data(arg_type, func_name)
+            if not user_data:
+                raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
             gen_callback_func(arg_type, func_name)
             callback_name = '&%s_callback' % func_name
             full_user_data = '&%s->%s' % (first_arg.name, user_data)
@@ -1133,7 +1144,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{
              send_args=", ".join(arg.name for arg in args if arg.name),
              build_result=build_result,
              build_return_value=build_return_value))
-    generated_funcs[func] = True
+    generated_funcs[func.name] = True
 
 
 def gen_func_error(method, exp):
@@ -1279,7 +1290,7 @@ print("""
  */
 """)
 
-module_funcs = [func for func in funcs if not func in generated_funcs]
+module_funcs = [func for func in funcs if not func.name in generated_funcs]
 for module_func in module_funcs[:]:
     try:
         gen_mp_func(module_func, None)
@@ -1287,7 +1298,7 @@ for module_func in module_funcs[:]:
         gen_func_error(module_func, exp)
         module_funcs.remove(module_func)
     
-functions_not_generated = [func.name for func in funcs if not func in generated_funcs]
+functions_not_generated = [func.name for func in funcs if not func.name in generated_funcs]
 if len(functions_not_generated) > 0:
     print("""
 /*
