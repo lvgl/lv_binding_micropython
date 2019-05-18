@@ -355,6 +355,51 @@ print("""
  * Helper functions
  */
 
+
+// Custom function mp object
+
+typedef struct _mp_lv_obj_fun_builtin_var_t {
+    mp_obj_base_t base;
+    mp_uint_t n_args;
+    mp_fun_var_t mp_fun;
+    void *lv_fun;
+} mp_lv_obj_fun_builtin_var_t;
+
+STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
+STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+
+STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
+    { &mp_type_type },
+    .name = MP_QSTR_function,
+    .call = lv_fun_builtin_var_call,
+    .unary_op = mp_generic_unary_op,
+    .buffer_p = { .get_buffer = mp_func_get_buffer }
+};
+
+STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var));
+    mp_lv_obj_fun_builtin_var_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_arg_check_num(n_args, n_kw, self->n_args, self->n_args, false);
+    return self->mp_fun(n_args, args);
+}
+
+STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
+    (void)flags;
+    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var));
+    mp_lv_obj_fun_builtin_var_t *self = MP_OBJ_TO_PTR(self_in);
+
+    bufinfo->buf = &self->lv_fun;
+    bufinfo->len = sizeof(self->lv_fun);
+    bufinfo->typecode = BYTEARRAY_TYPECODE;
+    return 0;
+}
+
+#define MP_DEFINE_CONST_LV_FUN_OBJ_VAR(obj_name, n_args, mp_fun, lv_fun) \\
+    const mp_lv_obj_fun_builtin_var_t obj_name = \\
+        {{&mp_lv_type_fun_builtin_var}, n_args, mp_fun, lv_fun}
+
+// lvgl object handling
+
 typedef lv_obj_t* (*lv_create)(lv_obj_t * par, const lv_obj_t * copy);
 
 typedef struct mp_lv_obj_t {
@@ -454,6 +499,9 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
 {
     return mp_obj_new_str(str, strlen(str));
 }
+
+
+// lvgl struct handling
 
 STATIC void field_not_found(qstr struct_name, qstr field_name)
 {
@@ -1135,7 +1183,7 @@ STATIC mp_obj_t mp_{func}(size_t n_args, const mp_obj_t *args)
     return {build_return_value};
 }}
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_{func}_obj, {count}, {count}, mp_{func});
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_{func}_obj, {count}, mp_{func}, {func});
 
  """.format(func=func.name, 
              print_func=gen.visit(func),
