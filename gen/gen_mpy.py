@@ -132,6 +132,7 @@ lv_callback_return_type_pattern = re.compile('^((void)|(lv_res_t))')
 lv_numstr_pattern = re.compile('^(.*)_NUMSTR')
 lv_str_enum_pattern = re.compile('^_LV_STR_(.+)')
 lv_callback_type_pattern = re.compile('(lv_){0,1}(.+)_cb(_t){0,1}')
+lv_global_callback_pattern = re.compile('.*g_cb_t')
 
 def simplify_identifier(id):
     return re.match(lv_func_pattern, id).group(1)
@@ -176,6 +177,11 @@ def is_obj_ctor(func):
     if not lv_base_obj_pattern.match(get_type(args[0].type, remove_quals=True)): return False
     if not lv_base_obj_pattern.match(get_type(args[1].type, remove_quals=True)): return False
     return True
+
+def is_global_callback(arg_type):
+    arg_type_str = get_name(arg_type.type)
+    # print('/* --> is_global_callback %s: %s */' % (lv_global_callback_pattern.match(arg_type_str), arg_type_str))
+    return lv_global_callback_pattern.match(arg_type_str)
 
 #
 # Initialization, data structures, helper functions
@@ -701,6 +707,11 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
         return mp_to_ptr(mp_callback);
     }
 }
+
+// Dict to hold user data for global callbacks (callbacks without context)
+
+static void *mp_lv_user_data = NULL;
+
 """)
 
 #
@@ -848,20 +859,21 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
         cast = '(void*)' if isinstance(decl.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
 
         callback = decl_to_callback(decl)
-        user_data = get_user_data(callback[1], func_name = callback[0], containing_struct = struct, containing_struct_name = struct_name) if callback else None
 
         if callback:
+            func_name, arg_type  = callback
+            user_data = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
             callbacks_used_on_structs.append(callback)
             # Emit callback forward decl.
             if user_data in [user_data_decl.name for user_data_decl in flatten_struct_decls]:
                 full_user_data = '&data->%s' % user_data
-                lv_callback = '%s_callback' % callback[0]
-                print('STATIC %s %s_callback(%s);' % (get_type(callback[1].type, remove_quals = False), callback[0], gen.visit(callback[1].args)))
+                lv_callback = '%s_callback' % func_name
+                print('STATIC %s %s_callback(%s);' % (get_type(arg_type.type, remove_quals = False), func_name, gen.visit(arg_type.args)))
             else:
                 full_user_data = 'NULL'
                 lv_callback = 'NULL'
                 if not user_data:
-                    gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_callback'" % callback[0])
+                    gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_callback'" % func_name)
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
             write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{field}, {user_data}); break; // converting to {type_name}'.
@@ -869,6 +881,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
             read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
                 format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
         else:
+            user_data = None
             # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
             if isinstance(decl.type, c_ast.ArrayDecl):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), decl.type.dim.value)
@@ -1060,13 +1073,17 @@ def gen_callback_func(func, func_name = None):
     args = func.args.params
     if not func_name: func_name = get_arg_name(func.type)
     # print('/* --> callback: func_name = %s */' % func_name)
-    user_data = get_user_data(func, func_name)
-    # if user_data: print('/* --> callback: %s user_data found!! %s */' %(gen.visit(func), user_data))
-    # else: print('/* --> callback: user_data NOT FOUND !! %s */' % (gen.visit(func)))
-    if not user_data:
-        raise MissingConversionException("Callback: user_data NOT FOUND! %s" % (gen.visit(func)))
-    if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
-        raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
+    if is_global_callback(func):
+        full_user_data = 'mp_lv_user_data'
+    else:
+        user_data = get_user_data(func, func_name)
+        full_user_data = 'arg0->%s' % user_data
+        # if user_data: print('/* --> callback: %s user_data found!! %s */' %(gen.visit(func), user_data))
+        # else: print('/* --> callback: user_data NOT FOUND !! %s */' % (gen.visit(func)))
+        if not user_data:
+            raise MissingConversionException("Callback: user_data NOT FOUND! %s" % (gen.visit(func)))
+        if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
+            raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
     return_type = get_type(func.type, remove_quals = False)
     if return_type != 'void' and not return_type in mp_to_lv:
         try_generate_type(func.type)
@@ -1086,7 +1103,7 @@ STATIC {return_type} {func_name}_callback({func_args})
 {{
     mp_obj_t args[{num_args}];
     {build_args}
-    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->{user_data});
+    mp_obj_t callbacks = get_callback_dict_from_user_data({user_data});
     {return_value_assignment}mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_{func_name})) , {num_args}, 0, args);
     return{return_value};
 }}
@@ -1097,7 +1114,7 @@ STATIC {return_type} {func_name}_callback({func_args})
         func_args = ', '.join(["%s arg%s" % (get_type(arg.type, remove_quals = False), i) for i,arg in enumerate(args)]),
         num_args=len(args),
         build_args="\n    ".join([build_callback_func_arg(arg, i, func) for i,arg in enumerate(args)]),
-        user_data=user_data,
+        user_data=full_user_data,
         return_value_assignment = '' if return_type == 'void' else 'mp_obj_t callback_result = ',
         return_value='' if return_type == 'void' else ' %s(callback_result)' % mp_to_lv[return_type]))
     generated_callbacks[func_name] = True
@@ -1114,35 +1131,36 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
     convert_array_to_ptr(fixed_arg)
     callback = decl_to_callback(arg)
     if callback:
+        func_name, arg_type  = callback
+        callback_name = '&%s_callback' % func_name
         try:
-            func_name, arg_type  = callback
-            if index == 0:
-                raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
-            user_data = get_user_data(arg_type, func_name)
-            if not user_data:
-                raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
+            if is_global_callback(arg_type):
+                full_user_data = 'mp_lv_user_data'
+            else:
+                if index == 0:
+                    raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
+                user_data = get_user_data(arg_type, func_name)
+                if not user_data:
+                    raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
+                full_user_data = '&%s->%s' % (first_arg.name, user_data)
             gen_callback_func(arg_type, func_name)
-            callback_name = '&%s_callback' % func_name
-            full_user_data = '&%s->%s' % (first_arg.name, user_data)
+            return 'void *{arg_name} = mp_lv_callback(args[{i}], {callback_name}, MP_QSTR_{func_name}, {full_user_data});'.format(
+                i = index,
+                arg_name = fixed_arg.name,
+                callback_name = callback_name,
+                func_name = func_name,
+                obj = first_arg.name,
+                full_user_data = full_user_data)
         except MissingConversionException as exp:
             gen_func_error(arg, exp)
             callback_name = 'NULL'
             full_user_data = 'NULL'
-        return """void *{arg_name} = mp_lv_callback(args[{i}], {callback_name}, MP_QSTR_{func_name}, {full_user_data});""".format(
-            i = index,
-            arg_name = fixed_arg.name,
-            callback_name = callback_name,
-            func_name = func_name,
-            obj = first_arg.name,
-            full_user_data = full_user_data)
-
-    else:
-        arg_type = get_type(arg.type, remove_quals = True)
+    arg_type = get_type(arg.type, remove_quals = True)
     # print('/* --> arg = %s, arg_type = %s */' %(gen.visit(arg), arg_type))
     if not arg_type in mp_to_lv:
         try_generate_type(arg.type)
         if not arg_type in mp_to_lv:
-            raise MissingConversionException("Missing conversion to %s" % arg_type)
+            raise MissingConversionException('Missing conversion to %s' % arg_type)
     return '{var} = {convertor}(args[{i}]);'.format(
             var = gen.visit(fixed_arg),
             convertor = mp_to_lv[arg_type],

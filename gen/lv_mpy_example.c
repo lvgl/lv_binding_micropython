@@ -33,6 +33,51 @@
  * Helper functions
  */
 
+
+// Custom function mp object
+
+typedef struct _mp_lv_obj_fun_builtin_var_t {
+    mp_obj_base_t base;
+    mp_uint_t n_args;
+    mp_fun_var_t mp_fun;
+    void *lv_fun;
+} mp_lv_obj_fun_builtin_var_t;
+
+STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
+STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+
+STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
+    { &mp_type_type },
+    .name = MP_QSTR_function,
+    .call = lv_fun_builtin_var_call,
+    .unary_op = mp_generic_unary_op,
+    .buffer_p = { .get_buffer = mp_func_get_buffer }
+};
+
+STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var));
+    mp_lv_obj_fun_builtin_var_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_arg_check_num(n_args, n_kw, self->n_args, self->n_args, false);
+    return self->mp_fun(n_args, args);
+}
+
+STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
+    (void)flags;
+    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var));
+    mp_lv_obj_fun_builtin_var_t *self = MP_OBJ_TO_PTR(self_in);
+
+    bufinfo->buf = &self->lv_fun;
+    bufinfo->len = sizeof(self->lv_fun);
+    bufinfo->typecode = BYTEARRAY_TYPECODE;
+    return 0;
+}
+
+#define MP_DEFINE_CONST_LV_FUN_OBJ_VAR(obj_name, n_args, mp_fun, lv_fun) \
+    const mp_lv_obj_fun_builtin_var_t obj_name = \
+        {{&mp_lv_type_fun_builtin_var}, n_args, mp_fun, lv_fun}
+
+// lvgl object handling
+
 typedef lv_obj_t* (*lv_create)(lv_obj_t * par, const lv_obj_t * copy);
 
 typedef struct mp_lv_obj_t {
@@ -132,6 +177,9 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
 {
     return mp_obj_new_str(str, strlen(str));
 }
+
+
+// lvgl struct handling
 
 STATIC void field_not_found(qstr struct_name, qstr field_name)
 {
@@ -331,6 +379,11 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
         return mp_to_ptr(mp_callback);
     }
 }
+
+// Dict to hold user data for global callbacks (callbacks without context)
+
+static void *mp_lv_user_data = NULL;
+
 
 
 /*
@@ -2559,7 +2612,7 @@ STATIC mp_obj_t mp_lv_obj_del(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_del_obj, 1, 1, mp_lv_obj_del);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_del_obj, 1, mp_lv_obj_del, lv_obj_del);
 
  
 
@@ -2575,7 +2628,7 @@ STATIC mp_obj_t mp_lv_obj_clean(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_clean_obj, 1, 1, mp_lv_obj_clean);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_clean_obj, 1, mp_lv_obj_clean, lv_obj_clean);
 
  
 
@@ -2591,7 +2644,7 @@ STATIC mp_obj_t mp_lv_obj_invalidate(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_invalidate_obj, 1, 1, mp_lv_obj_invalidate);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_invalidate_obj, 1, mp_lv_obj_invalidate, lv_obj_invalidate);
 
  
 
@@ -2608,7 +2661,7 @@ STATIC mp_obj_t mp_lv_obj_set_parent(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_parent_obj, 2, 2, mp_lv_obj_set_parent);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_parent_obj, 2, mp_lv_obj_set_parent, lv_obj_set_parent);
 
  
 
@@ -2624,7 +2677,7 @@ STATIC mp_obj_t mp_lv_obj_move_foreground(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_move_foreground_obj, 1, 1, mp_lv_obj_move_foreground);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_foreground_obj, 1, mp_lv_obj_move_foreground, lv_obj_move_foreground);
 
  
 
@@ -2640,7 +2693,7 @@ STATIC mp_obj_t mp_lv_obj_move_background(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_move_background_obj, 1, 1, mp_lv_obj_move_background);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_background_obj, 1, mp_lv_obj_move_background, lv_obj_move_background);
 
  
 
@@ -2658,7 +2711,7 @@ STATIC mp_obj_t mp_lv_obj_set_pos(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_pos_obj, 3, 3, mp_lv_obj_set_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_pos_obj, 3, mp_lv_obj_set_pos, lv_obj_set_pos);
 
  
 
@@ -2675,7 +2728,7 @@ STATIC mp_obj_t mp_lv_obj_set_x(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_x_obj, 2, 2, mp_lv_obj_set_x);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_x_obj, 2, mp_lv_obj_set_x, lv_obj_set_x);
 
  
 
@@ -2692,7 +2745,7 @@ STATIC mp_obj_t mp_lv_obj_set_y(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_y_obj, 2, 2, mp_lv_obj_set_y);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_y_obj, 2, mp_lv_obj_set_y, lv_obj_set_y);
 
  
 
@@ -2710,7 +2763,7 @@ STATIC mp_obj_t mp_lv_obj_set_size(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_size_obj, 3, 3, mp_lv_obj_set_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_size_obj, 3, mp_lv_obj_set_size, lv_obj_set_size);
 
  
 
@@ -2727,7 +2780,7 @@ STATIC mp_obj_t mp_lv_obj_set_width(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_width_obj, 2, 2, mp_lv_obj_set_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_width_obj, 2, mp_lv_obj_set_width, lv_obj_set_width);
 
  
 
@@ -2744,7 +2797,7 @@ STATIC mp_obj_t mp_lv_obj_set_height(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_height_obj, 2, 2, mp_lv_obj_set_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_height_obj, 2, mp_lv_obj_set_height, lv_obj_set_height);
 
  
 
@@ -2764,7 +2817,7 @@ STATIC mp_obj_t mp_lv_obj_align(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_align_obj, 5, 5, mp_lv_obj_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_align_obj, 5, mp_lv_obj_align, lv_obj_align);
 
  
 
@@ -2784,7 +2837,7 @@ STATIC mp_obj_t mp_lv_obj_align_origo(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_align_origo_obj, 5, 5, mp_lv_obj_align_origo);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_align_origo_obj, 5, mp_lv_obj_align_origo, lv_obj_align_origo);
 
  
 
@@ -2800,7 +2853,7 @@ STATIC mp_obj_t mp_lv_obj_realign(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_realign_obj, 1, 1, mp_lv_obj_realign);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_realign_obj, 1, mp_lv_obj_realign, lv_obj_realign);
 
  
 
@@ -2817,7 +2870,7 @@ STATIC mp_obj_t mp_lv_obj_set_auto_realign(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_auto_realign_obj, 2, 2, mp_lv_obj_set_auto_realign);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_auto_realign_obj, 2, mp_lv_obj_set_auto_realign, lv_obj_set_auto_realign);
 
  
 typedef typeof( ((lv_style_t*)(0))->body ) lv_style_body_t;
@@ -3894,7 +3947,7 @@ STATIC mp_obj_t mp_lv_obj_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_style_obj, 2, 2, mp_lv_obj_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_obj, 2, mp_lv_obj_set_style, lv_obj_set_style);
 
  
 
@@ -3910,7 +3963,7 @@ STATIC mp_obj_t mp_lv_obj_refresh_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_refresh_style_obj, 1, 1, mp_lv_obj_refresh_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_refresh_style_obj, 1, mp_lv_obj_refresh_style, lv_obj_refresh_style);
 
  
 
@@ -3926,7 +3979,7 @@ STATIC mp_obj_t mp_lv_obj_report_style_mod(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_report_style_mod_obj, 1, 1, mp_lv_obj_report_style_mod);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_report_style_mod_obj, 1, mp_lv_obj_report_style_mod, lv_obj_report_style_mod);
 
  
 
@@ -3943,7 +3996,7 @@ STATIC mp_obj_t mp_lv_obj_set_hidden(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_hidden_obj, 2, 2, mp_lv_obj_set_hidden);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_hidden_obj, 2, mp_lv_obj_set_hidden, lv_obj_set_hidden);
 
  
 
@@ -3960,7 +4013,7 @@ STATIC mp_obj_t mp_lv_obj_set_click(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_click_obj, 2, 2, mp_lv_obj_set_click);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_click_obj, 2, mp_lv_obj_set_click, lv_obj_set_click);
 
  
 
@@ -3977,7 +4030,7 @@ STATIC mp_obj_t mp_lv_obj_set_top(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_top_obj, 2, 2, mp_lv_obj_set_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_top_obj, 2, mp_lv_obj_set_top, lv_obj_set_top);
 
  
 
@@ -3994,7 +4047,7 @@ STATIC mp_obj_t mp_lv_obj_set_drag(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_drag_obj, 2, 2, mp_lv_obj_set_drag);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_drag_obj, 2, mp_lv_obj_set_drag, lv_obj_set_drag);
 
  
 
@@ -4011,7 +4064,7 @@ STATIC mp_obj_t mp_lv_obj_set_drag_dir(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_drag_dir_obj, 2, 2, mp_lv_obj_set_drag_dir);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_drag_dir_obj, 2, mp_lv_obj_set_drag_dir, lv_obj_set_drag_dir);
 
  
 
@@ -4028,7 +4081,7 @@ STATIC mp_obj_t mp_lv_obj_set_drag_throw(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_drag_throw_obj, 2, 2, mp_lv_obj_set_drag_throw);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_drag_throw_obj, 2, mp_lv_obj_set_drag_throw, lv_obj_set_drag_throw);
 
  
 
@@ -4045,7 +4098,7 @@ STATIC mp_obj_t mp_lv_obj_set_drag_parent(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_drag_parent_obj, 2, 2, mp_lv_obj_set_drag_parent);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_drag_parent_obj, 2, mp_lv_obj_set_drag_parent, lv_obj_set_drag_parent);
 
  
 
@@ -4062,7 +4115,7 @@ STATIC mp_obj_t mp_lv_obj_set_parent_event(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_parent_event_obj, 2, 2, mp_lv_obj_set_parent_event);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_parent_event_obj, 2, mp_lv_obj_set_parent_event, lv_obj_set_parent_event);
 
  
 
@@ -4079,7 +4132,7 @@ STATIC mp_obj_t mp_lv_obj_set_opa_scale_enable(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_opa_scale_enable_obj, 2, 2, mp_lv_obj_set_opa_scale_enable);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_opa_scale_enable_obj, 2, mp_lv_obj_set_opa_scale_enable, lv_obj_set_opa_scale_enable);
 
  
 
@@ -4096,7 +4149,7 @@ STATIC mp_obj_t mp_lv_obj_set_opa_scale(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_opa_scale_obj, 2, 2, mp_lv_obj_set_opa_scale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_opa_scale_obj, 2, mp_lv_obj_set_opa_scale, lv_obj_set_opa_scale);
 
  
 
@@ -4113,7 +4166,7 @@ STATIC mp_obj_t mp_lv_obj_set_protect(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_protect_obj, 2, 2, mp_lv_obj_set_protect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_protect_obj, 2, mp_lv_obj_set_protect, lv_obj_set_protect);
 
  
 
@@ -4130,7 +4183,7 @@ STATIC mp_obj_t mp_lv_obj_clear_protect(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_clear_protect_obj, 2, 2, mp_lv_obj_clear_protect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_clear_protect_obj, 2, mp_lv_obj_clear_protect, lv_obj_clear_protect);
 
  
 
@@ -4163,7 +4216,7 @@ STATIC mp_obj_t mp_lv_obj_set_event_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_event_cb_obj, 2, 2, mp_lv_obj_set_event_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_event_cb_obj, 2, mp_lv_obj_set_event_cb, lv_obj_set_event_cb);
 
  
 
@@ -4197,7 +4250,7 @@ STATIC mp_obj_t mp_lv_obj_set_signal_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_signal_cb_obj, 2, 2, mp_lv_obj_set_signal_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_signal_cb_obj, 2, mp_lv_obj_set_signal_cb, lv_obj_set_signal_cb);
 
  
 
@@ -4316,7 +4369,7 @@ STATIC mp_obj_t mp_lv_obj_set_design_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_design_cb_obj, 2, 2, mp_lv_obj_set_design_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_design_cb_obj, 2, mp_lv_obj_set_design_cb, lv_obj_set_design_cb);
 
  
 
@@ -4333,7 +4386,7 @@ STATIC mp_obj_t mp_lv_obj_allocate_ext_attr(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_allocate_ext_attr_obj, 2, 2, mp_lv_obj_allocate_ext_attr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_allocate_ext_attr_obj, 2, mp_lv_obj_allocate_ext_attr, lv_obj_allocate_ext_attr);
 
  
 
@@ -4349,7 +4402,7 @@ STATIC mp_obj_t mp_lv_obj_refresh_ext_draw_pad(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_refresh_ext_draw_pad_obj, 1, 1, mp_lv_obj_refresh_ext_draw_pad);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_refresh_ext_draw_pad_obj, 1, mp_lv_obj_refresh_ext_draw_pad, lv_obj_refresh_ext_draw_pad);
 
  
 
@@ -4365,7 +4418,7 @@ STATIC mp_obj_t mp_lv_obj_get_screen(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_screen_obj, 1, 1, mp_lv_obj_get_screen);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_screen_obj, 1, mp_lv_obj_get_screen, lv_obj_get_screen);
 
  
 
@@ -4847,7 +4900,7 @@ STATIC mp_obj_t mp_lv_obj_get_disp(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_disp_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_disp_obj, 1, 1, mp_lv_obj_get_disp);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_disp_obj, 1, mp_lv_obj_get_disp, lv_obj_get_disp);
 
  
 
@@ -4863,7 +4916,7 @@ STATIC mp_obj_t mp_lv_obj_get_parent(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_parent_obj, 1, 1, mp_lv_obj_get_parent);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_parent_obj, 1, mp_lv_obj_get_parent, lv_obj_get_parent);
 
  
 
@@ -4880,7 +4933,7 @@ STATIC mp_obj_t mp_lv_obj_get_child(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_child_obj, 2, 2, mp_lv_obj_get_child);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_obj, 2, mp_lv_obj_get_child, lv_obj_get_child);
 
  
 
@@ -4897,7 +4950,7 @@ STATIC mp_obj_t mp_lv_obj_get_child_back(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_child_back_obj, 2, 2, mp_lv_obj_get_child_back);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_back_obj, 2, mp_lv_obj_get_child_back, lv_obj_get_child_back);
 
  
 
@@ -4913,7 +4966,23 @@ STATIC mp_obj_t mp_lv_obj_count_children(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_count_children_obj, 1, 1, mp_lv_obj_count_children);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_count_children_obj, 1, mp_lv_obj_count_children, lv_obj_count_children);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * uint16_t lv_obj_count_children_recursive(const lv_obj_t *obj)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_count_children_recursive(size_t n_args, const mp_obj_t *args)
+{
+    const lv_obj_t *obj = mp_to_lv(args[0]);
+    uint16_t res = lv_obj_count_children_recursive(obj);
+    return mp_obj_new_int_from_uint(res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_count_children_recursive_obj, 1, mp_lv_obj_count_children_recursive, lv_obj_count_children_recursive);
 
  
 
@@ -4930,7 +4999,7 @@ STATIC mp_obj_t mp_lv_obj_get_coords(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_coords_obj, 2, 2, mp_lv_obj_get_coords);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_coords_obj, 2, mp_lv_obj_get_coords, lv_obj_get_coords);
 
  
 
@@ -4946,7 +5015,7 @@ STATIC mp_obj_t mp_lv_obj_get_x(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_x_obj, 1, 1, mp_lv_obj_get_x);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_x_obj, 1, mp_lv_obj_get_x, lv_obj_get_x);
 
  
 
@@ -4962,7 +5031,7 @@ STATIC mp_obj_t mp_lv_obj_get_y(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_y_obj, 1, 1, mp_lv_obj_get_y);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_y_obj, 1, mp_lv_obj_get_y, lv_obj_get_y);
 
  
 
@@ -4978,7 +5047,7 @@ STATIC mp_obj_t mp_lv_obj_get_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_width_obj, 1, 1, mp_lv_obj_get_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_width_obj, 1, mp_lv_obj_get_width, lv_obj_get_width);
 
  
 
@@ -4994,7 +5063,7 @@ STATIC mp_obj_t mp_lv_obj_get_height(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_height_obj, 1, 1, mp_lv_obj_get_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_height_obj, 1, mp_lv_obj_get_height, lv_obj_get_height);
 
  
 
@@ -5010,7 +5079,7 @@ STATIC mp_obj_t mp_lv_obj_get_width_fit(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_width_fit_obj, 1, 1, mp_lv_obj_get_width_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_width_fit_obj, 1, mp_lv_obj_get_width_fit, lv_obj_get_width_fit);
 
  
 
@@ -5026,7 +5095,7 @@ STATIC mp_obj_t mp_lv_obj_get_height_fit(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_height_fit_obj, 1, 1, mp_lv_obj_get_height_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_height_fit_obj, 1, mp_lv_obj_get_height_fit, lv_obj_get_height_fit);
 
  
 
@@ -5042,7 +5111,7 @@ STATIC mp_obj_t mp_lv_obj_get_auto_realign(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_auto_realign_obj, 1, 1, mp_lv_obj_get_auto_realign);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_auto_realign_obj, 1, mp_lv_obj_get_auto_realign, lv_obj_get_auto_realign);
 
  
 
@@ -5058,7 +5127,7 @@ STATIC mp_obj_t mp_lv_obj_get_ext_draw_pad(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_ext_draw_pad_obj, 1, 1, mp_lv_obj_get_ext_draw_pad);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_ext_draw_pad_obj, 1, mp_lv_obj_get_ext_draw_pad, lv_obj_get_ext_draw_pad);
 
  
 
@@ -5074,7 +5143,7 @@ STATIC mp_obj_t mp_lv_obj_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_style_obj, 1, 1, mp_lv_obj_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_obj, 1, mp_lv_obj_get_style, lv_obj_get_style);
 
  
 
@@ -5090,7 +5159,7 @@ STATIC mp_obj_t mp_lv_obj_get_hidden(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_hidden_obj, 1, 1, mp_lv_obj_get_hidden);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_hidden_obj, 1, mp_lv_obj_get_hidden, lv_obj_get_hidden);
 
  
 
@@ -5106,7 +5175,7 @@ STATIC mp_obj_t mp_lv_obj_get_click(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_click_obj, 1, 1, mp_lv_obj_get_click);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_click_obj, 1, mp_lv_obj_get_click, lv_obj_get_click);
 
  
 
@@ -5122,7 +5191,7 @@ STATIC mp_obj_t mp_lv_obj_get_top(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_top_obj, 1, 1, mp_lv_obj_get_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_top_obj, 1, mp_lv_obj_get_top, lv_obj_get_top);
 
  
 
@@ -5138,7 +5207,7 @@ STATIC mp_obj_t mp_lv_obj_get_drag(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_drag_obj, 1, 1, mp_lv_obj_get_drag);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_drag_obj, 1, mp_lv_obj_get_drag, lv_obj_get_drag);
 
  
 
@@ -5154,7 +5223,7 @@ STATIC mp_obj_t mp_lv_obj_get_drag_dir(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_drag_dir_obj, 1, 1, mp_lv_obj_get_drag_dir);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_drag_dir_obj, 1, mp_lv_obj_get_drag_dir, lv_obj_get_drag_dir);
 
  
 
@@ -5170,7 +5239,7 @@ STATIC mp_obj_t mp_lv_obj_get_drag_throw(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_drag_throw_obj, 1, 1, mp_lv_obj_get_drag_throw);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_drag_throw_obj, 1, mp_lv_obj_get_drag_throw, lv_obj_get_drag_throw);
 
  
 
@@ -5186,7 +5255,7 @@ STATIC mp_obj_t mp_lv_obj_get_drag_parent(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_drag_parent_obj, 1, 1, mp_lv_obj_get_drag_parent);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_drag_parent_obj, 1, mp_lv_obj_get_drag_parent, lv_obj_get_drag_parent);
 
  
 
@@ -5202,7 +5271,7 @@ STATIC mp_obj_t mp_lv_obj_get_parent_event(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_parent_event_obj, 1, 1, mp_lv_obj_get_parent_event);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_parent_event_obj, 1, mp_lv_obj_get_parent_event, lv_obj_get_parent_event);
 
  
 
@@ -5218,7 +5287,7 @@ STATIC mp_obj_t mp_lv_obj_get_opa_scale_enable(size_t n_args, const mp_obj_t *ar
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_opa_scale_enable_obj, 1, 1, mp_lv_obj_get_opa_scale_enable);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_opa_scale_enable_obj, 1, mp_lv_obj_get_opa_scale_enable, lv_obj_get_opa_scale_enable);
 
  
 
@@ -5234,7 +5303,7 @@ STATIC mp_obj_t mp_lv_obj_get_opa_scale(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_opa_scale_obj, 1, 1, mp_lv_obj_get_opa_scale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_opa_scale_obj, 1, mp_lv_obj_get_opa_scale, lv_obj_get_opa_scale);
 
  
 
@@ -5250,7 +5319,7 @@ STATIC mp_obj_t mp_lv_obj_get_protect(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_protect_obj, 1, 1, mp_lv_obj_get_protect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_protect_obj, 1, mp_lv_obj_get_protect, lv_obj_get_protect);
 
  
 
@@ -5267,7 +5336,7 @@ STATIC mp_obj_t mp_lv_obj_is_protected(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_is_protected_obj, 2, 2, mp_lv_obj_is_protected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_is_protected_obj, 2, mp_lv_obj_is_protected, lv_obj_is_protected);
 
  
 
@@ -5283,7 +5352,7 @@ STATIC mp_obj_t mp_lv_obj_get_signal_cb(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_signal_cb_obj, 1, 1, mp_lv_obj_get_signal_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_signal_cb_obj, 1, mp_lv_obj_get_signal_cb, lv_obj_get_signal_cb);
 
  
 
@@ -5299,7 +5368,7 @@ STATIC mp_obj_t mp_lv_obj_get_design_cb(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_design_cb_obj, 1, 1, mp_lv_obj_get_design_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_design_cb_obj, 1, mp_lv_obj_get_design_cb, lv_obj_get_design_cb);
 
  
 
@@ -5315,7 +5384,7 @@ STATIC mp_obj_t mp_lv_obj_get_event_cb(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_event_cb_obj, 1, 1, mp_lv_obj_get_event_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_event_cb_obj, 1, mp_lv_obj_get_event_cb, lv_obj_get_event_cb);
 
  
 
@@ -5331,7 +5400,7 @@ STATIC mp_obj_t mp_lv_obj_get_ext_attr(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_ext_attr_obj, 1, 1, mp_lv_obj_get_ext_attr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_ext_attr_obj, 1, mp_lv_obj_get_ext_attr, lv_obj_get_ext_attr);
 
  
 
@@ -5427,7 +5496,7 @@ STATIC mp_obj_t mp_lv_obj_get_type(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_type_obj, 2, 2, mp_lv_obj_get_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_type_obj, 2, mp_lv_obj_get_type, lv_obj_get_type);
 
  
 
@@ -5443,7 +5512,7 @@ STATIC mp_obj_t mp_lv_obj_get_user_data(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_user_data_obj, 1, 1, mp_lv_obj_get_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_user_data_obj, 1, mp_lv_obj_get_user_data, lv_obj_get_user_data);
 
  
 
@@ -5459,7 +5528,7 @@ STATIC mp_obj_t mp_lv_obj_get_user_data_ptr(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_user_data_ptr_obj, 1, 1, mp_lv_obj_get_user_data_ptr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_user_data_ptr_obj, 1, mp_lv_obj_get_user_data_ptr, lv_obj_get_user_data_ptr);
 
  
 
@@ -5476,7 +5545,7 @@ STATIC mp_obj_t mp_lv_obj_set_user_data(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_set_user_data_obj, 2, 2, mp_lv_obj_set_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_user_data_obj, 2, mp_lv_obj_set_user_data, lv_obj_set_user_data);
 
  
 
@@ -5492,7 +5561,7 @@ STATIC mp_obj_t mp_lv_obj_get_group(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_get_group_obj, 1, 1, mp_lv_obj_get_group);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_group_obj, 1, mp_lv_obj_get_group, lv_obj_get_group);
 
  
 
@@ -5508,7 +5577,7 @@ STATIC mp_obj_t mp_lv_obj_is_focused(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_obj_is_focused_obj, 1, 1, mp_lv_obj_is_focused);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_is_focused_obj, 1, mp_lv_obj_is_focused, lv_obj_is_focused);
 
  
 
@@ -5560,6 +5629,7 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -5638,7 +5708,7 @@ STATIC mp_obj_t mp_lv_cont_set_fit2(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_set_fit2_obj, 3, 3, mp_lv_cont_set_fit2);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_set_fit2_obj, 3, mp_lv_cont_set_fit2, lv_cont_set_fit2);
 
  
 
@@ -5655,7 +5725,7 @@ STATIC mp_obj_t mp_lv_cont_set_fit(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_set_fit_obj, 2, 2, mp_lv_cont_set_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_set_fit_obj, 2, mp_lv_cont_set_fit, lv_cont_set_fit);
 
  
 
@@ -5672,7 +5742,7 @@ STATIC mp_obj_t mp_lv_cont_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_set_style_obj, 2, 2, mp_lv_cont_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_set_style_obj, 2, mp_lv_cont_set_style, lv_cont_set_style);
 
  
 
@@ -5688,7 +5758,7 @@ STATIC mp_obj_t mp_lv_cont_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_style_obj, 1, 1, mp_lv_cont_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_get_style_obj, 1, mp_lv_cont_get_style, lv_cont_get_style);
 
  
 
@@ -5705,7 +5775,7 @@ STATIC mp_obj_t mp_lv_cont_set_layout(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_set_layout_obj, 2, 2, mp_lv_cont_set_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_set_layout_obj, 2, mp_lv_cont_set_layout, lv_cont_set_layout);
 
  
 
@@ -5725,7 +5795,7 @@ STATIC mp_obj_t mp_lv_cont_set_fit4(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_set_fit4_obj, 5, 5, mp_lv_cont_set_fit4);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_set_fit4_obj, 5, mp_lv_cont_set_fit4, lv_cont_set_fit4);
 
  
 
@@ -5741,7 +5811,7 @@ STATIC mp_obj_t mp_lv_cont_get_layout(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_layout_obj, 1, 1, mp_lv_cont_get_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_get_layout_obj, 1, mp_lv_cont_get_layout, lv_cont_get_layout);
 
  
 
@@ -5757,7 +5827,7 @@ STATIC mp_obj_t mp_lv_cont_get_fit_left(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_fit_left_obj, 1, 1, mp_lv_cont_get_fit_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_get_fit_left_obj, 1, mp_lv_cont_get_fit_left, lv_cont_get_fit_left);
 
  
 
@@ -5773,7 +5843,7 @@ STATIC mp_obj_t mp_lv_cont_get_fit_right(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_fit_right_obj, 1, 1, mp_lv_cont_get_fit_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_get_fit_right_obj, 1, mp_lv_cont_get_fit_right, lv_cont_get_fit_right);
 
  
 
@@ -5789,7 +5859,7 @@ STATIC mp_obj_t mp_lv_cont_get_fit_top(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_fit_top_obj, 1, 1, mp_lv_cont_get_fit_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_get_fit_top_obj, 1, mp_lv_cont_get_fit_top, lv_cont_get_fit_top);
 
  
 
@@ -5805,7 +5875,7 @@ STATIC mp_obj_t mp_lv_cont_get_fit_bottom(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cont_get_fit_bottom_obj, 1, 1, mp_lv_cont_get_fit_bottom);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cont_get_fit_bottom_obj, 1, mp_lv_cont_get_fit_bottom, lv_cont_get_fit_bottom);
 
  
 
@@ -5868,6 +5938,7 @@ STATIC const mp_rom_map_elem_t cont_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -5945,7 +6016,7 @@ STATIC mp_obj_t mp_lv_btn_set_layout(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_layout_obj, 2, 2, mp_lv_btn_set_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_layout_obj, 2, mp_lv_btn_set_layout, lv_btn_set_layout);
 
  
 
@@ -5965,7 +6036,7 @@ STATIC mp_obj_t mp_lv_btn_set_fit4(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_fit4_obj, 5, 5, mp_lv_btn_set_fit4);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_fit4_obj, 5, mp_lv_btn_set_fit4, lv_btn_set_fit4);
 
  
 
@@ -5983,7 +6054,7 @@ STATIC mp_obj_t mp_lv_btn_set_fit2(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_fit2_obj, 3, 3, mp_lv_btn_set_fit2);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_fit2_obj, 3, mp_lv_btn_set_fit2, lv_btn_set_fit2);
 
  
 
@@ -6000,7 +6071,7 @@ STATIC mp_obj_t mp_lv_btn_set_fit(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_fit_obj, 2, 2, mp_lv_btn_set_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_fit_obj, 2, mp_lv_btn_set_fit, lv_btn_set_fit);
 
  
 
@@ -6016,7 +6087,7 @@ STATIC mp_obj_t mp_lv_btn_get_layout(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_layout_obj, 1, 1, mp_lv_btn_get_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_layout_obj, 1, mp_lv_btn_get_layout, lv_btn_get_layout);
 
  
 
@@ -6032,7 +6103,7 @@ STATIC mp_obj_t mp_lv_btn_get_fit_left(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_fit_left_obj, 1, 1, mp_lv_btn_get_fit_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_fit_left_obj, 1, mp_lv_btn_get_fit_left, lv_btn_get_fit_left);
 
  
 
@@ -6048,7 +6119,7 @@ STATIC mp_obj_t mp_lv_btn_get_fit_right(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_fit_right_obj, 1, 1, mp_lv_btn_get_fit_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_fit_right_obj, 1, mp_lv_btn_get_fit_right, lv_btn_get_fit_right);
 
  
 
@@ -6064,7 +6135,7 @@ STATIC mp_obj_t mp_lv_btn_get_fit_top(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_fit_top_obj, 1, 1, mp_lv_btn_get_fit_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_fit_top_obj, 1, mp_lv_btn_get_fit_top, lv_btn_get_fit_top);
 
  
 
@@ -6080,7 +6151,7 @@ STATIC mp_obj_t mp_lv_btn_get_fit_bottom(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_fit_bottom_obj, 1, 1, mp_lv_btn_get_fit_bottom);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_fit_bottom_obj, 1, mp_lv_btn_get_fit_bottom, lv_btn_get_fit_bottom);
 
  
 
@@ -6097,7 +6168,7 @@ STATIC mp_obj_t mp_lv_btn_set_toggle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_toggle_obj, 2, 2, mp_lv_btn_set_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_toggle_obj, 2, mp_lv_btn_set_toggle, lv_btn_set_toggle);
 
  
 
@@ -6114,7 +6185,7 @@ STATIC mp_obj_t mp_lv_btn_set_state(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_state_obj, 2, 2, mp_lv_btn_set_state);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_state_obj, 2, mp_lv_btn_set_state, lv_btn_set_state);
 
  
 
@@ -6130,7 +6201,7 @@ STATIC mp_obj_t mp_lv_btn_toggle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_toggle_obj, 1, 1, mp_lv_btn_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_toggle_obj, 1, mp_lv_btn_toggle, lv_btn_toggle);
 
  
 
@@ -6147,7 +6218,7 @@ STATIC mp_obj_t mp_lv_btn_set_ink_in_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_ink_in_time_obj, 2, 2, mp_lv_btn_set_ink_in_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_ink_in_time_obj, 2, mp_lv_btn_set_ink_in_time, lv_btn_set_ink_in_time);
 
  
 
@@ -6164,7 +6235,7 @@ STATIC mp_obj_t mp_lv_btn_set_ink_wait_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_ink_wait_time_obj, 2, 2, mp_lv_btn_set_ink_wait_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_ink_wait_time_obj, 2, mp_lv_btn_set_ink_wait_time, lv_btn_set_ink_wait_time);
 
  
 
@@ -6181,7 +6252,7 @@ STATIC mp_obj_t mp_lv_btn_set_ink_out_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_ink_out_time_obj, 2, 2, mp_lv_btn_set_ink_out_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_ink_out_time_obj, 2, mp_lv_btn_set_ink_out_time, lv_btn_set_ink_out_time);
 
  
 
@@ -6199,7 +6270,7 @@ STATIC mp_obj_t mp_lv_btn_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_set_style_obj, 3, 3, mp_lv_btn_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_set_style_obj, 3, mp_lv_btn_set_style, lv_btn_set_style);
 
  
 
@@ -6215,7 +6286,7 @@ STATIC mp_obj_t mp_lv_btn_get_state(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_state_obj, 1, 1, mp_lv_btn_get_state);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_state_obj, 1, mp_lv_btn_get_state, lv_btn_get_state);
 
  
 
@@ -6231,7 +6302,7 @@ STATIC mp_obj_t mp_lv_btn_get_toggle(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_toggle_obj, 1, 1, mp_lv_btn_get_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_toggle_obj, 1, mp_lv_btn_get_toggle, lv_btn_get_toggle);
 
  
 
@@ -6247,7 +6318,7 @@ STATIC mp_obj_t mp_lv_btn_get_ink_in_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_ink_in_time_obj, 1, 1, mp_lv_btn_get_ink_in_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_ink_in_time_obj, 1, mp_lv_btn_get_ink_in_time, lv_btn_get_ink_in_time);
 
  
 
@@ -6263,7 +6334,7 @@ STATIC mp_obj_t mp_lv_btn_get_ink_wait_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_ink_wait_time_obj, 1, 1, mp_lv_btn_get_ink_wait_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_ink_wait_time_obj, 1, mp_lv_btn_get_ink_wait_time, lv_btn_get_ink_wait_time);
 
  
 
@@ -6279,7 +6350,7 @@ STATIC mp_obj_t mp_lv_btn_get_ink_out_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_ink_out_time_obj, 1, 1, mp_lv_btn_get_ink_out_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_ink_out_time_obj, 1, mp_lv_btn_get_ink_out_time, lv_btn_get_ink_out_time);
 
  
 
@@ -6296,7 +6367,7 @@ STATIC mp_obj_t mp_lv_btn_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btn_get_style_obj, 2, 2, mp_lv_btn_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btn_get_style_obj, 2, mp_lv_btn_get_style, lv_btn_get_style);
 
  
 
@@ -6370,6 +6441,7 @@ STATIC const mp_rom_map_elem_t btn_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -6449,7 +6521,7 @@ STATIC mp_obj_t mp_lv_imgbtn_set_toggle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_set_toggle_obj, 2, 2, mp_lv_imgbtn_set_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_set_toggle_obj, 2, mp_lv_imgbtn_set_toggle, lv_imgbtn_set_toggle);
 
  
 
@@ -6466,7 +6538,7 @@ STATIC mp_obj_t mp_lv_imgbtn_set_state(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_set_state_obj, 2, 2, mp_lv_imgbtn_set_state);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_set_state_obj, 2, mp_lv_imgbtn_set_state, lv_imgbtn_set_state);
 
  
 
@@ -6482,7 +6554,7 @@ STATIC mp_obj_t mp_lv_imgbtn_toggle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_toggle_obj, 1, 1, mp_lv_imgbtn_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_toggle_obj, 1, mp_lv_imgbtn_toggle, lv_imgbtn_toggle);
 
  
 
@@ -6498,7 +6570,7 @@ STATIC mp_obj_t mp_lv_imgbtn_get_state(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_get_state_obj, 1, 1, mp_lv_imgbtn_get_state);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_get_state_obj, 1, mp_lv_imgbtn_get_state, lv_imgbtn_get_state);
 
  
 
@@ -6514,7 +6586,7 @@ STATIC mp_obj_t mp_lv_imgbtn_get_toggle(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_get_toggle_obj, 1, 1, mp_lv_imgbtn_get_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_get_toggle_obj, 1, mp_lv_imgbtn_get_toggle, lv_imgbtn_get_toggle);
 
  
 
@@ -6532,7 +6604,7 @@ STATIC mp_obj_t mp_lv_imgbtn_set_src(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_set_src_obj, 3, 3, mp_lv_imgbtn_set_src);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_set_src_obj, 3, mp_lv_imgbtn_set_src, lv_imgbtn_set_src);
 
  
 
@@ -6550,7 +6622,7 @@ STATIC mp_obj_t mp_lv_imgbtn_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_set_style_obj, 3, 3, mp_lv_imgbtn_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_set_style_obj, 3, mp_lv_imgbtn_set_style, lv_imgbtn_set_style);
 
  
 
@@ -6567,7 +6639,7 @@ STATIC mp_obj_t mp_lv_imgbtn_get_src(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_get_src_obj, 2, 2, mp_lv_imgbtn_get_src);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_get_src_obj, 2, mp_lv_imgbtn_get_src, lv_imgbtn_get_src);
 
  
 
@@ -6584,7 +6656,7 @@ STATIC mp_obj_t mp_lv_imgbtn_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_imgbtn_get_style_obj, 2, 2, mp_lv_imgbtn_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_get_style_obj, 2, mp_lv_imgbtn_get_style, lv_imgbtn_get_style);
 
  
 
@@ -6645,6 +6717,7 @@ STATIC const mp_rom_map_elem_t imgbtn_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -6723,7 +6796,7 @@ STATIC mp_obj_t mp_lv_label_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_style_obj, 2, 2, mp_lv_label_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_style_obj, 2, mp_lv_label_set_style, lv_label_set_style);
 
  
 
@@ -6739,7 +6812,7 @@ STATIC mp_obj_t mp_lv_label_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_style_obj, 1, 1, mp_lv_label_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_style_obj, 1, mp_lv_label_get_style, lv_label_get_style);
 
  
 
@@ -6756,7 +6829,7 @@ STATIC mp_obj_t mp_lv_label_set_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_text_obj, 2, 2, mp_lv_label_set_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_text_obj, 2, mp_lv_label_set_text, lv_label_set_text);
 
  
 
@@ -6774,7 +6847,7 @@ STATIC mp_obj_t mp_lv_label_set_array_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_array_text_obj, 3, 3, mp_lv_label_set_array_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_array_text_obj, 3, mp_lv_label_set_array_text, lv_label_set_array_text);
 
  
 
@@ -6791,7 +6864,7 @@ STATIC mp_obj_t mp_lv_label_set_static_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_static_text_obj, 2, 2, mp_lv_label_set_static_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_static_text_obj, 2, mp_lv_label_set_static_text, lv_label_set_static_text);
 
  
 
@@ -6808,7 +6881,7 @@ STATIC mp_obj_t mp_lv_label_set_long_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_long_mode_obj, 2, 2, mp_lv_label_set_long_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_long_mode_obj, 2, mp_lv_label_set_long_mode, lv_label_set_long_mode);
 
  
 
@@ -6825,7 +6898,7 @@ STATIC mp_obj_t mp_lv_label_set_align(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_align_obj, 2, 2, mp_lv_label_set_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_align_obj, 2, mp_lv_label_set_align, lv_label_set_align);
 
  
 
@@ -6842,7 +6915,7 @@ STATIC mp_obj_t mp_lv_label_set_recolor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_recolor_obj, 2, 2, mp_lv_label_set_recolor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_recolor_obj, 2, mp_lv_label_set_recolor, lv_label_set_recolor);
 
  
 
@@ -6859,7 +6932,7 @@ STATIC mp_obj_t mp_lv_label_set_body_draw(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_body_draw_obj, 2, 2, mp_lv_label_set_body_draw);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_body_draw_obj, 2, mp_lv_label_set_body_draw, lv_label_set_body_draw);
 
  
 
@@ -6876,7 +6949,7 @@ STATIC mp_obj_t mp_lv_label_set_anim_speed(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_anim_speed_obj, 2, 2, mp_lv_label_set_anim_speed);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_anim_speed_obj, 2, mp_lv_label_set_anim_speed, lv_label_set_anim_speed);
 
  
 
@@ -6893,7 +6966,7 @@ STATIC mp_obj_t mp_lv_label_set_text_sel_start(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_text_sel_start_obj, 2, 2, mp_lv_label_set_text_sel_start);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_text_sel_start_obj, 2, mp_lv_label_set_text_sel_start, lv_label_set_text_sel_start);
 
  
 
@@ -6910,7 +6983,7 @@ STATIC mp_obj_t mp_lv_label_set_text_sel_end(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_set_text_sel_end_obj, 2, 2, mp_lv_label_set_text_sel_end);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_set_text_sel_end_obj, 2, mp_lv_label_set_text_sel_end, lv_label_set_text_sel_end);
 
  
 
@@ -6926,7 +6999,7 @@ STATIC mp_obj_t mp_lv_label_get_text(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_text_obj, 1, 1, mp_lv_label_get_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_text_obj, 1, mp_lv_label_get_text, lv_label_get_text);
 
  
 
@@ -6942,7 +7015,7 @@ STATIC mp_obj_t mp_lv_label_get_long_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_long_mode_obj, 1, 1, mp_lv_label_get_long_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_long_mode_obj, 1, mp_lv_label_get_long_mode, lv_label_get_long_mode);
 
  
 
@@ -6958,7 +7031,7 @@ STATIC mp_obj_t mp_lv_label_get_align(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_align_obj, 1, 1, mp_lv_label_get_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_align_obj, 1, mp_lv_label_get_align, lv_label_get_align);
 
  
 
@@ -6974,7 +7047,7 @@ STATIC mp_obj_t mp_lv_label_get_recolor(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_recolor_obj, 1, 1, mp_lv_label_get_recolor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_recolor_obj, 1, mp_lv_label_get_recolor, lv_label_get_recolor);
 
  
 
@@ -6990,7 +7063,7 @@ STATIC mp_obj_t mp_lv_label_get_body_draw(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_body_draw_obj, 1, 1, mp_lv_label_get_body_draw);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_body_draw_obj, 1, mp_lv_label_get_body_draw, lv_label_get_body_draw);
 
  
 
@@ -7006,7 +7079,7 @@ STATIC mp_obj_t mp_lv_label_get_anim_speed(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_anim_speed_obj, 1, 1, mp_lv_label_get_anim_speed);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_anim_speed_obj, 1, mp_lv_label_get_anim_speed, lv_label_get_anim_speed);
 
  
 
@@ -7105,7 +7178,7 @@ STATIC mp_obj_t mp_lv_label_get_letter_pos(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_letter_pos_obj, 3, 3, mp_lv_label_get_letter_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_letter_pos_obj, 3, mp_lv_label_get_letter_pos, lv_label_get_letter_pos);
 
  
 
@@ -7122,7 +7195,7 @@ STATIC mp_obj_t mp_lv_label_get_letter_on(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_letter_on_obj, 2, 2, mp_lv_label_get_letter_on);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_letter_on_obj, 2, mp_lv_label_get_letter_on, lv_label_get_letter_on);
 
  
 
@@ -7139,7 +7212,7 @@ STATIC mp_obj_t mp_lv_label_is_char_under_pos(size_t n_args, const mp_obj_t *arg
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_is_char_under_pos_obj, 2, 2, mp_lv_label_is_char_under_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_is_char_under_pos_obj, 2, mp_lv_label_is_char_under_pos, lv_label_is_char_under_pos);
 
  
 
@@ -7155,7 +7228,7 @@ STATIC mp_obj_t mp_lv_label_get_text_sel_start(size_t n_args, const mp_obj_t *ar
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_text_sel_start_obj, 1, 1, mp_lv_label_get_text_sel_start);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_text_sel_start_obj, 1, mp_lv_label_get_text_sel_start, lv_label_get_text_sel_start);
 
  
 
@@ -7171,7 +7244,7 @@ STATIC mp_obj_t mp_lv_label_get_text_sel_end(size_t n_args, const mp_obj_t *args
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_get_text_sel_end_obj, 1, 1, mp_lv_label_get_text_sel_end);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_get_text_sel_end_obj, 1, mp_lv_label_get_text_sel_end, lv_label_get_text_sel_end);
 
  
 
@@ -7189,7 +7262,7 @@ STATIC mp_obj_t mp_lv_label_ins_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_ins_text_obj, 3, 3, mp_lv_label_ins_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_ins_text_obj, 3, mp_lv_label_ins_text, lv_label_ins_text);
 
  
 
@@ -7207,7 +7280,7 @@ STATIC mp_obj_t mp_lv_label_cut_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_label_cut_text_obj, 3, 3, mp_lv_label_cut_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_label_cut_text_obj, 3, mp_lv_label_cut_text, lv_label_cut_text);
 
  
 
@@ -7284,6 +7357,7 @@ STATIC const mp_rom_map_elem_t label_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -7454,7 +7528,7 @@ STATIC mp_obj_t mp_lv_img_decoder_set_user_data(size_t n_args, const mp_obj_t *a
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_set_user_data_obj, 2, 2, mp_lv_img_decoder_set_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_user_data_obj, 2, mp_lv_img_decoder_set_user_data, lv_img_decoder_set_user_data);
 
  
 
@@ -7470,7 +7544,7 @@ STATIC mp_obj_t mp_lv_img_decoder_get_user_data(size_t n_args, const mp_obj_t *a
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_get_user_data_obj, 1, 1, mp_lv_img_decoder_get_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_get_user_data_obj, 1, mp_lv_img_decoder_get_user_data, lv_img_decoder_get_user_data);
 
  
 
@@ -7486,7 +7560,7 @@ STATIC mp_obj_t mp_lv_img_decoder_get_user_data_ptr(size_t n_args, const mp_obj_
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_get_user_data_ptr_obj, 1, 1, mp_lv_img_decoder_get_user_data_ptr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_get_user_data_ptr_obj, 1, mp_lv_img_decoder_get_user_data_ptr, lv_img_decoder_get_user_data_ptr);
 
  
 
@@ -7503,7 +7577,7 @@ STATIC mp_obj_t mp_lv_img_set_file(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_file_obj, 2, 2, mp_lv_img_set_file);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_file_obj, 2, mp_lv_img_set_file, lv_img_set_file);
 
  
 
@@ -7520,7 +7594,7 @@ STATIC mp_obj_t mp_lv_img_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_style_obj, 2, 2, mp_lv_img_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_style_obj, 2, mp_lv_img_set_style, lv_img_set_style);
 
  
 
@@ -7537,7 +7611,7 @@ STATIC mp_obj_t mp_lv_img_set_upscale(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_upscale_obj, 2, 2, mp_lv_img_set_upscale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_upscale_obj, 2, mp_lv_img_set_upscale, lv_img_set_upscale);
 
  
 
@@ -7553,7 +7627,7 @@ STATIC mp_obj_t mp_lv_img_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_style_obj, 1, 1, mp_lv_img_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_style_obj, 1, mp_lv_img_get_style, lv_img_get_style);
 
  
 
@@ -7569,7 +7643,7 @@ STATIC mp_obj_t mp_lv_img_get_upscale(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_upscale_obj, 1, 1, mp_lv_img_get_upscale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_upscale_obj, 1, mp_lv_img_get_upscale, lv_img_get_upscale);
 
  
 
@@ -7585,7 +7659,7 @@ STATIC mp_obj_t mp_lv_img_decoder_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_init_obj, 0, 0, mp_lv_img_decoder_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_init_obj, 0, mp_lv_img_decoder_init, lv_img_decoder_init);
 
  
 
@@ -7689,7 +7763,7 @@ STATIC mp_obj_t mp_lv_img_decoder_get_info(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_get_info_obj, 2, 2, mp_lv_img_decoder_get_info);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_get_info_obj, 2, mp_lv_img_decoder_get_info, lv_img_decoder_get_info);
 
  
 
@@ -7796,7 +7870,7 @@ STATIC mp_obj_t mp_lv_img_decoder_open(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_open_obj, 3, 3, mp_lv_img_decoder_open);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_open_obj, 3, mp_lv_img_decoder_open, lv_img_decoder_open);
 
  
 
@@ -7816,7 +7890,7 @@ STATIC mp_obj_t mp_lv_img_decoder_read_line(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_read_line_obj, 5, 5, mp_lv_img_decoder_read_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_read_line_obj, 5, mp_lv_img_decoder_read_line, lv_img_decoder_read_line);
 
  
 
@@ -7832,7 +7906,7 @@ STATIC mp_obj_t mp_lv_img_decoder_close(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_close_obj, 1, 1, mp_lv_img_decoder_close);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_close_obj, 1, mp_lv_img_decoder_close, lv_img_decoder_close);
 
  
 
@@ -7848,7 +7922,7 @@ STATIC mp_obj_t mp_lv_img_decoder_create(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_img_decoder_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_create_obj, 0, 0, mp_lv_img_decoder_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_create_obj, 0, mp_lv_img_decoder_create, lv_img_decoder_create);
 
  
 
@@ -7864,7 +7938,7 @@ STATIC mp_obj_t mp_lv_img_decoder_delete(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_delete_obj, 1, 1, mp_lv_img_decoder_delete);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_delete_obj, 1, mp_lv_img_decoder_delete, lv_img_decoder_delete);
 
  
 
@@ -7898,7 +7972,7 @@ STATIC mp_obj_t mp_lv_img_decoder_set_info_cb(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_set_info_cb_obj, 2, 2, mp_lv_img_decoder_set_info_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_info_cb_obj, 2, mp_lv_img_decoder_set_info_cb, lv_img_decoder_set_info_cb);
 
  
 
@@ -7931,7 +8005,7 @@ STATIC mp_obj_t mp_lv_img_decoder_set_open_cb(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_set_open_cb_obj, 2, 2, mp_lv_img_decoder_set_open_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_open_cb_obj, 2, mp_lv_img_decoder_set_open_cb, lv_img_decoder_set_open_cb);
 
  
 
@@ -7968,7 +8042,7 @@ STATIC mp_obj_t mp_lv_img_decoder_set_read_line_cb(size_t n_args, const mp_obj_t
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_set_read_line_cb_obj, 2, 2, mp_lv_img_decoder_set_read_line_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_read_line_cb_obj, 2, mp_lv_img_decoder_set_read_line_cb, lv_img_decoder_set_read_line_cb);
 
  
 
@@ -8001,7 +8075,7 @@ STATIC mp_obj_t mp_lv_img_decoder_set_close_cb(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_decoder_set_close_cb_obj, 2, 2, mp_lv_img_decoder_set_close_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_close_cb_obj, 2, mp_lv_img_decoder_set_close_cb, lv_img_decoder_set_close_cb);
 
  
 
@@ -8017,7 +8091,7 @@ STATIC mp_obj_t mp_lv_img_src_get_type(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_src_get_type_obj, 1, 1, mp_lv_img_src_get_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_src_get_type_obj, 1, mp_lv_img_src_get_type, lv_img_src_get_type);
 
  
 
@@ -8119,7 +8193,7 @@ STATIC mp_obj_t mp_lv_img_buf_get_px_color(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_buf_get_px_color_obj, 4, 4, mp_lv_img_buf_get_px_color);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_buf_get_px_color_obj, 4, mp_lv_img_buf_get_px_color, lv_img_buf_get_px_color);
 
  
 
@@ -8137,7 +8211,7 @@ STATIC mp_obj_t mp_lv_img_buf_get_px_alpha(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_buf_get_px_alpha_obj, 3, 3, mp_lv_img_buf_get_px_alpha);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_buf_get_px_alpha_obj, 3, mp_lv_img_buf_get_px_alpha, lv_img_buf_get_px_alpha);
 
  
 
@@ -8156,7 +8230,7 @@ STATIC mp_obj_t mp_lv_img_buf_set_px_color(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_buf_set_px_color_obj, 4, 4, mp_lv_img_buf_set_px_color);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_buf_set_px_color_obj, 4, mp_lv_img_buf_set_px_color, lv_img_buf_set_px_color);
 
  
 
@@ -8175,7 +8249,7 @@ STATIC mp_obj_t mp_lv_img_buf_set_px_alpha(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_buf_set_px_alpha_obj, 4, 4, mp_lv_img_buf_set_px_alpha);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_buf_set_px_alpha_obj, 4, mp_lv_img_buf_set_px_alpha, lv_img_buf_set_px_alpha);
 
  
 
@@ -8193,7 +8267,7 @@ STATIC mp_obj_t mp_lv_img_buf_set_palette(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_buf_set_palette_obj, 3, 3, mp_lv_img_buf_set_palette);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_buf_set_palette_obj, 3, mp_lv_img_buf_set_palette, lv_img_buf_set_palette);
 
  
 
@@ -8209,7 +8283,7 @@ STATIC mp_obj_t mp_lv_img_color_format_get_px_size(size_t n_args, const mp_obj_t
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_color_format_get_px_size_obj, 1, 1, mp_lv_img_color_format_get_px_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_color_format_get_px_size_obj, 1, mp_lv_img_color_format_get_px_size, lv_img_color_format_get_px_size);
 
  
 
@@ -8225,7 +8299,7 @@ STATIC mp_obj_t mp_lv_img_color_format_is_chroma_keyed(size_t n_args, const mp_o
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_color_format_is_chroma_keyed_obj, 1, 1, mp_lv_img_color_format_is_chroma_keyed);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_color_format_is_chroma_keyed_obj, 1, mp_lv_img_color_format_is_chroma_keyed, lv_img_color_format_is_chroma_keyed);
 
  
 
@@ -8241,7 +8315,7 @@ STATIC mp_obj_t mp_lv_img_color_format_has_alpha(size_t n_args, const mp_obj_t *
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_color_format_has_alpha_obj, 1, 1, mp_lv_img_color_format_has_alpha);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_color_format_has_alpha_obj, 1, mp_lv_img_color_format_has_alpha, lv_img_color_format_has_alpha);
 
  
 
@@ -8258,7 +8332,7 @@ STATIC mp_obj_t mp_lv_img_set_src(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_src_obj, 2, 2, mp_lv_img_set_src);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_src_obj, 2, mp_lv_img_set_src, lv_img_set_src);
 
  
 
@@ -8275,7 +8349,7 @@ STATIC mp_obj_t mp_lv_img_set_auto_size(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_auto_size_obj, 2, 2, mp_lv_img_set_auto_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_auto_size_obj, 2, mp_lv_img_set_auto_size, lv_img_set_auto_size);
 
  
 
@@ -8293,7 +8367,7 @@ STATIC mp_obj_t mp_lv_img_set_offset(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_offset_obj, 3, 3, mp_lv_img_set_offset);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_offset_obj, 3, mp_lv_img_set_offset, lv_img_set_offset);
 
  
 
@@ -8310,7 +8384,7 @@ STATIC mp_obj_t mp_lv_img_set_offset_x(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_offset_x_obj, 2, 2, mp_lv_img_set_offset_x);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_offset_x_obj, 2, mp_lv_img_set_offset_x, lv_img_set_offset_x);
 
  
 
@@ -8327,7 +8401,7 @@ STATIC mp_obj_t mp_lv_img_set_offset_y(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_set_offset_y_obj, 2, 2, mp_lv_img_set_offset_y);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_set_offset_y_obj, 2, mp_lv_img_set_offset_y, lv_img_set_offset_y);
 
  
 
@@ -8343,7 +8417,7 @@ STATIC mp_obj_t mp_lv_img_get_src(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_src_obj, 1, 1, mp_lv_img_get_src);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_src_obj, 1, mp_lv_img_get_src, lv_img_get_src);
 
  
 
@@ -8359,7 +8433,7 @@ STATIC mp_obj_t mp_lv_img_get_file_name(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_file_name_obj, 1, 1, mp_lv_img_get_file_name);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_file_name_obj, 1, mp_lv_img_get_file_name, lv_img_get_file_name);
 
  
 
@@ -8375,7 +8449,7 @@ STATIC mp_obj_t mp_lv_img_get_auto_size(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_auto_size_obj, 1, 1, mp_lv_img_get_auto_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_auto_size_obj, 1, mp_lv_img_get_auto_size, lv_img_get_auto_size);
 
  
 
@@ -8391,7 +8465,7 @@ STATIC mp_obj_t mp_lv_img_get_offset_x(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_offset_x_obj, 1, 1, mp_lv_img_get_offset_x);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_offset_x_obj, 1, mp_lv_img_get_offset_x, lv_img_get_offset_x);
 
  
 
@@ -8407,7 +8481,7 @@ STATIC mp_obj_t mp_lv_img_get_offset_y(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_img_get_offset_y_obj, 1, 1, mp_lv_img_get_offset_y);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_get_offset_y_obj, 1, mp_lv_img_get_offset_y, lv_img_get_offset_y);
 
  
 
@@ -8497,6 +8571,7 @@ STATIC const mp_rom_map_elem_t img_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -8576,7 +8651,7 @@ STATIC mp_obj_t mp_lv_line_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_set_style_obj, 2, 2, mp_lv_line_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_set_style_obj, 2, mp_lv_line_set_style, lv_line_set_style);
 
  
 
@@ -8593,7 +8668,7 @@ STATIC mp_obj_t mp_lv_line_set_upscale(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_set_upscale_obj, 2, 2, mp_lv_line_set_upscale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_set_upscale_obj, 2, mp_lv_line_set_upscale, lv_line_set_upscale);
 
  
 
@@ -8609,7 +8684,7 @@ STATIC mp_obj_t mp_lv_line_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_get_style_obj, 1, 1, mp_lv_line_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_get_style_obj, 1, mp_lv_line_get_style, lv_line_get_style);
 
  
 
@@ -8625,7 +8700,7 @@ STATIC mp_obj_t mp_lv_line_get_upscale(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_get_upscale_obj, 1, 1, mp_lv_line_get_upscale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_get_upscale_obj, 1, mp_lv_line_get_upscale, lv_line_get_upscale);
 
  
 
@@ -8643,7 +8718,7 @@ STATIC mp_obj_t mp_lv_line_set_points(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_set_points_obj, 3, 3, mp_lv_line_set_points);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_set_points_obj, 3, mp_lv_line_set_points, lv_line_set_points);
 
  
 
@@ -8660,7 +8735,7 @@ STATIC mp_obj_t mp_lv_line_set_auto_size(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_set_auto_size_obj, 2, 2, mp_lv_line_set_auto_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_set_auto_size_obj, 2, mp_lv_line_set_auto_size, lv_line_set_auto_size);
 
  
 
@@ -8677,7 +8752,7 @@ STATIC mp_obj_t mp_lv_line_set_y_invert(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_set_y_invert_obj, 2, 2, mp_lv_line_set_y_invert);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_set_y_invert_obj, 2, mp_lv_line_set_y_invert, lv_line_set_y_invert);
 
  
 
@@ -8693,7 +8768,7 @@ STATIC mp_obj_t mp_lv_line_get_auto_size(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_get_auto_size_obj, 1, 1, mp_lv_line_get_auto_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_get_auto_size_obj, 1, mp_lv_line_get_auto_size, lv_line_get_auto_size);
 
  
 
@@ -8709,7 +8784,7 @@ STATIC mp_obj_t mp_lv_line_get_y_invert(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_line_get_y_invert_obj, 1, 1, mp_lv_line_get_y_invert);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_line_get_y_invert_obj, 1, mp_lv_line_get_y_invert, lv_line_get_y_invert);
 
  
 
@@ -8770,6 +8845,7 @@ STATIC const mp_rom_map_elem_t line_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -8850,7 +8926,7 @@ STATIC mp_obj_t mp_lv_page_set_scrl_fit4(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scrl_fit4_obj, 5, 5, mp_lv_page_set_scrl_fit4);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scrl_fit4_obj, 5, mp_lv_page_set_scrl_fit4, lv_page_set_scrl_fit4);
 
  
 
@@ -8868,7 +8944,7 @@ STATIC mp_obj_t mp_lv_page_set_scrl_fit2(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scrl_fit2_obj, 3, 3, mp_lv_page_set_scrl_fit2);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scrl_fit2_obj, 3, mp_lv_page_set_scrl_fit2, lv_page_set_scrl_fit2);
 
  
 
@@ -8885,7 +8961,7 @@ STATIC mp_obj_t mp_lv_page_set_scrl_fit(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scrl_fit_obj, 2, 2, mp_lv_page_set_scrl_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scrl_fit_obj, 2, mp_lv_page_set_scrl_fit, lv_page_set_scrl_fit);
 
  
 
@@ -8902,7 +8978,7 @@ STATIC mp_obj_t mp_lv_page_set_scrl_width(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scrl_width_obj, 2, 2, mp_lv_page_set_scrl_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scrl_width_obj, 2, mp_lv_page_set_scrl_width, lv_page_set_scrl_width);
 
  
 
@@ -8919,7 +8995,7 @@ STATIC mp_obj_t mp_lv_page_set_scrl_height(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scrl_height_obj, 2, 2, mp_lv_page_set_scrl_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scrl_height_obj, 2, mp_lv_page_set_scrl_height, lv_page_set_scrl_height);
 
  
 
@@ -8936,7 +9012,7 @@ STATIC mp_obj_t mp_lv_page_set_scrl_layout(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scrl_layout_obj, 2, 2, mp_lv_page_set_scrl_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scrl_layout_obj, 2, mp_lv_page_set_scrl_layout, lv_page_set_scrl_layout);
 
  
 
@@ -8952,7 +9028,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_width_obj, 1, 1, mp_lv_page_get_scrl_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_width_obj, 1, mp_lv_page_get_scrl_width, lv_page_get_scrl_width);
 
  
 
@@ -8968,7 +9044,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_height(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_height_obj, 1, 1, mp_lv_page_get_scrl_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_height_obj, 1, mp_lv_page_get_scrl_height, lv_page_get_scrl_height);
 
  
 
@@ -8984,7 +9060,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_layout(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_layout_obj, 1, 1, mp_lv_page_get_scrl_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_layout_obj, 1, mp_lv_page_get_scrl_layout, lv_page_get_scrl_layout);
 
  
 
@@ -9000,7 +9076,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_fit_left(size_t n_args, const mp_obj_t *args
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_fit_left_obj, 1, 1, mp_lv_page_get_scrl_fit_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_fit_left_obj, 1, mp_lv_page_get_scrl_fit_left, lv_page_get_scrl_fit_left);
 
  
 
@@ -9016,7 +9092,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_fit_right(size_t n_args, const mp_obj_t *arg
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_fit_right_obj, 1, 1, mp_lv_page_get_scrl_fit_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_fit_right_obj, 1, mp_lv_page_get_scrl_fit_right, lv_page_get_scrl_fit_right);
 
  
 
@@ -9032,7 +9108,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_fit_top(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_fit_top_obj, 1, 1, mp_lv_page_get_scrl_fit_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_fit_top_obj, 1, mp_lv_page_get_scrl_fit_top, lv_page_get_scrl_fit_top);
 
  
 
@@ -9048,7 +9124,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl_fit_bottom(size_t n_args, const mp_obj_t *ar
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_fit_bottom_obj, 1, 1, mp_lv_page_get_scrl_fit_bottom);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_fit_bottom_obj, 1, mp_lv_page_get_scrl_fit_bottom, lv_page_get_scrl_fit_bottom);
 
  
 
@@ -9064,7 +9140,7 @@ STATIC mp_obj_t mp_lv_page_clean(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_clean_obj, 1, 1, mp_lv_page_clean);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_clean_obj, 1, mp_lv_page_clean, lv_page_clean);
 
  
 
@@ -9080,7 +9156,7 @@ STATIC mp_obj_t mp_lv_page_get_scrl(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scrl_obj, 1, 1, mp_lv_page_get_scrl);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scrl_obj, 1, mp_lv_page_get_scrl, lv_page_get_scrl);
 
  
 
@@ -9097,7 +9173,7 @@ STATIC mp_obj_t mp_lv_page_set_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_sb_mode_obj, 2, 2, mp_lv_page_set_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_sb_mode_obj, 2, mp_lv_page_set_sb_mode, lv_page_set_sb_mode);
 
  
 
@@ -9114,7 +9190,7 @@ STATIC mp_obj_t mp_lv_page_set_arrow_scroll(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_arrow_scroll_obj, 2, 2, mp_lv_page_set_arrow_scroll);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_arrow_scroll_obj, 2, mp_lv_page_set_arrow_scroll, lv_page_set_arrow_scroll);
 
  
 
@@ -9131,7 +9207,7 @@ STATIC mp_obj_t mp_lv_page_set_scroll_propagation(size_t n_args, const mp_obj_t 
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_scroll_propagation_obj, 2, 2, mp_lv_page_set_scroll_propagation);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_scroll_propagation_obj, 2, mp_lv_page_set_scroll_propagation, lv_page_set_scroll_propagation);
 
  
 
@@ -9148,7 +9224,7 @@ STATIC mp_obj_t mp_lv_page_set_edge_flash(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_edge_flash_obj, 2, 2, mp_lv_page_set_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_edge_flash_obj, 2, mp_lv_page_set_edge_flash, lv_page_set_edge_flash);
 
  
 
@@ -9166,7 +9242,7 @@ STATIC mp_obj_t mp_lv_page_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_set_style_obj, 3, 3, mp_lv_page_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_set_style_obj, 3, mp_lv_page_set_style, lv_page_set_style);
 
  
 
@@ -9182,7 +9258,7 @@ STATIC mp_obj_t mp_lv_page_get_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_sb_mode_obj, 1, 1, mp_lv_page_get_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_sb_mode_obj, 1, mp_lv_page_get_sb_mode, lv_page_get_sb_mode);
 
  
 
@@ -9198,7 +9274,7 @@ STATIC mp_obj_t mp_lv_page_get_arrow_scroll(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_arrow_scroll_obj, 1, 1, mp_lv_page_get_arrow_scroll);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_arrow_scroll_obj, 1, mp_lv_page_get_arrow_scroll, lv_page_get_arrow_scroll);
 
  
 
@@ -9214,7 +9290,7 @@ STATIC mp_obj_t mp_lv_page_get_scroll_propagation(size_t n_args, const mp_obj_t 
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_scroll_propagation_obj, 1, 1, mp_lv_page_get_scroll_propagation);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_scroll_propagation_obj, 1, mp_lv_page_get_scroll_propagation, lv_page_get_scroll_propagation);
 
  
 
@@ -9230,7 +9306,7 @@ STATIC mp_obj_t mp_lv_page_get_edge_flash(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_edge_flash_obj, 1, 1, mp_lv_page_get_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_edge_flash_obj, 1, mp_lv_page_get_edge_flash, lv_page_get_edge_flash);
 
  
 
@@ -9246,7 +9322,7 @@ STATIC mp_obj_t mp_lv_page_get_fit_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_fit_width_obj, 1, 1, mp_lv_page_get_fit_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_fit_width_obj, 1, mp_lv_page_get_fit_width, lv_page_get_fit_width);
 
  
 
@@ -9262,7 +9338,7 @@ STATIC mp_obj_t mp_lv_page_get_fit_height(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_fit_height_obj, 1, 1, mp_lv_page_get_fit_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_fit_height_obj, 1, mp_lv_page_get_fit_height, lv_page_get_fit_height);
 
  
 
@@ -9279,7 +9355,7 @@ STATIC mp_obj_t mp_lv_page_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_get_style_obj, 2, 2, mp_lv_page_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_get_style_obj, 2, mp_lv_page_get_style, lv_page_get_style);
 
  
 
@@ -9296,7 +9372,7 @@ STATIC mp_obj_t mp_lv_page_on_edge(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_on_edge_obj, 2, 2, mp_lv_page_on_edge);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_on_edge_obj, 2, mp_lv_page_on_edge, lv_page_on_edge);
 
  
 
@@ -9313,7 +9389,7 @@ STATIC mp_obj_t mp_lv_page_glue_obj(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_glue_obj_obj, 2, 2, mp_lv_page_glue_obj);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_glue_obj_obj, 2, mp_lv_page_glue_obj, lv_page_glue_obj);
 
  
 
@@ -9331,7 +9407,7 @@ STATIC mp_obj_t mp_lv_page_focus(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_focus_obj, 3, 3, mp_lv_page_focus);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_focus_obj, 3, mp_lv_page_focus, lv_page_focus);
 
  
 
@@ -9348,7 +9424,7 @@ STATIC mp_obj_t mp_lv_page_scroll_hor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_scroll_hor_obj, 2, 2, mp_lv_page_scroll_hor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_scroll_hor_obj, 2, mp_lv_page_scroll_hor, lv_page_scroll_hor);
 
  
 
@@ -9365,7 +9441,7 @@ STATIC mp_obj_t mp_lv_page_scroll_ver(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_scroll_ver_obj, 2, 2, mp_lv_page_scroll_ver);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_scroll_ver_obj, 2, mp_lv_page_scroll_ver, lv_page_scroll_ver);
 
  
 
@@ -9381,7 +9457,7 @@ STATIC mp_obj_t mp_lv_page_start_edge_flash(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_page_start_edge_flash_obj, 1, 1, mp_lv_page_start_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_page_start_edge_flash_obj, 1, mp_lv_page_start_edge_flash, lv_page_start_edge_flash);
 
  
 
@@ -9466,6 +9542,7 @@ STATIC const mp_rom_map_elem_t page_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -9545,7 +9622,7 @@ STATIC mp_obj_t mp_lv_list_set_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_sb_mode_obj, 2, 2, mp_lv_list_set_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_sb_mode_obj, 2, mp_lv_list_set_sb_mode, lv_list_set_sb_mode);
 
  
 
@@ -9562,7 +9639,7 @@ STATIC mp_obj_t mp_lv_list_set_scroll_propagation(size_t n_args, const mp_obj_t 
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_scroll_propagation_obj, 2, 2, mp_lv_list_set_scroll_propagation);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_scroll_propagation_obj, 2, mp_lv_list_set_scroll_propagation, lv_list_set_scroll_propagation);
 
  
 
@@ -9579,7 +9656,7 @@ STATIC mp_obj_t mp_lv_list_set_edge_flash(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_edge_flash_obj, 2, 2, mp_lv_list_set_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_edge_flash_obj, 2, mp_lv_list_set_edge_flash, lv_list_set_edge_flash);
 
  
 
@@ -9595,7 +9672,7 @@ STATIC mp_obj_t mp_lv_list_get_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_sb_mode_obj, 1, 1, mp_lv_list_get_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_sb_mode_obj, 1, mp_lv_list_get_sb_mode, lv_list_get_sb_mode);
 
  
 
@@ -9611,7 +9688,7 @@ STATIC mp_obj_t mp_lv_list_get_scroll_propagation(size_t n_args, const mp_obj_t 
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_scroll_propagation_obj, 1, 1, mp_lv_list_get_scroll_propagation);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_scroll_propagation_obj, 1, mp_lv_list_get_scroll_propagation, lv_list_get_scroll_propagation);
 
  
 
@@ -9627,7 +9704,7 @@ STATIC mp_obj_t mp_lv_list_get_edge_flash(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_edge_flash_obj, 1, 1, mp_lv_list_get_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_edge_flash_obj, 1, mp_lv_list_get_edge_flash, lv_list_get_edge_flash);
 
  
 
@@ -9643,7 +9720,7 @@ STATIC mp_obj_t mp_lv_list_clean(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_clean_obj, 1, 1, mp_lv_list_clean);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_clean_obj, 1, mp_lv_list_clean, lv_list_clean);
 
  
 
@@ -9662,24 +9739,24 @@ STATIC mp_obj_t mp_lv_list_add(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_add_obj, 4, 4, mp_lv_list_add);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_add_obj, 4, mp_lv_list_add, lv_list_add);
 
  
 
 /*
  * lvgl extension definition for:
- * bool lv_list_remove(const lv_obj_t *list, uint32_t index)
+ * bool lv_list_remove(const lv_obj_t *list, uint16_t index)
  */
  
 STATIC mp_obj_t mp_lv_list_remove(size_t n_args, const mp_obj_t *args)
 {
     const lv_obj_t *list = mp_to_lv(args[0]);
-    uint32_t index = (uint32_t)mp_obj_get_int(args[1]);
+    uint16_t index = (uint16_t)mp_obj_get_int(args[1]);
     bool res = lv_list_remove(list, index);
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_remove_obj, 2, 2, mp_lv_list_remove);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_remove_obj, 2, mp_lv_list_remove, lv_list_remove);
 
  
 
@@ -9696,7 +9773,7 @@ STATIC mp_obj_t mp_lv_list_set_single_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_single_mode_obj, 2, 2, mp_lv_list_set_single_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_single_mode_obj, 2, mp_lv_list_set_single_mode, lv_list_set_single_mode);
 
  
 
@@ -9713,7 +9790,7 @@ STATIC mp_obj_t mp_lv_list_set_btn_selected(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_btn_selected_obj, 2, 2, mp_lv_list_set_btn_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_btn_selected_obj, 2, mp_lv_list_set_btn_selected, lv_list_set_btn_selected);
 
  
 
@@ -9730,7 +9807,7 @@ STATIC mp_obj_t mp_lv_list_set_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_anim_time_obj, 2, 2, mp_lv_list_set_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_anim_time_obj, 2, mp_lv_list_set_anim_time, lv_list_set_anim_time);
 
  
 
@@ -9748,7 +9825,7 @@ STATIC mp_obj_t mp_lv_list_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_set_style_obj, 3, 3, mp_lv_list_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_set_style_obj, 3, mp_lv_list_set_style, lv_list_set_style);
 
  
 
@@ -9764,7 +9841,7 @@ STATIC mp_obj_t mp_lv_list_get_single_mode(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_single_mode_obj, 1, 1, mp_lv_list_get_single_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_single_mode_obj, 1, mp_lv_list_get_single_mode, lv_list_get_single_mode);
 
  
 
@@ -9780,7 +9857,7 @@ STATIC mp_obj_t mp_lv_list_get_btn_text(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_btn_text_obj, 1, 1, mp_lv_list_get_btn_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_btn_text_obj, 1, mp_lv_list_get_btn_text, lv_list_get_btn_text);
 
  
 
@@ -9796,7 +9873,7 @@ STATIC mp_obj_t mp_lv_list_get_btn_label(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_btn_label_obj, 1, 1, mp_lv_list_get_btn_label);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_btn_label_obj, 1, mp_lv_list_get_btn_label, lv_list_get_btn_label);
 
  
 
@@ -9812,7 +9889,7 @@ STATIC mp_obj_t mp_lv_list_get_btn_img(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_btn_img_obj, 1, 1, mp_lv_list_get_btn_img);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_btn_img_obj, 1, mp_lv_list_get_btn_img, lv_list_get_btn_img);
 
  
 
@@ -9829,7 +9906,7 @@ STATIC mp_obj_t mp_lv_list_get_prev_btn(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_prev_btn_obj, 2, 2, mp_lv_list_get_prev_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_prev_btn_obj, 2, mp_lv_list_get_prev_btn, lv_list_get_prev_btn);
 
  
 
@@ -9846,7 +9923,7 @@ STATIC mp_obj_t mp_lv_list_get_next_btn(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_next_btn_obj, 2, 2, mp_lv_list_get_next_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_next_btn_obj, 2, mp_lv_list_get_next_btn, lv_list_get_next_btn);
 
  
 
@@ -9863,23 +9940,23 @@ STATIC mp_obj_t mp_lv_list_get_btn_index(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_btn_index_obj, 2, 2, mp_lv_list_get_btn_index);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_btn_index_obj, 2, mp_lv_list_get_btn_index, lv_list_get_btn_index);
 
  
 
 /*
  * lvgl extension definition for:
- * uint32_t lv_list_get_size(const lv_obj_t *list)
+ * uint16_t lv_list_get_size(const lv_obj_t *list)
  */
  
 STATIC mp_obj_t mp_lv_list_get_size(size_t n_args, const mp_obj_t *args)
 {
     const lv_obj_t *list = mp_to_lv(args[0]);
-    uint32_t res = lv_list_get_size(list);
+    uint16_t res = lv_list_get_size(list);
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_size_obj, 1, 1, mp_lv_list_get_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_size_obj, 1, mp_lv_list_get_size, lv_list_get_size);
 
  
 
@@ -9895,7 +9972,7 @@ STATIC mp_obj_t mp_lv_list_get_btn_selected(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_btn_selected_obj, 1, 1, mp_lv_list_get_btn_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_btn_selected_obj, 1, mp_lv_list_get_btn_selected, lv_list_get_btn_selected);
 
  
 
@@ -9911,7 +9988,7 @@ STATIC mp_obj_t mp_lv_list_get_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_anim_time_obj, 1, 1, mp_lv_list_get_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_anim_time_obj, 1, mp_lv_list_get_anim_time, lv_list_get_anim_time);
 
  
 
@@ -9928,7 +10005,7 @@ STATIC mp_obj_t mp_lv_list_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_get_style_obj, 2, 2, mp_lv_list_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_get_style_obj, 2, mp_lv_list_get_style, lv_list_get_style);
 
  
 
@@ -9944,7 +10021,7 @@ STATIC mp_obj_t mp_lv_list_up(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_up_obj, 1, 1, mp_lv_list_up);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_up_obj, 1, mp_lv_list_up, lv_list_up);
 
  
 
@@ -9960,7 +10037,7 @@ STATIC mp_obj_t mp_lv_list_down(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_down_obj, 1, 1, mp_lv_list_down);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_down_obj, 1, mp_lv_list_down, lv_list_down);
 
  
 
@@ -9977,7 +10054,7 @@ STATIC mp_obj_t mp_lv_list_focus(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_list_focus_obj, 2, 2, mp_lv_list_focus);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_list_focus_obj, 2, mp_lv_list_focus, lv_list_focus);
 
  
 
@@ -10056,6 +10133,7 @@ STATIC const mp_rom_map_elem_t list_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -10134,7 +10212,7 @@ STATIC mp_obj_t mp_lv_chart_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_style_obj, 2, 2, mp_lv_chart_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_style_obj, 2, mp_lv_chart_set_style, lv_chart_set_style);
 
  
 
@@ -10150,7 +10228,7 @@ STATIC mp_obj_t mp_lv_chart_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_style_obj, 1, 1, mp_lv_chart_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_style_obj, 1, mp_lv_chart_get_style, lv_chart_get_style);
 
  
 
@@ -10250,7 +10328,7 @@ STATIC mp_obj_t mp_lv_chart_add_series(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_chart_series_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_add_series_obj, 2, 2, mp_lv_chart_add_series);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_add_series_obj, 2, mp_lv_chart_add_series, lv_chart_add_series);
 
  
 
@@ -10267,7 +10345,7 @@ STATIC mp_obj_t mp_lv_chart_clear_serie(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_clear_serie_obj, 2, 2, mp_lv_chart_clear_serie);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_clear_serie_obj, 2, mp_lv_chart_clear_serie, lv_chart_clear_serie);
 
  
 
@@ -10285,7 +10363,7 @@ STATIC mp_obj_t mp_lv_chart_set_div_line_count(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_div_line_count_obj, 3, 3, mp_lv_chart_set_div_line_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_div_line_count_obj, 3, mp_lv_chart_set_div_line_count, lv_chart_set_div_line_count);
 
  
 
@@ -10303,7 +10381,7 @@ STATIC mp_obj_t mp_lv_chart_set_range(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_range_obj, 3, 3, mp_lv_chart_set_range);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_range_obj, 3, mp_lv_chart_set_range, lv_chart_set_range);
 
  
 
@@ -10320,7 +10398,7 @@ STATIC mp_obj_t mp_lv_chart_set_type(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_type_obj, 2, 2, mp_lv_chart_set_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_type_obj, 2, mp_lv_chart_set_type, lv_chart_set_type);
 
  
 
@@ -10337,7 +10415,7 @@ STATIC mp_obj_t mp_lv_chart_set_point_count(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_point_count_obj, 2, 2, mp_lv_chart_set_point_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_point_count_obj, 2, mp_lv_chart_set_point_count, lv_chart_set_point_count);
 
  
 
@@ -10354,7 +10432,7 @@ STATIC mp_obj_t mp_lv_chart_set_series_opa(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_series_opa_obj, 2, 2, mp_lv_chart_set_series_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_series_opa_obj, 2, mp_lv_chart_set_series_opa, lv_chart_set_series_opa);
 
  
 
@@ -10371,7 +10449,7 @@ STATIC mp_obj_t mp_lv_chart_set_series_width(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_series_width_obj, 2, 2, mp_lv_chart_set_series_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_series_width_obj, 2, mp_lv_chart_set_series_width, lv_chart_set_series_width);
 
  
 
@@ -10388,7 +10466,7 @@ STATIC mp_obj_t mp_lv_chart_set_series_darking(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_series_darking_obj, 2, 2, mp_lv_chart_set_series_darking);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_series_darking_obj, 2, mp_lv_chart_set_series_darking, lv_chart_set_series_darking);
 
  
 
@@ -10406,7 +10484,7 @@ STATIC mp_obj_t mp_lv_chart_init_points(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_init_points_obj, 3, 3, mp_lv_chart_init_points);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_init_points_obj, 3, mp_lv_chart_init_points, lv_chart_init_points);
 
  
 
@@ -10424,7 +10502,7 @@ STATIC mp_obj_t mp_lv_chart_set_points(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_points_obj, 3, 3, mp_lv_chart_set_points);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_points_obj, 3, mp_lv_chart_set_points, lv_chart_set_points);
 
  
 
@@ -10442,7 +10520,7 @@ STATIC mp_obj_t mp_lv_chart_set_next(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_next_obj, 3, 3, mp_lv_chart_set_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_next_obj, 3, mp_lv_chart_set_next, lv_chart_set_next);
 
  
 
@@ -10459,7 +10537,7 @@ STATIC mp_obj_t mp_lv_chart_set_update_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_update_mode_obj, 2, 2, mp_lv_chart_set_update_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_update_mode_obj, 2, mp_lv_chart_set_update_mode, lv_chart_set_update_mode);
 
  
 
@@ -10476,7 +10554,7 @@ STATIC mp_obj_t mp_lv_chart_set_margin(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_margin_obj, 2, 2, mp_lv_chart_set_margin);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_margin_obj, 2, mp_lv_chart_set_margin, lv_chart_set_margin);
 
  
 
@@ -10497,7 +10575,7 @@ STATIC mp_obj_t mp_lv_chart_set_x_ticks(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_x_ticks_obj, 6, 6, mp_lv_chart_set_x_ticks);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_x_ticks_obj, 6, mp_lv_chart_set_x_ticks, lv_chart_set_x_ticks);
 
  
 
@@ -10518,7 +10596,7 @@ STATIC mp_obj_t mp_lv_chart_set_y_ticks(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_set_y_ticks_obj, 6, 6, mp_lv_chart_set_y_ticks);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_y_ticks_obj, 6, mp_lv_chart_set_y_ticks, lv_chart_set_y_ticks);
 
  
 
@@ -10534,7 +10612,7 @@ STATIC mp_obj_t mp_lv_chart_get_type(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_type_obj, 1, 1, mp_lv_chart_get_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_type_obj, 1, mp_lv_chart_get_type, lv_chart_get_type);
 
  
 
@@ -10550,7 +10628,7 @@ STATIC mp_obj_t mp_lv_chart_get_point_cnt(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_point_cnt_obj, 1, 1, mp_lv_chart_get_point_cnt);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_point_cnt_obj, 1, mp_lv_chart_get_point_cnt, lv_chart_get_point_cnt);
 
  
 
@@ -10566,7 +10644,7 @@ STATIC mp_obj_t mp_lv_chart_get_series_opa(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_series_opa_obj, 1, 1, mp_lv_chart_get_series_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_series_opa_obj, 1, mp_lv_chart_get_series_opa, lv_chart_get_series_opa);
 
  
 
@@ -10582,7 +10660,7 @@ STATIC mp_obj_t mp_lv_chart_get_series_width(size_t n_args, const mp_obj_t *args
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_series_width_obj, 1, 1, mp_lv_chart_get_series_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_series_width_obj, 1, mp_lv_chart_get_series_width, lv_chart_get_series_width);
 
  
 
@@ -10598,7 +10676,7 @@ STATIC mp_obj_t mp_lv_chart_get_series_darking(size_t n_args, const mp_obj_t *ar
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_series_darking_obj, 1, 1, mp_lv_chart_get_series_darking);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_series_darking_obj, 1, mp_lv_chart_get_series_darking, lv_chart_get_series_darking);
 
  
 
@@ -10614,7 +10692,7 @@ STATIC mp_obj_t mp_lv_chart_get_margin(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_get_margin_obj, 1, 1, mp_lv_chart_get_margin);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_margin_obj, 1, mp_lv_chart_get_margin, lv_chart_get_margin);
 
  
 
@@ -10630,7 +10708,7 @@ STATIC mp_obj_t mp_lv_chart_refresh(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_chart_refresh_obj, 1, 1, mp_lv_chart_refresh);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_refresh_obj, 1, mp_lv_chart_refresh, lv_chart_refresh);
 
  
 
@@ -10707,6 +10785,7 @@ STATIC const mp_rom_map_elem_t chart_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -10789,7 +10868,7 @@ STATIC mp_obj_t mp_lv_table_set_cell_value(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_cell_value_obj, 4, 4, mp_lv_table_set_cell_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_cell_value_obj, 4, mp_lv_table_set_cell_value, lv_table_set_cell_value);
 
  
 
@@ -10806,7 +10885,7 @@ STATIC mp_obj_t mp_lv_table_set_row_cnt(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_row_cnt_obj, 2, 2, mp_lv_table_set_row_cnt);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_row_cnt_obj, 2, mp_lv_table_set_row_cnt, lv_table_set_row_cnt);
 
  
 
@@ -10823,7 +10902,7 @@ STATIC mp_obj_t mp_lv_table_set_col_cnt(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_col_cnt_obj, 2, 2, mp_lv_table_set_col_cnt);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_col_cnt_obj, 2, mp_lv_table_set_col_cnt, lv_table_set_col_cnt);
 
  
 
@@ -10841,7 +10920,7 @@ STATIC mp_obj_t mp_lv_table_set_col_width(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_col_width_obj, 3, 3, mp_lv_table_set_col_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_col_width_obj, 3, mp_lv_table_set_col_width, lv_table_set_col_width);
 
  
 
@@ -10860,7 +10939,7 @@ STATIC mp_obj_t mp_lv_table_set_cell_align(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_cell_align_obj, 4, 4, mp_lv_table_set_cell_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_cell_align_obj, 4, mp_lv_table_set_cell_align, lv_table_set_cell_align);
 
  
 
@@ -10879,7 +10958,7 @@ STATIC mp_obj_t mp_lv_table_set_cell_type(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_cell_type_obj, 4, 4, mp_lv_table_set_cell_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_cell_type_obj, 4, mp_lv_table_set_cell_type, lv_table_set_cell_type);
 
  
 
@@ -10898,7 +10977,7 @@ STATIC mp_obj_t mp_lv_table_set_cell_crop(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_cell_crop_obj, 4, 4, mp_lv_table_set_cell_crop);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_cell_crop_obj, 4, mp_lv_table_set_cell_crop, lv_table_set_cell_crop);
 
  
 
@@ -10917,7 +10996,7 @@ STATIC mp_obj_t mp_lv_table_set_cell_merge_right(size_t n_args, const mp_obj_t *
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_cell_merge_right_obj, 4, 4, mp_lv_table_set_cell_merge_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_cell_merge_right_obj, 4, mp_lv_table_set_cell_merge_right, lv_table_set_cell_merge_right);
 
  
 
@@ -10935,7 +11014,7 @@ STATIC mp_obj_t mp_lv_table_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_set_style_obj, 3, 3, mp_lv_table_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_set_style_obj, 3, mp_lv_table_set_style, lv_table_set_style);
 
  
 
@@ -10953,7 +11032,7 @@ STATIC mp_obj_t mp_lv_table_get_cell_value(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_cell_value_obj, 3, 3, mp_lv_table_get_cell_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_cell_value_obj, 3, mp_lv_table_get_cell_value, lv_table_get_cell_value);
 
  
 
@@ -10969,7 +11048,7 @@ STATIC mp_obj_t mp_lv_table_get_row_cnt(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_row_cnt_obj, 1, 1, mp_lv_table_get_row_cnt);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_row_cnt_obj, 1, mp_lv_table_get_row_cnt, lv_table_get_row_cnt);
 
  
 
@@ -10985,7 +11064,7 @@ STATIC mp_obj_t mp_lv_table_get_col_cnt(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_col_cnt_obj, 1, 1, mp_lv_table_get_col_cnt);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_col_cnt_obj, 1, mp_lv_table_get_col_cnt, lv_table_get_col_cnt);
 
  
 
@@ -11002,7 +11081,7 @@ STATIC mp_obj_t mp_lv_table_get_col_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_col_width_obj, 2, 2, mp_lv_table_get_col_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_col_width_obj, 2, mp_lv_table_get_col_width, lv_table_get_col_width);
 
  
 
@@ -11020,7 +11099,7 @@ STATIC mp_obj_t mp_lv_table_get_cell_align(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_cell_align_obj, 3, 3, mp_lv_table_get_cell_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_cell_align_obj, 3, mp_lv_table_get_cell_align, lv_table_get_cell_align);
 
  
 
@@ -11038,7 +11117,7 @@ STATIC mp_obj_t mp_lv_table_get_cell_type(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_cell_type_obj, 3, 3, mp_lv_table_get_cell_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_cell_type_obj, 3, mp_lv_table_get_cell_type, lv_table_get_cell_type);
 
  
 
@@ -11056,7 +11135,7 @@ STATIC mp_obj_t mp_lv_table_get_cell_crop(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_cell_crop_obj, 3, 3, mp_lv_table_get_cell_crop);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_cell_crop_obj, 3, mp_lv_table_get_cell_crop, lv_table_get_cell_crop);
 
  
 
@@ -11074,7 +11153,7 @@ STATIC mp_obj_t mp_lv_table_get_cell_merge_right(size_t n_args, const mp_obj_t *
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_cell_merge_right_obj, 3, 3, mp_lv_table_get_cell_merge_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_cell_merge_right_obj, 3, mp_lv_table_get_cell_merge_right, lv_table_get_cell_merge_right);
 
  
 
@@ -11091,7 +11170,7 @@ STATIC mp_obj_t mp_lv_table_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_table_get_style_obj, 2, 2, mp_lv_table_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_get_style_obj, 2, mp_lv_table_get_style, lv_table_get_style);
 
  
 
@@ -11161,6 +11240,7 @@ STATIC const mp_rom_map_elem_t table_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -11239,7 +11319,7 @@ STATIC mp_obj_t mp_lv_cb_set_checked(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_set_checked_obj, 2, 2, mp_lv_cb_set_checked);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_set_checked_obj, 2, mp_lv_cb_set_checked, lv_cb_set_checked);
 
  
 
@@ -11255,7 +11335,7 @@ STATIC mp_obj_t mp_lv_cb_set_inactive(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_set_inactive_obj, 1, 1, mp_lv_cb_set_inactive);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_set_inactive_obj, 1, mp_lv_cb_set_inactive, lv_cb_set_inactive);
 
  
 
@@ -11271,7 +11351,7 @@ STATIC mp_obj_t mp_lv_cb_is_checked(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_is_checked_obj, 1, 1, mp_lv_cb_is_checked);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_is_checked_obj, 1, mp_lv_cb_is_checked, lv_cb_is_checked);
 
  
 
@@ -11288,7 +11368,7 @@ STATIC mp_obj_t mp_lv_cb_set_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_set_text_obj, 2, 2, mp_lv_cb_set_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_set_text_obj, 2, mp_lv_cb_set_text, lv_cb_set_text);
 
  
 
@@ -11305,7 +11385,7 @@ STATIC mp_obj_t mp_lv_cb_set_static_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_set_static_text_obj, 2, 2, mp_lv_cb_set_static_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_set_static_text_obj, 2, mp_lv_cb_set_static_text, lv_cb_set_static_text);
 
  
 
@@ -11323,7 +11403,7 @@ STATIC mp_obj_t mp_lv_cb_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_set_style_obj, 3, 3, mp_lv_cb_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_set_style_obj, 3, mp_lv_cb_set_style, lv_cb_set_style);
 
  
 
@@ -11339,7 +11419,7 @@ STATIC mp_obj_t mp_lv_cb_get_text(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_get_text_obj, 1, 1, mp_lv_cb_get_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_get_text_obj, 1, mp_lv_cb_get_text, lv_cb_get_text);
 
  
 
@@ -11356,7 +11436,7 @@ STATIC mp_obj_t mp_lv_cb_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_cb_get_style_obj, 2, 2, mp_lv_cb_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_cb_get_style_obj, 2, mp_lv_cb_get_style, lv_cb_get_style);
 
  
 
@@ -11416,6 +11496,7 @@ STATIC const mp_rom_map_elem_t cb_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -11495,7 +11576,7 @@ STATIC mp_obj_t mp_lv_bar_set_value(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_set_value_obj, 3, 3, mp_lv_bar_set_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_set_value_obj, 3, mp_lv_bar_set_value, lv_bar_set_value);
 
  
 
@@ -11513,7 +11594,7 @@ STATIC mp_obj_t mp_lv_bar_set_range(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_set_range_obj, 3, 3, mp_lv_bar_set_range);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_set_range_obj, 3, mp_lv_bar_set_range, lv_bar_set_range);
 
  
 
@@ -11530,7 +11611,7 @@ STATIC mp_obj_t mp_lv_bar_set_sym(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_set_sym_obj, 2, 2, mp_lv_bar_set_sym);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_set_sym_obj, 2, mp_lv_bar_set_sym, lv_bar_set_sym);
 
  
 
@@ -11548,7 +11629,7 @@ STATIC mp_obj_t mp_lv_bar_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_set_style_obj, 3, 3, mp_lv_bar_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_set_style_obj, 3, mp_lv_bar_set_style, lv_bar_set_style);
 
  
 
@@ -11564,7 +11645,7 @@ STATIC mp_obj_t mp_lv_bar_get_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_get_value_obj, 1, 1, mp_lv_bar_get_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_get_value_obj, 1, mp_lv_bar_get_value, lv_bar_get_value);
 
  
 
@@ -11580,7 +11661,7 @@ STATIC mp_obj_t mp_lv_bar_get_min_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_get_min_value_obj, 1, 1, mp_lv_bar_get_min_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_get_min_value_obj, 1, mp_lv_bar_get_min_value, lv_bar_get_min_value);
 
  
 
@@ -11596,7 +11677,7 @@ STATIC mp_obj_t mp_lv_bar_get_max_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_get_max_value_obj, 1, 1, mp_lv_bar_get_max_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_get_max_value_obj, 1, mp_lv_bar_get_max_value, lv_bar_get_max_value);
 
  
 
@@ -11612,7 +11693,7 @@ STATIC mp_obj_t mp_lv_bar_get_sym(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_get_sym_obj, 1, 1, mp_lv_bar_get_sym);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_get_sym_obj, 1, mp_lv_bar_get_sym, lv_bar_get_sym);
 
  
 
@@ -11629,7 +11710,7 @@ STATIC mp_obj_t mp_lv_bar_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bar_get_style_obj, 2, 2, mp_lv_bar_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bar_get_style_obj, 2, mp_lv_bar_get_style, lv_bar_get_style);
 
  
 
@@ -11690,6 +11771,7 @@ STATIC const mp_rom_map_elem_t bar_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -11769,7 +11851,7 @@ STATIC mp_obj_t mp_lv_slider_set_value(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_set_value_obj, 3, 3, mp_lv_slider_set_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_set_value_obj, 3, mp_lv_slider_set_value, lv_slider_set_value);
 
  
 
@@ -11787,7 +11869,7 @@ STATIC mp_obj_t mp_lv_slider_set_range(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_set_range_obj, 3, 3, mp_lv_slider_set_range);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_set_range_obj, 3, mp_lv_slider_set_range, lv_slider_set_range);
 
  
 
@@ -11803,7 +11885,7 @@ STATIC mp_obj_t mp_lv_slider_get_min_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_get_min_value_obj, 1, 1, mp_lv_slider_get_min_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_get_min_value_obj, 1, mp_lv_slider_get_min_value, lv_slider_get_min_value);
 
  
 
@@ -11819,7 +11901,7 @@ STATIC mp_obj_t mp_lv_slider_get_max_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_get_max_value_obj, 1, 1, mp_lv_slider_get_max_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_get_max_value_obj, 1, mp_lv_slider_get_max_value, lv_slider_get_max_value);
 
  
 
@@ -11836,7 +11918,7 @@ STATIC mp_obj_t mp_lv_slider_set_knob_in(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_set_knob_in_obj, 2, 2, mp_lv_slider_set_knob_in);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_set_knob_in_obj, 2, mp_lv_slider_set_knob_in, lv_slider_set_knob_in);
 
  
 
@@ -11854,7 +11936,7 @@ STATIC mp_obj_t mp_lv_slider_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_set_style_obj, 3, 3, mp_lv_slider_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_set_style_obj, 3, mp_lv_slider_set_style, lv_slider_set_style);
 
  
 
@@ -11870,7 +11952,7 @@ STATIC mp_obj_t mp_lv_slider_get_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_get_value_obj, 1, 1, mp_lv_slider_get_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_get_value_obj, 1, mp_lv_slider_get_value, lv_slider_get_value);
 
  
 
@@ -11886,7 +11968,7 @@ STATIC mp_obj_t mp_lv_slider_is_dragged(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_is_dragged_obj, 1, 1, mp_lv_slider_is_dragged);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_is_dragged_obj, 1, mp_lv_slider_is_dragged, lv_slider_is_dragged);
 
  
 
@@ -11902,7 +11984,7 @@ STATIC mp_obj_t mp_lv_slider_get_knob_in(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_get_knob_in_obj, 1, 1, mp_lv_slider_get_knob_in);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_get_knob_in_obj, 1, mp_lv_slider_get_knob_in, lv_slider_get_knob_in);
 
  
 
@@ -11919,7 +12001,7 @@ STATIC mp_obj_t mp_lv_slider_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_slider_get_style_obj, 2, 2, mp_lv_slider_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_slider_get_style_obj, 2, mp_lv_slider_get_style, lv_slider_get_style);
 
  
 
@@ -11981,6 +12063,7 @@ STATIC const mp_rom_map_elem_t slider_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -12059,7 +12142,7 @@ STATIC mp_obj_t mp_lv_led_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_set_style_obj, 2, 2, mp_lv_led_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_set_style_obj, 2, mp_lv_led_set_style, lv_led_set_style);
 
  
 
@@ -12075,7 +12158,7 @@ STATIC mp_obj_t mp_lv_led_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_get_style_obj, 1, 1, mp_lv_led_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_get_style_obj, 1, mp_lv_led_get_style, lv_led_get_style);
 
  
 
@@ -12092,7 +12175,7 @@ STATIC mp_obj_t mp_lv_led_set_bright(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_set_bright_obj, 2, 2, mp_lv_led_set_bright);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_set_bright_obj, 2, mp_lv_led_set_bright, lv_led_set_bright);
 
  
 
@@ -12108,7 +12191,7 @@ STATIC mp_obj_t mp_lv_led_on(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_on_obj, 1, 1, mp_lv_led_on);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_on_obj, 1, mp_lv_led_on, lv_led_on);
 
  
 
@@ -12124,7 +12207,7 @@ STATIC mp_obj_t mp_lv_led_off(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_off_obj, 1, 1, mp_lv_led_off);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_off_obj, 1, mp_lv_led_off, lv_led_off);
 
  
 
@@ -12140,7 +12223,7 @@ STATIC mp_obj_t mp_lv_led_toggle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_toggle_obj, 1, 1, mp_lv_led_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_toggle_obj, 1, mp_lv_led_toggle, lv_led_toggle);
 
  
 
@@ -12156,7 +12239,7 @@ STATIC mp_obj_t mp_lv_led_get_bright(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_led_get_bright_obj, 1, 1, mp_lv_led_get_bright);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_get_bright_obj, 1, mp_lv_led_get_bright, lv_led_get_bright);
 
  
 
@@ -12215,6 +12298,7 @@ STATIC const mp_rom_map_elem_t led_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -12292,7 +12376,7 @@ STATIC mp_obj_t mp_lv_btnm_set_map(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_map_obj, 2, 2, mp_lv_btnm_set_map);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_map_obj, 2, mp_lv_btnm_set_map, lv_btnm_set_map);
 
  
 
@@ -12309,7 +12393,7 @@ STATIC mp_obj_t mp_lv_btnm_set_ctrl_map(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_ctrl_map_obj, 2, 2, mp_lv_btnm_set_ctrl_map);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_ctrl_map_obj, 2, mp_lv_btnm_set_ctrl_map, lv_btnm_set_ctrl_map);
 
  
 
@@ -12326,7 +12410,7 @@ STATIC mp_obj_t mp_lv_btnm_set_pressed(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_pressed_obj, 2, 2, mp_lv_btnm_set_pressed);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_pressed_obj, 2, mp_lv_btnm_set_pressed, lv_btnm_set_pressed);
 
  
 
@@ -12344,7 +12428,7 @@ STATIC mp_obj_t mp_lv_btnm_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_style_obj, 3, 3, mp_lv_btnm_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_style_obj, 3, mp_lv_btnm_set_style, lv_btnm_set_style);
 
  
 
@@ -12361,7 +12445,7 @@ STATIC mp_obj_t mp_lv_btnm_set_recolor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_recolor_obj, 2, 2, mp_lv_btnm_set_recolor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_recolor_obj, 2, mp_lv_btnm_set_recolor, lv_btnm_set_recolor);
 
  
 
@@ -12380,7 +12464,7 @@ STATIC mp_obj_t mp_lv_btnm_set_btn_ctrl(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_btn_ctrl_obj, 4, 4, mp_lv_btnm_set_btn_ctrl);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_btn_ctrl_obj, 4, mp_lv_btnm_set_btn_ctrl, lv_btnm_set_btn_ctrl);
 
  
 
@@ -12398,7 +12482,7 @@ STATIC mp_obj_t mp_lv_btnm_set_btn_ctrl_all(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_btn_ctrl_all_obj, 3, 3, mp_lv_btnm_set_btn_ctrl_all);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_btn_ctrl_all_obj, 3, mp_lv_btnm_set_btn_ctrl_all, lv_btnm_set_btn_ctrl_all);
 
  
 
@@ -12416,7 +12500,7 @@ STATIC mp_obj_t mp_lv_btnm_set_btn_width(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_btn_width_obj, 3, 3, mp_lv_btnm_set_btn_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_btn_width_obj, 3, mp_lv_btnm_set_btn_width, lv_btnm_set_btn_width);
 
  
 
@@ -12433,7 +12517,7 @@ STATIC mp_obj_t mp_lv_btnm_set_one_toggle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_set_one_toggle_obj, 2, 2, mp_lv_btnm_set_one_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_one_toggle_obj, 2, mp_lv_btnm_set_one_toggle, lv_btnm_set_one_toggle);
 
  
 
@@ -12456,7 +12540,7 @@ STATIC mp_obj_t mp_lv_btnm_get_recolor(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_recolor_obj, 1, 1, mp_lv_btnm_get_recolor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_recolor_obj, 1, mp_lv_btnm_get_recolor, lv_btnm_get_recolor);
 
  
 
@@ -12472,7 +12556,7 @@ STATIC mp_obj_t mp_lv_btnm_get_active_btn(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_active_btn_obj, 1, 1, mp_lv_btnm_get_active_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_active_btn_obj, 1, mp_lv_btnm_get_active_btn, lv_btnm_get_active_btn);
 
  
 
@@ -12488,7 +12572,7 @@ STATIC mp_obj_t mp_lv_btnm_get_active_btn_text(size_t n_args, const mp_obj_t *ar
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_active_btn_text_obj, 1, 1, mp_lv_btnm_get_active_btn_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_active_btn_text_obj, 1, mp_lv_btnm_get_active_btn_text, lv_btnm_get_active_btn_text);
 
  
 
@@ -12504,7 +12588,7 @@ STATIC mp_obj_t mp_lv_btnm_get_pressed_btn(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_pressed_btn_obj, 1, 1, mp_lv_btnm_get_pressed_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_pressed_btn_obj, 1, mp_lv_btnm_get_pressed_btn, lv_btnm_get_pressed_btn);
 
  
 
@@ -12521,7 +12605,7 @@ STATIC mp_obj_t mp_lv_btnm_get_btn_text(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_btn_text_obj, 2, 2, mp_lv_btnm_get_btn_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_btn_text_obj, 2, mp_lv_btnm_get_btn_text, lv_btnm_get_btn_text);
 
  
 
@@ -12539,7 +12623,7 @@ STATIC mp_obj_t mp_lv_btnm_get_btn_ctrl(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_btn_ctrl_obj, 3, 3, mp_lv_btnm_get_btn_ctrl);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_btn_ctrl_obj, 3, mp_lv_btnm_get_btn_ctrl, lv_btnm_get_btn_ctrl);
 
  
 
@@ -12556,7 +12640,7 @@ STATIC mp_obj_t mp_lv_btnm_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_style_obj, 2, 2, mp_lv_btnm_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_style_obj, 2, mp_lv_btnm_get_style, lv_btnm_get_style);
 
  
 
@@ -12572,7 +12656,7 @@ STATIC mp_obj_t mp_lv_btnm_get_one_toggle(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_btnm_get_one_toggle_obj, 1, 1, mp_lv_btnm_get_one_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_one_toggle_obj, 1, mp_lv_btnm_get_one_toggle, lv_btnm_get_one_toggle);
 
  
 
@@ -12641,6 +12725,7 @@ STATIC const mp_rom_map_elem_t btnm_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -12720,7 +12805,7 @@ STATIC mp_obj_t mp_lv_kb_set_map(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_set_map_obj, 2, 2, mp_lv_kb_set_map);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_map_obj, 2, mp_lv_kb_set_map, lv_kb_set_map);
 
  
 
@@ -12737,7 +12822,7 @@ STATIC mp_obj_t mp_lv_kb_set_ctrl_map(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_set_ctrl_map_obj, 2, 2, mp_lv_kb_set_ctrl_map);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_ctrl_map_obj, 2, mp_lv_kb_set_ctrl_map, lv_kb_set_ctrl_map);
 
  
 
@@ -12761,7 +12846,7 @@ STATIC mp_obj_t mp_lv_kb_set_ta(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_set_ta_obj, 2, 2, mp_lv_kb_set_ta);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_ta_obj, 2, mp_lv_kb_set_ta, lv_kb_set_ta);
 
  
 
@@ -12778,7 +12863,7 @@ STATIC mp_obj_t mp_lv_kb_set_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_set_mode_obj, 2, 2, mp_lv_kb_set_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_mode_obj, 2, mp_lv_kb_set_mode, lv_kb_set_mode);
 
  
 
@@ -12795,7 +12880,7 @@ STATIC mp_obj_t mp_lv_kb_set_cursor_manage(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_set_cursor_manage_obj, 2, 2, mp_lv_kb_set_cursor_manage);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_cursor_manage_obj, 2, mp_lv_kb_set_cursor_manage, lv_kb_set_cursor_manage);
 
  
 
@@ -12813,7 +12898,7 @@ STATIC mp_obj_t mp_lv_kb_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_set_style_obj, 3, 3, mp_lv_kb_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_style_obj, 3, mp_lv_kb_set_style, lv_kb_set_style);
 
  
 
@@ -12829,7 +12914,7 @@ STATIC mp_obj_t mp_lv_kb_get_ta(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_get_ta_obj, 1, 1, mp_lv_kb_get_ta);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_get_ta_obj, 1, mp_lv_kb_get_ta, lv_kb_get_ta);
 
  
 
@@ -12845,7 +12930,7 @@ STATIC mp_obj_t mp_lv_kb_get_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_get_mode_obj, 1, 1, mp_lv_kb_get_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_get_mode_obj, 1, mp_lv_kb_get_mode, lv_kb_get_mode);
 
  
 
@@ -12861,7 +12946,7 @@ STATIC mp_obj_t mp_lv_kb_get_cursor_manage(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_get_cursor_manage_obj, 1, 1, mp_lv_kb_get_cursor_manage);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_get_cursor_manage_obj, 1, mp_lv_kb_get_cursor_manage, lv_kb_get_cursor_manage);
 
  
 
@@ -12878,7 +12963,7 @@ STATIC mp_obj_t mp_lv_kb_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_get_style_obj, 2, 2, mp_lv_kb_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_get_style_obj, 2, mp_lv_kb_get_style, lv_kb_get_style);
 
  
 
@@ -12895,7 +12980,7 @@ STATIC mp_obj_t mp_lv_kb_def_event_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_kb_def_event_cb_obj, 2, 2, mp_lv_kb_def_event_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_def_event_cb_obj, 2, mp_lv_kb_def_event_cb, lv_kb_def_event_cb);
 
  
 
@@ -12958,6 +13043,7 @@ STATIC const mp_rom_map_elem_t kb_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -13037,7 +13123,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_sb_mode_obj, 2, 2, mp_lv_ddlist_set_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_sb_mode_obj, 2, mp_lv_ddlist_set_sb_mode, lv_ddlist_set_sb_mode);
 
  
 
@@ -13053,7 +13139,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_sb_mode_obj, 1, 1, mp_lv_ddlist_get_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_sb_mode_obj, 1, mp_lv_ddlist_get_sb_mode, lv_ddlist_get_sb_mode);
 
  
 
@@ -13070,7 +13156,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_options(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_options_obj, 2, 2, mp_lv_ddlist_set_options);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_options_obj, 2, mp_lv_ddlist_set_options, lv_ddlist_set_options);
 
  
 
@@ -13087,7 +13173,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_selected(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_selected_obj, 2, 2, mp_lv_ddlist_set_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_selected_obj, 2, mp_lv_ddlist_set_selected, lv_ddlist_set_selected);
 
  
 
@@ -13104,7 +13190,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_fix_height(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_fix_height_obj, 2, 2, mp_lv_ddlist_set_fix_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_fix_height_obj, 2, mp_lv_ddlist_set_fix_height, lv_ddlist_set_fix_height);
 
  
 
@@ -13121,7 +13207,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_hor_fit(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_hor_fit_obj, 2, 2, mp_lv_ddlist_set_hor_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_hor_fit_obj, 2, mp_lv_ddlist_set_hor_fit, lv_ddlist_set_hor_fit);
 
  
 
@@ -13138,7 +13224,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_draw_arrow(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_draw_arrow_obj, 2, 2, mp_lv_ddlist_set_draw_arrow);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_draw_arrow_obj, 2, mp_lv_ddlist_set_draw_arrow, lv_ddlist_set_draw_arrow);
 
  
 
@@ -13155,7 +13241,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_stay_open(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_stay_open_obj, 2, 2, mp_lv_ddlist_set_stay_open);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_stay_open_obj, 2, mp_lv_ddlist_set_stay_open, lv_ddlist_set_stay_open);
 
  
 
@@ -13172,7 +13258,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_anim_time_obj, 2, 2, mp_lv_ddlist_set_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_anim_time_obj, 2, mp_lv_ddlist_set_anim_time, lv_ddlist_set_anim_time);
 
  
 
@@ -13190,7 +13276,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_style_obj, 3, 3, mp_lv_ddlist_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_style_obj, 3, mp_lv_ddlist_set_style, lv_ddlist_set_style);
 
  
 
@@ -13207,7 +13293,7 @@ STATIC mp_obj_t mp_lv_ddlist_set_align(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_set_align_obj, 2, 2, mp_lv_ddlist_set_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_set_align_obj, 2, mp_lv_ddlist_set_align, lv_ddlist_set_align);
 
  
 
@@ -13223,7 +13309,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_options(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_options_obj, 1, 1, mp_lv_ddlist_get_options);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_options_obj, 1, mp_lv_ddlist_get_options, lv_ddlist_get_options);
 
  
 
@@ -13239,7 +13325,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_selected(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_selected_obj, 1, 1, mp_lv_ddlist_get_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_selected_obj, 1, mp_lv_ddlist_get_selected, lv_ddlist_get_selected);
 
  
 
@@ -13257,7 +13343,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_selected_str(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_selected_str_obj, 3, 3, mp_lv_ddlist_get_selected_str);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_selected_str_obj, 3, mp_lv_ddlist_get_selected_str, lv_ddlist_get_selected_str);
 
  
 
@@ -13273,7 +13359,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_fix_height(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_fix_height_obj, 1, 1, mp_lv_ddlist_get_fix_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_fix_height_obj, 1, mp_lv_ddlist_get_fix_height, lv_ddlist_get_fix_height);
 
  
 
@@ -13289,7 +13375,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_draw_arrow(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_draw_arrow_obj, 1, 1, mp_lv_ddlist_get_draw_arrow);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_draw_arrow_obj, 1, mp_lv_ddlist_get_draw_arrow, lv_ddlist_get_draw_arrow);
 
  
 
@@ -13305,7 +13391,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_stay_open(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_stay_open_obj, 1, 1, mp_lv_ddlist_get_stay_open);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_stay_open_obj, 1, mp_lv_ddlist_get_stay_open, lv_ddlist_get_stay_open);
 
  
 
@@ -13321,7 +13407,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_anim_time_obj, 1, 1, mp_lv_ddlist_get_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_anim_time_obj, 1, mp_lv_ddlist_get_anim_time, lv_ddlist_get_anim_time);
 
  
 
@@ -13338,7 +13424,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_style_obj, 2, 2, mp_lv_ddlist_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_style_obj, 2, mp_lv_ddlist_get_style, lv_ddlist_get_style);
 
  
 
@@ -13354,7 +13440,7 @@ STATIC mp_obj_t mp_lv_ddlist_get_align(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_get_align_obj, 1, 1, mp_lv_ddlist_get_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_get_align_obj, 1, mp_lv_ddlist_get_align, lv_ddlist_get_align);
 
  
 
@@ -13371,7 +13457,7 @@ STATIC mp_obj_t mp_lv_ddlist_open(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_open_obj, 2, 2, mp_lv_ddlist_open);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_open_obj, 2, mp_lv_ddlist_open, lv_ddlist_open);
 
  
 
@@ -13388,7 +13474,7 @@ STATIC mp_obj_t mp_lv_ddlist_close(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ddlist_close_obj, 2, 2, mp_lv_ddlist_close);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ddlist_close_obj, 2, mp_lv_ddlist_close, lv_ddlist_close);
 
  
 
@@ -13462,6 +13548,7 @@ STATIC const mp_rom_map_elem_t ddlist_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -13540,7 +13627,7 @@ STATIC mp_obj_t mp_lv_roller_set_hor_fit(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_hor_fit_obj, 2, 2, mp_lv_roller_set_hor_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_hor_fit_obj, 2, mp_lv_roller_set_hor_fit, lv_roller_set_hor_fit);
 
  
 
@@ -13557,7 +13644,7 @@ STATIC mp_obj_t mp_lv_roller_set_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_anim_time_obj, 2, 2, mp_lv_roller_set_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_anim_time_obj, 2, mp_lv_roller_set_anim_time, lv_roller_set_anim_time);
 
  
 
@@ -13575,7 +13662,7 @@ STATIC mp_obj_t mp_lv_roller_get_selected_str(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_selected_str_obj, 3, 3, mp_lv_roller_get_selected_str);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_selected_str_obj, 3, mp_lv_roller_get_selected_str, lv_roller_get_selected_str);
 
  
 
@@ -13591,7 +13678,7 @@ STATIC mp_obj_t mp_lv_roller_get_options(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_options_obj, 1, 1, mp_lv_roller_get_options);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_options_obj, 1, mp_lv_roller_get_options, lv_roller_get_options);
 
  
 
@@ -13607,7 +13694,7 @@ STATIC mp_obj_t mp_lv_roller_get_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_anim_time_obj, 1, 1, mp_lv_roller_get_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_anim_time_obj, 1, mp_lv_roller_get_anim_time, lv_roller_get_anim_time);
 
  
 
@@ -13625,7 +13712,7 @@ STATIC mp_obj_t mp_lv_roller_set_options(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_options_obj, 3, 3, mp_lv_roller_set_options);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_options_obj, 3, mp_lv_roller_set_options, lv_roller_set_options);
 
  
 
@@ -13642,7 +13729,7 @@ STATIC mp_obj_t mp_lv_roller_set_align(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_align_obj, 2, 2, mp_lv_roller_set_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_align_obj, 2, mp_lv_roller_set_align, lv_roller_set_align);
 
  
 
@@ -13660,7 +13747,7 @@ STATIC mp_obj_t mp_lv_roller_set_selected(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_selected_obj, 3, 3, mp_lv_roller_set_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_selected_obj, 3, mp_lv_roller_set_selected, lv_roller_set_selected);
 
  
 
@@ -13677,7 +13764,7 @@ STATIC mp_obj_t mp_lv_roller_set_visible_row_count(size_t n_args, const mp_obj_t
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_visible_row_count_obj, 2, 2, mp_lv_roller_set_visible_row_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_visible_row_count_obj, 2, mp_lv_roller_set_visible_row_count, lv_roller_set_visible_row_count);
 
  
 
@@ -13695,7 +13782,7 @@ STATIC mp_obj_t mp_lv_roller_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_set_style_obj, 3, 3, mp_lv_roller_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_set_style_obj, 3, mp_lv_roller_set_style, lv_roller_set_style);
 
  
 
@@ -13711,7 +13798,7 @@ STATIC mp_obj_t mp_lv_roller_get_selected(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_selected_obj, 1, 1, mp_lv_roller_get_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_selected_obj, 1, mp_lv_roller_get_selected, lv_roller_get_selected);
 
  
 
@@ -13727,7 +13814,7 @@ STATIC mp_obj_t mp_lv_roller_get_align(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_align_obj, 1, 1, mp_lv_roller_get_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_align_obj, 1, mp_lv_roller_get_align, lv_roller_get_align);
 
  
 
@@ -13743,7 +13830,7 @@ STATIC mp_obj_t mp_lv_roller_get_hor_fit(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_hor_fit_obj, 1, 1, mp_lv_roller_get_hor_fit);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_hor_fit_obj, 1, mp_lv_roller_get_hor_fit, lv_roller_get_hor_fit);
 
  
 
@@ -13760,7 +13847,7 @@ STATIC mp_obj_t mp_lv_roller_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_roller_get_style_obj, 2, 2, mp_lv_roller_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_roller_get_style_obj, 2, mp_lv_roller_get_style, lv_roller_get_style);
 
  
 
@@ -13826,6 +13913,7 @@ STATIC const mp_rom_map_elem_t roller_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -13904,7 +13992,7 @@ STATIC mp_obj_t mp_lv_ta_set_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_sb_mode_obj, 2, 2, mp_lv_ta_set_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_sb_mode_obj, 2, mp_lv_ta_set_sb_mode, lv_ta_set_sb_mode);
 
  
 
@@ -13921,7 +14009,7 @@ STATIC mp_obj_t mp_lv_ta_set_scroll_propagation(size_t n_args, const mp_obj_t *a
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_scroll_propagation_obj, 2, 2, mp_lv_ta_set_scroll_propagation);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_scroll_propagation_obj, 2, mp_lv_ta_set_scroll_propagation, lv_ta_set_scroll_propagation);
 
  
 
@@ -13938,7 +14026,7 @@ STATIC mp_obj_t mp_lv_ta_set_edge_flash(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_edge_flash_obj, 2, 2, mp_lv_ta_set_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_edge_flash_obj, 2, mp_lv_ta_set_edge_flash, lv_ta_set_edge_flash);
 
  
 
@@ -13954,7 +14042,7 @@ STATIC mp_obj_t mp_lv_ta_get_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_sb_mode_obj, 1, 1, mp_lv_ta_get_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_sb_mode_obj, 1, mp_lv_ta_get_sb_mode, lv_ta_get_sb_mode);
 
  
 
@@ -13970,7 +14058,7 @@ STATIC mp_obj_t mp_lv_ta_get_scroll_propagation(size_t n_args, const mp_obj_t *a
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_scroll_propagation_obj, 1, 1, mp_lv_ta_get_scroll_propagation);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_scroll_propagation_obj, 1, mp_lv_ta_get_scroll_propagation, lv_ta_get_scroll_propagation);
 
  
 
@@ -13986,7 +14074,7 @@ STATIC mp_obj_t mp_lv_ta_get_edge_flash(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_edge_flash_obj, 1, 1, mp_lv_ta_get_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_edge_flash_obj, 1, mp_lv_ta_get_edge_flash, lv_ta_get_edge_flash);
 
  
 
@@ -14003,7 +14091,7 @@ STATIC mp_obj_t mp_lv_ta_add_char(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_add_char_obj, 2, 2, mp_lv_ta_add_char);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_add_char_obj, 2, mp_lv_ta_add_char, lv_ta_add_char);
 
  
 
@@ -14020,7 +14108,7 @@ STATIC mp_obj_t mp_lv_ta_add_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_add_text_obj, 2, 2, mp_lv_ta_add_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_add_text_obj, 2, mp_lv_ta_add_text, lv_ta_add_text);
 
  
 
@@ -14036,7 +14124,7 @@ STATIC mp_obj_t mp_lv_ta_del_char(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_del_char_obj, 1, 1, mp_lv_ta_del_char);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_del_char_obj, 1, mp_lv_ta_del_char, lv_ta_del_char);
 
  
 
@@ -14052,7 +14140,7 @@ STATIC mp_obj_t mp_lv_ta_del_char_forward(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_del_char_forward_obj, 1, 1, mp_lv_ta_del_char_forward);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_del_char_forward_obj, 1, mp_lv_ta_del_char_forward, lv_ta_del_char_forward);
 
  
 
@@ -14069,7 +14157,7 @@ STATIC mp_obj_t mp_lv_ta_set_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_text_obj, 2, 2, mp_lv_ta_set_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_text_obj, 2, mp_lv_ta_set_text, lv_ta_set_text);
 
  
 
@@ -14086,7 +14174,7 @@ STATIC mp_obj_t mp_lv_ta_set_placeholder_text(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_placeholder_text_obj, 2, 2, mp_lv_ta_set_placeholder_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_placeholder_text_obj, 2, mp_lv_ta_set_placeholder_text, lv_ta_set_placeholder_text);
 
  
 
@@ -14103,7 +14191,7 @@ STATIC mp_obj_t mp_lv_ta_set_cursor_pos(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_cursor_pos_obj, 2, 2, mp_lv_ta_set_cursor_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_cursor_pos_obj, 2, mp_lv_ta_set_cursor_pos, lv_ta_set_cursor_pos);
 
  
 
@@ -14120,7 +14208,7 @@ STATIC mp_obj_t mp_lv_ta_set_cursor_type(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_cursor_type_obj, 2, 2, mp_lv_ta_set_cursor_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_cursor_type_obj, 2, mp_lv_ta_set_cursor_type, lv_ta_set_cursor_type);
 
  
 
@@ -14137,7 +14225,7 @@ STATIC mp_obj_t mp_lv_ta_set_pwd_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_pwd_mode_obj, 2, 2, mp_lv_ta_set_pwd_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_pwd_mode_obj, 2, mp_lv_ta_set_pwd_mode, lv_ta_set_pwd_mode);
 
  
 
@@ -14154,7 +14242,7 @@ STATIC mp_obj_t mp_lv_ta_set_one_line(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_one_line_obj, 2, 2, mp_lv_ta_set_one_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_one_line_obj, 2, mp_lv_ta_set_one_line, lv_ta_set_one_line);
 
  
 
@@ -14171,7 +14259,7 @@ STATIC mp_obj_t mp_lv_ta_set_text_align(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_text_align_obj, 2, 2, mp_lv_ta_set_text_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_text_align_obj, 2, mp_lv_ta_set_text_align, lv_ta_set_text_align);
 
  
 
@@ -14188,7 +14276,7 @@ STATIC mp_obj_t mp_lv_ta_set_accepted_chars(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_accepted_chars_obj, 2, 2, mp_lv_ta_set_accepted_chars);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_accepted_chars_obj, 2, mp_lv_ta_set_accepted_chars, lv_ta_set_accepted_chars);
 
  
 
@@ -14205,7 +14293,7 @@ STATIC mp_obj_t mp_lv_ta_set_max_length(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_max_length_obj, 2, 2, mp_lv_ta_set_max_length);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_max_length_obj, 2, mp_lv_ta_set_max_length, lv_ta_set_max_length);
 
  
 
@@ -14222,7 +14310,7 @@ STATIC mp_obj_t mp_lv_ta_set_insert_replace(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_insert_replace_obj, 2, 2, mp_lv_ta_set_insert_replace);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_insert_replace_obj, 2, mp_lv_ta_set_insert_replace, lv_ta_set_insert_replace);
 
  
 
@@ -14240,7 +14328,7 @@ STATIC mp_obj_t mp_lv_ta_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_style_obj, 3, 3, mp_lv_ta_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_style_obj, 3, mp_lv_ta_set_style, lv_ta_set_style);
 
  
 
@@ -14257,7 +14345,7 @@ STATIC mp_obj_t mp_lv_ta_set_text_sel(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_set_text_sel_obj, 2, 2, mp_lv_ta_set_text_sel);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_set_text_sel_obj, 2, mp_lv_ta_set_text_sel, lv_ta_set_text_sel);
 
  
 
@@ -14273,7 +14361,7 @@ STATIC mp_obj_t mp_lv_ta_get_text(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_text_obj, 1, 1, mp_lv_ta_get_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_text_obj, 1, mp_lv_ta_get_text, lv_ta_get_text);
 
  
 
@@ -14289,7 +14377,7 @@ STATIC mp_obj_t mp_lv_ta_get_placeholder_text(size_t n_args, const mp_obj_t *arg
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_placeholder_text_obj, 1, 1, mp_lv_ta_get_placeholder_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_placeholder_text_obj, 1, mp_lv_ta_get_placeholder_text, lv_ta_get_placeholder_text);
 
  
 
@@ -14305,7 +14393,7 @@ STATIC mp_obj_t mp_lv_ta_get_label(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_label_obj, 1, 1, mp_lv_ta_get_label);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_label_obj, 1, mp_lv_ta_get_label, lv_ta_get_label);
 
  
 
@@ -14321,7 +14409,7 @@ STATIC mp_obj_t mp_lv_ta_get_cursor_pos(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_cursor_pos_obj, 1, 1, mp_lv_ta_get_cursor_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_cursor_pos_obj, 1, mp_lv_ta_get_cursor_pos, lv_ta_get_cursor_pos);
 
  
 
@@ -14337,7 +14425,7 @@ STATIC mp_obj_t mp_lv_ta_get_cursor_type(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_cursor_type_obj, 1, 1, mp_lv_ta_get_cursor_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_cursor_type_obj, 1, mp_lv_ta_get_cursor_type, lv_ta_get_cursor_type);
 
  
 
@@ -14353,7 +14441,7 @@ STATIC mp_obj_t mp_lv_ta_get_pwd_mode(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_pwd_mode_obj, 1, 1, mp_lv_ta_get_pwd_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_pwd_mode_obj, 1, mp_lv_ta_get_pwd_mode, lv_ta_get_pwd_mode);
 
  
 
@@ -14369,7 +14457,7 @@ STATIC mp_obj_t mp_lv_ta_get_one_line(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_one_line_obj, 1, 1, mp_lv_ta_get_one_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_one_line_obj, 1, mp_lv_ta_get_one_line, lv_ta_get_one_line);
 
  
 
@@ -14385,7 +14473,7 @@ STATIC mp_obj_t mp_lv_ta_get_accepted_chars(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_accepted_chars_obj, 1, 1, mp_lv_ta_get_accepted_chars);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_accepted_chars_obj, 1, mp_lv_ta_get_accepted_chars, lv_ta_get_accepted_chars);
 
  
 
@@ -14401,7 +14489,7 @@ STATIC mp_obj_t mp_lv_ta_get_max_length(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_max_length_obj, 1, 1, mp_lv_ta_get_max_length);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_max_length_obj, 1, mp_lv_ta_get_max_length, lv_ta_get_max_length);
 
  
 
@@ -14418,7 +14506,7 @@ STATIC mp_obj_t mp_lv_ta_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_style_obj, 2, 2, mp_lv_ta_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_style_obj, 2, mp_lv_ta_get_style, lv_ta_get_style);
 
  
 
@@ -14434,7 +14522,7 @@ STATIC mp_obj_t mp_lv_ta_text_is_selected(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_text_is_selected_obj, 1, 1, mp_lv_ta_text_is_selected);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_text_is_selected_obj, 1, mp_lv_ta_text_is_selected, lv_ta_text_is_selected);
 
  
 
@@ -14450,7 +14538,7 @@ STATIC mp_obj_t mp_lv_ta_get_text_sel_en(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_get_text_sel_en_obj, 1, 1, mp_lv_ta_get_text_sel_en);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_get_text_sel_en_obj, 1, mp_lv_ta_get_text_sel_en, lv_ta_get_text_sel_en);
 
  
 
@@ -14466,7 +14554,7 @@ STATIC mp_obj_t mp_lv_ta_clear_selection(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_clear_selection_obj, 1, 1, mp_lv_ta_clear_selection);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_clear_selection_obj, 1, mp_lv_ta_clear_selection, lv_ta_clear_selection);
 
  
 
@@ -14482,7 +14570,7 @@ STATIC mp_obj_t mp_lv_ta_cursor_right(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_cursor_right_obj, 1, 1, mp_lv_ta_cursor_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_cursor_right_obj, 1, mp_lv_ta_cursor_right, lv_ta_cursor_right);
 
  
 
@@ -14498,7 +14586,7 @@ STATIC mp_obj_t mp_lv_ta_cursor_left(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_cursor_left_obj, 1, 1, mp_lv_ta_cursor_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_cursor_left_obj, 1, mp_lv_ta_cursor_left, lv_ta_cursor_left);
 
  
 
@@ -14514,7 +14602,7 @@ STATIC mp_obj_t mp_lv_ta_cursor_down(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_cursor_down_obj, 1, 1, mp_lv_ta_cursor_down);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_cursor_down_obj, 1, mp_lv_ta_cursor_down, lv_ta_cursor_down);
 
  
 
@@ -14530,7 +14618,7 @@ STATIC mp_obj_t mp_lv_ta_cursor_up(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ta_cursor_up_obj, 1, 1, mp_lv_ta_cursor_up);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ta_cursor_up_obj, 1, mp_lv_ta_cursor_up, lv_ta_cursor_up);
 
  
 
@@ -14621,6 +14709,7 @@ STATIC const mp_rom_map_elem_t ta_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -14702,7 +14791,7 @@ STATIC mp_obj_t mp_lv_canvas_set_buffer(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_set_buffer_obj, 5, 5, mp_lv_canvas_set_buffer);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_buffer_obj, 5, mp_lv_canvas_set_buffer, lv_canvas_set_buffer);
 
  
 
@@ -14721,7 +14810,7 @@ STATIC mp_obj_t mp_lv_canvas_set_px(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_set_px_obj, 4, 4, mp_lv_canvas_set_px);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_px_obj, 4, mp_lv_canvas_set_px, lv_canvas_set_px);
 
  
 
@@ -14739,7 +14828,7 @@ STATIC mp_obj_t mp_lv_canvas_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_set_style_obj, 3, 3, mp_lv_canvas_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_style_obj, 3, mp_lv_canvas_set_style, lv_canvas_set_style);
 
  
 
@@ -14757,7 +14846,7 @@ STATIC mp_obj_t mp_lv_canvas_get_px(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_get_px_obj, 3, 3, mp_lv_canvas_get_px);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_px_obj, 3, mp_lv_canvas_get_px, lv_canvas_get_px);
 
  
 
@@ -14773,7 +14862,7 @@ STATIC mp_obj_t mp_lv_canvas_get_img(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_img_dsc_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_get_img_obj, 1, 1, mp_lv_canvas_get_img);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_img_obj, 1, mp_lv_canvas_get_img, lv_canvas_get_img);
 
  
 
@@ -14790,7 +14879,7 @@ STATIC mp_obj_t mp_lv_canvas_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_get_style_obj, 2, 2, mp_lv_canvas_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_style_obj, 2, mp_lv_canvas_get_style, lv_canvas_get_style);
 
  
 
@@ -14811,7 +14900,7 @@ STATIC mp_obj_t mp_lv_canvas_copy_buf(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_copy_buf_obj, 6, 6, mp_lv_canvas_copy_buf);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_copy_buf_obj, 6, mp_lv_canvas_copy_buf, lv_canvas_copy_buf);
 
  
 
@@ -14832,7 +14921,7 @@ STATIC mp_obj_t mp_lv_canvas_mult_buf(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_mult_buf_obj, 6, 6, mp_lv_canvas_mult_buf);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_mult_buf_obj, 6, mp_lv_canvas_mult_buf, lv_canvas_mult_buf);
 
  
 
@@ -14854,7 +14943,7 @@ STATIC mp_obj_t mp_lv_canvas_rotate(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_rotate_obj, 7, 7, mp_lv_canvas_rotate);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_rotate_obj, 7, mp_lv_canvas_rotate, lv_canvas_rotate);
 
  
 
@@ -14874,7 +14963,7 @@ STATIC mp_obj_t mp_lv_canvas_draw_circle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_draw_circle_obj, 5, 5, mp_lv_canvas_draw_circle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_circle_obj, 5, mp_lv_canvas_draw_circle, lv_canvas_draw_circle);
 
  
 
@@ -14893,7 +14982,7 @@ STATIC mp_obj_t mp_lv_canvas_draw_line(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_draw_line_obj, 4, 4, mp_lv_canvas_draw_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_line_obj, 4, mp_lv_canvas_draw_line, lv_canvas_draw_line);
 
  
 
@@ -14911,7 +15000,7 @@ STATIC mp_obj_t mp_lv_canvas_draw_triangle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_draw_triangle_obj, 3, 3, mp_lv_canvas_draw_triangle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_triangle_obj, 3, mp_lv_canvas_draw_triangle, lv_canvas_draw_triangle);
 
  
 
@@ -14929,7 +15018,7 @@ STATIC mp_obj_t mp_lv_canvas_draw_rect(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_draw_rect_obj, 3, 3, mp_lv_canvas_draw_rect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_rect_obj, 3, mp_lv_canvas_draw_rect, lv_canvas_draw_rect);
 
  
 
@@ -14948,7 +15037,7 @@ STATIC mp_obj_t mp_lv_canvas_draw_polygon(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_draw_polygon_obj, 4, 4, mp_lv_canvas_draw_polygon);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_polygon_obj, 4, mp_lv_canvas_draw_polygon, lv_canvas_draw_polygon);
 
  
 
@@ -14968,7 +15057,7 @@ STATIC mp_obj_t mp_lv_canvas_fill_polygon(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_fill_polygon_obj, 5, 5, mp_lv_canvas_fill_polygon);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_fill_polygon_obj, 5, mp_lv_canvas_fill_polygon, lv_canvas_fill_polygon);
 
  
 
@@ -14988,7 +15077,7 @@ STATIC mp_obj_t mp_lv_canvas_boundary_fill4(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_boundary_fill4_obj, 5, 5, mp_lv_canvas_boundary_fill4);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_boundary_fill4_obj, 5, mp_lv_canvas_boundary_fill4, lv_canvas_boundary_fill4);
 
  
 
@@ -15008,7 +15097,7 @@ STATIC mp_obj_t mp_lv_canvas_flood_fill(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_canvas_flood_fill_obj, 5, 5, mp_lv_canvas_flood_fill);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_flood_fill_obj, 5, mp_lv_canvas_flood_fill, lv_canvas_flood_fill);
 
  
 
@@ -15077,6 +15166,7 @@ STATIC const mp_rom_map_elem_t canvas_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -15154,7 +15244,7 @@ STATIC mp_obj_t mp_lv_win_get_drag(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_drag_obj, 1, 1, mp_lv_win_get_drag);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_drag_obj, 1, mp_lv_win_get_drag, lv_win_get_drag);
 
  
 
@@ -15171,7 +15261,7 @@ STATIC mp_obj_t mp_lv_win_scroll_hor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_scroll_hor_obj, 2, 2, mp_lv_win_scroll_hor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_scroll_hor_obj, 2, mp_lv_win_scroll_hor, lv_win_scroll_hor);
 
  
 
@@ -15188,7 +15278,7 @@ STATIC mp_obj_t mp_lv_win_scroll_ver(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_scroll_ver_obj, 2, 2, mp_lv_win_scroll_ver);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_scroll_ver_obj, 2, mp_lv_win_scroll_ver, lv_win_scroll_ver);
 
  
 
@@ -15204,7 +15294,7 @@ STATIC mp_obj_t mp_lv_win_clean(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_clean_obj, 1, 1, mp_lv_win_clean);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_clean_obj, 1, mp_lv_win_clean, lv_win_clean);
 
  
 
@@ -15222,7 +15312,7 @@ STATIC mp_obj_t mp_lv_win_add_btn(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_add_btn_obj, 3, 3, mp_lv_win_add_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_add_btn_obj, 3, mp_lv_win_add_btn, lv_win_add_btn);
 
  
 
@@ -15239,7 +15329,7 @@ STATIC mp_obj_t mp_lv_win_close_event(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_close_event_obj, 2, 2, mp_lv_win_close_event);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_close_event_obj, 2, mp_lv_win_close_event, lv_win_close_event);
 
  
 
@@ -15256,7 +15346,7 @@ STATIC mp_obj_t mp_lv_win_set_title(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_set_title_obj, 2, 2, mp_lv_win_set_title);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_set_title_obj, 2, mp_lv_win_set_title, lv_win_set_title);
 
  
 
@@ -15273,7 +15363,7 @@ STATIC mp_obj_t mp_lv_win_set_btn_size(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_set_btn_size_obj, 2, 2, mp_lv_win_set_btn_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_set_btn_size_obj, 2, mp_lv_win_set_btn_size, lv_win_set_btn_size);
 
  
 
@@ -15290,7 +15380,7 @@ STATIC mp_obj_t mp_lv_win_set_layout(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_set_layout_obj, 2, 2, mp_lv_win_set_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_set_layout_obj, 2, mp_lv_win_set_layout, lv_win_set_layout);
 
  
 
@@ -15307,7 +15397,7 @@ STATIC mp_obj_t mp_lv_win_set_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_set_sb_mode_obj, 2, 2, mp_lv_win_set_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_set_sb_mode_obj, 2, mp_lv_win_set_sb_mode, lv_win_set_sb_mode);
 
  
 
@@ -15325,7 +15415,7 @@ STATIC mp_obj_t mp_lv_win_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_set_style_obj, 3, 3, mp_lv_win_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_set_style_obj, 3, mp_lv_win_set_style, lv_win_set_style);
 
  
 
@@ -15342,7 +15432,7 @@ STATIC mp_obj_t mp_lv_win_set_drag(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_set_drag_obj, 2, 2, mp_lv_win_set_drag);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_set_drag_obj, 2, mp_lv_win_set_drag, lv_win_set_drag);
 
  
 
@@ -15358,7 +15448,7 @@ STATIC mp_obj_t mp_lv_win_get_title(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_title_obj, 1, 1, mp_lv_win_get_title);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_title_obj, 1, mp_lv_win_get_title, lv_win_get_title);
 
  
 
@@ -15374,7 +15464,7 @@ STATIC mp_obj_t mp_lv_win_get_content(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_content_obj, 1, 1, mp_lv_win_get_content);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_content_obj, 1, mp_lv_win_get_content, lv_win_get_content);
 
  
 
@@ -15390,7 +15480,7 @@ STATIC mp_obj_t mp_lv_win_get_btn_size(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_btn_size_obj, 1, 1, mp_lv_win_get_btn_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_btn_size_obj, 1, mp_lv_win_get_btn_size, lv_win_get_btn_size);
 
  
 
@@ -15406,7 +15496,7 @@ STATIC mp_obj_t mp_lv_win_get_from_btn(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_from_btn_obj, 1, 1, mp_lv_win_get_from_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_from_btn_obj, 1, mp_lv_win_get_from_btn, lv_win_get_from_btn);
 
  
 
@@ -15422,7 +15512,7 @@ STATIC mp_obj_t mp_lv_win_get_layout(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_layout_obj, 1, 1, mp_lv_win_get_layout);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_layout_obj, 1, mp_lv_win_get_layout, lv_win_get_layout);
 
  
 
@@ -15438,7 +15528,7 @@ STATIC mp_obj_t mp_lv_win_get_sb_mode(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_sb_mode_obj, 1, 1, mp_lv_win_get_sb_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_sb_mode_obj, 1, mp_lv_win_get_sb_mode, lv_win_get_sb_mode);
 
  
 
@@ -15454,7 +15544,7 @@ STATIC mp_obj_t mp_lv_win_get_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_width_obj, 1, 1, mp_lv_win_get_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_width_obj, 1, mp_lv_win_get_width, lv_win_get_width);
 
  
 
@@ -15471,7 +15561,7 @@ STATIC mp_obj_t mp_lv_win_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_get_style_obj, 2, 2, mp_lv_win_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_get_style_obj, 2, mp_lv_win_get_style, lv_win_get_style);
 
  
 
@@ -15489,7 +15579,7 @@ STATIC mp_obj_t mp_lv_win_focus(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_win_focus_obj, 3, 3, mp_lv_win_focus);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_focus_obj, 3, mp_lv_win_focus, lv_win_focus);
 
  
 
@@ -15562,6 +15652,7 @@ STATIC const mp_rom_map_elem_t win_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -15639,7 +15730,7 @@ STATIC mp_obj_t mp_lv_tabview_clean(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_clean_obj, 1, 1, mp_lv_tabview_clean);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_clean_obj, 1, mp_lv_tabview_clean, lv_tabview_clean);
 
  
 
@@ -15656,7 +15747,7 @@ STATIC mp_obj_t mp_lv_tabview_add_tab(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_add_tab_obj, 2, 2, mp_lv_tabview_add_tab);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_add_tab_obj, 2, mp_lv_tabview_add_tab, lv_tabview_add_tab);
 
  
 
@@ -15674,7 +15765,7 @@ STATIC mp_obj_t mp_lv_tabview_set_tab_act(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_set_tab_act_obj, 3, 3, mp_lv_tabview_set_tab_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_tab_act_obj, 3, mp_lv_tabview_set_tab_act, lv_tabview_set_tab_act);
 
  
 
@@ -15691,7 +15782,7 @@ STATIC mp_obj_t mp_lv_tabview_set_sliding(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_set_sliding_obj, 2, 2, mp_lv_tabview_set_sliding);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_sliding_obj, 2, mp_lv_tabview_set_sliding, lv_tabview_set_sliding);
 
  
 
@@ -15708,7 +15799,7 @@ STATIC mp_obj_t mp_lv_tabview_set_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_set_anim_time_obj, 2, 2, mp_lv_tabview_set_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_anim_time_obj, 2, mp_lv_tabview_set_anim_time, lv_tabview_set_anim_time);
 
  
 
@@ -15726,7 +15817,7 @@ STATIC mp_obj_t mp_lv_tabview_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_set_style_obj, 3, 3, mp_lv_tabview_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_style_obj, 3, mp_lv_tabview_set_style, lv_tabview_set_style);
 
  
 
@@ -15743,7 +15834,7 @@ STATIC mp_obj_t mp_lv_tabview_set_btns_pos(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_set_btns_pos_obj, 2, 2, mp_lv_tabview_set_btns_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_btns_pos_obj, 2, mp_lv_tabview_set_btns_pos, lv_tabview_set_btns_pos);
 
  
 
@@ -15760,7 +15851,7 @@ STATIC mp_obj_t mp_lv_tabview_set_btns_hidden(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_set_btns_hidden_obj, 2, 2, mp_lv_tabview_set_btns_hidden);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_btns_hidden_obj, 2, mp_lv_tabview_set_btns_hidden, lv_tabview_set_btns_hidden);
 
  
 
@@ -15776,7 +15867,7 @@ STATIC mp_obj_t mp_lv_tabview_get_tab_act(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_tab_act_obj, 1, 1, mp_lv_tabview_get_tab_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_tab_act_obj, 1, mp_lv_tabview_get_tab_act, lv_tabview_get_tab_act);
 
  
 
@@ -15792,7 +15883,7 @@ STATIC mp_obj_t mp_lv_tabview_get_tab_count(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_tab_count_obj, 1, 1, mp_lv_tabview_get_tab_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_tab_count_obj, 1, mp_lv_tabview_get_tab_count, lv_tabview_get_tab_count);
 
  
 
@@ -15809,7 +15900,7 @@ STATIC mp_obj_t mp_lv_tabview_get_tab(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_tab_obj, 2, 2, mp_lv_tabview_get_tab);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_tab_obj, 2, mp_lv_tabview_get_tab, lv_tabview_get_tab);
 
  
 
@@ -15825,7 +15916,7 @@ STATIC mp_obj_t mp_lv_tabview_get_sliding(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_sliding_obj, 1, 1, mp_lv_tabview_get_sliding);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_sliding_obj, 1, mp_lv_tabview_get_sliding, lv_tabview_get_sliding);
 
  
 
@@ -15841,7 +15932,7 @@ STATIC mp_obj_t mp_lv_tabview_get_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_anim_time_obj, 1, 1, mp_lv_tabview_get_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_anim_time_obj, 1, mp_lv_tabview_get_anim_time, lv_tabview_get_anim_time);
 
  
 
@@ -15858,7 +15949,7 @@ STATIC mp_obj_t mp_lv_tabview_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_style_obj, 2, 2, mp_lv_tabview_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_style_obj, 2, mp_lv_tabview_get_style, lv_tabview_get_style);
 
  
 
@@ -15874,7 +15965,7 @@ STATIC mp_obj_t mp_lv_tabview_get_btns_pos(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_btns_pos_obj, 1, 1, mp_lv_tabview_get_btns_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_btns_pos_obj, 1, mp_lv_tabview_get_btns_pos, lv_tabview_get_btns_pos);
 
  
 
@@ -15890,7 +15981,7 @@ STATIC mp_obj_t mp_lv_tabview_get_btns_hidden(size_t n_args, const mp_obj_t *arg
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tabview_get_btns_hidden_obj, 1, 1, mp_lv_tabview_get_btns_hidden);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_btns_hidden_obj, 1, mp_lv_tabview_get_btns_hidden, lv_tabview_get_btns_hidden);
 
  
 
@@ -15958,6 +16049,7 @@ STATIC const mp_rom_map_elem_t tabview_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -16037,7 +16129,7 @@ STATIC mp_obj_t mp_lv_tileview_set_edge_flash(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_set_edge_flash_obj, 2, 2, mp_lv_tileview_set_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_set_edge_flash_obj, 2, mp_lv_tileview_set_edge_flash, lv_tileview_set_edge_flash);
 
  
 
@@ -16053,7 +16145,7 @@ STATIC mp_obj_t mp_lv_tileview_get_edge_flash(size_t n_args, const mp_obj_t *arg
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_get_edge_flash_obj, 1, 1, mp_lv_tileview_get_edge_flash);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_get_edge_flash_obj, 1, mp_lv_tileview_get_edge_flash, lv_tileview_get_edge_flash);
 
  
 
@@ -16070,7 +16162,7 @@ STATIC mp_obj_t mp_lv_tileview_add_element(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_add_element_obj, 2, 2, mp_lv_tileview_add_element);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_add_element_obj, 2, mp_lv_tileview_add_element, lv_tileview_add_element);
 
  
 
@@ -16087,7 +16179,7 @@ STATIC mp_obj_t mp_lv_tileview_set_valid_positions(size_t n_args, const mp_obj_t
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_set_valid_positions_obj, 2, 2, mp_lv_tileview_set_valid_positions);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_set_valid_positions_obj, 2, mp_lv_tileview_set_valid_positions, lv_tileview_set_valid_positions);
 
  
 
@@ -16106,7 +16198,7 @@ STATIC mp_obj_t mp_lv_tileview_set_tile_act(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_set_tile_act_obj, 4, 4, mp_lv_tileview_set_tile_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_set_tile_act_obj, 4, mp_lv_tileview_set_tile_act, lv_tileview_set_tile_act);
 
  
 
@@ -16124,7 +16216,7 @@ STATIC mp_obj_t mp_lv_tileview_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_set_style_obj, 3, 3, mp_lv_tileview_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_set_style_obj, 3, mp_lv_tileview_set_style, lv_tileview_set_style);
 
  
 
@@ -16141,7 +16233,7 @@ STATIC mp_obj_t mp_lv_tileview_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tileview_get_style_obj, 2, 2, mp_lv_tileview_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tileview_get_style_obj, 2, mp_lv_tileview_get_style, lv_tileview_get_style);
 
  
 
@@ -16200,6 +16292,7 @@ STATIC const mp_rom_map_elem_t tileview_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -16278,7 +16371,7 @@ STATIC mp_obj_t mp_lv_mbox_add_btns(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_add_btns_obj, 2, 2, mp_lv_mbox_add_btns);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_add_btns_obj, 2, mp_lv_mbox_add_btns, lv_mbox_add_btns);
 
  
 
@@ -16295,7 +16388,7 @@ STATIC mp_obj_t mp_lv_mbox_set_text(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_set_text_obj, 2, 2, mp_lv_mbox_set_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_set_text_obj, 2, mp_lv_mbox_set_text, lv_mbox_set_text);
 
  
 
@@ -16312,7 +16405,7 @@ STATIC mp_obj_t mp_lv_mbox_set_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_set_anim_time_obj, 2, 2, mp_lv_mbox_set_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_set_anim_time_obj, 2, mp_lv_mbox_set_anim_time, lv_mbox_set_anim_time);
 
  
 
@@ -16329,7 +16422,7 @@ STATIC mp_obj_t mp_lv_mbox_start_auto_close(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_start_auto_close_obj, 2, 2, mp_lv_mbox_start_auto_close);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_start_auto_close_obj, 2, mp_lv_mbox_start_auto_close, lv_mbox_start_auto_close);
 
  
 
@@ -16345,7 +16438,7 @@ STATIC mp_obj_t mp_lv_mbox_stop_auto_close(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_stop_auto_close_obj, 1, 1, mp_lv_mbox_stop_auto_close);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_stop_auto_close_obj, 1, mp_lv_mbox_stop_auto_close, lv_mbox_stop_auto_close);
 
  
 
@@ -16363,7 +16456,7 @@ STATIC mp_obj_t mp_lv_mbox_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_set_style_obj, 3, 3, mp_lv_mbox_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_set_style_obj, 3, mp_lv_mbox_set_style, lv_mbox_set_style);
 
  
 
@@ -16380,7 +16473,7 @@ STATIC mp_obj_t mp_lv_mbox_set_recolor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_set_recolor_obj, 2, 2, mp_lv_mbox_set_recolor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_set_recolor_obj, 2, mp_lv_mbox_set_recolor, lv_mbox_set_recolor);
 
  
 
@@ -16396,7 +16489,7 @@ STATIC mp_obj_t mp_lv_mbox_get_text(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_text_obj, 1, 1, mp_lv_mbox_get_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_text_obj, 1, mp_lv_mbox_get_text, lv_mbox_get_text);
 
  
 
@@ -16412,7 +16505,7 @@ STATIC mp_obj_t mp_lv_mbox_get_active_btn(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_active_btn_obj, 1, 1, mp_lv_mbox_get_active_btn);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_active_btn_obj, 1, mp_lv_mbox_get_active_btn, lv_mbox_get_active_btn);
 
  
 
@@ -16428,7 +16521,7 @@ STATIC mp_obj_t mp_lv_mbox_get_active_btn_text(size_t n_args, const mp_obj_t *ar
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_active_btn_text_obj, 1, 1, mp_lv_mbox_get_active_btn_text);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_active_btn_text_obj, 1, mp_lv_mbox_get_active_btn_text, lv_mbox_get_active_btn_text);
 
  
 
@@ -16444,7 +16537,7 @@ STATIC mp_obj_t mp_lv_mbox_get_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_anim_time_obj, 1, 1, mp_lv_mbox_get_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_anim_time_obj, 1, mp_lv_mbox_get_anim_time, lv_mbox_get_anim_time);
 
  
 
@@ -16461,7 +16554,7 @@ STATIC mp_obj_t mp_lv_mbox_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_style_obj, 2, 2, mp_lv_mbox_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_style_obj, 2, mp_lv_mbox_get_style, lv_mbox_get_style);
 
  
 
@@ -16477,7 +16570,7 @@ STATIC mp_obj_t mp_lv_mbox_get_recolor(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_recolor_obj, 1, 1, mp_lv_mbox_get_recolor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_recolor_obj, 1, mp_lv_mbox_get_recolor, lv_mbox_get_recolor);
 
  
 
@@ -16493,7 +16586,7 @@ STATIC mp_obj_t mp_lv_mbox_get_btnm(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mbox_get_btnm_obj, 1, 1, mp_lv_mbox_get_btnm);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mbox_get_btnm_obj, 1, mp_lv_mbox_get_btnm, lv_mbox_get_btnm);
 
  
 
@@ -16559,6 +16652,7 @@ STATIC const mp_rom_map_elem_t mbox_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -16637,7 +16731,7 @@ STATIC mp_obj_t mp_lv_lmeter_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_set_style_obj, 2, 2, mp_lv_lmeter_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_set_style_obj, 2, mp_lv_lmeter_set_style, lv_lmeter_set_style);
 
  
 
@@ -16653,7 +16747,7 @@ STATIC mp_obj_t mp_lv_lmeter_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_style_obj, 1, 1, mp_lv_lmeter_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_get_style_obj, 1, mp_lv_lmeter_get_style, lv_lmeter_get_style);
 
  
 
@@ -16670,7 +16764,7 @@ STATIC mp_obj_t mp_lv_lmeter_set_value(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_set_value_obj, 2, 2, mp_lv_lmeter_set_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_set_value_obj, 2, mp_lv_lmeter_set_value, lv_lmeter_set_value);
 
  
 
@@ -16688,7 +16782,7 @@ STATIC mp_obj_t mp_lv_lmeter_set_range(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_set_range_obj, 3, 3, mp_lv_lmeter_set_range);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_set_range_obj, 3, mp_lv_lmeter_set_range, lv_lmeter_set_range);
 
  
 
@@ -16706,7 +16800,7 @@ STATIC mp_obj_t mp_lv_lmeter_set_scale(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_set_scale_obj, 3, 3, mp_lv_lmeter_set_scale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_set_scale_obj, 3, mp_lv_lmeter_set_scale, lv_lmeter_set_scale);
 
  
 
@@ -16722,7 +16816,7 @@ STATIC mp_obj_t mp_lv_lmeter_get_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_value_obj, 1, 1, mp_lv_lmeter_get_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_get_value_obj, 1, mp_lv_lmeter_get_value, lv_lmeter_get_value);
 
  
 
@@ -16738,7 +16832,7 @@ STATIC mp_obj_t mp_lv_lmeter_get_min_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_min_value_obj, 1, 1, mp_lv_lmeter_get_min_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_get_min_value_obj, 1, mp_lv_lmeter_get_min_value, lv_lmeter_get_min_value);
 
  
 
@@ -16754,7 +16848,7 @@ STATIC mp_obj_t mp_lv_lmeter_get_max_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_max_value_obj, 1, 1, mp_lv_lmeter_get_max_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_get_max_value_obj, 1, mp_lv_lmeter_get_max_value, lv_lmeter_get_max_value);
 
  
 
@@ -16770,7 +16864,7 @@ STATIC mp_obj_t mp_lv_lmeter_get_line_count(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_line_count_obj, 1, 1, mp_lv_lmeter_get_line_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_get_line_count_obj, 1, mp_lv_lmeter_get_line_count, lv_lmeter_get_line_count);
 
  
 
@@ -16786,7 +16880,7 @@ STATIC mp_obj_t mp_lv_lmeter_get_scale_angle(size_t n_args, const mp_obj_t *args
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_lmeter_get_scale_angle_obj, 1, 1, mp_lv_lmeter_get_scale_angle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_lmeter_get_scale_angle_obj, 1, mp_lv_lmeter_get_scale_angle, lv_lmeter_get_scale_angle);
 
  
 
@@ -16848,6 +16942,7 @@ STATIC const mp_rom_map_elem_t lmeter_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -16926,7 +17021,7 @@ STATIC mp_obj_t mp_lv_gauge_set_range(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_set_range_obj, 3, 3, mp_lv_gauge_set_range);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_set_range_obj, 3, mp_lv_gauge_set_range, lv_gauge_set_range);
 
  
 
@@ -16943,7 +17038,7 @@ STATIC mp_obj_t mp_lv_gauge_set_critical_value(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_set_critical_value_obj, 2, 2, mp_lv_gauge_set_critical_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_set_critical_value_obj, 2, mp_lv_gauge_set_critical_value, lv_gauge_set_critical_value);
 
  
 
@@ -16960,7 +17055,7 @@ STATIC mp_obj_t mp_lv_gauge_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_set_style_obj, 2, 2, mp_lv_gauge_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_set_style_obj, 2, mp_lv_gauge_set_style, lv_gauge_set_style);
 
  
 
@@ -16976,7 +17071,7 @@ STATIC mp_obj_t mp_lv_gauge_get_min_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_min_value_obj, 1, 1, mp_lv_gauge_get_min_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_min_value_obj, 1, mp_lv_gauge_get_min_value, lv_gauge_get_min_value);
 
  
 
@@ -16992,7 +17087,7 @@ STATIC mp_obj_t mp_lv_gauge_get_max_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_max_value_obj, 1, 1, mp_lv_gauge_get_max_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_max_value_obj, 1, mp_lv_gauge_get_max_value, lv_gauge_get_max_value);
 
  
 
@@ -17008,7 +17103,7 @@ STATIC mp_obj_t mp_lv_gauge_get_critical_value(size_t n_args, const mp_obj_t *ar
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_critical_value_obj, 1, 1, mp_lv_gauge_get_critical_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_critical_value_obj, 1, mp_lv_gauge_get_critical_value, lv_gauge_get_critical_value);
 
  
 
@@ -17024,7 +17119,7 @@ STATIC mp_obj_t mp_lv_gauge_get_line_count(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_line_count_obj, 1, 1, mp_lv_gauge_get_line_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_line_count_obj, 1, mp_lv_gauge_get_line_count, lv_gauge_get_line_count);
 
  
 
@@ -17040,7 +17135,7 @@ STATIC mp_obj_t mp_lv_gauge_get_scale_angle(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_scale_angle_obj, 1, 1, mp_lv_gauge_get_scale_angle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_scale_angle_obj, 1, mp_lv_gauge_get_scale_angle, lv_gauge_get_scale_angle);
 
  
 
@@ -17056,7 +17151,7 @@ STATIC mp_obj_t mp_lv_gauge_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_style_obj, 1, 1, mp_lv_gauge_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_style_obj, 1, mp_lv_gauge_get_style, lv_gauge_get_style);
 
  
 
@@ -17074,7 +17169,7 @@ STATIC mp_obj_t mp_lv_gauge_set_needle_count(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_set_needle_count_obj, 3, 3, mp_lv_gauge_set_needle_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_set_needle_count_obj, 3, mp_lv_gauge_set_needle_count, lv_gauge_set_needle_count);
 
  
 
@@ -17092,7 +17187,7 @@ STATIC mp_obj_t mp_lv_gauge_set_value(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_set_value_obj, 3, 3, mp_lv_gauge_set_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_set_value_obj, 3, mp_lv_gauge_set_value, lv_gauge_set_value);
 
  
 
@@ -17111,7 +17206,7 @@ STATIC mp_obj_t mp_lv_gauge_set_scale(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_set_scale_obj, 4, 4, mp_lv_gauge_set_scale);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_set_scale_obj, 4, mp_lv_gauge_set_scale, lv_gauge_set_scale);
 
  
 
@@ -17128,7 +17223,7 @@ STATIC mp_obj_t mp_lv_gauge_get_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_value_obj, 2, 2, mp_lv_gauge_get_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_value_obj, 2, mp_lv_gauge_get_value, lv_gauge_get_value);
 
  
 
@@ -17144,7 +17239,7 @@ STATIC mp_obj_t mp_lv_gauge_get_needle_count(size_t n_args, const mp_obj_t *args
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_needle_count_obj, 1, 1, mp_lv_gauge_get_needle_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_needle_count_obj, 1, mp_lv_gauge_get_needle_count, lv_gauge_get_needle_count);
 
  
 
@@ -17160,7 +17255,7 @@ STATIC mp_obj_t mp_lv_gauge_get_label_count(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_gauge_get_label_count_obj, 1, 1, mp_lv_gauge_get_label_count);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gauge_get_label_count_obj, 1, mp_lv_gauge_get_label_count, lv_gauge_get_label_count);
 
  
 
@@ -17227,6 +17322,7 @@ STATIC const mp_rom_map_elem_t gauge_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -17303,7 +17399,7 @@ STATIC mp_obj_t mp_lv_sw_get_state(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_get_state_obj, 1, 1, mp_lv_sw_get_state);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_get_state_obj, 1, mp_lv_sw_get_state, lv_sw_get_state);
 
  
 
@@ -17320,7 +17416,7 @@ STATIC mp_obj_t mp_lv_sw_on(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_on_obj, 2, 2, mp_lv_sw_on);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_on_obj, 2, mp_lv_sw_on, lv_sw_on);
 
  
 
@@ -17337,7 +17433,7 @@ STATIC mp_obj_t mp_lv_sw_off(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_off_obj, 2, 2, mp_lv_sw_off);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_off_obj, 2, mp_lv_sw_off, lv_sw_off);
 
  
 
@@ -17354,7 +17450,7 @@ STATIC mp_obj_t mp_lv_sw_toggle(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_toggle_obj, 2, 2, mp_lv_sw_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_toggle_obj, 2, mp_lv_sw_toggle, lv_sw_toggle);
 
  
 
@@ -17372,7 +17468,7 @@ STATIC mp_obj_t mp_lv_sw_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_set_style_obj, 3, 3, mp_lv_sw_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_set_style_obj, 3, mp_lv_sw_set_style, lv_sw_set_style);
 
  
 
@@ -17389,7 +17485,7 @@ STATIC mp_obj_t mp_lv_sw_set_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_set_anim_time_obj, 2, 2, mp_lv_sw_set_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_set_anim_time_obj, 2, mp_lv_sw_set_anim_time, lv_sw_set_anim_time);
 
  
 
@@ -17406,7 +17502,7 @@ STATIC mp_obj_t mp_lv_sw_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_get_style_obj, 2, 2, mp_lv_sw_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_get_style_obj, 2, mp_lv_sw_get_style, lv_sw_get_style);
 
  
 
@@ -17422,7 +17518,7 @@ STATIC mp_obj_t mp_lv_sw_get_anim_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_sw_get_anim_time_obj, 1, 1, mp_lv_sw_get_anim_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sw_get_anim_time_obj, 1, mp_lv_sw_get_anim_time, lv_sw_get_anim_time);
 
  
 
@@ -17482,6 +17578,7 @@ STATIC const mp_rom_map_elem_t sw_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -17561,7 +17658,7 @@ STATIC mp_obj_t mp_lv_arc_set_angles(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_arc_set_angles_obj, 3, 3, mp_lv_arc_set_angles);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_set_angles_obj, 3, mp_lv_arc_set_angles, lv_arc_set_angles);
 
  
 
@@ -17579,7 +17676,7 @@ STATIC mp_obj_t mp_lv_arc_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_arc_set_style_obj, 3, 3, mp_lv_arc_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_set_style_obj, 3, mp_lv_arc_set_style, lv_arc_set_style);
 
  
 
@@ -17595,7 +17692,7 @@ STATIC mp_obj_t mp_lv_arc_get_angle_start(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_arc_get_angle_start_obj, 1, 1, mp_lv_arc_get_angle_start);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_get_angle_start_obj, 1, mp_lv_arc_get_angle_start, lv_arc_get_angle_start);
 
  
 
@@ -17611,7 +17708,7 @@ STATIC mp_obj_t mp_lv_arc_get_angle_end(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_arc_get_angle_end_obj, 1, 1, mp_lv_arc_get_angle_end);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_get_angle_end_obj, 1, mp_lv_arc_get_angle_end, lv_arc_get_angle_end);
 
  
 
@@ -17628,7 +17725,7 @@ STATIC mp_obj_t mp_lv_arc_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_arc_get_style_obj, 2, 2, mp_lv_arc_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_get_style_obj, 2, mp_lv_arc_get_style, lv_arc_get_style);
 
  
 
@@ -17685,6 +17782,7 @@ STATIC const mp_rom_map_elem_t arc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -17752,18 +17850,18 @@ STATIC const mp_obj_type_t mp_arc_type = {
 
 /*
  * lvgl extension definition for:
- * void lv_preload_set_arc_length(lv_obj_t *preload, uint16_t deg)
+ * void lv_preload_set_arc_length(lv_obj_t *preload, lv_anim_value_t deg)
  */
  
 STATIC mp_obj_t mp_lv_preload_set_arc_length(size_t n_args, const mp_obj_t *args)
 {
     lv_obj_t *preload = mp_to_lv(args[0]);
-    uint16_t deg = (uint16_t)mp_obj_get_int(args[1]);
+    lv_anim_value_t deg = (int16_t)mp_obj_get_int(args[1]);
     lv_preload_set_arc_length(preload, deg);
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_set_arc_length_obj, 2, 2, mp_lv_preload_set_arc_length);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_set_arc_length_obj, 2, mp_lv_preload_set_arc_length, lv_preload_set_arc_length);
 
  
 
@@ -17780,7 +17878,7 @@ STATIC mp_obj_t mp_lv_preload_set_spin_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_set_spin_time_obj, 2, 2, mp_lv_preload_set_spin_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_set_spin_time_obj, 2, mp_lv_preload_set_spin_time, lv_preload_set_spin_time);
 
  
 
@@ -17798,7 +17896,7 @@ STATIC mp_obj_t mp_lv_preload_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_set_style_obj, 3, 3, mp_lv_preload_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_set_style_obj, 3, mp_lv_preload_set_style, lv_preload_set_style);
 
  
 
@@ -17815,7 +17913,7 @@ STATIC mp_obj_t mp_lv_preload_set_anim_type(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_set_anim_type_obj, 2, 2, mp_lv_preload_set_anim_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_set_anim_type_obj, 2, mp_lv_preload_set_anim_type, lv_preload_set_anim_type);
 
  
 
@@ -17832,23 +17930,23 @@ STATIC mp_obj_t mp_lv_preload_set_anim_dir(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_set_anim_dir_obj, 2, 2, mp_lv_preload_set_anim_dir);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_set_anim_dir_obj, 2, mp_lv_preload_set_anim_dir, lv_preload_set_anim_dir);
 
  
 
 /*
  * lvgl extension definition for:
- * uint16_t lv_preload_get_arc_length(const lv_obj_t *preload)
+ * lv_anim_value_t lv_preload_get_arc_length(const lv_obj_t *preload)
  */
  
 STATIC mp_obj_t mp_lv_preload_get_arc_length(size_t n_args, const mp_obj_t *args)
 {
     const lv_obj_t *preload = mp_to_lv(args[0]);
-    uint16_t res = lv_preload_get_arc_length(preload);
-    return mp_obj_new_int_from_uint(res);
+    lv_anim_value_t res = lv_preload_get_arc_length(preload);
+    return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_get_arc_length_obj, 1, 1, mp_lv_preload_get_arc_length);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_get_arc_length_obj, 1, mp_lv_preload_get_arc_length, lv_preload_get_arc_length);
 
  
 
@@ -17864,7 +17962,7 @@ STATIC mp_obj_t mp_lv_preload_get_spin_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_get_spin_time_obj, 1, 1, mp_lv_preload_get_spin_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_get_spin_time_obj, 1, mp_lv_preload_get_spin_time, lv_preload_get_spin_time);
 
  
 
@@ -17881,7 +17979,7 @@ STATIC mp_obj_t mp_lv_preload_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_get_style_obj, 2, 2, mp_lv_preload_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_get_style_obj, 2, mp_lv_preload_get_style, lv_preload_get_style);
 
  
 
@@ -17897,7 +17995,7 @@ STATIC mp_obj_t mp_lv_preload_get_anim_type(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_get_anim_type_obj, 1, 1, mp_lv_preload_get_anim_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_get_anim_type_obj, 1, mp_lv_preload_get_anim_type, lv_preload_get_anim_type);
 
  
 
@@ -17913,24 +18011,24 @@ STATIC mp_obj_t mp_lv_preload_get_anim_dir(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_get_anim_dir_obj, 1, 1, mp_lv_preload_get_anim_dir);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_get_anim_dir_obj, 1, mp_lv_preload_get_anim_dir, lv_preload_get_anim_dir);
 
  
 
 /*
  * lvgl extension definition for:
- * void lv_preload_spinner_anim(void *ptr, int32_t val)
+ * void lv_preload_spinner_anim(void *ptr, lv_anim_value_t val)
  */
  
 STATIC mp_obj_t mp_lv_preload_spinner_anim(size_t n_args, const mp_obj_t *args)
 {
     void *ptr = mp_to_ptr(args[0]);
-    int32_t val = (int32_t)mp_obj_get_int(args[1]);
+    lv_anim_value_t val = (int16_t)mp_obj_get_int(args[1]);
     lv_preload_spinner_anim(ptr, val);
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_preload_spinner_anim_obj, 2, 2, mp_lv_preload_spinner_anim);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_preload_spinner_anim_obj, 2, mp_lv_preload_spinner_anim, lv_preload_spinner_anim);
 
  
 
@@ -17993,6 +18091,7 @@ STATIC const mp_rom_map_elem_t preload_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -18156,7 +18255,7 @@ STATIC mp_obj_t mp_lv_calendar_set_today_date(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_set_today_date_obj, 2, 2, mp_lv_calendar_set_today_date);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_today_date_obj, 2, mp_lv_calendar_set_today_date, lv_calendar_set_today_date);
 
  
 
@@ -18173,7 +18272,7 @@ STATIC mp_obj_t mp_lv_calendar_set_showed_date(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_set_showed_date_obj, 2, 2, mp_lv_calendar_set_showed_date);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_showed_date_obj, 2, mp_lv_calendar_set_showed_date, lv_calendar_set_showed_date);
 
  
 
@@ -18191,7 +18290,7 @@ STATIC mp_obj_t mp_lv_calendar_set_highlighted_dates(size_t n_args, const mp_obj
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_set_highlighted_dates_obj, 3, 3, mp_lv_calendar_set_highlighted_dates);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_highlighted_dates_obj, 3, mp_lv_calendar_set_highlighted_dates, lv_calendar_set_highlighted_dates);
 
  
 
@@ -18208,7 +18307,7 @@ STATIC mp_obj_t mp_lv_calendar_set_day_names(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_set_day_names_obj, 2, 2, mp_lv_calendar_set_day_names);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_day_names_obj, 2, mp_lv_calendar_set_day_names, lv_calendar_set_day_names);
 
  
 
@@ -18225,7 +18324,7 @@ STATIC mp_obj_t mp_lv_calendar_set_month_names(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_set_month_names_obj, 2, 2, mp_lv_calendar_set_month_names);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_month_names_obj, 2, mp_lv_calendar_set_month_names, lv_calendar_set_month_names);
 
  
 
@@ -18243,7 +18342,7 @@ STATIC mp_obj_t mp_lv_calendar_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_set_style_obj, 3, 3, mp_lv_calendar_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_style_obj, 3, mp_lv_calendar_set_style, lv_calendar_set_style);
 
  
 
@@ -18259,7 +18358,7 @@ STATIC mp_obj_t mp_lv_calendar_get_today_date(size_t n_args, const mp_obj_t *arg
     return mp_read_ptr_lv_calendar_date_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_get_today_date_obj, 1, 1, mp_lv_calendar_get_today_date);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_today_date_obj, 1, mp_lv_calendar_get_today_date, lv_calendar_get_today_date);
 
  
 
@@ -18275,7 +18374,7 @@ STATIC mp_obj_t mp_lv_calendar_get_showed_date(size_t n_args, const mp_obj_t *ar
     return mp_read_ptr_lv_calendar_date_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_get_showed_date_obj, 1, 1, mp_lv_calendar_get_showed_date);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_showed_date_obj, 1, mp_lv_calendar_get_showed_date, lv_calendar_get_showed_date);
 
  
 
@@ -18291,7 +18390,7 @@ STATIC mp_obj_t mp_lv_calendar_get_pressed_date(size_t n_args, const mp_obj_t *a
     return mp_read_ptr_lv_calendar_date_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_get_pressed_date_obj, 1, 1, mp_lv_calendar_get_pressed_date);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_pressed_date_obj, 1, mp_lv_calendar_get_pressed_date, lv_calendar_get_pressed_date);
 
  
 
@@ -18307,7 +18406,7 @@ STATIC mp_obj_t mp_lv_calendar_get_highlighted_dates(size_t n_args, const mp_obj
     return mp_read_ptr_lv_calendar_date_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_get_highlighted_dates_obj, 1, 1, mp_lv_calendar_get_highlighted_dates);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_highlighted_dates_obj, 1, mp_lv_calendar_get_highlighted_dates, lv_calendar_get_highlighted_dates);
 
  
 
@@ -18323,7 +18422,7 @@ STATIC mp_obj_t mp_lv_calendar_get_highlighted_dates_num(size_t n_args, const mp
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_get_highlighted_dates_num_obj, 1, 1, mp_lv_calendar_get_highlighted_dates_num);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_highlighted_dates_num_obj, 1, mp_lv_calendar_get_highlighted_dates_num, lv_calendar_get_highlighted_dates_num);
 
  
 
@@ -18354,7 +18453,7 @@ STATIC mp_obj_t mp_lv_calendar_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_calendar_get_style_obj, 2, 2, mp_lv_calendar_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_style_obj, 2, mp_lv_calendar_get_style, lv_calendar_get_style);
 
  
 
@@ -18418,6 +18517,7 @@ STATIC const mp_rom_map_elem_t calendar_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -18497,7 +18597,7 @@ STATIC mp_obj_t mp_lv_spinbox_set_style(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_set_style_obj, 3, 3, mp_lv_spinbox_set_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_style_obj, 3, mp_lv_spinbox_set_style, lv_spinbox_set_style);
 
  
 
@@ -18514,7 +18614,7 @@ STATIC mp_obj_t mp_lv_spinbox_get_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_get_style_obj, 2, 2, mp_lv_spinbox_get_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_get_style_obj, 2, mp_lv_spinbox_get_style, lv_spinbox_get_style);
 
  
 
@@ -18531,7 +18631,7 @@ STATIC mp_obj_t mp_lv_spinbox_set_value(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_set_value_obj, 2, 2, mp_lv_spinbox_set_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_value_obj, 2, mp_lv_spinbox_set_value, lv_spinbox_set_value);
 
  
 
@@ -18549,7 +18649,7 @@ STATIC mp_obj_t mp_lv_spinbox_set_digit_format(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_set_digit_format_obj, 3, 3, mp_lv_spinbox_set_digit_format);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_digit_format_obj, 3, mp_lv_spinbox_set_digit_format, lv_spinbox_set_digit_format);
 
  
 
@@ -18566,7 +18666,7 @@ STATIC mp_obj_t mp_lv_spinbox_set_step(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_set_step_obj, 2, 2, mp_lv_spinbox_set_step);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_step_obj, 2, mp_lv_spinbox_set_step, lv_spinbox_set_step);
 
  
 
@@ -18584,7 +18684,7 @@ STATIC mp_obj_t mp_lv_spinbox_set_range(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_set_range_obj, 3, 3, mp_lv_spinbox_set_range);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_range_obj, 3, mp_lv_spinbox_set_range, lv_spinbox_set_range);
 
  
 
@@ -18601,7 +18701,7 @@ STATIC mp_obj_t mp_lv_spinbox_set_padding_left(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_set_padding_left_obj, 2, 2, mp_lv_spinbox_set_padding_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_padding_left_obj, 2, mp_lv_spinbox_set_padding_left, lv_spinbox_set_padding_left);
 
  
 
@@ -18617,7 +18717,7 @@ STATIC mp_obj_t mp_lv_spinbox_get_value(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_get_value_obj, 1, 1, mp_lv_spinbox_get_value);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_get_value_obj, 1, mp_lv_spinbox_get_value, lv_spinbox_get_value);
 
  
 
@@ -18633,7 +18733,7 @@ STATIC mp_obj_t mp_lv_spinbox_step_next(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_step_next_obj, 1, 1, mp_lv_spinbox_step_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_step_next_obj, 1, mp_lv_spinbox_step_next, lv_spinbox_step_next);
 
  
 
@@ -18649,7 +18749,7 @@ STATIC mp_obj_t mp_lv_spinbox_step_previous(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_step_previous_obj, 1, 1, mp_lv_spinbox_step_previous);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_step_previous_obj, 1, mp_lv_spinbox_step_previous, lv_spinbox_step_previous);
 
  
 
@@ -18665,7 +18765,7 @@ STATIC mp_obj_t mp_lv_spinbox_increment(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_increment_obj, 1, 1, mp_lv_spinbox_increment);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_increment_obj, 1, mp_lv_spinbox_increment, lv_spinbox_increment);
 
  
 
@@ -18681,7 +18781,7 @@ STATIC mp_obj_t mp_lv_spinbox_decrement(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_spinbox_decrement_obj, 1, 1, mp_lv_spinbox_decrement);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_decrement_obj, 1, mp_lv_spinbox_decrement, lv_spinbox_decrement);
 
  
 
@@ -18745,6 +18845,7 @@ STATIC const mp_rom_map_elem_t spinbox_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_back), MP_ROM_PTR(&mp_lv_obj_get_child_back_obj) },
     { MP_ROM_QSTR(MP_QSTR_count_children), MP_ROM_PTR(&mp_lv_obj_count_children_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count_children_recursive), MP_ROM_PTR(&mp_lv_obj_count_children_recursive_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_coords), MP_ROM_PTR(&mp_lv_obj_get_coords_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_x), MP_ROM_PTR(&mp_lv_obj_get_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
@@ -18835,7 +18936,7 @@ STATIC mp_obj_t mp_lv_color_to1(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_to1_obj, 1, 1, mp_lv_color_to1);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_to1_obj, 1, mp_lv_color_to1, lv_color_to1);
 
  
 
@@ -18851,7 +18952,7 @@ STATIC mp_obj_t mp_lv_color_to8(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_to8_obj, 1, 1, mp_lv_color_to8);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_to8_obj, 1, mp_lv_color_to8, lv_color_to8);
 
  
 
@@ -18867,7 +18968,7 @@ STATIC mp_obj_t mp_lv_color_to16(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_to16_obj, 1, 1, mp_lv_color_to16);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_to16_obj, 1, mp_lv_color_to16, lv_color_to16);
 
  
 
@@ -18883,7 +18984,7 @@ STATIC mp_obj_t mp_lv_color_to32(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_to32_obj, 1, 1, mp_lv_color_to32);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_to32_obj, 1, mp_lv_color_to32, lv_color_to32);
 
  
 
@@ -18901,7 +19002,7 @@ STATIC mp_obj_t mp_lv_color_mix(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_mix_obj, 3, 3, mp_lv_color_mix);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_mix_obj, 3, mp_lv_color_mix, lv_color_mix);
 
  
 
@@ -18917,7 +19018,7 @@ STATIC mp_obj_t mp_lv_color_brightness(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_brightness_obj, 1, 1, mp_lv_color_brightness);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_brightness_obj, 1, mp_lv_color_brightness, lv_color_brightness);
 
  
 
@@ -18935,7 +19036,7 @@ STATIC mp_obj_t mp_lv_color_make(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_make_obj, 3, 3, mp_lv_color_make);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_make_obj, 3, mp_lv_color_make, lv_color_make);
 
  
 
@@ -18951,7 +19052,7 @@ STATIC mp_obj_t mp_lv_color_hex(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_hex_obj, 1, 1, mp_lv_color_hex);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_hex_obj, 1, mp_lv_color_hex, lv_color_hex);
 
  
 
@@ -18967,7 +19068,7 @@ STATIC mp_obj_t mp_lv_color_hex3(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_hex3_obj, 1, 1, mp_lv_color_hex3);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_hex3_obj, 1, mp_lv_color_hex3, lv_color_hex3);
 
  
 
@@ -18984,7 +19085,7 @@ STATIC mp_obj_t mp_lv_area_copy(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_copy_obj, 2, 2, mp_lv_area_copy);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_copy_obj, 2, mp_lv_area_copy, lv_area_copy);
 
  
 
@@ -19000,7 +19101,7 @@ STATIC mp_obj_t mp_lv_area_get_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_get_width_obj, 1, 1, mp_lv_area_get_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_get_width_obj, 1, mp_lv_area_get_width, lv_area_get_width);
 
  
 
@@ -19016,7 +19117,7 @@ STATIC mp_obj_t mp_lv_area_get_height(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_get_height_obj, 1, 1, mp_lv_area_get_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_get_height_obj, 1, mp_lv_area_get_height, lv_area_get_height);
 
  
 
@@ -19032,7 +19133,7 @@ STATIC mp_obj_t mp_lv_font_get_height(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_height_obj, 1, 1, mp_lv_font_get_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_height_obj, 1, mp_lv_font_get_height, lv_font_get_height);
 
  
 
@@ -19165,7 +19266,7 @@ STATIC mp_obj_t mp_lv_anim_set_var(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_var_obj, 2, 2, mp_lv_anim_set_var);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_var_obj, 2, mp_lv_anim_set_var, lv_anim_set_var);
 
  
 
@@ -19183,7 +19284,7 @@ STATIC mp_obj_t mp_lv_anim_set_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_time_obj, 3, 3, mp_lv_anim_set_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_time_obj, 3, mp_lv_anim_set_time, lv_anim_set_time);
 
  
 
@@ -19201,7 +19302,7 @@ STATIC mp_obj_t mp_lv_anim_set_values(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_values_obj, 3, 3, mp_lv_anim_set_values);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_values_obj, 3, mp_lv_anim_set_values, lv_anim_set_values);
 
  
 
@@ -19220,12 +19321,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_values_obj, 3, 3, mp_l
 STATIC mp_obj_t mp_lv_anim_set_exec_cb(size_t n_args, const mp_obj_t *args)
 {
     lv_anim_t *a = mp_write_ptr_lv_anim_t(args[0]);
-    void *exec_cb = mp_lv_callback(args[1], NULL, MP_QSTR_exec_cb, NULL);
+    lv_anim_exec_cb_t exec_cb = mp_to_ptr(args[1]);
     lv_anim_set_exec_cb(a, exec_cb);
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_exec_cb_obj, 2, 2, mp_lv_anim_set_exec_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_exec_cb_obj, 2, mp_lv_anim_set_exec_cb, lv_anim_set_exec_cb);
 
  
 
@@ -19258,7 +19359,7 @@ STATIC mp_obj_t mp_lv_anim_set_custom_exec_cb(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_custom_exec_cb_obj, 2, 2, mp_lv_anim_set_custom_exec_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_custom_exec_cb_obj, 2, mp_lv_anim_set_custom_exec_cb, lv_anim_set_custom_exec_cb);
 
  
 
@@ -19290,7 +19391,7 @@ STATIC mp_obj_t mp_lv_anim_set_path_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_path_cb_obj, 2, 2, mp_lv_anim_set_path_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_path_cb_obj, 2, mp_lv_anim_set_path_cb, lv_anim_set_path_cb);
 
  
 
@@ -19322,7 +19423,7 @@ STATIC mp_obj_t mp_lv_anim_set_ready_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_ready_cb_obj, 2, 2, mp_lv_anim_set_ready_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_ready_cb_obj, 2, mp_lv_anim_set_ready_cb, lv_anim_set_ready_cb);
 
  
 
@@ -19339,7 +19440,7 @@ STATIC mp_obj_t mp_lv_anim_set_playback(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_playback_obj, 2, 2, mp_lv_anim_set_playback);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_playback_obj, 2, mp_lv_anim_set_playback, lv_anim_set_playback);
 
  
 
@@ -19355,7 +19456,7 @@ STATIC mp_obj_t mp_lv_anim_clear_playback(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_clear_playback_obj, 1, 1, mp_lv_anim_clear_playback);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_clear_playback_obj, 1, mp_lv_anim_clear_playback, lv_anim_clear_playback);
 
  
 
@@ -19372,7 +19473,7 @@ STATIC mp_obj_t mp_lv_anim_set_repeat(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_repeat_obj, 2, 2, mp_lv_anim_set_repeat);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_repeat_obj, 2, mp_lv_anim_set_repeat, lv_anim_set_repeat);
 
  
 
@@ -19388,7 +19489,7 @@ STATIC mp_obj_t mp_lv_anim_clear_repeat(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_clear_repeat_obj, 1, 1, mp_lv_anim_clear_repeat);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_clear_repeat_obj, 1, mp_lv_anim_clear_repeat, lv_anim_clear_repeat);
 
  
 
@@ -19405,7 +19506,7 @@ STATIC mp_obj_t mp_lv_anim_set_user_data(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_set_user_data_obj, 2, 2, mp_lv_anim_set_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_user_data_obj, 2, mp_lv_anim_set_user_data, lv_anim_set_user_data);
 
  
 
@@ -19421,7 +19522,7 @@ STATIC mp_obj_t mp_lv_anim_get_user_data(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_get_user_data_obj, 1, 1, mp_lv_anim_get_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_get_user_data_obj, 1, mp_lv_anim_get_user_data, lv_anim_get_user_data);
 
  
 
@@ -19437,7 +19538,7 @@ STATIC mp_obj_t mp_lv_anim_get_user_data_ptr(size_t n_args, const mp_obj_t *args
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_get_user_data_ptr_obj, 1, 1, mp_lv_anim_get_user_data_ptr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_get_user_data_ptr_obj, 1, mp_lv_anim_get_user_data_ptr, lv_anim_get_user_data_ptr);
 
  
 
@@ -19454,7 +19555,7 @@ STATIC mp_obj_t mp_lv_anim_custom_del(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_custom_del_obj, 2, 2, mp_lv_anim_custom_del);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_custom_del_obj, 2, mp_lv_anim_custom_del, lv_anim_custom_del);
 
  
 
@@ -19472,7 +19573,7 @@ STATIC mp_obj_t mp_lv_style_anim_set_time(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_set_time_obj, 3, 3, mp_lv_style_anim_set_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_set_time_obj, 3, mp_lv_style_anim_set_time, lv_style_anim_set_time);
 
  
 
@@ -19489,7 +19590,7 @@ STATIC mp_obj_t mp_lv_style_anim_set_ready_cb(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_set_ready_cb_obj, 2, 2, mp_lv_style_anim_set_ready_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_set_ready_cb_obj, 2, mp_lv_style_anim_set_ready_cb, lv_style_anim_set_ready_cb);
 
  
 
@@ -19506,7 +19607,7 @@ STATIC mp_obj_t mp_lv_style_anim_set_playback(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_set_playback_obj, 2, 2, mp_lv_style_anim_set_playback);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_set_playback_obj, 2, mp_lv_style_anim_set_playback, lv_style_anim_set_playback);
 
  
 
@@ -19522,7 +19623,7 @@ STATIC mp_obj_t mp_lv_style_anim_clear_playback(size_t n_args, const mp_obj_t *a
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_clear_playback_obj, 1, 1, mp_lv_style_anim_clear_playback);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_clear_playback_obj, 1, mp_lv_style_anim_clear_playback, lv_style_anim_clear_playback);
 
  
 
@@ -19539,7 +19640,7 @@ STATIC mp_obj_t mp_lv_style_anim_set_repeat(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_set_repeat_obj, 2, 2, mp_lv_style_anim_set_repeat);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_set_repeat_obj, 2, mp_lv_style_anim_set_repeat, lv_style_anim_set_repeat);
 
  
 
@@ -19555,7 +19656,7 @@ STATIC mp_obj_t mp_lv_style_anim_clear_repeat(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_clear_repeat_obj, 1, 1, mp_lv_style_anim_clear_repeat);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_clear_repeat_obj, 1, mp_lv_style_anim_clear_repeat, lv_style_anim_clear_repeat);
 
  
 
@@ -19572,7 +19673,7 @@ STATIC mp_obj_t mp_lv_style_anim_set_user_data(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_set_user_data_obj, 2, 2, mp_lv_style_anim_set_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_set_user_data_obj, 2, mp_lv_style_anim_set_user_data, lv_style_anim_set_user_data);
 
  
 
@@ -19588,7 +19689,7 @@ STATIC mp_obj_t mp_lv_style_anim_get_user_data(size_t n_args, const mp_obj_t *ar
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_get_user_data_obj, 1, 1, mp_lv_style_anim_get_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_get_user_data_obj, 1, mp_lv_style_anim_get_user_data, lv_style_anim_get_user_data);
 
  
 
@@ -19604,7 +19705,7 @@ STATIC mp_obj_t mp_lv_style_anim_get_user_data_ptr(size_t n_args, const mp_obj_t
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_get_user_data_ptr_obj, 1, 1, mp_lv_style_anim_get_user_data_ptr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_get_user_data_ptr_obj, 1, mp_lv_style_anim_get_user_data_ptr, lv_style_anim_get_user_data_ptr);
 
  
 
@@ -19620,7 +19721,7 @@ STATIC mp_obj_t mp_lv_style_anim_create(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_create_obj, 1, 1, mp_lv_style_anim_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_create_obj, 1, mp_lv_style_anim_create, lv_style_anim_create);
 
  
 
@@ -19636,7 +19737,7 @@ STATIC mp_obj_t mp_lv_scr_act(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_scr_act_obj, 0, 0, mp_lv_scr_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_scr_act_obj, 0, mp_lv_scr_act, lv_scr_act);
 
  
 
@@ -19652,7 +19753,7 @@ STATIC mp_obj_t mp_lv_layer_top(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_top_obj, 0, 0, mp_lv_layer_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_layer_top_obj, 0, mp_lv_layer_top, lv_layer_top);
 
  
 
@@ -19668,7 +19769,7 @@ STATIC mp_obj_t mp_lv_layer_sys(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_layer_sys_obj, 0, 0, mp_lv_layer_sys);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_layer_sys_obj, 0, mp_lv_layer_sys, lv_layer_sys);
 
  
 
@@ -19684,30 +19785,41 @@ STATIC mp_obj_t mp_lv_scr_load(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_scr_load_obj, 1, 1, mp_lv_scr_load);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_scr_load_obj, 1, mp_lv_scr_load, lv_scr_load);
 
  
 
 /*
- * Function NOT generated:
- * Callback argument 'void f(lv_log_level_t, const char *, uint32_t, const char *)' cannot be the first argument! We assume the first argument contains the user_data
- * void f(lv_log_level_t, const char *, uint32_t, const char *)
+ * Callback function print_cb
+ * void lv_log_print_g_cb_t(lv_log_level_t level, const char *, uint32_t, const char *)
  */
-    
+
+STATIC void print_cb_callback(lv_log_level_t arg0, const char * arg1, uint32_t arg2, const char * arg3)
+{
+    mp_obj_t args[4];
+    args[0] = mp_obj_new_int(arg0);
+    args[1] = convert_to_str((void*)arg1);
+    args[2] = mp_obj_new_int_from_uint(arg2);
+    args[3] = convert_to_str((void*)arg3);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(mp_lv_user_data);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_print_cb)) , 4, 0, args);
+    return;
+}
+
 
 /*
  * lvgl extension definition for:
- * void lv_log_register_print(void f(lv_log_level_t, const char *, uint32_t, const char *))
+ * void lv_log_register_print_cb(lv_log_print_g_cb_t print_cb)
  */
  
-STATIC mp_obj_t mp_lv_log_register_print(size_t n_args, const mp_obj_t *args)
+STATIC mp_obj_t mp_lv_log_register_print_cb(size_t n_args, const mp_obj_t *args)
 {
-    void *f = mp_lv_callback(args[0], NULL, MP_QSTR_f, NULL);
-    lv_log_register_print(f);
+    void *print_cb = mp_lv_callback(args[0], &print_cb_callback, MP_QSTR_print_cb, mp_lv_user_data);
+    lv_log_register_print_cb(print_cb);
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_log_register_print_obj, 1, 1, mp_lv_log_register_print);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_log_register_print_cb_obj, 1, mp_lv_log_register_print_cb, lv_log_register_print_cb);
 
  
 
@@ -19726,7 +19838,7 @@ STATIC mp_obj_t mp_lv_log_add(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_log_add_obj, 4, 4, mp_lv_log_add);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_log_add_obj, 4, mp_lv_log_add, lv_log_add);
 
  
 
@@ -19742,7 +19854,7 @@ STATIC mp_obj_t mp_lv_mem_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_init_obj, 0, 0, mp_lv_mem_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_init_obj, 0, mp_lv_mem_init, lv_mem_init);
 
  
 
@@ -19758,7 +19870,7 @@ STATIC mp_obj_t mp_lv_mem_alloc(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_alloc_obj, 1, 1, mp_lv_mem_alloc);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_alloc_obj, 1, mp_lv_mem_alloc, lv_mem_alloc);
 
  
 
@@ -19774,7 +19886,7 @@ STATIC mp_obj_t mp_lv_mem_free(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_free_obj, 1, 1, mp_lv_mem_free);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_free_obj, 1, mp_lv_mem_free, lv_mem_free);
 
  
 
@@ -19791,7 +19903,7 @@ STATIC mp_obj_t mp_lv_mem_realloc(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_realloc_obj, 2, 2, mp_lv_mem_realloc);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_realloc_obj, 2, mp_lv_mem_realloc, lv_mem_realloc);
 
  
 
@@ -19807,7 +19919,7 @@ STATIC mp_obj_t mp_lv_mem_defrag(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_defrag_obj, 0, 0, mp_lv_mem_defrag);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_defrag_obj, 0, mp_lv_mem_defrag, lv_mem_defrag);
 
  
 
@@ -19914,7 +20026,7 @@ STATIC mp_obj_t mp_lv_mem_monitor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_monitor_obj, 1, 1, mp_lv_mem_monitor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_monitor_obj, 1, mp_lv_mem_monitor, lv_mem_monitor);
 
  
 
@@ -19930,7 +20042,7 @@ STATIC mp_obj_t mp_lv_mem_get_size(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_mem_get_size_obj, 1, 1, mp_lv_mem_get_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_get_size_obj, 1, mp_lv_mem_get_size, lv_mem_get_size);
 
  
 
@@ -19947,7 +20059,7 @@ STATIC mp_obj_t mp_lv_ll_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_init_obj, 2, 2, mp_lv_ll_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_init_obj, 2, mp_lv_ll_init, lv_ll_init);
 
  
 
@@ -19963,7 +20075,7 @@ STATIC mp_obj_t mp_lv_ll_ins_head(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_ins_head_obj, 1, 1, mp_lv_ll_ins_head);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_ins_head_obj, 1, mp_lv_ll_ins_head, lv_ll_ins_head);
 
  
 
@@ -19980,7 +20092,7 @@ STATIC mp_obj_t mp_lv_ll_ins_prev(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_ins_prev_obj, 2, 2, mp_lv_ll_ins_prev);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_ins_prev_obj, 2, mp_lv_ll_ins_prev, lv_ll_ins_prev);
 
  
 
@@ -19996,7 +20108,7 @@ STATIC mp_obj_t mp_lv_ll_ins_tail(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_ins_tail_obj, 1, 1, mp_lv_ll_ins_tail);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_ins_tail_obj, 1, mp_lv_ll_ins_tail, lv_ll_ins_tail);
 
  
 
@@ -20013,7 +20125,7 @@ STATIC mp_obj_t mp_lv_ll_rem(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_rem_obj, 2, 2, mp_lv_ll_rem);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_rem_obj, 2, mp_lv_ll_rem, lv_ll_rem);
 
  
 
@@ -20029,7 +20141,7 @@ STATIC mp_obj_t mp_lv_ll_clear(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_clear_obj, 1, 1, mp_lv_ll_clear);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_clear_obj, 1, mp_lv_ll_clear, lv_ll_clear);
 
  
 
@@ -20048,7 +20160,7 @@ STATIC mp_obj_t mp_lv_ll_chg_list(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_chg_list_obj, 4, 4, mp_lv_ll_chg_list);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_chg_list_obj, 4, mp_lv_ll_chg_list, lv_ll_chg_list);
 
  
 
@@ -20064,7 +20176,7 @@ STATIC mp_obj_t mp_lv_ll_get_head(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_get_head_obj, 1, 1, mp_lv_ll_get_head);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_get_head_obj, 1, mp_lv_ll_get_head, lv_ll_get_head);
 
  
 
@@ -20080,7 +20192,7 @@ STATIC mp_obj_t mp_lv_ll_get_tail(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_get_tail_obj, 1, 1, mp_lv_ll_get_tail);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_get_tail_obj, 1, mp_lv_ll_get_tail, lv_ll_get_tail);
 
  
 
@@ -20097,7 +20209,7 @@ STATIC mp_obj_t mp_lv_ll_get_next(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_get_next_obj, 2, 2, mp_lv_ll_get_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_get_next_obj, 2, mp_lv_ll_get_next, lv_ll_get_next);
 
  
 
@@ -20114,7 +20226,23 @@ STATIC mp_obj_t mp_lv_ll_get_prev(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_get_prev_obj, 2, 2, mp_lv_ll_get_prev);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_get_prev_obj, 2, mp_lv_ll_get_prev, lv_ll_get_prev);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * uint32_t lv_ll_get_len(const lv_ll_t *ll_p)
+ */
+ 
+STATIC mp_obj_t mp_lv_ll_get_len(size_t n_args, const mp_obj_t *args)
+{
+    const lv_ll_t *ll_p = mp_write_ptr_lv_ll_t(args[0]);
+    uint32_t res = lv_ll_get_len(ll_p);
+    return mp_obj_new_int_from_uint(res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_get_len_obj, 1, mp_lv_ll_get_len, lv_ll_get_len);
 
  
 
@@ -20132,7 +20260,7 @@ STATIC mp_obj_t mp_lv_ll_move_before(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_move_before_obj, 3, 3, mp_lv_ll_move_before);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_move_before_obj, 3, mp_lv_ll_move_before, lv_ll_move_before);
 
  
 
@@ -20148,7 +20276,7 @@ STATIC mp_obj_t mp_lv_ll_is_empty(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_ll_is_empty_obj, 1, 1, mp_lv_ll_is_empty);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_ll_is_empty_obj, 1, mp_lv_ll_is_empty, lv_ll_is_empty);
 
  
 
@@ -20164,7 +20292,7 @@ STATIC mp_obj_t mp_lv_task_core_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_core_init_obj, 0, 0, mp_lv_task_core_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_core_init_obj, 0, mp_lv_task_core_init, lv_task_core_init);
 
  
 
@@ -20180,7 +20308,7 @@ STATIC mp_obj_t mp_lv_task_handler(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_handler_obj, 0, 0, mp_lv_task_handler);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_handler_obj, 0, mp_lv_task_handler, lv_task_handler);
 
  
 
@@ -20196,7 +20324,7 @@ STATIC mp_obj_t mp_lv_task_create_basic(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_task_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_create_basic_obj, 0, 0, mp_lv_task_create_basic);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_create_basic_obj, 0, mp_lv_task_create_basic, lv_task_create_basic);
 
  
 
@@ -20214,7 +20342,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_create_basic_obj, 0, 0, mp
  
 STATIC mp_obj_t mp_lv_task_create(size_t n_args, const mp_obj_t *args)
 {
-    void *task_cb = mp_lv_callback(args[0], NULL, MP_QSTR_task_cb, NULL);
+    lv_task_cb_t task_cb = mp_to_ptr(args[0]);
     uint32_t period = (uint32_t)mp_obj_get_int(args[1]);
     lv_task_prio_t prio = (uint8_t)mp_obj_get_int(args[2]);
     void *user_data = mp_to_ptr(args[3]);
@@ -20222,7 +20350,7 @@ STATIC mp_obj_t mp_lv_task_create(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_task_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_create_obj, 4, 4, mp_lv_task_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_create_obj, 4, mp_lv_task_create, lv_task_create);
 
  
 
@@ -20238,7 +20366,7 @@ STATIC mp_obj_t mp_lv_task_del(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_del_obj, 1, 1, mp_lv_task_del);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_del_obj, 1, mp_lv_task_del, lv_task_del);
 
  
 
@@ -20270,7 +20398,7 @@ STATIC mp_obj_t mp_lv_task_set_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_set_cb_obj, 2, 2, mp_lv_task_set_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_set_cb_obj, 2, mp_lv_task_set_cb, lv_task_set_cb);
 
  
 
@@ -20287,7 +20415,7 @@ STATIC mp_obj_t mp_lv_task_set_prio(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_set_prio_obj, 2, 2, mp_lv_task_set_prio);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_set_prio_obj, 2, mp_lv_task_set_prio, lv_task_set_prio);
 
  
 
@@ -20304,7 +20432,7 @@ STATIC mp_obj_t mp_lv_task_set_period(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_set_period_obj, 2, 2, mp_lv_task_set_period);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_set_period_obj, 2, mp_lv_task_set_period, lv_task_set_period);
 
  
 
@@ -20320,7 +20448,7 @@ STATIC mp_obj_t mp_lv_task_ready(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_ready_obj, 1, 1, mp_lv_task_ready);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_ready_obj, 1, mp_lv_task_ready, lv_task_ready);
 
  
 
@@ -20336,7 +20464,7 @@ STATIC mp_obj_t mp_lv_task_once(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_once_obj, 1, 1, mp_lv_task_once);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_once_obj, 1, mp_lv_task_once, lv_task_once);
 
  
 
@@ -20352,7 +20480,7 @@ STATIC mp_obj_t mp_lv_task_reset(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_reset_obj, 1, 1, mp_lv_task_reset);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_reset_obj, 1, mp_lv_task_reset, lv_task_reset);
 
  
 
@@ -20368,7 +20496,7 @@ STATIC mp_obj_t mp_lv_task_enable(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_enable_obj, 1, 1, mp_lv_task_enable);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_enable_obj, 1, mp_lv_task_enable, lv_task_enable);
 
  
 
@@ -20384,7 +20512,7 @@ STATIC mp_obj_t mp_lv_task_get_idle(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_task_get_idle_obj, 0, 0, mp_lv_task_get_idle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_get_idle_obj, 0, mp_lv_task_get_idle, lv_task_get_idle);
 
  
 
@@ -20400,7 +20528,7 @@ STATIC mp_obj_t mp_lv_trigo_sin(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_trigo_sin_obj, 1, 1, mp_lv_trigo_sin);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_trigo_sin_obj, 1, mp_lv_trigo_sin, lv_trigo_sin);
 
  
 
@@ -20420,7 +20548,7 @@ STATIC mp_obj_t mp_lv_bezier3(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_bezier3_obj, 5, 5, mp_lv_bezier3);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_bezier3_obj, 5, mp_lv_bezier3, lv_bezier3);
 
  
 
@@ -20438,7 +20566,7 @@ STATIC mp_obj_t mp_lv_color_hsv_to_rgb(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color32_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_hsv_to_rgb_obj, 3, 3, mp_lv_color_hsv_to_rgb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_hsv_to_rgb_obj, 3, mp_lv_color_hsv_to_rgb, lv_color_hsv_to_rgb);
 
  
 
@@ -20539,7 +20667,7 @@ STATIC mp_obj_t mp_lv_color_rgb_to_hsv(size_t n_args, const mp_obj_t *args)
     return mp_read_lv_color_hsv_t(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_color_rgb_to_hsv_obj, 3, 3, mp_lv_color_rgb_to_hsv);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_rgb_to_hsv_obj, 3, mp_lv_color_rgb_to_hsv, lv_color_rgb_to_hsv);
 
  
 
@@ -20559,7 +20687,7 @@ STATIC mp_obj_t mp_lv_area_set(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_set_obj, 5, 5, mp_lv_area_set);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_set_obj, 5, mp_lv_area_set, lv_area_set);
 
  
 
@@ -20576,7 +20704,7 @@ STATIC mp_obj_t mp_lv_area_set_width(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_set_width_obj, 2, 2, mp_lv_area_set_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_set_width_obj, 2, mp_lv_area_set_width, lv_area_set_width);
 
  
 
@@ -20593,7 +20721,7 @@ STATIC mp_obj_t mp_lv_area_set_height(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_set_height_obj, 2, 2, mp_lv_area_set_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_set_height_obj, 2, mp_lv_area_set_height, lv_area_set_height);
 
  
 
@@ -20611,7 +20739,7 @@ STATIC mp_obj_t mp_lv_area_set_pos(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_set_pos_obj, 3, 3, mp_lv_area_set_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_set_pos_obj, 3, mp_lv_area_set_pos, lv_area_set_pos);
 
  
 
@@ -20627,7 +20755,7 @@ STATIC mp_obj_t mp_lv_area_get_size(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_get_size_obj, 1, 1, mp_lv_area_get_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_get_size_obj, 1, mp_lv_area_get_size, lv_area_get_size);
 
  
 
@@ -20645,7 +20773,7 @@ STATIC mp_obj_t mp_lv_area_intersect(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_intersect_obj, 3, 3, mp_lv_area_intersect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_intersect_obj, 3, mp_lv_area_intersect, lv_area_intersect);
 
  
 
@@ -20663,7 +20791,7 @@ STATIC mp_obj_t mp_lv_area_join(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_join_obj, 3, 3, mp_lv_area_join);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_join_obj, 3, mp_lv_area_join, lv_area_join);
 
  
 
@@ -20680,7 +20808,7 @@ STATIC mp_obj_t mp_lv_area_is_point_on(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_is_point_on_obj, 2, 2, mp_lv_area_is_point_on);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_is_point_on_obj, 2, mp_lv_area_is_point_on, lv_area_is_point_on);
 
  
 
@@ -20697,7 +20825,7 @@ STATIC mp_obj_t mp_lv_area_is_on(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_is_on_obj, 2, 2, mp_lv_area_is_on);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_is_on_obj, 2, mp_lv_area_is_on, lv_area_is_on);
 
  
 
@@ -20714,7 +20842,7 @@ STATIC mp_obj_t mp_lv_area_is_in(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_area_is_in_obj, 2, 2, mp_lv_area_is_in);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_is_in_obj, 2, mp_lv_area_is_in, lv_area_is_in);
 
  
 
@@ -20730,7 +20858,7 @@ STATIC mp_obj_t mp_lv_disp_drv_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_drv_init_obj, 1, 1, mp_lv_disp_drv_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_drv_init_obj, 1, mp_lv_disp_drv_init, lv_disp_drv_init);
 
  
 
@@ -20749,7 +20877,7 @@ STATIC mp_obj_t mp_lv_disp_buf_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_buf_init_obj, 4, 4, mp_lv_disp_buf_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_buf_init_obj, 4, mp_lv_disp_buf_init, lv_disp_buf_init);
 
  
 
@@ -20765,7 +20893,7 @@ STATIC mp_obj_t mp_lv_disp_drv_register(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_disp_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_drv_register_obj, 1, 1, mp_lv_disp_drv_register);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_drv_register_obj, 1, mp_lv_disp_drv_register, lv_disp_drv_register);
 
  
 
@@ -20782,7 +20910,7 @@ STATIC mp_obj_t mp_lv_disp_drv_update(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_drv_update_obj, 2, 2, mp_lv_disp_drv_update);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_drv_update_obj, 2, mp_lv_disp_drv_update, lv_disp_drv_update);
 
  
 
@@ -20798,7 +20926,7 @@ STATIC mp_obj_t mp_lv_disp_remove(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_remove_obj, 1, 1, mp_lv_disp_remove);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_remove_obj, 1, mp_lv_disp_remove, lv_disp_remove);
 
  
 
@@ -20814,7 +20942,7 @@ STATIC mp_obj_t mp_lv_disp_set_default(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_set_default_obj, 1, 1, mp_lv_disp_set_default);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_set_default_obj, 1, mp_lv_disp_set_default, lv_disp_set_default);
 
  
 
@@ -20830,7 +20958,7 @@ STATIC mp_obj_t mp_lv_disp_get_default(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_disp_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_default_obj, 0, 0, mp_lv_disp_get_default);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_default_obj, 0, mp_lv_disp_get_default, lv_disp_get_default);
 
  
 
@@ -20846,7 +20974,7 @@ STATIC mp_obj_t mp_lv_disp_get_hor_res(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_hor_res_obj, 1, 1, mp_lv_disp_get_hor_res);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_hor_res_obj, 1, mp_lv_disp_get_hor_res, lv_disp_get_hor_res);
 
  
 
@@ -20862,7 +20990,7 @@ STATIC mp_obj_t mp_lv_disp_get_ver_res(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_ver_res_obj, 1, 1, mp_lv_disp_get_ver_res);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_ver_res_obj, 1, mp_lv_disp_get_ver_res, lv_disp_get_ver_res);
 
  
 
@@ -20878,7 +21006,7 @@ STATIC mp_obj_t mp_lv_disp_get_antialiasing(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_antialiasing_obj, 1, 1, mp_lv_disp_get_antialiasing);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_antialiasing_obj, 1, mp_lv_disp_get_antialiasing, lv_disp_get_antialiasing);
 
  
 
@@ -20894,7 +21022,7 @@ STATIC mp_obj_t mp_lv_disp_flush_ready(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_flush_ready_obj, 1, 1, mp_lv_disp_flush_ready);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_flush_ready_obj, 1, mp_lv_disp_flush_ready, lv_disp_flush_ready);
 
  
 
@@ -20910,7 +21038,7 @@ STATIC mp_obj_t mp_lv_disp_get_next(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_disp_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_next_obj, 1, 1, mp_lv_disp_get_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_next_obj, 1, mp_lv_disp_get_next, lv_disp_get_next);
 
  
 
@@ -20926,7 +21054,7 @@ STATIC mp_obj_t mp_lv_disp_get_buf(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_disp_buf_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_buf_obj, 1, 1, mp_lv_disp_get_buf);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_buf_obj, 1, mp_lv_disp_get_buf, lv_disp_get_buf);
 
  
 
@@ -20942,7 +21070,7 @@ STATIC mp_obj_t mp_lv_disp_get_inv_buf_size(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_inv_buf_size_obj, 1, 1, mp_lv_disp_get_inv_buf_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_inv_buf_size_obj, 1, mp_lv_disp_get_inv_buf_size, lv_disp_get_inv_buf_size);
 
  
 
@@ -20959,7 +21087,7 @@ STATIC mp_obj_t mp_lv_disp_pop_from_inv_buf(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_pop_from_inv_buf_obj, 2, 2, mp_lv_disp_pop_from_inv_buf);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_pop_from_inv_buf_obj, 2, mp_lv_disp_pop_from_inv_buf, lv_disp_pop_from_inv_buf);
 
  
 
@@ -20975,7 +21103,7 @@ STATIC mp_obj_t mp_lv_disp_is_double_buf(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_is_double_buf_obj, 1, 1, mp_lv_disp_is_double_buf);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_is_double_buf_obj, 1, mp_lv_disp_is_double_buf, lv_disp_is_double_buf);
 
  
 
@@ -20991,7 +21119,7 @@ STATIC mp_obj_t mp_lv_disp_is_true_double_buf(size_t n_args, const mp_obj_t *arg
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_is_true_double_buf_obj, 1, 1, mp_lv_disp_is_true_double_buf);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_is_true_double_buf_obj, 1, mp_lv_disp_is_true_double_buf, lv_disp_is_true_double_buf);
 
  
 STATIC bool read_cb_callback(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
@@ -21106,7 +21234,7 @@ STATIC mp_obj_t mp_lv_indev_drv_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_drv_init_obj, 1, 1, mp_lv_indev_drv_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_init_obj, 1, mp_lv_indev_drv_init, lv_indev_drv_init);
 
  
 typedef typeof( ((lv_indev_proc_t*)(0))->types ) lv_indev_proc_types_t;
@@ -21668,7 +21796,7 @@ STATIC mp_obj_t mp_lv_indev_drv_register(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_indev_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_drv_register_obj, 1, 1, mp_lv_indev_drv_register);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_register_obj, 1, mp_lv_indev_drv_register, lv_indev_drv_register);
 
  
 
@@ -21685,7 +21813,7 @@ STATIC mp_obj_t mp_lv_indev_drv_update(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_drv_update_obj, 2, 2, mp_lv_indev_drv_update);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_update_obj, 2, mp_lv_indev_drv_update, lv_indev_drv_update);
 
  
 
@@ -21701,7 +21829,7 @@ STATIC mp_obj_t mp_lv_indev_get_next(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_indev_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_next_obj, 1, 1, mp_lv_indev_get_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_next_obj, 1, mp_lv_indev_get_next, lv_indev_get_next);
 
  
 
@@ -21805,7 +21933,7 @@ STATIC mp_obj_t mp_lv_indev_read(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_read_obj, 2, 2, mp_lv_indev_read);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_read_obj, 2, mp_lv_indev_read, lv_indev_read);
 
  
 
@@ -21821,7 +21949,7 @@ STATIC mp_obj_t mp_lv_tick_inc(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_inc_obj, 1, 1, mp_lv_tick_inc);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tick_inc_obj, 1, mp_lv_tick_inc, lv_tick_inc);
 
  
 
@@ -21837,7 +21965,7 @@ STATIC mp_obj_t mp_lv_tick_get(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_get_obj, 0, 0, mp_lv_tick_get);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tick_get_obj, 0, mp_lv_tick_get, lv_tick_get);
 
  
 
@@ -21853,7 +21981,7 @@ STATIC mp_obj_t mp_lv_tick_elaps(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_tick_elaps_obj, 1, 1, mp_lv_tick_elaps);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tick_elaps_obj, 1, mp_lv_tick_elaps, lv_tick_elaps);
 
  
 
@@ -21869,7 +21997,7 @@ STATIC mp_obj_t mp_lv_font_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_init_obj, 0, 0, mp_lv_font_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_init_obj, 0, mp_lv_font_init, lv_font_init);
 
  
 
@@ -21886,7 +22014,7 @@ STATIC mp_obj_t mp_lv_font_add(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_add_obj, 2, 2, mp_lv_font_add);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_add_obj, 2, mp_lv_font_add, lv_font_add);
 
  
 
@@ -21903,7 +22031,7 @@ STATIC mp_obj_t mp_lv_font_remove(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_remove_obj, 2, 2, mp_lv_font_remove);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_remove_obj, 2, mp_lv_font_remove, lv_font_remove);
 
  
 
@@ -21920,7 +22048,7 @@ STATIC mp_obj_t mp_lv_font_is_monospace(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_is_monospace_obj, 2, 2, mp_lv_font_is_monospace);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_is_monospace_obj, 2, mp_lv_font_is_monospace, lv_font_is_monospace);
 
  
 
@@ -21937,7 +22065,7 @@ STATIC mp_obj_t mp_lv_font_get_bitmap(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_bitmap_obj, 2, 2, mp_lv_font_get_bitmap);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_bitmap_obj, 2, mp_lv_font_get_bitmap, lv_font_get_bitmap);
 
  
 
@@ -21954,7 +22082,7 @@ STATIC mp_obj_t mp_lv_font_get_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_width_obj, 2, 2, mp_lv_font_get_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_width_obj, 2, mp_lv_font_get_width, lv_font_get_width);
 
  
 
@@ -21971,7 +22099,7 @@ STATIC mp_obj_t mp_lv_font_get_real_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_real_width_obj, 2, 2, mp_lv_font_get_real_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_real_width_obj, 2, mp_lv_font_get_real_width, lv_font_get_real_width);
 
  
 
@@ -21988,7 +22116,7 @@ STATIC mp_obj_t mp_lv_font_get_bpp(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_bpp_obj, 2, 2, mp_lv_font_get_bpp);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_bpp_obj, 2, mp_lv_font_get_bpp, lv_font_get_bpp);
 
  
 
@@ -22005,7 +22133,7 @@ STATIC mp_obj_t mp_lv_font_get_bitmap_continuous(size_t n_args, const mp_obj_t *
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_bitmap_continuous_obj, 2, 2, mp_lv_font_get_bitmap_continuous);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_bitmap_continuous_obj, 2, mp_lv_font_get_bitmap_continuous, lv_font_get_bitmap_continuous);
 
  
 
@@ -22022,7 +22150,7 @@ STATIC mp_obj_t mp_lv_font_get_bitmap_sparse(size_t n_args, const mp_obj_t *args
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_bitmap_sparse_obj, 2, 2, mp_lv_font_get_bitmap_sparse);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_bitmap_sparse_obj, 2, mp_lv_font_get_bitmap_sparse, lv_font_get_bitmap_sparse);
 
  
 
@@ -22039,7 +22167,7 @@ STATIC mp_obj_t mp_lv_font_get_width_continuous(size_t n_args, const mp_obj_t *a
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_width_continuous_obj, 2, 2, mp_lv_font_get_width_continuous);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_width_continuous_obj, 2, mp_lv_font_get_width_continuous, lv_font_get_width_continuous);
 
  
 
@@ -22056,7 +22184,7 @@ STATIC mp_obj_t mp_lv_font_get_width_sparse(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_get_width_sparse_obj, 2, 2, mp_lv_font_get_width_sparse);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_width_sparse_obj, 2, mp_lv_font_get_width_sparse, lv_font_get_width_sparse);
 
  
 
@@ -22072,7 +22200,7 @@ STATIC mp_obj_t mp_lv_font_builtin_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_font_builtin_init_obj, 0, 0, mp_lv_font_builtin_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_builtin_init_obj, 0, mp_lv_font_builtin_init, lv_font_builtin_init);
 
  
 
@@ -22088,7 +22216,7 @@ STATIC mp_obj_t mp_lv_anim_core_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_core_init_obj, 0, 0, mp_lv_anim_core_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_core_init_obj, 0, mp_lv_anim_core_init, lv_anim_core_init);
 
  
 
@@ -22104,7 +22232,7 @@ STATIC mp_obj_t mp_lv_anim_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_init_obj, 1, 1, mp_lv_anim_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_init_obj, 1, mp_lv_anim_init, lv_anim_init);
 
  
 
@@ -22120,7 +22248,7 @@ STATIC mp_obj_t mp_lv_anim_create(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_create_obj, 1, 1, mp_lv_anim_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_create_obj, 1, mp_lv_anim_create, lv_anim_create);
 
  
 
@@ -22139,12 +22267,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_create_obj, 1, 1, mp_lv_an
 STATIC mp_obj_t mp_lv_anim_del(size_t n_args, const mp_obj_t *args)
 {
     void *var = mp_to_ptr(args[0]);
-    void *exec_cb = mp_lv_callback(args[1], NULL, MP_QSTR_exec_cb, NULL);
+    lv_anim_exec_cb_t exec_cb = mp_to_ptr(args[1]);
     bool res = lv_anim_del(var, exec_cb);
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_del_obj, 2, 2, mp_lv_anim_del);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_del_obj, 2, mp_lv_anim_del, lv_anim_del);
 
  
 
@@ -22160,7 +22288,7 @@ STATIC mp_obj_t mp_lv_anim_count_running(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_count_running_obj, 0, 0, mp_lv_anim_count_running);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_count_running_obj, 0, mp_lv_anim_count_running, lv_anim_count_running);
 
  
 
@@ -22178,7 +22306,7 @@ STATIC mp_obj_t mp_lv_anim_speed_to_time(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_speed_to_time_obj, 3, 3, mp_lv_anim_speed_to_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_speed_to_time_obj, 3, mp_lv_anim_speed_to_time, lv_anim_speed_to_time);
 
  
 
@@ -22194,7 +22322,7 @@ STATIC mp_obj_t mp_lv_anim_path_linear(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_linear_obj, 1, 1, mp_lv_anim_path_linear);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_linear_obj, 1, mp_lv_anim_path_linear, lv_anim_path_linear);
 
  
 
@@ -22210,7 +22338,7 @@ STATIC mp_obj_t mp_lv_anim_path_ease_in(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_ease_in_obj, 1, 1, mp_lv_anim_path_ease_in);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_ease_in_obj, 1, mp_lv_anim_path_ease_in, lv_anim_path_ease_in);
 
  
 
@@ -22226,7 +22354,7 @@ STATIC mp_obj_t mp_lv_anim_path_ease_out(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_ease_out_obj, 1, 1, mp_lv_anim_path_ease_out);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_ease_out_obj, 1, mp_lv_anim_path_ease_out, lv_anim_path_ease_out);
 
  
 
@@ -22242,7 +22370,7 @@ STATIC mp_obj_t mp_lv_anim_path_ease_in_out(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_ease_in_out_obj, 1, 1, mp_lv_anim_path_ease_in_out);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_ease_in_out_obj, 1, mp_lv_anim_path_ease_in_out, lv_anim_path_ease_in_out);
 
  
 
@@ -22258,7 +22386,7 @@ STATIC mp_obj_t mp_lv_anim_path_overshoot(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_overshoot_obj, 1, 1, mp_lv_anim_path_overshoot);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_overshoot_obj, 1, mp_lv_anim_path_overshoot, lv_anim_path_overshoot);
 
  
 
@@ -22274,7 +22402,7 @@ STATIC mp_obj_t mp_lv_anim_path_bounce(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_bounce_obj, 1, 1, mp_lv_anim_path_bounce);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_bounce_obj, 1, mp_lv_anim_path_bounce, lv_anim_path_bounce);
 
  
 
@@ -22290,7 +22418,7 @@ STATIC mp_obj_t mp_lv_anim_path_step(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_anim_path_step_obj, 1, 1, mp_lv_anim_path_step);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_step_obj, 1, mp_lv_anim_path_step, lv_anim_path_step);
 
  
 
@@ -22306,7 +22434,7 @@ STATIC mp_obj_t mp_lv_style_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_init_obj, 0, 0, mp_lv_style_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_init_obj, 0, mp_lv_style_init, lv_style_init);
 
  
 
@@ -22323,7 +22451,7 @@ STATIC mp_obj_t mp_lv_style_copy(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_copy_obj, 2, 2, mp_lv_style_copy);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_copy_obj, 2, mp_lv_style_copy, lv_style_copy);
 
  
 
@@ -22342,7 +22470,7 @@ STATIC mp_obj_t mp_lv_style_mix(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_mix_obj, 4, 4, mp_lv_style_mix);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_mix_obj, 4, mp_lv_style_mix, lv_style_mix);
 
  
 
@@ -22358,7 +22486,7 @@ STATIC mp_obj_t mp_lv_style_anim_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_init_obj, 1, 1, mp_lv_style_anim_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_init_obj, 1, mp_lv_style_anim_init, lv_style_anim_init);
 
  
 
@@ -22377,7 +22505,7 @@ STATIC mp_obj_t mp_lv_style_anim_set_styles(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_style_anim_set_styles_obj, 4, 4, mp_lv_style_anim_set_styles);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_anim_set_styles_obj, 4, mp_lv_style_anim_set_styles, lv_style_anim_set_styles);
 
  
 
@@ -22393,7 +22521,7 @@ STATIC mp_obj_t mp_lv_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_init_obj, 0, 0, mp_lv_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_init_obj, 0, mp_lv_init, lv_init);
 
  
 
@@ -22411,7 +22539,7 @@ STATIC mp_obj_t mp_lv_event_send(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_event_send_obj, 3, 3, mp_lv_event_send);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_event_send_obj, 3, mp_lv_event_send, lv_event_send);
 
  
 
@@ -22429,7 +22557,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_event_send_obj, 3, 3, mp_lv_eve
  
 STATIC mp_obj_t mp_lv_event_send_func(size_t n_args, const mp_obj_t *args)
 {
-    void *event_cb = mp_lv_callback(args[0], NULL, MP_QSTR_event_cb, NULL);
+    lv_event_cb_t event_cb = mp_to_ptr(args[0]);
     lv_obj_t *obj = mp_to_lv(args[1]);
     lv_event_t event = (uint8_t)mp_obj_get_int(args[2]);
     const void *data = mp_to_ptr(args[3]);
@@ -22437,7 +22565,7 @@ STATIC mp_obj_t mp_lv_event_send_func(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_event_send_func_obj, 4, 4, mp_lv_event_send_func);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_event_send_func_obj, 4, mp_lv_event_send_func, lv_event_send_func);
 
  
 
@@ -22453,7 +22581,7 @@ STATIC mp_obj_t mp_lv_event_get_data(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_event_get_data_obj, 0, 0, mp_lv_event_get_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_event_get_data_obj, 0, mp_lv_event_get_data, lv_event_get_data);
 
  
 
@@ -22471,7 +22599,7 @@ STATIC mp_obj_t mp_lv_signal_send(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_signal_send_obj, 3, 3, mp_lv_signal_send);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_signal_send_obj, 3, mp_lv_signal_send, lv_signal_send);
 
  
 
@@ -22487,7 +22615,7 @@ STATIC mp_obj_t mp_lv_group_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_init_obj, 0, 0, mp_lv_group_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_init_obj, 0, mp_lv_group_init, lv_group_init);
 
  
 
@@ -22503,7 +22631,7 @@ STATIC mp_obj_t mp_lv_group_create(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_group_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_create_obj, 0, 0, mp_lv_group_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_create_obj, 0, mp_lv_group_create, lv_group_create);
 
  
 
@@ -22519,7 +22647,7 @@ STATIC mp_obj_t mp_lv_group_del(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_del_obj, 1, 1, mp_lv_group_del);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_del_obj, 1, mp_lv_group_del, lv_group_del);
 
  
 
@@ -22536,7 +22664,7 @@ STATIC mp_obj_t mp_lv_group_add_obj(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_add_obj_obj, 2, 2, mp_lv_group_add_obj);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_add_obj_obj, 2, mp_lv_group_add_obj, lv_group_add_obj);
 
  
 
@@ -22552,7 +22680,23 @@ STATIC mp_obj_t mp_lv_group_remove_obj(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_remove_obj_obj, 1, 1, mp_lv_group_remove_obj);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_remove_obj_obj, 1, mp_lv_group_remove_obj, lv_group_remove_obj);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * void lv_group_remove_all_objs(lv_group_t *group)
+ */
+ 
+STATIC mp_obj_t mp_lv_group_remove_all_objs(size_t n_args, const mp_obj_t *args)
+{
+    lv_group_t *group = mp_write_ptr_lv_group_t(args[0]);
+    lv_group_remove_all_objs(group);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_remove_all_objs_obj, 1, mp_lv_group_remove_all_objs, lv_group_remove_all_objs);
 
  
 
@@ -22568,7 +22712,7 @@ STATIC mp_obj_t mp_lv_group_focus_obj(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_obj_obj, 1, 1, mp_lv_group_focus_obj);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_focus_obj_obj, 1, mp_lv_group_focus_obj, lv_group_focus_obj);
 
  
 
@@ -22584,7 +22728,7 @@ STATIC mp_obj_t mp_lv_group_focus_next(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_next_obj, 1, 1, mp_lv_group_focus_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_focus_next_obj, 1, mp_lv_group_focus_next, lv_group_focus_next);
 
  
 
@@ -22600,7 +22744,7 @@ STATIC mp_obj_t mp_lv_group_focus_prev(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_prev_obj, 1, 1, mp_lv_group_focus_prev);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_focus_prev_obj, 1, mp_lv_group_focus_prev, lv_group_focus_prev);
 
  
 
@@ -22617,7 +22761,7 @@ STATIC mp_obj_t mp_lv_group_focus_freeze(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_focus_freeze_obj, 2, 2, mp_lv_group_focus_freeze);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_focus_freeze_obj, 2, mp_lv_group_focus_freeze, lv_group_focus_freeze);
 
  
 
@@ -22634,7 +22778,7 @@ STATIC mp_obj_t mp_lv_group_send_data(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_send_data_obj, 2, 2, mp_lv_group_send_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_send_data_obj, 2, mp_lv_group_send_data, lv_group_send_data);
 
  
 
@@ -22667,7 +22811,7 @@ STATIC mp_obj_t mp_lv_group_set_style_mod_cb(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_style_mod_cb_obj, 2, 2, mp_lv_group_set_style_mod_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_style_mod_cb_obj, 2, mp_lv_group_set_style_mod_cb, lv_group_set_style_mod_cb);
 
  
 
@@ -22700,7 +22844,7 @@ STATIC mp_obj_t mp_lv_group_set_style_mod_edit_cb(size_t n_args, const mp_obj_t 
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_style_mod_edit_cb_obj, 2, 2, mp_lv_group_set_style_mod_edit_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_style_mod_edit_cb_obj, 2, mp_lv_group_set_style_mod_edit_cb, lv_group_set_style_mod_edit_cb);
 
  
 
@@ -22732,7 +22876,7 @@ STATIC mp_obj_t mp_lv_group_set_focus_cb(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_focus_cb_obj, 2, 2, mp_lv_group_set_focus_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_focus_cb_obj, 2, mp_lv_group_set_focus_cb, lv_group_set_focus_cb);
 
  
 
@@ -22749,7 +22893,7 @@ STATIC mp_obj_t mp_lv_group_set_refocus_policy(size_t n_args, const mp_obj_t *ar
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_refocus_policy_obj, 2, 2, mp_lv_group_set_refocus_policy);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_refocus_policy_obj, 2, mp_lv_group_set_refocus_policy, lv_group_set_refocus_policy);
 
  
 
@@ -22766,7 +22910,7 @@ STATIC mp_obj_t mp_lv_group_set_editing(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_editing_obj, 2, 2, mp_lv_group_set_editing);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_editing_obj, 2, mp_lv_group_set_editing, lv_group_set_editing);
 
  
 
@@ -22783,7 +22927,7 @@ STATIC mp_obj_t mp_lv_group_set_click_focus(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_click_focus_obj, 2, 2, mp_lv_group_set_click_focus);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_click_focus_obj, 2, mp_lv_group_set_click_focus, lv_group_set_click_focus);
 
  
 
@@ -22800,7 +22944,7 @@ STATIC mp_obj_t mp_lv_group_set_wrap(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_set_wrap_obj, 2, 2, mp_lv_group_set_wrap);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_set_wrap_obj, 2, mp_lv_group_set_wrap, lv_group_set_wrap);
 
  
 
@@ -22817,7 +22961,7 @@ STATIC mp_obj_t mp_lv_group_mod_style(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_style_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_mod_style_obj, 2, 2, mp_lv_group_mod_style);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_mod_style_obj, 2, mp_lv_group_mod_style, lv_group_mod_style);
 
  
 
@@ -22833,7 +22977,7 @@ STATIC mp_obj_t mp_lv_group_get_focused(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_focused_obj, 1, 1, mp_lv_group_get_focused);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_focused_obj, 1, mp_lv_group_get_focused, lv_group_get_focused);
 
  
 
@@ -22849,7 +22993,7 @@ STATIC mp_obj_t mp_lv_group_get_user_data(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_user_data_obj, 1, 1, mp_lv_group_get_user_data);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_user_data_obj, 1, mp_lv_group_get_user_data, lv_group_get_user_data);
 
  
 
@@ -22865,7 +23009,7 @@ STATIC mp_obj_t mp_lv_group_get_style_mod_cb(size_t n_args, const mp_obj_t *args
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_style_mod_cb_obj, 1, 1, mp_lv_group_get_style_mod_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_style_mod_cb_obj, 1, mp_lv_group_get_style_mod_cb, lv_group_get_style_mod_cb);
 
  
 
@@ -22881,7 +23025,7 @@ STATIC mp_obj_t mp_lv_group_get_style_mod_edit_cb(size_t n_args, const mp_obj_t 
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_style_mod_edit_cb_obj, 1, 1, mp_lv_group_get_style_mod_edit_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_style_mod_edit_cb_obj, 1, mp_lv_group_get_style_mod_edit_cb, lv_group_get_style_mod_edit_cb);
 
  
 
@@ -22897,7 +23041,7 @@ STATIC mp_obj_t mp_lv_group_get_focus_cb(size_t n_args, const mp_obj_t *args)
     return ptr_to_mp(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_focus_cb_obj, 1, 1, mp_lv_group_get_focus_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_focus_cb_obj, 1, mp_lv_group_get_focus_cb, lv_group_get_focus_cb);
 
  
 
@@ -22913,7 +23057,7 @@ STATIC mp_obj_t mp_lv_group_get_editing(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_editing_obj, 1, 1, mp_lv_group_get_editing);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_editing_obj, 1, mp_lv_group_get_editing, lv_group_get_editing);
 
  
 
@@ -22929,7 +23073,7 @@ STATIC mp_obj_t mp_lv_group_get_click_focus(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_click_focus_obj, 1, 1, mp_lv_group_get_click_focus);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_click_focus_obj, 1, mp_lv_group_get_click_focus, lv_group_get_click_focus);
 
  
 
@@ -22945,7 +23089,7 @@ STATIC mp_obj_t mp_lv_group_get_wrap(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_get_wrap_obj, 1, 1, mp_lv_group_get_wrap);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_wrap_obj, 1, mp_lv_group_get_wrap, lv_group_get_wrap);
 
  
 
@@ -22961,7 +23105,7 @@ STATIC mp_obj_t mp_lv_group_report_style_mod(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_group_report_style_mod_obj, 1, 1, mp_lv_group_report_style_mod);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_report_style_mod_obj, 1, mp_lv_group_report_style_mod, lv_group_report_style_mod);
 
  
 
@@ -22977,7 +23121,7 @@ STATIC mp_obj_t mp_lv_refr_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_refr_init_obj, 0, 0, mp_lv_refr_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_refr_init_obj, 0, mp_lv_refr_init, lv_refr_init);
 
  
 
@@ -22993,7 +23137,7 @@ STATIC mp_obj_t mp_lv_refr_now(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_refr_now_obj, 0, 0, mp_lv_refr_now);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_refr_now_obj, 0, mp_lv_refr_now, lv_refr_now);
 
  
 
@@ -23010,7 +23154,7 @@ STATIC mp_obj_t mp_lv_inv_area(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_inv_area_obj, 2, 2, mp_lv_inv_area);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_inv_area_obj, 2, mp_lv_inv_area, lv_inv_area);
 
  
 
@@ -23026,7 +23170,7 @@ STATIC mp_obj_t mp_lv_refr_get_disp_refreshing(size_t n_args, const mp_obj_t *ar
     return mp_read_ptr_lv_disp_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_refr_get_disp_refreshing_obj, 0, 0, mp_lv_refr_get_disp_refreshing);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_refr_get_disp_refreshing_obj, 0, mp_lv_refr_get_disp_refreshing, lv_refr_get_disp_refreshing);
 
  
 
@@ -23042,7 +23186,7 @@ STATIC mp_obj_t mp_lv_disp_refr_task(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_refr_task_obj, 1, 1, mp_lv_disp_refr_task);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_refr_task_obj, 1, mp_lv_disp_refr_task, lv_disp_refr_task);
 
  
 
@@ -23058,7 +23202,7 @@ STATIC mp_obj_t mp_lv_disp_get_scr_act(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_scr_act_obj, 1, 1, mp_lv_disp_get_scr_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_scr_act_obj, 1, mp_lv_disp_get_scr_act, lv_disp_get_scr_act);
 
  
 
@@ -23074,7 +23218,7 @@ STATIC mp_obj_t mp_lv_disp_set_scr_act(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_set_scr_act_obj, 1, 1, mp_lv_disp_set_scr_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_set_scr_act_obj, 1, mp_lv_disp_set_scr_act, lv_disp_set_scr_act);
 
  
 
@@ -23090,7 +23234,7 @@ STATIC mp_obj_t mp_lv_disp_get_layer_top(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_layer_top_obj, 1, 1, mp_lv_disp_get_layer_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_layer_top_obj, 1, mp_lv_disp_get_layer_top, lv_disp_get_layer_top);
 
  
 
@@ -23106,7 +23250,7 @@ STATIC mp_obj_t mp_lv_disp_get_layer_sys(size_t n_args, const mp_obj_t *args)
     return lv_to_mp((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_layer_sys_obj, 1, 1, mp_lv_disp_get_layer_sys);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_layer_sys_obj, 1, mp_lv_disp_get_layer_sys, lv_disp_get_layer_sys);
 
  
 
@@ -23123,7 +23267,7 @@ STATIC mp_obj_t mp_lv_disp_assign_screen(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_assign_screen_obj, 2, 2, mp_lv_disp_assign_screen);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_assign_screen_obj, 2, mp_lv_disp_assign_screen, lv_disp_assign_screen);
 
  
 
@@ -23139,7 +23283,7 @@ STATIC mp_obj_t mp_lv_disp_get_refr_task(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_task_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_refr_task_obj, 1, 1, mp_lv_disp_get_refr_task);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_refr_task_obj, 1, mp_lv_disp_get_refr_task, lv_disp_get_refr_task);
 
  
 
@@ -23155,7 +23299,7 @@ STATIC mp_obj_t mp_lv_disp_get_inactive_time(size_t n_args, const mp_obj_t *args
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_get_inactive_time_obj, 1, 1, mp_lv_disp_get_inactive_time);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_inactive_time_obj, 1, mp_lv_disp_get_inactive_time, lv_disp_get_inactive_time);
 
  
 
@@ -23171,7 +23315,7 @@ STATIC mp_obj_t mp_lv_disp_trig_activity(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_disp_trig_activity_obj, 1, 1, mp_lv_disp_trig_activity);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_trig_activity_obj, 1, mp_lv_disp_trig_activity, lv_disp_trig_activity);
 
  
 typedef typeof( ((lv_theme_t*)(0))->style ) lv_theme_style_t;
@@ -26134,7 +26278,7 @@ STATIC mp_obj_t mp_lv_theme_set_current(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_set_current_obj, 1, 1, mp_lv_theme_set_current);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_set_current_obj, 1, mp_lv_theme_set_current, lv_theme_set_current);
 
  
 
@@ -26150,7 +26294,7 @@ STATIC mp_obj_t mp_lv_theme_get_current(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_current_obj, 0, 0, mp_lv_theme_get_current);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_current_obj, 0, mp_lv_theme_get_current, lv_theme_get_current);
 
  
 
@@ -26167,7 +26311,7 @@ STATIC mp_obj_t mp_lv_theme_templ_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_templ_init_obj, 2, 2, mp_lv_theme_templ_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_templ_init_obj, 2, mp_lv_theme_templ_init, lv_theme_templ_init);
 
  
 
@@ -26183,7 +26327,7 @@ STATIC mp_obj_t mp_lv_theme_get_templ(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_templ_obj, 0, 0, mp_lv_theme_get_templ);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_templ_obj, 0, mp_lv_theme_get_templ, lv_theme_get_templ);
 
  
 
@@ -26200,7 +26344,7 @@ STATIC mp_obj_t mp_lv_theme_default_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_default_init_obj, 2, 2, mp_lv_theme_default_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_default_init_obj, 2, mp_lv_theme_default_init, lv_theme_default_init);
 
  
 
@@ -26216,7 +26360,7 @@ STATIC mp_obj_t mp_lv_theme_get_default(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_default_obj, 0, 0, mp_lv_theme_get_default);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_default_obj, 0, mp_lv_theme_get_default, lv_theme_get_default);
 
  
 
@@ -26233,7 +26377,7 @@ STATIC mp_obj_t mp_lv_theme_alien_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_alien_init_obj, 2, 2, mp_lv_theme_alien_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_alien_init_obj, 2, mp_lv_theme_alien_init, lv_theme_alien_init);
 
  
 
@@ -26249,7 +26393,7 @@ STATIC mp_obj_t mp_lv_theme_get_alien(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_alien_obj, 0, 0, mp_lv_theme_get_alien);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_alien_obj, 0, mp_lv_theme_get_alien, lv_theme_get_alien);
 
  
 
@@ -26266,7 +26410,7 @@ STATIC mp_obj_t mp_lv_theme_night_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_night_init_obj, 2, 2, mp_lv_theme_night_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_night_init_obj, 2, mp_lv_theme_night_init, lv_theme_night_init);
 
  
 
@@ -26282,7 +26426,7 @@ STATIC mp_obj_t mp_lv_theme_get_night(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_night_obj, 0, 0, mp_lv_theme_get_night);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_night_obj, 0, mp_lv_theme_get_night, lv_theme_get_night);
 
  
 
@@ -26299,7 +26443,7 @@ STATIC mp_obj_t mp_lv_theme_zen_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_zen_init_obj, 2, 2, mp_lv_theme_zen_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_zen_init_obj, 2, mp_lv_theme_zen_init, lv_theme_zen_init);
 
  
 
@@ -26315,7 +26459,7 @@ STATIC mp_obj_t mp_lv_theme_get_zen(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_zen_obj, 0, 0, mp_lv_theme_get_zen);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_zen_obj, 0, mp_lv_theme_get_zen, lv_theme_get_zen);
 
  
 
@@ -26332,7 +26476,7 @@ STATIC mp_obj_t mp_lv_theme_mono_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_mono_init_obj, 2, 2, mp_lv_theme_mono_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_mono_init_obj, 2, mp_lv_theme_mono_init, lv_theme_mono_init);
 
  
 
@@ -26348,7 +26492,7 @@ STATIC mp_obj_t mp_lv_theme_get_mono(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_mono_obj, 0, 0, mp_lv_theme_get_mono);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_mono_obj, 0, mp_lv_theme_get_mono, lv_theme_get_mono);
 
  
 
@@ -26365,7 +26509,7 @@ STATIC mp_obj_t mp_lv_theme_nemo_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_nemo_init_obj, 2, 2, mp_lv_theme_nemo_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_nemo_init_obj, 2, mp_lv_theme_nemo_init, lv_theme_nemo_init);
 
  
 
@@ -26381,7 +26525,7 @@ STATIC mp_obj_t mp_lv_theme_get_nemo(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_nemo_obj, 0, 0, mp_lv_theme_get_nemo);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_nemo_obj, 0, mp_lv_theme_get_nemo, lv_theme_get_nemo);
 
  
 
@@ -26398,7 +26542,7 @@ STATIC mp_obj_t mp_lv_theme_material_init(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_material_init_obj, 2, 2, mp_lv_theme_material_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_material_init_obj, 2, mp_lv_theme_material_init, lv_theme_material_init);
 
  
 
@@ -26414,7 +26558,7 @@ STATIC mp_obj_t mp_lv_theme_get_material(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_theme_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_theme_get_material_obj, 0, 0, mp_lv_theme_get_material);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_material_obj, 0, mp_lv_theme_get_material, lv_theme_get_material);
 
  
 
@@ -26430,7 +26574,7 @@ STATIC mp_obj_t mp_lv_indev_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_init_obj, 0, 0, mp_lv_indev_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_init_obj, 0, mp_lv_indev_init, lv_indev_init);
 
  
 
@@ -26446,7 +26590,7 @@ STATIC mp_obj_t mp_lv_indev_read_task(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_read_task_obj, 1, 1, mp_lv_indev_read_task);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_read_task_obj, 1, mp_lv_indev_read_task, lv_indev_read_task);
 
  
 
@@ -26462,7 +26606,7 @@ STATIC mp_obj_t mp_lv_indev_get_act(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_indev_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_act_obj, 0, 0, mp_lv_indev_get_act);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_act_obj, 0, mp_lv_indev_get_act, lv_indev_get_act);
 
  
 
@@ -26478,7 +26622,7 @@ STATIC mp_obj_t mp_lv_indev_get_type(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_type_obj, 1, 1, mp_lv_indev_get_type);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_type_obj, 1, mp_lv_indev_get_type, lv_indev_get_type);
 
  
 
@@ -26494,7 +26638,7 @@ STATIC mp_obj_t mp_lv_indev_reset(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_reset_obj, 1, 1, mp_lv_indev_reset);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_reset_obj, 1, mp_lv_indev_reset, lv_indev_reset);
 
  
 
@@ -26510,7 +26654,7 @@ STATIC mp_obj_t mp_lv_indev_reset_long_press(size_t n_args, const mp_obj_t *args
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_reset_long_press_obj, 1, 1, mp_lv_indev_reset_long_press);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_reset_long_press_obj, 1, mp_lv_indev_reset_long_press, lv_indev_reset_long_press);
 
  
 
@@ -26527,7 +26671,7 @@ STATIC mp_obj_t mp_lv_indev_enable(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_enable_obj, 2, 2, mp_lv_indev_enable);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_enable_obj, 2, mp_lv_indev_enable, lv_indev_enable);
 
  
 
@@ -26544,7 +26688,7 @@ STATIC mp_obj_t mp_lv_indev_set_cursor(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_set_cursor_obj, 2, 2, mp_lv_indev_set_cursor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_set_cursor_obj, 2, mp_lv_indev_set_cursor, lv_indev_set_cursor);
 
  
 
@@ -26561,7 +26705,7 @@ STATIC mp_obj_t mp_lv_indev_set_group(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_set_group_obj, 2, 2, mp_lv_indev_set_group);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_set_group_obj, 2, mp_lv_indev_set_group, lv_indev_set_group);
 
  
 
@@ -26578,7 +26722,7 @@ STATIC mp_obj_t mp_lv_indev_set_button_points(size_t n_args, const mp_obj_t *arg
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_set_button_points_obj, 2, 2, mp_lv_indev_set_button_points);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_set_button_points_obj, 2, mp_lv_indev_set_button_points, lv_indev_set_button_points);
 
  
 
@@ -26595,7 +26739,7 @@ STATIC mp_obj_t mp_lv_indev_get_point(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_point_obj, 2, 2, mp_lv_indev_get_point);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_point_obj, 2, mp_lv_indev_get_point, lv_indev_get_point);
 
  
 
@@ -26611,7 +26755,7 @@ STATIC mp_obj_t mp_lv_indev_get_key(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_key_obj, 1, 1, mp_lv_indev_get_key);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_key_obj, 1, mp_lv_indev_get_key, lv_indev_get_key);
 
  
 
@@ -26627,7 +26771,7 @@ STATIC mp_obj_t mp_lv_indev_is_dragging(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_is_dragging_obj, 1, 1, mp_lv_indev_is_dragging);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_is_dragging_obj, 1, mp_lv_indev_is_dragging, lv_indev_is_dragging);
 
  
 
@@ -26644,7 +26788,7 @@ STATIC mp_obj_t mp_lv_indev_get_vect(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_vect_obj, 2, 2, mp_lv_indev_get_vect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_vect_obj, 2, mp_lv_indev_get_vect, lv_indev_get_vect);
 
  
 
@@ -26660,7 +26804,7 @@ STATIC mp_obj_t mp_lv_indev_wait_release(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_wait_release_obj, 1, 1, mp_lv_indev_wait_release);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_wait_release_obj, 1, mp_lv_indev_wait_release, lv_indev_wait_release);
 
  
 
@@ -26676,7 +26820,23 @@ STATIC mp_obj_t mp_lv_indev_get_read_task(size_t n_args, const mp_obj_t *args)
     return mp_read_ptr_lv_task_t((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_indev_get_read_task_obj, 1, 1, mp_lv_indev_get_read_task);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_read_task_obj, 1, mp_lv_indev_get_read_task, lv_indev_get_read_task);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * lv_obj_t *lv_indev_get_obj_act(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_indev_get_obj_act(size_t n_args, const mp_obj_t *args)
+{
+    
+    lv_obj_t * res = lv_indev_get_obj_act();
+    return lv_to_mp((void*)res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_obj_act_obj, 0, mp_lv_indev_get_obj_act, lv_indev_get_obj_act);
 
  
 
@@ -26698,7 +26858,7 @@ STATIC mp_obj_t mp_lv_txt_get_size(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_get_size_obj, 7, 7, mp_lv_txt_get_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_txt_get_size_obj, 7, mp_lv_txt_get_size, lv_txt_get_size);
 
  
 
@@ -26718,7 +26878,7 @@ STATIC mp_obj_t mp_lv_txt_get_next_line(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_get_next_line_obj, 5, 5, mp_lv_txt_get_next_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_txt_get_next_line_obj, 5, mp_lv_txt_get_next_line, lv_txt_get_next_line);
 
  
 
@@ -26738,7 +26898,7 @@ STATIC mp_obj_t mp_lv_txt_get_width(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_get_width_obj, 5, 5, mp_lv_txt_get_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_txt_get_width_obj, 5, mp_lv_txt_get_width, lv_txt_get_width);
 
  
 
@@ -26755,7 +26915,7 @@ STATIC mp_obj_t mp_lv_txt_is_cmd(size_t n_args, const mp_obj_t *args)
     return convert_to_bool(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_is_cmd_obj, 2, 2, mp_lv_txt_is_cmd);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_txt_is_cmd_obj, 2, mp_lv_txt_is_cmd, lv_txt_is_cmd);
 
  
 
@@ -26773,7 +26933,7 @@ STATIC mp_obj_t mp_lv_txt_ins(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_ins_obj, 3, 3, mp_lv_txt_ins);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_txt_ins_obj, 3, mp_lv_txt_ins, lv_txt_ins);
 
  
 
@@ -26791,7 +26951,7 @@ STATIC mp_obj_t mp_lv_txt_cut(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_txt_cut_obj, 3, 3, mp_lv_txt_cut);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_txt_cut_obj, 3, mp_lv_txt_cut, lv_txt_cut);
 
  
 
@@ -26807,7 +26967,7 @@ STATIC mp_obj_t mp_lv_fs_init(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_init_obj, 0, 0, mp_lv_fs_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_init_obj, 0, mp_lv_fs_init, lv_fs_init);
 
  
 
@@ -26851,7 +27011,7 @@ STATIC mp_obj_t mp_lv_fs_remove(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_remove_obj, 1, 1, mp_lv_fs_remove);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_remove_obj, 1, mp_lv_fs_remove, lv_fs_remove);
 
  
 
@@ -26910,7 +27070,7 @@ STATIC mp_obj_t mp_lv_fs_rename(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_rename_obj, 2, 2, mp_lv_fs_rename);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_rename_obj, 2, mp_lv_fs_rename, lv_fs_rename);
 
  
 
@@ -26954,7 +27114,7 @@ STATIC mp_obj_t mp_lv_fs_get_letters(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_get_letters_obj, 1, 1, mp_lv_fs_get_letters);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_get_letters_obj, 1, mp_lv_fs_get_letters, lv_fs_get_letters);
 
  
 
@@ -26970,7 +27130,7 @@ STATIC mp_obj_t mp_lv_fs_get_ext(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_get_ext_obj, 1, 1, mp_lv_fs_get_ext);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_get_ext_obj, 1, mp_lv_fs_get_ext, lv_fs_get_ext);
 
  
 
@@ -26986,7 +27146,7 @@ STATIC mp_obj_t mp_lv_fs_up(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_up_obj, 1, 1, mp_lv_fs_up);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_up_obj, 1, mp_lv_fs_up, lv_fs_up);
 
  
 
@@ -27002,7 +27162,7 @@ STATIC mp_obj_t mp_lv_fs_get_last(size_t n_args, const mp_obj_t *args)
     return convert_to_str((void*)res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_fs_get_last_obj, 1, 1, mp_lv_fs_get_last);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_get_last_obj, 1, mp_lv_fs_get_last, lv_fs_get_last);
 
  
 
@@ -27020,7 +27180,7 @@ STATIC mp_obj_t mp_lv_draw_aa_get_opa(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int_from_uint(res);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_aa_get_opa_obj, 3, 3, mp_lv_draw_aa_get_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_aa_get_opa_obj, 3, mp_lv_draw_aa_get_opa, lv_draw_aa_get_opa);
 
  
 
@@ -27041,7 +27201,7 @@ STATIC mp_obj_t mp_lv_draw_aa_ver_seg(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_aa_ver_seg_obj, 6, 6, mp_lv_draw_aa_ver_seg);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_aa_ver_seg_obj, 6, mp_lv_draw_aa_ver_seg, lv_draw_aa_ver_seg);
 
  
 
@@ -27062,7 +27222,7 @@ STATIC mp_obj_t mp_lv_draw_aa_hor_seg(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_aa_hor_seg_obj, 6, 6, mp_lv_draw_aa_hor_seg);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_aa_hor_seg_obj, 6, mp_lv_draw_aa_hor_seg, lv_draw_aa_hor_seg);
 
  
 
@@ -27082,7 +27242,7 @@ STATIC mp_obj_t mp_lv_draw_px(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_px_obj, 5, 5, mp_lv_draw_px);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_px_obj, 5, mp_lv_draw_px, lv_draw_px);
 
  
 
@@ -27101,7 +27261,7 @@ STATIC mp_obj_t mp_lv_draw_fill(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_fill_obj, 4, 4, mp_lv_draw_fill);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_fill_obj, 4, mp_lv_draw_fill, lv_draw_fill);
 
  
 
@@ -27122,7 +27282,7 @@ STATIC mp_obj_t mp_lv_draw_letter(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_letter_obj, 6, 6, mp_lv_draw_letter);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_letter_obj, 6, mp_lv_draw_letter, lv_draw_letter);
 
  
 
@@ -27145,7 +27305,7 @@ STATIC mp_obj_t mp_lv_draw_map(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_map_obj, 8, 8, mp_lv_draw_map);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_map_obj, 8, mp_lv_draw_map, lv_draw_map);
 
  
 
@@ -27164,7 +27324,7 @@ STATIC mp_obj_t mp_lv_draw_rect(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_rect_obj, 4, 4, mp_lv_draw_rect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_rect_obj, 4, mp_lv_draw_rect, lv_draw_rect);
 
  
 
@@ -27188,7 +27348,7 @@ STATIC mp_obj_t mp_lv_draw_label(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_label_obj, 9, 9, mp_lv_draw_label);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_label_obj, 9, mp_lv_draw_label, lv_draw_label);
 
  
 
@@ -27208,7 +27368,7 @@ STATIC mp_obj_t mp_lv_draw_line(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_line_obj, 5, 5, mp_lv_draw_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_line_obj, 5, mp_lv_draw_line, lv_draw_line);
 
  
 
@@ -27227,7 +27387,7 @@ STATIC mp_obj_t mp_lv_draw_triangle(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_triangle_obj, 4, 4, mp_lv_draw_triangle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_triangle_obj, 4, mp_lv_draw_triangle, lv_draw_triangle);
 
  
 
@@ -27247,7 +27407,7 @@ STATIC mp_obj_t mp_lv_draw_img(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_draw_img_obj, 5, 5, mp_lv_draw_img);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_img_obj, 5, mp_lv_draw_img, lv_draw_img);
 
  
 
@@ -27787,7 +27947,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_layer_top), MP_ROM_PTR(&mp_lv_layer_top_obj) },
     { MP_ROM_QSTR(MP_QSTR_layer_sys), MP_ROM_PTR(&mp_lv_layer_sys_obj) },
     { MP_ROM_QSTR(MP_QSTR_scr_load), MP_ROM_PTR(&mp_lv_scr_load_obj) },
-    { MP_ROM_QSTR(MP_QSTR_log_register_print), MP_ROM_PTR(&mp_lv_log_register_print_obj) },
+    { MP_ROM_QSTR(MP_QSTR_log_register_print_cb), MP_ROM_PTR(&mp_lv_log_register_print_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_log_add), MP_ROM_PTR(&mp_lv_log_add_obj) },
     { MP_ROM_QSTR(MP_QSTR_mem_init), MP_ROM_PTR(&mp_lv_mem_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_mem_alloc), MP_ROM_PTR(&mp_lv_mem_alloc_obj) },
@@ -27807,6 +27967,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ll_get_tail), MP_ROM_PTR(&mp_lv_ll_get_tail_obj) },
     { MP_ROM_QSTR(MP_QSTR_ll_get_next), MP_ROM_PTR(&mp_lv_ll_get_next_obj) },
     { MP_ROM_QSTR(MP_QSTR_ll_get_prev), MP_ROM_PTR(&mp_lv_ll_get_prev_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ll_get_len), MP_ROM_PTR(&mp_lv_ll_get_len_obj) },
     { MP_ROM_QSTR(MP_QSTR_ll_move_before), MP_ROM_PTR(&mp_lv_ll_move_before_obj) },
     { MP_ROM_QSTR(MP_QSTR_ll_is_empty), MP_ROM_PTR(&mp_lv_ll_is_empty_obj) },
     { MP_ROM_QSTR(MP_QSTR_task_core_init), MP_ROM_PTR(&mp_lv_task_core_init_obj) },
@@ -27902,6 +28063,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_group_del), MP_ROM_PTR(&mp_lv_group_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_add_obj), MP_ROM_PTR(&mp_lv_group_add_obj_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_remove_obj), MP_ROM_PTR(&mp_lv_group_remove_obj_obj) },
+    { MP_ROM_QSTR(MP_QSTR_group_remove_all_objs), MP_ROM_PTR(&mp_lv_group_remove_all_objs_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_focus_obj), MP_ROM_PTR(&mp_lv_group_focus_obj_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_focus_next), MP_ROM_PTR(&mp_lv_group_focus_next_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_focus_prev), MP_ROM_PTR(&mp_lv_group_focus_prev_obj) },
@@ -27971,6 +28133,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_indev_get_vect), MP_ROM_PTR(&mp_lv_indev_get_vect_obj) },
     { MP_ROM_QSTR(MP_QSTR_indev_wait_release), MP_ROM_PTR(&mp_lv_indev_wait_release_obj) },
     { MP_ROM_QSTR(MP_QSTR_indev_get_read_task), MP_ROM_PTR(&mp_lv_indev_get_read_task_obj) },
+    { MP_ROM_QSTR(MP_QSTR_indev_get_obj_act), MP_ROM_PTR(&mp_lv_indev_get_obj_act_obj) },
     { MP_ROM_QSTR(MP_QSTR_txt_get_size), MP_ROM_PTR(&mp_lv_txt_get_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_txt_get_next_line), MP_ROM_PTR(&mp_lv_txt_get_next_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_txt_get_width), MP_ROM_PTR(&mp_lv_txt_get_width_obj) },
