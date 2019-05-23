@@ -450,7 +450,7 @@ STATIC inline lv_obj_t *mp_to_lv(mp_obj_t *mp_obj)
     return mp_lv_obj->lv_obj;
 }
 
-STATIC inline lv_obj_t *mp_get_callbacks(mp_obj_t *mp_obj)
+STATIC inline lv_obj_t *mp_get_callbacks(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
@@ -506,6 +506,15 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
     return mp_obj_new_str(str, strlen(str));
 }
 
+STATIC mp_int_t mp_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
+    (void)flags;
+    mp_lv_obj_t *self = MP_OBJ_TO_PTR(self_in);
+
+    bufinfo->buf = &self->lv_obj;
+    bufinfo->len = sizeof(self->lv_obj);
+    bufinfo->typecode = BYTEARRAY_TYPECODE;
+    return 0;
+}
 
 // lvgl struct handling
 
@@ -525,7 +534,7 @@ typedef struct mp_lv_struct_t
     void *data;
 } mp_lv_struct_t;
 
-STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t *mp_obj)
+STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
@@ -1135,7 +1144,7 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
         callback_name = '&%s_callback' % func_name
         try:
             if is_global_callback(arg_type):
-                full_user_data = 'mp_lv_user_data'
+                full_user_data = '&mp_lv_user_data'
             else:
                 if index == 0:
                     raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
@@ -1301,6 +1310,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
     .print = {obj}_print,
     {make_new}
     .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
+    .buffer_p = {{ .get_buffer = mp_obj_get_buffer }},
     .parent = {parent},
 }};
     """.format(obj = obj_name, base_obj = base_obj_name,
