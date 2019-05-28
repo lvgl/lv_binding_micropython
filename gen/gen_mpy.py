@@ -1,5 +1,7 @@
 # TODO
 # - Implement array. Convert python list to C pointer throught struct object. Useful lv_line_set_points or for setting "points" on lv_chart_series_t for example.
+#   - return custom iterable object instead of Blob when converting to array
+#   - check array dim on conversion
 # - On print extensions, print the reflected internal representation of the object
 # - Verify that when mp_obj is given it is indeed the right type (mp_lv_obj_t). Report error if not. can be added to mp_to_lv.
 # - Implement inheritance instead of embed base methods (how? seems it's not supported, see https://github.com/micropython/micropython/issues/1159)
@@ -114,7 +116,7 @@ def get_name(type):
     if isinstance(type, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         return get_type(type, remove_quals=True)
     else:
-        return type
+        return gen.visit(type)
 
 #
 # lv text patterns
@@ -561,7 +563,7 @@ STATIC mp_obj_t make_new_lv_struct(
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
     *self = (mp_lv_struct_t){
         .base = {type}, 
-        .data = malloc(size)
+        .data = m_malloc(size)
     };
     mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
     if (other) {
@@ -572,7 +574,7 @@ STATIC mp_obj_t make_new_lv_struct(
 
 STATIC void *copy_buffer(const void *buffer, size_t size)
 {
-    void *new_buffer = malloc(size);
+    void *new_buffer = m_malloc(size);
     memcpy(new_buffer, buffer, size);
     return new_buffer;
 }
@@ -719,7 +721,7 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
 
 // Dict to hold user data for global callbacks (callbacks without context)
 
-static void *mp_lv_user_data = NULL;
+STATIC void *mp_lv_user_data = NULL;
 
 """)
 
@@ -872,7 +874,8 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
         if callback:
             func_name, arg_type  = callback
             user_data = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
-            callbacks_used_on_structs.append(callback)
+            if not callback in callbacks_used_on_structs:
+                callbacks_used_on_structs.append(callback)
             # Emit callback forward decl.
             if user_data in [user_data_decl.name for user_data_decl in flatten_struct_decls]:
                 full_user_data = '&data->%s' % user_data
@@ -896,7 +899,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), decl.type.dim.value)
                 write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
                     format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
-                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}&data->{field}); break; // converting from {type_name}'.
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
                     format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
             else:
                 write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
@@ -997,6 +1000,62 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     # print('/* --> struct "%s" generated! */' % (struct_name))
     return struct_name
 
+#
+# Generate Array Types when needed
+#
+
+def try_generate_array_type(type_ast, structs_in_progress = None):
+    if not isinstance(type_ast, c_ast.ArrayDecl): 
+        return None
+    arr_name = get_name(type_ast)
+    # print('/* --> try_generate_array_type %s: %s */' % (arr_name, type_ast))    
+    dim = gen.visit(type_ast.dim) if type_ast.dim else None
+    element_type = get_type(type_ast.type, remove_quals = True)
+    qualified_element_type = get_type(type_ast.type, remove_quals = False)
+    if not element_type in mp_to_lv:
+        try_generate_type(type_ast.type, structs_in_progress = structs_in_progress)
+        if not element_type in mp_to_lv:
+            raise MissingConversionException('Missing conversion to %s while generating array type conversion' % element_type)
+    array_convertor_suffix = arr_name.replace(' ','_').replace('*','ptr').replace('[','__').replace(']','__')
+    arr_to_c_convertor_name = 'mp_arr_to_%s' % array_convertor_suffix
+    arr_to_mp_convertor_name = 'mp_arr_from_%s' % array_convertor_suffix
+    print('''
+/*
+ * Array convertors for {arr_name}
+ */
+
+STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
+{{
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    {check_dim}
+    {type} *lv_arr = ({type}*)m_malloc(len * sizeof({type}*));
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    size_t i = 0;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {{
+        lv_arr[i] = {convertor}(item);
+    }}
+    return ({qualified_type} *)lv_arr;
+}}
+    
+STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
+{{
+    return ptr_to_mp((void*)arr); // TODO: return custom iterable object!
+}}
+    '''.format(
+        arr_to_c_convertor_name = arr_to_c_convertor_name,
+        arr_to_mp_convertor_name = arr_to_mp_convertor_name ,
+        arr_name = arr_name,
+        type = element_type,
+        qualified_type = qualified_element_type,
+        check_dim = '//TODO check dim!' if dim else '',
+        convertor = mp_to_lv[element_type],
+        ))
+    mp_to_lv[arr_name] = arr_to_c_convertor_name
+    lv_to_mp[arr_name] = arr_to_mp_convertor_name
+    return arr_to_c_convertor_name
 
 #
 # Generate types from typedefs when needed
@@ -1010,15 +1069,16 @@ def get_arg_name(arg):
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
 
 def try_generate_type(type_ast, structs_in_progress = None):
+    # eprint(' --> try_generate_type %s : %s' % (get_name(type_ast), gen.visit(type_ast)))
     # print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
     if isinstance(type_ast, basestring): raise SyntaxError('Internal error! try_generate_type argument is a string.')
     # Handle the case of a pointer 
     if isinstance(type_ast, c_ast.TypeDecl): 
         return try_generate_type(type_ast.type, structs_in_progress)
     type = get_name(type_ast)
-    if isinstance(type, c_ast.Node):
-        return None
     if type in mp_to_lv:
+        return mp_to_lv[type]
+    if try_generate_array_type(type_ast, structs_in_progress):
         return mp_to_lv[type]
     if isinstance(type_ast, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         type = get_name(type_ast.type.type)
@@ -1432,6 +1492,7 @@ for global_name in blobs:
 
 for (func_name, func) in callbacks_used_on_structs:
     try:
+        # print('/* --> gen_callback_func %s */' % func_name)
         gen_callback_func(func, func_name = func_name)
     except MissingConversionException as exp:
         gen_func_error(func, exp)
