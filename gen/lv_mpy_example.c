@@ -12950,11 +12950,46 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_set_one_toggle_obj, 2, mp_lv_bt
  
 
 /*
- * Function NOT generated:
- * Missing convertion from const char **
+ * Array convertors for char **
+ */
+
+STATIC const char * *mp_arr_to_char_ptrptr(mp_obj_t mp_arr)
+{
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    
+    char * *lv_arr = (char **)m_malloc(len * sizeof(char *));
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    size_t i = 0;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        lv_arr[i++] = (char*)mp_obj_str_get_str(item);
+    }
+    return (const char * *)lv_arr;
+}
+    
+STATIC mp_obj_t mp_arr_from_char_ptrptr(const char * *arr)
+{
+    return ptr_to_mp((void*)arr); // TODO: return custom iterable object!
+}
+    
+
+/*
+ * lvgl extension definition for:
  * const char **lv_btnm_get_map_array(const lv_obj_t *btnm)
  */
-    
+ 
+STATIC mp_obj_t mp_lv_btnm_get_map_array(size_t n_args, const mp_obj_t *args)
+{
+    const lv_obj_t *btnm = mp_to_lv(args[0]);
+    const char ** res = lv_btnm_get_map_array(btnm);
+    return mp_arr_from_char_ptrptr((void*)res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnm_get_map_array_obj, 1, mp_lv_btnm_get_map_array, lv_btnm_get_map_array);
+
+ 
 
 /*
  * lvgl extension definition for:
@@ -13103,6 +13138,7 @@ STATIC const mp_rom_map_elem_t btnm_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_btn_ctrl_all), MP_ROM_PTR(&mp_lv_btnm_set_btn_ctrl_all_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_btn_width), MP_ROM_PTR(&mp_lv_btnm_set_btn_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_one_toggle), MP_ROM_PTR(&mp_lv_btnm_set_one_toggle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_map_array), MP_ROM_PTR(&mp_lv_btnm_get_map_array_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_recolor), MP_ROM_PTR(&mp_lv_btnm_get_recolor_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_active_btn), MP_ROM_PTR(&mp_lv_btnm_get_active_btn_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_active_btn_text), MP_ROM_PTR(&mp_lv_btnm_get_active_btn_text_obj) },
@@ -13261,11 +13297,20 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_set_ctrl_map_obj, 2, mp_lv_kb_set
  
 
 /*
- * Function NOT generated:
- * Missing convertion from const char **
+ * lvgl extension definition for:
  * inline static const char **lv_kb_get_map_array(const lv_obj_t *kb)
  */
-    
+ 
+STATIC mp_obj_t mp_lv_kb_get_map_array(size_t n_args, const mp_obj_t *args)
+{
+    const lv_obj_t *kb = mp_to_lv(args[0]);
+    const char ** res = lv_kb_get_map_array(kb);
+    return mp_arr_from_char_ptrptr((void*)res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_get_map_array_obj, 1, mp_lv_kb_get_map_array, lv_kb_get_map_array);
+
+ 
 
 /*
  * lvgl extension definition for:
@@ -13426,6 +13471,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_kb_def_event_cb_obj, 2, mp_lv_kb_def
 STATIC const mp_rom_map_elem_t kb_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_map), MP_ROM_PTR(&mp_lv_kb_set_map_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_ctrl_map), MP_ROM_PTR(&mp_lv_kb_set_ctrl_map_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_map_array), MP_ROM_PTR(&mp_lv_kb_get_map_array_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_ta), MP_ROM_PTR(&mp_lv_kb_set_ta_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_mode), MP_ROM_PTR(&mp_lv_kb_set_mode_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_cursor_manage), MP_ROM_PTR(&mp_lv_kb_set_cursor_manage_obj) },
@@ -16918,7 +16964,7 @@ STATIC const mp_obj_type_t mp_tileview_type = {
 STATIC mp_obj_t mp_lv_mbox_add_btns(size_t n_args, const mp_obj_t *args)
 {
     lv_obj_t *mbox = mp_to_lv(args[0]);
-    const char **btn_mapaction = mp_to_ptr(args[1]);
+    const char **btn_mapaction = mp_arr_to_char_ptrptr(args[1]);
     lv_mbox_add_btns(mbox, btn_mapaction);
     return mp_const_none;
 }
@@ -18916,7 +18962,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_highlighted_dates_obj, 
 STATIC mp_obj_t mp_lv_calendar_set_day_names(size_t n_args, const mp_obj_t *args)
 {
     lv_obj_t *calendar = mp_to_lv(args[0]);
-    const char **day_names = mp_to_ptr(args[1]);
+    const char **day_names = mp_arr_to_char_ptrptr(args[1]);
     lv_calendar_set_day_names(calendar, day_names);
     return mp_const_none;
 }
@@ -18933,7 +18979,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_day_names_obj, 2, mp_lv
 STATIC mp_obj_t mp_lv_calendar_set_month_names(size_t n_args, const mp_obj_t *args)
 {
     lv_obj_t *calendar = mp_to_lv(args[0]);
-    const char **day_names = mp_to_ptr(args[1]);
+    const char **day_names = mp_arr_to_char_ptrptr(args[1]);
     lv_calendar_set_month_names(calendar, day_names);
     return mp_const_none;
 }
@@ -19041,18 +19087,36 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_highlighted_dates_num_o
  
 
 /*
- * Function NOT generated:
- * Missing convertion from const char **
+ * lvgl extension definition for:
  * const char **lv_calendar_get_day_names(const lv_obj_t *calendar)
  */
-    
+ 
+STATIC mp_obj_t mp_lv_calendar_get_day_names(size_t n_args, const mp_obj_t *args)
+{
+    const lv_obj_t *calendar = mp_to_lv(args[0]);
+    const char ** res = lv_calendar_get_day_names(calendar);
+    return mp_arr_from_char_ptrptr((void*)res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_day_names_obj, 1, mp_lv_calendar_get_day_names, lv_calendar_get_day_names);
+
+ 
 
 /*
- * Function NOT generated:
- * Missing convertion from const char **
+ * lvgl extension definition for:
  * const char **lv_calendar_get_month_names(const lv_obj_t *calendar)
  */
-    
+ 
+STATIC mp_obj_t mp_lv_calendar_get_month_names(size_t n_args, const mp_obj_t *args)
+{
+    const lv_obj_t *calendar = mp_to_lv(args[0]);
+    const char ** res = lv_calendar_get_month_names(calendar);
+    return mp_arr_from_char_ptrptr((void*)res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_month_names_obj, 1, mp_lv_calendar_get_month_names, lv_calendar_get_month_names);
+
+ 
 
 /*
  * lvgl extension definition for:
@@ -19088,6 +19152,8 @@ STATIC const mp_rom_map_elem_t calendar_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_pressed_date), MP_ROM_PTR(&mp_lv_calendar_get_pressed_date_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_highlighted_dates), MP_ROM_PTR(&mp_lv_calendar_get_highlighted_dates_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_highlighted_dates_num), MP_ROM_PTR(&mp_lv_calendar_get_highlighted_dates_num_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_day_names), MP_ROM_PTR(&mp_lv_calendar_get_day_names_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_month_names), MP_ROM_PTR(&mp_lv_calendar_get_month_names_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style), MP_ROM_PTR(&mp_lv_calendar_get_style_obj) },
     { MP_ROM_QSTR(MP_QSTR_delete), MP_ROM_PTR(&mp_lv_obj_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_obj_clean_obj) },

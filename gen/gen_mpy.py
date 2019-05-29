@@ -1,8 +1,8 @@
 # TODO
-# - Implement array. Convert python list to C pointer throught struct object. Useful lv_line_set_points or for setting "points" on lv_chart_series_t for example.
+# - Array conversion improvements: 
 #   - return custom iterable object instead of Blob when converting to array
 #   - check array dim on conversion
-# - On print extensions, print the reflected internal representation of the object
+# - On print extensions, print the reflected internal representation of the object (worth the extra ROM?)
 # - Verify that when mp_obj is given it is indeed the right type (mp_lv_obj_t). Report error if not. can be added to mp_to_lv.
 # - Implement inheritance instead of embed base methods (how? seems it's not supported, see https://github.com/micropython/micropython/issues/1159)
 # - Prevent writing to const fields, but allow reading
@@ -135,6 +135,7 @@ lv_numstr_pattern = re.compile('^(.*)_NUMSTR')
 lv_str_enum_pattern = re.compile('^_LV_STR_(.+)')
 lv_callback_type_pattern = re.compile('(lv_){0,1}(.+)_cb(_t){0,1}')
 lv_global_callback_pattern = re.compile('.*g_cb_t')
+lv_func_returns_array = re.compile('.*_array$')
 
 def simplify_identifier(id):
     return re.match(lv_func_pattern, id).group(1)
@@ -1005,11 +1006,11 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
 #
 
 def try_generate_array_type(type_ast, structs_in_progress = None):
-    if not isinstance(type_ast, c_ast.ArrayDecl): 
-        return None
     arr_name = get_name(type_ast)
+    if arr_name in mp_to_lv:
+        return mp_to_lv[arr_name]
     # print('/* --> try_generate_array_type %s: %s */' % (arr_name, type_ast))    
-    dim = gen.visit(type_ast.dim) if type_ast.dim else None
+    dim = gen.visit(type_ast.dim) if hasattr(type_ast, 'dim') and type_ast.dim else None
     element_type = get_type(type_ast.type, remove_quals = True)
     qualified_element_type = get_type(type_ast.type, remove_quals = False)
     if not element_type in mp_to_lv:
@@ -1054,7 +1055,9 @@ STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
         convertor = mp_to_lv[element_type],
         ))
     mp_to_lv[arr_name] = arr_to_c_convertor_name
+    mp_to_lv['const %s' % arr_name] = arr_to_c_convertor_name
     lv_to_mp[arr_name] = arr_to_mp_convertor_name
+    lv_to_mp['const %s' % arr_name] = arr_to_mp_convertor_name
     return arr_to_c_convertor_name
 
 #
@@ -1078,7 +1081,7 @@ def try_generate_type(type_ast, structs_in_progress = None):
     type = get_name(type_ast)
     if type in mp_to_lv:
         return mp_to_lv[type]
-    if try_generate_array_type(type_ast, structs_in_progress):
+    if isinstance(type_ast, c_ast.ArrayDecl) and try_generate_array_type(type_ast, structs_in_progress):
         return mp_to_lv[type]
     if isinstance(type_ast, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         type = get_name(type_ast.type.type)
@@ -1245,6 +1248,8 @@ def gen_mp_func(func, obj_name):
     else:
         param_count = len(args)
     return_type = get_type(func.type.type, remove_quals = False)
+    if isinstance(func.type.type, c_ast.PtrDecl) and lv_func_returns_array.match(func.name):
+        try_generate_array_type(func.type.type)
     # print('/* --> return_type = %s, func.type.type = %s\n%s */' % (return_type, gen.visit(func.type.type), func.type.type))
     if return_type == "void":        
         build_result = ""
