@@ -4893,12 +4893,12 @@ STATIC lv_area_t *mp_arr_to_lv_area_t___32__(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     //TODO check dim!
-    lv_area_t *lv_arr = (lv_area_t*)m_malloc(len * sizeof(lv_area_t*));
+    lv_area_t *lv_arr = (lv_area_t*)m_malloc(len * sizeof(lv_area_t));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = mp_write_lv_area_t(item);
+        lv_arr[i++] = mp_write_lv_area_t(item);
     }
     return (lv_area_t *)lv_arr;
 }
@@ -4919,12 +4919,12 @@ STATIC uint8_t *mp_arr_to_uint8_t___32__(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     //TODO check dim!
-    uint8_t *lv_arr = (uint8_t*)m_malloc(len * sizeof(uint8_t*));
+    uint8_t *lv_arr = (uint8_t*)m_malloc(len * sizeof(uint8_t));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = (uint8_t)mp_obj_get_int(item);
+        lv_arr[i++] = (uint8_t)mp_obj_get_int(item);
     }
     return (uint8_t *)lv_arr;
 }
@@ -5622,12 +5622,12 @@ STATIC const char * *mp_arr_to_char_ptr__8__(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     //TODO check dim!
-    char * *lv_arr = (char **)m_malloc(len * sizeof(char **));
+    char * *lv_arr = (char **)m_malloc(len * sizeof(char *));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = (char*)mp_obj_str_get_str(item);
+        lv_arr[i++] = (char*)mp_obj_str_get_str(item);
     }
     return (const char * *)lv_arr;
 }
@@ -8984,12 +8984,12 @@ STATIC const lv_point_t *mp_arr_to_lv_point_t_____(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     
-    lv_point_t *lv_arr = (lv_point_t*)m_malloc(len * sizeof(lv_point_t*));
+    lv_point_t *lv_arr = (lv_point_t*)m_malloc(len * sizeof(lv_point_t));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = mp_write_lv_point_t(item);
+        lv_arr[i++] = mp_write_lv_point_t(item);
     }
     return (const lv_point_t *)lv_arr;
 }
@@ -10812,12 +10812,12 @@ STATIC lv_coord_t *mp_arr_to_lv_coord_t_____(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     
-    lv_coord_t *lv_arr = (lv_coord_t*)m_malloc(len * sizeof(lv_coord_t*));
+    lv_coord_t *lv_arr = (lv_coord_t*)m_malloc(len * sizeof(lv_coord_t));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = (int16_t)mp_obj_get_int(item);
+        lv_arr[i++] = (int16_t)mp_obj_get_int(item);
     }
     return (lv_coord_t *)lv_arr;
 }
@@ -12749,12 +12749,12 @@ STATIC const char * *mp_arr_to_char_ptr____(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     
-    char * *lv_arr = (char **)m_malloc(len * sizeof(char **));
+    char * *lv_arr = (char **)m_malloc(len * sizeof(char *));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = (char*)mp_obj_str_get_str(item);
+        lv_arr[i++] = (char*)mp_obj_str_get_str(item);
     }
     return (const char * *)lv_arr;
 }
@@ -12792,12 +12792,12 @@ STATIC const lv_btnm_ctrl_t *mp_arr_to_lv_btnm_ctrl_t_____(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     
-    lv_btnm_ctrl_t *lv_arr = (lv_btnm_ctrl_t*)m_malloc(len * sizeof(lv_btnm_ctrl_t*));
+    lv_btnm_ctrl_t *lv_arr = (lv_btnm_ctrl_t*)m_malloc(len * sizeof(lv_btnm_ctrl_t));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = (uint16_t)mp_obj_get_int(item);
+        lv_arr[i++] = (uint16_t)mp_obj_get_int(item);
     }
     return (const lv_btnm_ctrl_t *)lv_arr;
 }
@@ -17729,12 +17729,12 @@ STATIC const lv_color_t *mp_arr_to_lv_color_t_____(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     
-    lv_color_t *lv_arr = (lv_color_t*)m_malloc(len * sizeof(lv_color_t*));
+    lv_color_t *lv_arr = (lv_color_t*)m_malloc(len * sizeof(lv_color_t));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i] = mp_write_lv_color32_t(item);
+        lv_arr[i++] = mp_write_lv_color32_t(item);
     }
     return (const lv_color_t *)lv_arr;
 }

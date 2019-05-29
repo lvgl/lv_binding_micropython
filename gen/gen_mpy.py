@@ -1030,12 +1030,12 @@ STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     {check_dim}
-    {type} *lv_arr = ({type}*)m_malloc(len * sizeof({type}*));
+    {type} *lv_arr = ({type}*)m_malloc(len * sizeof({type}));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {{
-        lv_arr[i] = {convertor}(item);
+        lv_arr[i++] = {convertor}(item);
     }}
     return ({qualified_type} *)lv_arr;
 }}
