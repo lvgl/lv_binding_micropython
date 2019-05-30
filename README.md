@@ -25,29 +25,78 @@ For this to work correctly, lvgl needs to be configured to use gc and to use Mic
 
 This implementation of Micropython Bindings to lvgl assumes that Micropython and lvgl are running **on a single thread** and **on the same thread** (or alternatively, running without multithreading at all).  
 No synchronization means (locks, mutexes) are taken.  
-However, asynchronous calls to lvgl still take place in a few cases:
-
-- When a callback is called. For example, when a button is clicked.
-- When screen needs to be refreshed.
+However, asynchronous calls to lvgl still take place periodically for screen refresh and other lvgl tasks such as animation.
 
 This is achieved by using the internal Micropython scheduler (that must be enabled), by calling `mp_sched_schedule`.  
-`mp_sched_schedule` is called on the following occasions:
-
-- When a callback is fired, within lv_mpy.c
-- When screen need to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/littlevgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting). This will ususally be handled in the display device driver.
+`mp_sched_schedule` is called when screen needs to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/littlevgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting). This is ususally handled in the display device driver.
 Here is [an example](https://github.com/littlevgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L23) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing lvgl. [`mp_lv_task_handler`](https://github.com/littlevgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L7) is scheduled to run on the same thread Micropython is running, and it calls both `lv_task_handler` for lvgl task handling and `monitor_sdl_refr_core` for refreshing the display and handling mouse events.  
 
 With REPL (interactive console), when waiting for the user input, asynchronous events can also happen. In [this example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/unix_mphal.c#L176) we just call `mp_handle_pending` periodically when waiting for a keypress. `mp_handle_pending` takes care of dispatching asynchronous events registered with `mp_sched_schedule`.
+
+### Structs Classes and globals
+
+The lvgl binding script parses lvgl headers and provides API to access lvgl **classes** (such as `btn`) and **structs** (such as `color_t`). All structs and classes are available under lvgl micropython module.  
+
+lvgl Class contains:
+- functions (such as `set_x`)
+- enums related to that class (such as `STATE` of a `btn`)
+
+lvgl struct contains only attributes that can be read or written. For example:
+```python
+c = lvgl.color_t()
+c.ch.red = 0xff
+```
+structs can also be initialized from dict. For example, the example above can be written like this:
+```python
+c = lvgl.color_t({'ch': {'red' : 0xff}})
+```
+
+All lvgl globals (functions, enums, types) are avaiable under lvgl module. For example, `lvgl.SYMBOL` is an "enum" of symbol strings, `lvgl.anim_create` will create animation etc.
+
+### Callbacks
+
+In C a callback is a function pointer.  
+In Micropython we would also need to register a *Micropython callable object* for each callback.  
+Therefore in the Micropython binding we need to register both a function pointer and a Micropython object for every callback.  
+
+Therefore we defined a **callback convention** that expects lvgl headers to be defined in a certain way. Callbacks that are declared according to the convention would allow the binding to register a Micropython object next to the function pointer when registering a callback, and access that object when the callback is called.  
+The Micropython callable object is automatically saved in a `user_data` variable which is provided when registering or calling the callback.
+
+The callback convetion assumes the following:
+- There's a struct that contains a field called `void * user_data`.
+- A pointer to that struct is provided as the first argument of a callback registration function.
+- A pointer to that struct is provided as the first argument of the callback itself.
+
+Another option is that the callback function pointer is just a field of a struct, in that case we expect the same struct to contain `user_data` field as well.
+
+As long as the convention above is followed, the lvgl Micropython binding script would automatically set and use `user_data` when callbacks are set and used.  
+
+From the user perspective, any python callable object (such as python regular function, class function, lambda etc.) can be user as an lvgl callbacks. For example:
+```python
+lvgl.anim_set_custom_exec_cb(anim, lambda anim, val, obj=obj: obj.set_y(val))
+```
+In this example an exec callback is registered for an animation `anim`, which would animate the y coordinate of `obj`.  
+An lvgl API function can also be used as a callback directly, so the example above could also be written like this:
+```python
+lv.anim_set_exec_cb(anim, obj, obj.set_y)
+```
+
+lvgl callbacks that do not follow the Callback Convention cannot be used with micropython callable objects. A discussion related to adjusting lvgl callbacks to the convention: https://github.com/littlevgl/lvgl/issues/1036  
+
+The `user_data` field **must not be used directly by the user**, since it is used internally to hold pointers to Micropython objects.
 
 ### Display and Input Drivers
 
 LittlevGL can be configured to use different displays and different input devices. More information is available on [LittlevGL documentation](https://docs.littlevgl.com/#Porting).  
 Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameter (actually a struct that contains function pointers). The function pointer is used to access the actual display / input device.  
-When using LittlevGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registration is perfomed in the Micropython script** to make is easy for the user to select and replace drivers without building the project and changing C files.  
+When using LittlevGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registration is perfomed in the Micropython script** to make it easy for the user to select and replace drivers without building the project and changing C files.  
+Technically, the driver can be written in either C or in pure Micropython using callbacks.  
 
 Example:
 
 ```python
+# init
+
 import lvgl as lv
 lv.init()
 
@@ -56,27 +105,30 @@ SDL.init()
 
 # Register SDL display driver.
 
+disp_buf1 = lv.disp_buf_t()
+buf1_1 = bytes(480*10)
+lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 lv.disp_drv_init(disp_drv)
-disp_drv.disp_flush = SDL.monitor_flush
-disp_drv.disp_fill = SDL.monitor_fill
-disp_drv.disp_map = SDL.monitor_map
+disp_drv.buffer = disp_buf1
+disp_drv.flush_cb = SDL.monitor_flush
+disp_drv.hor_res = 480
+disp_drv.ver_res = 320
 lv.disp_drv_register(disp_drv)
 
 # Regsiter SDL mouse driver
 
 indev_drv = lv.indev_drv_t()
 lv.indev_drv_init(indev_drv) 
-indev_drv.type = lv.INDEV_TYPE.POINTER;
-indev_drv.read = SDL.mouse_read;
-lv.indev_drv_register(indev_drv);
+indev_drv.type = lv.INDEV_TYPE.POINTER
+indev_drv.read_cb = SDL.mouse_read
+lv.indev_drv_register(indev_drv)
 ```
 
-In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush` and `SDL.monitor_fill`, which are wrappers around function pointers and can be registerd as LittlevGL display and input driver.  
+In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush`, which are wrappers around function pointers and can be registerd as LittlevGL display and input driver.  
 Behind the scences these objects implement the buffer protocol to give access to the function pointer bytes.
 
-On current LittlevGL version the display settings (width, length, color depth) is defined using macros. It cannot change on runtime.  
-This means, unfortunately, that **LittlevGL needs to be rebuilt when changing display driver** since different displays have different settings. This will be fixed on the next LittlevGL version (`v6.0`).
+Starting from version 6.0, lvgl supports setting the display settings (width, length) on runtime. In this example they are set to 480x320. Color depth is set on compile time.  
 
 Currently supported drivers for Micropyton are 
 
@@ -86,10 +138,12 @@ Currently supported drivers for Micropyton are
 
 Driver code is under `/driver` directory.
 
+Drivers can also be implemented in pure Micropython, by providing callbacks (`disp_drv.flush_cb`, `indev_drv.read_cb` etc.)
+
 ### Adding Micropython Bindings to a project
 
 An example project of "Micropython + lvgl + Bindings" is [`lv_mpy`](https://github.com/littlevgl/lv_mpy).  
-The following examples are taken from there:
+Here is a procedure for adding lvgl to an existing Micropython project. (The examples in this list are taken from [`lv_mpy`](https://github.com/littlevgl/lv_mpy)):
 
 - Add [`lv_bindings`](https://github.com/littlevgl/lv_bindings) as a sub-module under `lib`.
 - Add `lv_conf.h` in `lib`
@@ -101,7 +155,8 @@ The following examples are taken from there:
 
 ### gen_mpy.py syntax
 ```
-usage: gen_mpy.py [-h] [-I <Include Path>] [-X <Object Name>]
+usage: gen_mpy.py [-h] [-I <Include Path>] [-D <Macro Name>]
+                  [-E <Preprocessed File>]
                   input [input ...]
 
 positional arguments:
@@ -111,19 +166,23 @@ optional arguments:
   -h, --help            show this help message and exit
   -I <Include Path>, --include <Include Path>
                         Preprocesor include path
-  -X <Object Name>, --exclude <Object Name>
-                        Exclude lvgl object
+  -D <Macro Name>, --define <Macro Name>
+                        Define preprocessor macro
+  -E <Preprocessed File>, --external-preprocessing <Preprocessed File>
+                        Prevent preprocessing. Assume input file is already
+                        preprocessed
 ```
 
 Example: 
 
 ```
-python ../../lib/lv_bindings/micropython/gen_mpy.py -X anim -X group -X task -I../../lib/berkeley-db-1.xx/PORT/include -I../../lib/lv_bindings/lvgl -I. -I../.. -Ibuild -I../../lib/mp-readline -I ../../lib/lv_bindings/micropython/pycparser/utils/fake_libc_include ../../lib/lv_bindings/lvgl/lvgl.h > ../../lib/lv_bindings/micropython/lv_mpy_example.c
+python gen_mpy.py -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h > lv_mpy_example.c
 ```
 
 ## Micropython Bindings Usage
 
-A simple example: [`advanced_demo.py`](https://github.com/littlevgl/lv_binding_micropython/blob/master/gen/advanced_demo.py).
+A simple example: [`advanced_demo.py`](https://github.com/littlevgl/lv_binding_micropython/blob/master/gen/examples/advanced_demo.py).
+More examples can be found under `/examples` folder.
 
 #### Importing and Initializing LittlelvGL
 ```python
@@ -137,20 +196,24 @@ SDL.init()
 
 # Register SDL display driver.
 
+disp_buf1 = lv.disp_buf_t()
+buf1_1 = bytes(480*10)
+lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 lv.disp_drv_init(disp_drv)
-disp_drv.disp_flush = SDL.monitor_flush
-disp_drv.disp_fill = SDL.monitor_fill
-disp_drv.disp_map = SDL.monitor_map
+disp_drv.buffer = disp_buf1
+disp_drv.flush_cb = SDL.monitor_flush
+disp_drv.hor_res = 480
+disp_drv.ver_res = 320
 lv.disp_drv_register(disp_drv)
 
 # Regsiter SDL mouse driver
 
 indev_drv = lv.indev_drv_t()
 lv.indev_drv_init(indev_drv) 
-indev_drv.type = lv.INDEV_TYPE.POINTER;
-indev_drv.read = SDL.mouse_read;
-lv.indev_drv_register(indev_drv);
+indev_drv.type = lv.INDEV_TYPE.POINTER
+indev_drv.read_cb = SDL.mouse_read
+lv.indev_drv_register(indev_drv)
 ```
 In this example, SDL display and input drivers are registered on a unix port of Micropython.
 
@@ -166,10 +229,15 @@ import lvesp32
 import ILI9341 as ili
 d = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
 d.init()
+disp_buf1 = lv.disp_buf_t()
+buf1_1 = bytes(480*10)
+lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 lv.disp_drv_init(disp_drv)
-disp_drv.disp_flush = d.flush
-disp_drv.disp_fill = d.fill
+disp_drv.buffer = disp_buf1
+disp_drv.flush_cb = d.flus
+disp_drv.hor_res = 480
+disp_drv.ver_res = 320
 lv.disp_drv_register(disp_drv)
 ```
 
@@ -208,7 +276,8 @@ symbolstyle.text.color = {"red":0xff, "green":0xff, "blue":0xff}
 ```python
 self.tabview = lv.tabview(lv.scr_act())
 ```
-The first argument to an object constructor is the parent object, the second is which element to copy this element from
+The first argument to an object constructor is the parent object, the second is which element to copy this element from.  
+Both arguments are optional.
 
 #### Calling an object method
 ```python
@@ -219,9 +288,8 @@ In this example `lv.ALIGN` is an enum and `lv.ALIGN.CENTER` is an enum member (a
 #### Using callbacks
 ```python
 for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.set_action(lv.btn.ACTION.CLICK, lambda action,name=name: self.label.set_text('%s click' % name) or lv.RES.OK)
+    btn.set_event_cb(lambda obj=None, event=-1, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
 ```
-Currently the binding is limited to one callback per object.
 
 #### Listing available functions/memebers/constants etc.
 ```python
@@ -229,6 +297,7 @@ print('\n'.join(dir(lvgl)))
 print('\n'.join(dir(lvgl.btn)))
 ...
 ```
+
 
 
 
