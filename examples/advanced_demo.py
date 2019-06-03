@@ -72,6 +72,15 @@ class Page_Simple:
         self.style_selector.align(self.slider, lv.ALIGN.IN_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
         self.style_selector.set_event_cb(self.on_style_selector_changed)
+
+        self.counter_btn = lv.btn(page)
+        self.counter_btn.align(self.slider, lv.ALIGN.OUT_RIGHT_TOP, 0, 40)
+        self.counter_btn.set_size(140,100)
+        self.counter_label = lv.label(self.counter_btn)
+        self.counter_label.set_text('Count')
+        self.counter_btn.set_event_cb(self.on_counter_btn)
+        self.counter = 0
+
     
     def on_slider_changed(self, obj=None, event=-1):
         self.slider_label.set_text(str(self.slider.get_value()))
@@ -80,6 +89,10 @@ class Page_Simple:
         selected = self.style_selector.get_selected()
         self.app.screen_main.tabview.set_style(lv.tabview.STYLE.BG, self.styles[selected][1])   
 
+    def on_counter_btn(self, obj, event):
+        if event == lv.EVENT.CLICKED:
+            self.counter += 1
+            self.counter_label.set_text(str(self.counter))
 
 class Screen_Main(lv.obj):
     def __init__(self, app, *args, **kwds):
