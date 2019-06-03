@@ -28,8 +28,10 @@
  *  STATIC VARIABLES
  **********************/
 static bool left_button_down = false;
-static int16_t last_x = 0;
-static int16_t last_y = 0;
+static int16_t first_x = 0, last_x = 0;
+static int16_t first_y = 0, last_y = 0;
+static bool mouse_was_read = false;
+static int16_t cached_clicks = 0;
 
 /**********************
  *      MACROS
@@ -46,10 +48,22 @@ static int16_t last_y = 0;
  */
 bool mouse_read(lv_indev_data_t * data)
 {
-    /*Store the collected data*/
+    /* Replay cached clicks on its original coordinates */
+    if (cached_clicks > 0) {
+        cached_clicks--;
+        data->point.x = first_x;
+        data->point.y = first_y;
+        data->state = (cached_clicks&1)==1 ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+
+        return true;
+    }
+
+    /* Store the collected data */
     data->point.x = last_x;
     data->point.y = last_y;
     data->state = left_button_down ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+
+    mouse_was_read = true;
 
     return false;
 }
@@ -61,14 +75,21 @@ void mouse_handler(SDL_Event * event)
 {
     switch(event->type) {
         case SDL_MOUSEBUTTONUP:
-            if(event->button.button == SDL_BUTTON_LEFT)
+            if(event->button.button == SDL_BUTTON_LEFT) {
                 left_button_down = false;
+                if (!mouse_was_read) cached_clicks+=2;
+            }
             break;
         case SDL_MOUSEBUTTONDOWN:
             if(event->button.button == SDL_BUTTON_LEFT) {
                 left_button_down = true;
                 last_x = event->motion.x / MONITOR_ZOOM;
                 last_y = event->motion.y / MONITOR_ZOOM;
+                if (mouse_was_read) {
+                    first_x = last_x;
+                    first_y = last_y;
+                }
+                mouse_was_read = false;
             }
             break;
         case SDL_MOUSEMOTION:
