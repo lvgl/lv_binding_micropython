@@ -8,7 +8,7 @@
 /* Defines the LittlevGL tick rate in milliseconds. */
 /* Decreasing this value might help with CPU usage at the cost of lower
  * responsiveness. */
-#define LV_TICK_RATE 50
+#define LV_TICK_RATE 20
 
 //////////////////////////////////////////////////////////////////////////////
 
