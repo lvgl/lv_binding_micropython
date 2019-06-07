@@ -889,9 +889,9 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
                     gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_callback'" % func_name)
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{field}, {user_data}); break; // converting to {type_name}'.
+            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{field}, {user_data}); break; // converting to callback {type_name}'.
                 format(field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
-            read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
+            read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from callback {type_name}'.
                 format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
         else:
             user_data = None
