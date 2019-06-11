@@ -24,9 +24,9 @@ lv.disp_drv_register(disp_drv)
 
 indev_drv = lv.indev_drv_t()
 lv.indev_drv_init(indev_drv) 
-indev_drv.type = lv.INDEV_TYPE.POINTER;
-indev_drv.read_cb = SDL.mouse_read;
-lv.indev_drv_register(indev_drv);
+indev_drv.type = lv.INDEV_TYPE.POINTER
+indev_drv.read_cb = SDL.mouse_read
+lv.indev_drv_register(indev_drv)
 
 
 # animation helper class
@@ -62,7 +62,7 @@ class btn(lv.btn):
                     self, 
                     self.get_x(), 
                     50, 
-                    lv.btn.set_x, # register built-in lvgl function
+                    btn.set_x, # register built-in lvgl function
                     lv.anim_path_ease_out, 
                     playback=True)
 
