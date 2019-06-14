@@ -373,6 +373,7 @@ print ("""
 #include "py/objstr.h"
 #include "py/runtime.h"
 #include "py/binary.h"
+#include "py/objarray.h"
 
 /*
  * {module_name} includes
@@ -405,7 +406,6 @@ print("""
 /*
  * Helper functions
  */
-
 
 // Custom function mp object
 
@@ -453,6 +453,7 @@ STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
 
 STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
 {
+    if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
     if (native_type->parent == NULL) return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
@@ -679,13 +680,21 @@ STATIC mp_int_t mp_blob_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
     return 0;
 }
 
+
+STATIC const mp_obj_fun_builtin_var_t mp_lv_dereference_obj;
+
+STATIC const mp_rom_map_elem_t mp_blob_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_blob_locals_dict, mp_blob_locals_dict_table);
+
 STATIC const mp_obj_type_t mp_blob_type = {
     { &mp_type_type },
     .name = MP_QSTR_Blob,
     .print = mp_blob_print,
     //.make_new = make_new_blob,
-    //.attr = mp_blob_attr,
-    //.locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
+    .locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
     .buffer_p = { .get_buffer = mp_blob_get_buffer }
 };
 
@@ -695,11 +704,9 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
     if (self_in == mp_const_none)
         return NULL;
     mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
-    const mp_obj_type_t *self_in_type = ((mp_obj_base_t*)self_in)->type;
-    if (self_in_type == &mp_type_bytes || 
-        self_in_type == &mp_type_bytearray ||
-        self_in_type == &mp_type_memoryview ||
-        self_in_type == &mp_type_str)
+    if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
+        MP_OBJ_IS_TYPE(self_in, &mp_type_bytearray) ||
+        MP_OBJ_IS_TYPE(self_in, &mp_type_memoryview))
             return buffer_info.buf;
     else
     {
@@ -735,7 +742,27 @@ STATIC mp_obj_t mp_lv_cast(mp_obj_t type_obj, mp_obj_t ptr_obj)
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_lv_cast_obj, mp_lv_cast);
 STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_lv_cast_obj));
 
-STATIC const mp_obj_type_t mp_obj_type;
+// Dereference a struct/blob. This allows access to the raw data the struct holds
+
+STATIC mp_obj_t mp_lv_dereference(size_t argc, const mp_obj_t *argv)
+{
+    mp_obj_t self_in = argv[0];
+    mp_obj_t size_in = argc > 1? argv[1]: mp_const_none;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    size_t size = 0;
+    if (size_in == mp_const_none){
+        const mp_obj_type_t *type = self->base.type;
+        size = get_lv_struct_size(type);
+    } else {
+        size = (size_t)mp_obj_get_int(size_in);
+    }
+    mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE,
+        size, self->data));
+    view->typecode |= 0x80; // used to indicate writable buffer
+    return MP_OBJ_FROM_PTR(view);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_lv_dereference_obj, 1, 2, mp_lv_dereference);
 
 // Callback function handling
 // Callback is either a callable object or a pointer. If it's a callable object, set user_data to the callback.
@@ -995,6 +1022,11 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {{
             {read_cases};
+            case MP_QSTR___dereference__: {{
+                dest[0] = (void*)&mp_lv_dereference_obj; 
+                dest[1] = self_in;
+            }}
+            break;
             default: field_not_found(MP_QSTR_{struct_name}, attr);
         }}
     }} else {{
@@ -1022,6 +1054,7 @@ STATIC void mp_{struct_name}_print(const mp_print_t *print,
 STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
+//    {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_locals_dict_table);
@@ -1055,6 +1088,7 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     generated_structs[struct_name] = True
     # print('/* --> struct "%s" generated! */' % (struct_name))
     return struct_name
+
 
 #
 # Generate Array Types when needed
@@ -1180,6 +1214,32 @@ def try_generate_type(type_ast, structs_in_progress = None):
            return mp_to_lv[type] 
     return None
   
+#
+# Helper structs
+#
+
+def create_helper_struct(struct_str):
+    print(struct_str)
+    struct_str_ast = parser.parse(struct_str).ext[0].type
+    struct_name = get_name(struct_str_ast)
+    # print('/* --> %s: %s */' % (struct_name, struct_str_ast.type))
+    structs[struct_name] = struct_str_ast.type
+    try_generate_struct(struct_name, struct_str_ast.type)
+
+
+print('''
+/*
+ * Helper Structs
+ */
+        ''')
+
+create_helper_struct('''
+typedef union {
+    void *ptr_val;
+    int int_val;
+    const char *str_val;
+} C_Pointer;
+''')
 
 #
 # Emit C callback functions 
@@ -1480,6 +1540,8 @@ for obj_name in obj_names:
         generated_obj_names[obj_name] = True
 
 print ("""
+STATIC const mp_obj_type_t mp_{base_obj}_type;
+
 STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {{
     return &mp_{base_obj}_type;
