@@ -1,6 +1,8 @@
 
 # init
 
+import ustruct as struct
+
 import lodepng as png
 import lvgl as lv
 lv.init()
@@ -28,6 +30,27 @@ lv.indev_drv_init(indev_drv)
 indev_drv.type = lv.INDEV_TYPE.POINTER
 indev_drv.read_cb = SDL.mouse_read
 lv.indev_drv_register(indev_drv)
+
+# Read PNG file header
+# Taken from https://github.com/shibukawa/imagesize_py/blob/ffef30c1a4715c5acf90e8945ceb77f4a2ed2d45/imagesize.py#L63-L85
+
+with open('lib/lv_bindings/examples/png_decoder_test.png','rb') as f:
+    png_header = f.read(24)
+if png_header.startswith(b'\211PNG\r\n\032\n') and png_header[12:16] == b'IHDR':
+    try:
+        width, height = struct.unpack(">LL", png_header[16:24])
+    except struct.error:
+        raise ValueError("Invalid PNG file")
+# Maybe this is for an older PNG version.
+elif png_header.startswith(b'\211PNG\r\n\032\n'):
+    # Check to see if we have the right content type
+    try:
+        width, height = struct.unpack(">LL", png_header[8:16])
+    except struct.error:
+        raise ValueError("Invalid PNG file")
+else:
+    raise ValueError("Not a PNG file")
+print("Header: width=%d, height=%d" % (width, height))
 
 # Read and parse PNG file
 
