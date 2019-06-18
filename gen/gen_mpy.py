@@ -187,18 +187,10 @@ def is_obj_ctor(func):
     if not lv_base_obj_pattern.match(get_type(args[1].type, remove_quals=True)): return False
     return True
 
-global_callbacks_exist = False
-
 def is_global_callback(arg_type):
-    global global_callbacks_exist
     arg_type_str = get_name(arg_type.type)
     # print('/* --> is_global_callback %s: %s */' % (lv_global_callback_pattern.match(arg_type_str), arg_type_str))
     result = lv_global_callback_pattern.match(arg_type_str)
-    if result and not global_callbacks_exist:
-        print('''
-STATIC void *mp_lv_user_data = NULL;
-        ''')
-        global_callbacks_exist = True;
     return result
 
 #
@@ -703,6 +695,8 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
     mp_buffer_info_t buffer_info;
     if (self_in == mp_const_none)
         return NULL;
+    if (MP_OBJ_IS_INT(self_in))
+        return (void*)mp_obj_get_int(self_in);
     mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
     if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
         MP_OBJ_IS_TYPE(self_in, &mp_type_bytearray) ||
@@ -1268,7 +1262,7 @@ def gen_callback_func(func, func_name = None):
     if not func_name: func_name = get_arg_name(func.type)
     # print('/* --> callback: func_name = %s */' % func_name)
     if is_global_callback(func):
-        full_user_data = 'mp_lv_user_data'
+        full_user_data = 'MP_STATE_PORT(mp_lv_user_data)'
     else:
         user_data = get_user_data(func, func_name)
         full_user_data = 'arg0->%s' % user_data
@@ -1326,7 +1320,7 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
         callback_name = '&%s_callback' % func_name
         try:
             if is_global_callback(arg_type):
-                full_user_data = '&mp_lv_user_data'
+                full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
             else:
                 if index == 0:
                     raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
