@@ -952,21 +952,21 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
             func_name, arg_type  = callback
             user_data = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
             if not callback in callbacks_used_on_structs:
-                callbacks_used_on_structs.append(callback)
+                callbacks_used_on_structs.append(callback + (struct_name,))
             # Emit callback forward decl.
             if user_data in [user_data_decl.name for user_data_decl in flatten_struct_decls]:
                 full_user_data = '&data->%s' % user_data
-                lv_callback = '%s_callback' % func_name
-                print('STATIC %s %s_callback(%s);' % (get_type(arg_type.type, remove_quals = False), func_name, gen.visit(arg_type.args)))
+                lv_callback = '%s_%s_callback' % (struct_name, func_name)
+                print('STATIC %s %s_%s_callback(%s);' % (get_type(arg_type.type, remove_quals = False), struct_name, func_name, gen.visit(arg_type.args)))
             else:
                 full_user_data = 'NULL'
                 lv_callback = 'NULL'
                 if not user_data:
-                    gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_callback'" % func_name)
+                    gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_%s_callback'" % (struct_name, func_name))
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{field}, {user_data}); break; // converting to callback {type_name}'.
-                format(field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
+            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting to callback {type_name}'.
+                format(struct_name = struct_name, field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
             read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from callback {type_name}'.
                 format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
         else:
@@ -1312,12 +1312,15 @@ generated_funcs = collections.OrderedDict()
 
 def build_mp_func_arg(arg, index, func, obj_name, first_arg):
     # print('/* --> ARG: %s */' % arg)
+    # print('/* --> FIRST ARG: %s */' % first_arg)
     fixed_arg = copy.deepcopy(arg)
     convert_array_to_ptr(fixed_arg)
     callback = decl_to_callback(arg)
     if callback:
         func_name, arg_type  = callback
-        callback_name = '&%s_callback' % func_name
+        # print('/* --> ARG TYPE: %s */' % arg_type)
+        struct_name = get_name(first_arg.type.type.type if hasattr(first_arg.type.type,'type') else first_arg.type.type)
+        callback_name = '&%s_%s_callback' % (struct_name, func_name)
         try:
             if is_global_callback(arg_type):
                 full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
@@ -1328,11 +1331,12 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
                 if not user_data:
                     raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
                 full_user_data = '&%s->%s' % (first_arg.name, user_data)
-            gen_callback_func(arg_type, func_name)
-            return 'void *{arg_name} = mp_lv_callback(args[{i}], {callback_name}, MP_QSTR_{func_name}, {full_user_data});'.format(
+            gen_callback_func(arg_type, '%s_%s' % (struct_name, func_name))
+            return 'void *{arg_name} = mp_lv_callback(args[{i}], {callback_name}, MP_QSTR_{struct_name}_{func_name}, {full_user_data});'.format(
                 i = index,
                 arg_name = fixed_arg.name,
                 callback_name = callback_name,
+                struct_name = struct_name,
                 func_name = func_name,
                 obj = first_arg.name,
                 full_user_data = full_user_data)
@@ -1620,10 +1624,10 @@ for global_name in blobs:
 #         lv_to_mp[func_name] = lv_to_mp['void *']
 #         mp_to_lv[func_name] = mp_to_lv['void *']
 
-for (func_name, func) in callbacks_used_on_structs:
+for (func_name, func, struct_name) in callbacks_used_on_structs:
     try:
         # print('/* --> gen_callback_func %s */' % func_name)
-        gen_callback_func(func, func_name = func_name)
+        gen_callback_func(func, func_name = '%s_%s' % (struct_name, func_name))
     except MissingConversionException as exp:
         gen_func_error(func, exp)
         # func_name = get_arg_name(func.type)

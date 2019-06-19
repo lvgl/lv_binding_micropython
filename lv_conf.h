@@ -139,6 +139,10 @@ typedef void * lv_group_user_data_t;
 
 /* 1: Enable file system (might be required for images */
 #define LV_USE_FILESYSTEM       1
+#if LV_USE_FILESYSTEM
+/*Declare the type of the user data of file system drivers (can be e.g. `void *`, `int`, `struct`)*/
+typedef void * lv_fs_drv_user_data_t;
+#endif
 
 /* 1: Enable indexed (palette) images */
 #define LV_IMG_CF_INDEXED       1
@@ -267,15 +271,6 @@ typedef void * lv_font_user_data_t;
  /*Can break (wrap) texts on these chars*/
 #define LV_TXT_BREAK_CHARS                  " ,.;:-_"
 
-/* If a character is at least this long, will break wherever "prettiest" */
-#define LV_TXT_LINE_BREAK_LONG_LEN          12
-
-/* Minimum number of characters of a word to put on a line before a break */
-#define LV_TXT_LINE_BREAK_LONG_PRE_MIN_LEN  3
-
-/* Minimum number of characters of a word to put on a line after a break */
-#define LV_TXT_LINE_BREAK_LONG_POST_MIN_LEN 1
-
 /*===================
  *  LV_OBJ SETTINGS
  *==================*/
@@ -362,8 +357,15 @@ typedef void * lv_obj_user_data_t;
 #if LV_USE_LABEL != 0
 /*Hor, or ver. scroll speed [px/sec] in 'LV_LABEL_LONG_ROLL/ROLL_CIRC' mode*/
 #  define LV_LABEL_DEF_SCROLL_SPEED       25
-#  define LV_LABEL_WAIT_CHAR_COUNT        3 /* Waiting period at beginning/end of animation cycle */
-#  define LV_LABEL_TEXT_SEL               1  /*Enable selecting text of the label */
+
+/* Waiting period at beginning/end of animation cycle */
+#  define LV_LABEL_WAIT_CHAR_COUNT        3
+
+/*Enable selecting text of the label */
+#  define LV_LABEL_TEXT_SEL               0
+
+/*Store extra some info in labels (12 bytes) to speed up drawing of very long texts*/
+#  define LV_LABEL_LONG_TXT_HINT          0
 #endif
 
 /*LED (dependencies: -)*/

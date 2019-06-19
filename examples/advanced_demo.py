@@ -25,7 +25,7 @@ class SymbolButton(lv.btn):
         super().__init__(parent)
         self.symbol = lv.label(self)
         self.symbol.set_text(symbol)
-        self.symbol.set_style(symbolstyle)
+        self.symbol.set_style(lv.label.STYLE.MAIN, symbolstyle)
         
         self.label = lv.label(self)
         self.label.set_text(text)
