@@ -1,6 +1,14 @@
 #include "../include/common.h"
 #include "SDL_monitor.h"
 #include "SDL_mouse.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+/* Defines the LittlevGL tick rate in milliseconds. */
+/* Increasing this value might help with CPU usage at the cost of lower
+ * responsiveness. */
+#define LV_TICK_RATE 50
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -13,6 +21,7 @@ STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_task_handler_obj, mp_lv_task_handler);
 
+#ifndef __EMSCRIPTEN__
 STATIC int tick_thread(void * data)
 {
     (void)data;
@@ -25,11 +34,26 @@ STATIC int tick_thread(void * data)
 
     return 0;
 }
+#else
+STATIC void mp_lv_main_loop(void)
+{
+        mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+        lv_tick_inc(LV_TICK_RATE);
+}
+#endif
 
 STATIC mp_obj_t mp_init_SDL()
 {
     monitor_init();
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
+    /* Required for HTML input elements to work */
+    SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
+    SDL_EventState(SDL_KEYDOWN, SDL_DISABLE);
+    SDL_EventState(SDL_KEYUP, SDL_DISABLE);
+#else
     SDL_CreateThread(tick_thread, "tick", NULL);
+#endif
     return mp_const_none;
 }
 
