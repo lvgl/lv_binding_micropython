@@ -122,7 +122,10 @@ typedef int16_t lv_coord_t;
 /*1: Enable the Animations */
 #define LV_USE_ANIMATION        1
 #if LV_USE_ANIMATION
+
+/*Declare the type of the user data of animations (can be e.g. `void *`, `int`, `struct`)*/
 typedef void * lv_anim_user_data_t;
+
 #endif
 
 /* 1: Enable shadow drawing*/
@@ -144,17 +147,29 @@ typedef void * lv_group_user_data_t;
 typedef void * lv_fs_drv_user_data_t;
 #endif
 
+/*1: Add a `user_data` to drivers and objects*/
+#define LV_USE_USER_DATA        1
+
+/*========================
+ * Image decoder and cache
+ *========================*/
+
 /* 1: Enable indexed (palette) images */
 #define LV_IMG_CF_INDEXED       1
 
 /* 1: Enable alpha indexed images */
 #define LV_IMG_CF_ALPHA         1
 
+/* Default image cache size. Image caching keeps the images opened.
+ * If only the built-in image formats are used there is no real advantage of caching.
+ * (I.e. no new image decoder is added)
+ * With complex image decoders (e.g. PNG or JPG) caching can save the continuous open/decode of images.
+ * However the opened images might consume additional RAM.
+ * LV_IMG_CACHE_DEF_SIZE must be >= 1 */
+#define LV_IMG_CACHE_DEF_SIZE       1
+
 /*Declare the type of the user data of image decoder (can be e.g. `void *`, `int`, `struct`)*/
 typedef void * lv_img_decoder_user_data_t;
-
-/*1: Add a `user_data` to drivers and objects*/
-#define LV_USE_USER_DATA        1
 
 /*=====================
  *  Compiler settings
@@ -389,6 +404,10 @@ typedef void * lv_obj_user_data_t;
 
 /*Page (dependencies: lv_cont)*/
 #define LV_USE_PAGE     1
+#if LV_USE_PAGE != 0
+/*Focus default animation time [ms] (0: no animation)*/
+#  define LV_PAGE_DEF_ANIM_TIME     400
+#endif
 
 /*Preload (dependencies: lv_arc, lv_anim)*/
 #define LV_USE_PRELOAD      1

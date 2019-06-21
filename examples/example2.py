@@ -116,6 +116,7 @@ scr = lv.obj()
 
 # Create an image on the left using the decoder
 
+lv.img.cache_set_size(2)
 img1 = lv.img(scr)
 img1.align(scr, lv.ALIGN.IN_LEFT_MID, -50, 0)
 img1.set_src(png_img_dsc)
