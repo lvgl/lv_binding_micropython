@@ -135,7 +135,7 @@ lv_obj_pattern = re.compile('^{prefix}_([^_]+)'.format(prefix=module_prefix), re
 lv_func_pattern = re.compile('^{prefix}_(.+)'.format(prefix=module_prefix), re.IGNORECASE)
 create_obj_pattern = re.compile('^{prefix}_([^_]+)_create'.format(prefix=module_prefix))
 lv_method_pattern = re.compile('^{prefix}_[^_]+_(.+)'.format(prefix=module_prefix), re.IGNORECASE)
-lv_base_obj_pattern = re.compile('^(struct _){{0,1}}{prefix}_{base_name}_t( \*){{0,1}}'.format(prefix=module_prefix, base_name = base_obj_name))
+lv_base_obj_pattern = re.compile('^(struct _){{0,1}}{prefix}_{base_name}_t( [*]){{0,1}}'.format(prefix=module_prefix, base_name = base_obj_name))
 lv_str_enum_pattern = re.compile('^_{prefix}_STR_(.+)'.format(prefix=module_prefix.upper()))
 lv_callback_type_pattern = re.compile('({prefix}_){{0,1}}(.+)_cb(_t){{0,1}}'.format(prefix=module_prefix))
 lv_global_callback_pattern = re.compile('.*g_cb_t')
@@ -1157,7 +1157,7 @@ def get_arg_name(arg):
 def try_generate_type(type_ast, structs_in_progress = None):
     # eprint(' --> try_generate_type %s : %s' % (get_name(type_ast), gen.visit(type_ast)))
     # print('/* --> try_generate_type %s: %s */' % (get_name(type_ast), type_ast))
-    if isinstance(type_ast, basestring): raise SyntaxError('Internal error! try_generate_type argument is a string.')
+    if isinstance(type_ast, str): raise SyntaxError('Internal error! try_generate_type argument is a string.')
     # Handle the case of a pointer 
     if isinstance(type_ast, c_ast.TypeDecl): 
         return try_generate_type(type_ast.type, structs_in_progress)
