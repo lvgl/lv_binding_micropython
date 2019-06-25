@@ -5,12 +5,12 @@
 
 #include "../include/common.h"
 #include "driver/gpio.h"
-#include "lv_hal/lv_hal_indev.h"
 #include "driver/adc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_task.h"
+#include "lvgl/src/lv_hal/lv_hal_indev.h"
 
 // #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include "esp_log.h"
