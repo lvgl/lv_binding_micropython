@@ -535,6 +535,7 @@ STATIC mp_obj_t make_new(
         .lv_obj = create(parent, copy),
         .callbacks = NULL,
     };
+    if (!self->lv_obj) return mp_const_none;
     self->lv_obj->user_data = self;
     return MP_OBJ_FROM_PTR(self);
 }
@@ -1030,7 +1031,8 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             switch(attr)
             {{
                 {write_cases};
-                default: field_not_found(MP_QSTR_{struct_name}, attr);
+                // default: field_not_found(MP_QSTR_{struct_name}, attr);
+                default: return;
             }}
 
             dest[0] = MP_OBJ_NULL; // indicate success
