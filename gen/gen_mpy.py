@@ -1021,7 +1021,7 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 dest[1] = self_in;
             }}
             break;
-            default: field_not_found(MP_QSTR_{struct_name}, attr);
+            // default: field_not_found(MP_QSTR_{struct_name}, attr);
         }}
     }} else {{
         if (dest[1])

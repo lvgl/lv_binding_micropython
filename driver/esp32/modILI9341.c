@@ -15,14 +15,6 @@
 // ILI9341 requires specific lv_conf resolution and color depth
 //////////////////////////////////////////////////////////////////////////////
 
-#if LV_HOR_RES != 240
-#error "modILI9341: LV_HOR_RES must be set to 240!"
-#endif 
-
-#if LV_VER_RES != 320
-#error "modILI9341: LV_VER_RES must be set to 320!"
-#endif 
-
 #if LV_COLOR_DEPTH != 16
 #error "modILI9341: LV_COLOR_DEPTH must be set to 16!"
 #endif

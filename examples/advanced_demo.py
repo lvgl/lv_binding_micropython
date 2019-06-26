@@ -13,7 +13,9 @@ symbolstyle.text.font = lv.font_roboto_28
 # They show how to initialize struct either directly or through a dict
 
 symbolstyle.text.color = lv.color_hex(0xffffff)
-symbolstyle.text.color = {"ch": {"red":0xff, "green":0xff, "blue":0xff, "alpha":0xff}}
+symbolstyle.text.color = {"ch": {"red":0xff, "green":0xff, "blue":0xff}}
+if hasattr(symbolstyle.text.color.ch, 'alpha'):
+    symbolstyle.text.color.ch.alpha = 0xff # Only has alpha when color is 32 bit
 
 def get_member_name(obj, value):
     for member in dir(obj):
@@ -197,11 +199,17 @@ class AdvancedDemoApplication():
 
         # Register display driver 
 
+        disp_buf1 = lv.disp_buf_t()
+        buf1_1 = bytearray(480*10)
+        lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
+        disp_drv.buffer = disp_buf1
         disp_drv.flush_cb = disp.flush
+        disp_drv.hor_res = 240
+        disp_drv.ver_res = 320
         lv.disp_drv_register(disp_drv)
-
+        
         # Register raw resistive touch driver
 
         import rtch
