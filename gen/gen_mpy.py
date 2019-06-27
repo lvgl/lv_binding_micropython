@@ -564,16 +564,6 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
 
 // struct handling
 
-STATIC void field_not_found(qstr struct_name, qstr field_name)
-{
-    nlr_raise(
-        mp_obj_new_exception_msg_varg(
-            &mp_type_SyntaxError, 
-            "Cannot access field %s. Field does not exist in struct %s!", 
-            qstr_str(field_name), 
-            qstr_str(struct_name)));
-}
-
 typedef struct mp_lv_struct_t
 {
     mp_obj_base_t base;
@@ -696,8 +686,8 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
     mp_buffer_info_t buffer_info;
     if (self_in == mp_const_none)
         return NULL;
-    if (MP_OBJ_IS_INT(self_in))
-        return (void*)mp_obj_get_int(self_in);
+//    if (MP_OBJ_IS_INT(self_in))
+//        return (void*)mp_obj_get_int(self_in);
     mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
     if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
         MP_OBJ_IS_TYPE(self_in, &mp_type_bytearray) ||
@@ -1022,7 +1012,6 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 dest[1] = self_in;
             }}
             break;
-            // default: field_not_found(MP_QSTR_{struct_name}, attr);
         }}
     }} else {{
         if (dest[1])
@@ -1031,7 +1020,6 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             switch(attr)
             {{
                 {write_cases};
-                // default: field_not_found(MP_QSTR_{struct_name}, attr);
                 default: return;
             }}
 

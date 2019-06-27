@@ -81,7 +81,7 @@ def open_png(decoder, dsc):
     png_height = png.C_Pointer()
     error = png.decode32(png_decoded, png_width, png_height, png_data, png_size);
     if error:
-        return -1 # LV_IMG_DECODER_OPEN_FAIL
+        return None # LV_IMG_DECODER_OPEN_FAIL
     img_size = png_width.int_val * png_height.int_val * lv.color_t.SIZE
     img_data = png_decoded.ptr_val
 
@@ -94,7 +94,8 @@ def open_png(decoder, dsc):
         ch = lv.color_t.cast(img_view[i:i]).ch
         ch.red, ch.blue = ch.blue, ch.red
 
-    return img_data
+    dsc.img_data = img_data
+    return lv.RES.OK
 
 # Register new image decoder
 
@@ -128,10 +129,12 @@ img2 = lv.img(scr)
 img2.align(scr, lv.ALIGN.IN_RIGHT_MID, 0, 0)
 raw_dsc = lv.img_dsc_t()
 get_png_info(None, png_img_dsc, raw_dsc.header)
-raw_dsc.data = open_png(None, lv.img_decoder_dsc_t({'src': png_img_dsc}))
-raw_dsc.data_size = raw_dsc.header.w * raw_dsc.header.h * lv.color_t.SIZE
-img2.set_src(raw_dsc)
-img2.set_drag(True)
+dsc = lv.img_decoder_dsc_t({'src': png_img_dsc})
+if open_png(None, dsc) == lv.RES.OK:
+    raw_dsc.data = dsc.img_data
+    raw_dsc.data_size = raw_dsc.header.w * raw_dsc.header.h * lv.color_t.SIZE
+    img2.set_src(raw_dsc)
+    img2.set_drag(True)
 
 # Load the screen and display image
 
