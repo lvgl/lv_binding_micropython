@@ -145,7 +145,12 @@ chart.set_series_width(3)
 chart.set_range(0,100)
 chart.init_points(series1, 10)
 chart.set_points(series1, [10,20,30,20,10,40,50,90,95,90])
- 
+chart.set_x_tick_texts('a\nb\nc\nd\ne', 2, lv.chart.AXIS.DRAW_LAST_TICK)
+chart.set_x_tick_length(10, 5)
+chart.set_y_tick_texts('1\n2\n3\n4\n5', 2, lv.chart.AXIS.DRAW_LAST_TICK)
+chart.set_y_tick_length(10, 5)
+chart.set_margin(30)
+
 # Create a slider that controls the chart animation speed
 
 def on_slider_changed(self, obj=None, event=-1):
