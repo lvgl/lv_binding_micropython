@@ -149,6 +149,7 @@ chart.set_x_tick_texts('a\nb\nc\nd\ne', 2, lv.chart.AXIS.DRAW_LAST_TICK)
 chart.set_x_tick_length(10, 5)
 chart.set_y_tick_texts('1\n2\n3\n4\n5', 2, lv.chart.AXIS.DRAW_LAST_TICK)
 chart.set_y_tick_length(10, 5)
+chart.set_div_line_count(3, 3)
 chart.set_margin(30)
 
 # Create a slider that controls the chart animation speed
