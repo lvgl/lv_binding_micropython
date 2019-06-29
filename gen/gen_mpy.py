@@ -110,7 +110,7 @@ def get_type(arg, **kwargs):
 def get_name(type):
     if isinstance(type, c_ast.Decl):
         return type.name
-    if isinstance(type, c_ast.Struct) and type.name:
+    if isinstance(type, c_ast.Struct) and type.name and type.name in explicit_structs:
         return explicit_structs[type.name]
     if isinstance(type, c_ast.TypeDecl):
         return type.declname
@@ -162,9 +162,9 @@ def method_name_from_func_name(func_name):
     return res if res != "del" else "delete" # del is a resrved name, don't use it
 
 def get_enum_name(enum):
-    prefix = '%s_' % module_prefix
+    prefix = '%s_' % module_prefix.upper()
     fixed_enum_name = enum[len(prefix):]
-    return fixed_enum_name if fixed_enum_name else enum
+    return fixed_enum_name if fixed_enum_name and enum[:len(prefix)] == prefix else enum
 
 def str_enum_to_str(str_enum):
     res = re.match(lv_str_enum_pattern, str_enum).group(1)
@@ -602,6 +602,8 @@ STATIC mp_obj_t make_new_lv_struct(
     mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
     if (other) {
         memcpy(self->data, other->data, size);
+    } else {
+        memset(self->data, 0, size);
     }
     return MP_OBJ_FROM_PTR(self);
 }
@@ -802,9 +804,15 @@ for enum_def in enum_defs:
     for member in enum_def.type.values.enumerators:
         if member.name.startswith('_'):
             continue
-        member_name = member.name[len(enum_name)+1:]
-        enum[member_name] = 'MP_ROM_INT(%s_%s)' % (enum_name, member_name)
-    if len(enum) > 0: enums[enum_name] = enum
+        member_name = member.name[len(enum_name)+1:] if len(enum_name) > 0 else member.name
+        enum[member_name] = 'MP_ROM_INT(%s)' % member.name
+    if len(enum) > 0:
+        real_enum_name = enum_name if len(enum_name) > 0 else 'enum'
+        prev_enum = enums.get(real_enum_name)
+        if prev_enum:
+            prev_enum.update(enum)
+        else:
+            enums[real_enum_name] =enum
 
 # Add special string enums
 
@@ -991,7 +999,7 @@ STATIC inline {struct_name}* mp_write_ptr_{struct_name}(mp_obj_t self_in)
 
 STATIC inline mp_obj_t mp_read_ptr_{struct_name}({struct_name} *field)
 {{
-    return lv_to_mp_struct(get_mp_{struct_name}_type(), field);
+    return lv_to_mp_struct(get_mp_{struct_name}_type(), (void*)field);
 }}
 
 #define mp_read_{struct_name}(field) mp_read_ptr_{struct_name}(copy_buffer(&field, sizeof({struct_name})))
@@ -1238,7 +1246,7 @@ def build_callback_func_arg(arg, index, func):
         try_generate_type(arg.type)
         if not arg_type in lv_to_mp:
             raise MissingConversionException("Callback: Missing conversion to %s" % arg_type)
-    return 'args[{i}] = {convertor}({cast}arg{i});'.format(
+    return 'mp_args[{i}] = {convertor}({cast}arg{i});'.format(
                 convertor = lv_to_mp[arg_type],
                 i = index, cast = cast) 
 
@@ -1276,10 +1284,10 @@ def gen_callback_func(func, func_name = None):
 
 STATIC {return_type} {func_name}_callback({func_args})
 {{
-    mp_obj_t args[{num_args}];
+    mp_obj_t mp_args[{num_args}];
     {build_args}
     mp_obj_t callbacks = get_callback_dict_from_user_data({user_data});
-    {return_value_assignment}mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_{func_name})) , {num_args}, 0, args);
+    {return_value_assignment}mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_{func_name})) , {num_args}, 0, mp_args);
     return{return_value};
 }}
 """.format(
@@ -1322,7 +1330,7 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
                     raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
                 full_user_data = '&%s->%s' % (first_arg.name, user_data)
             gen_callback_func(arg_type, '%s_%s' % (struct_name, func_name))
-            return 'void *{arg_name} = mp_lv_callback(args[{i}], {callback_name}, MP_QSTR_{struct_name}_{func_name}, {full_user_data});'.format(
+            return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], {callback_name}, MP_QSTR_{struct_name}_{func_name}, {full_user_data});'.format(
                 i = index,
                 arg_name = fixed_arg.name,
                 callback_name = callback_name,
@@ -1340,14 +1348,14 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
         try_generate_type(arg.type)
         if not arg_type in mp_to_lv:
             raise MissingConversionException('Missing conversion to %s' % arg_type)
-    return '{var} = {convertor}(args[{i}]);'.format(
+    return '{var} = {convertor}(mp_args[{i}]);'.format(
             var = gen.visit(fixed_arg),
             convertor = mp_to_lv[arg_type],
             i = index) 
 
 def gen_mp_func(func, obj_name):
-    # print("/*\n{ast}\n*/").format(ast=func)
-    args = func.type.args.params
+    # eprint("/*\n{ast}\n*/".format(ast=func))
+    args = func.type.args.params if func.type.args else []
     # Handle the case of a single function argument which is "void"
     if len(args)==1 and get_type(args[0].type, remove_quals = True) == "void":
         param_count = 0
@@ -1375,7 +1383,7 @@ def gen_mp_func(func, obj_name):
  * {print_func}
  */
  
-STATIC mp_obj_t mp_{func}(size_t n_args, const mp_obj_t *args)
+STATIC mp_obj_t mp_{func}(size_t mp_n_args, const mp_obj_t *mp_args)
 {{
     {build_args}
     {build_result}{func}({send_args});
