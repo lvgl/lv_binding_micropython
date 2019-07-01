@@ -52,7 +52,7 @@ inline void gpio_init(void){}
 
 // We don't want the whole FreeRTOS, only selected functions
 
-inline void task_delay_ms(int ms)
+static inline void task_delay_ms(int ms)
 {
 	vTaskDelay(ms / portTICK_RATE_MS);
 }
