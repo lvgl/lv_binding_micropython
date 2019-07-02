@@ -5,12 +5,13 @@
 
 #include "../include/common.h"
 #include "driver/gpio.h"
-#include "lv_hal/lv_hal_indev.h"
 #include "driver/adc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_task.h"
+#include "lvgl/src/lv_hal/lv_hal_indev.h"
+#include "lvgl/src/lv_core/lv_disp.h"  
 
 // #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include "esp_log.h"
@@ -98,7 +99,7 @@ typedef struct _rtch_t
 // This means we can have only one active touch driver instance, pointed by this global.
 STATIC rtch_t *g_rtch = NULL;
 
-STATIC bool touch_read(lv_indev_data_t *data)
+STATIC bool touch_read(lv_indev_drv_t * indev_drv, lv_indev_data_t *data)
 {
     rtch_info_t *touch_info = &g_rtch->rtch_info;
     xSemaphoreTake(g_rtch->rtch_info_mutex, portMAX_DELAY);
@@ -191,8 +192,8 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
         { MP_QSTR_touch_rail, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}}, 
         { MP_QSTR_touch_sense, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}}, 
 
-        { MP_QSTR_screen_width, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=LV_HOR_RES}},
-        { MP_QSTR_screen_height, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=LV_VER_RES}},
+        { MP_QSTR_screen_width, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
+        { MP_QSTR_screen_height, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
         { MP_QSTR_cal_x, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=29821466}},
         { MP_QSTR_cal_y, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=14944964}},
         { MP_QSTR_touch_samples, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=9}}, 
@@ -211,7 +212,9 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
     self->touch_sense = args[ARG_touch_sense].u_int;
 
     self->screen_width = args[ARG_screen_width].u_int;
+    if (self->screen_width == -1) self->screen_width = LV_HOR_RES;
     self->screen_height = args[ARG_screen_height].u_int;
+    if (self->screen_height == -1) self->screen_height = LV_VER_RES;
     self->cal_x = args[ARG_cal_x].u_int;
     self->cal_y = args[ARG_cal_y].u_int;
     self->touch_samples = args[ARG_touch_samples].u_int;

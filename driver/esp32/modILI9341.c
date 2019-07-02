@@ -4,24 +4,16 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "../include/common.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
+//#include "freertos/FreeRTOS.h"
+//#include "freertos/task.h"
+//#include "esp_system.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
-#include "lv_core/lv_vdb.h"
+#include "lvgl/src/lv_hal/lv_hal_disp.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // ILI9341 requires specific lv_conf resolution and color depth
 //////////////////////////////////////////////////////////////////////////////
-
-#if LV_HOR_RES != 240
-#error "modILI9341: LV_HOR_RES must be set to 240!"
-#endif 
-
-#if LV_VER_RES != 320
-#error "modILI9341: LV_VER_RES must be set to 320!"
-#endif 
 
 #if LV_COLOR_DEPTH != 16
 #error "modILI9341: LV_COLOR_DEPTH must be set to 16!"
@@ -64,27 +56,16 @@ STATIC mp_obj_t mp_activate_ILI9341(mp_obj_t self_in)
     return mp_const_none;
 }
 
-STATIC mp_obj_t mp_get_spi_device(mp_obj_t self_in)
-{
-    ILI9341_t *self = MP_OBJ_TO_PTR(self_in);
-    return NEW_PTR_OBJ(spi_device, self->spi);
-}
-
-STATIC void ili9431_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color);
-STATIC void ili9431_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_map);
+STATIC void ili9431_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_init_ILI9341_obj, mp_init_ILI9341);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_activate_ILI9341_obj, mp_activate_ILI9341);
-DEFINE_PTR_OBJ(ili9431_fill);
 DEFINE_PTR_OBJ(ili9431_flush);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_get_spi_device_obj, mp_get_spi_device);
 
 STATIC const mp_rom_map_elem_t ILI9341_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_init_ILI9341_obj) },
     { MP_ROM_QSTR(MP_QSTR_activate), MP_ROM_PTR(&mp_activate_ILI9341_obj) },
-    { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&PTR_OBJ(ili9431_fill)) },
     { MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&PTR_OBJ(ili9431_flush)) },
-    { MP_ROM_QSTR(MP_QSTR_get_spi_device), MP_ROM_PTR(&mp_get_spi_device_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(ILI9341_locals_dict, ILI9341_locals_dict_table);
@@ -115,7 +96,7 @@ STATIC mp_obj_t ILI9341_make_new(const mp_obj_type_t *type,
     };
 
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=20}},
+        { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=40}},
         { MP_QSTR_spihost,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=HSPI_HOST}},
         { MP_QSTR_miso,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},             
         { MP_QSTR_mosi,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
@@ -318,7 +299,7 @@ STATIC mp_obj_t mp_init_ILI9341(mp_obj_t self_in)
 }
 
 
-STATIC void ili9431_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
+STATIC void ili9431_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
 	uint8_t data[4];
 
@@ -326,74 +307,28 @@ STATIC void ili9431_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_colo
 
 	/*Column addresses*/
 	ili9441_send_cmd(self, 0x2A);
-	data[0] = (x1 >> 8) & 0xFF;
-	data[1] = x1 & 0xFF;
-	data[2] = (x2 >> 8) & 0xFF;
-	data[3] = x2 & 0xFF;
+	data[0] = (area->x1 >> 8) & 0xFF;
+	data[1] = area->x1 & 0xFF;
+	data[2] = (area->x2 >> 8) & 0xFF;
+	data[3] = area->x2 & 0xFF;
 	ili9341_send_data(self, data, 4);
 
 	/*Page addresses*/
 	ili9441_send_cmd(self, 0x2B);
-	data[0] = (y1 >> 8) & 0xFF;
-	data[1] = y1 & 0xFF;
-	data[2] = (y2 >> 8) & 0xFF;
-	data[3] = y2 & 0xFF;
+	data[0] = (area->y1 >> 8) & 0xFF;
+	data[1] = area->y1 & 0xFF;
+	data[2] = (area->y2 >> 8) & 0xFF;
+	data[3] = area->y2 & 0xFF;
 	ili9341_send_data(self, data, 4);
 
 	/*Memory write*/
 	ili9441_send_cmd(self, 0x2C);
 
-	uint32_t size = (x2 - x1 + 1) * (y2 - y1 + 1);
-	uint16_t color_swap = ((color.full >> 8) & 0xFF) | ((color.full & 0xFF) << 8);	/*It's a 8 bit SPI bytes need to be swapped*/
-	uint16_t buf[LV_HOR_RES];
-
-	uint32_t i;
-	if(size < LV_HOR_RES) {
-		for(i = 0; i < size; i++) buf[i] = color_swap;
-
-	} else {
-		for(i = 0; i < LV_HOR_RES; i++) buf[i] = color_swap;
-	}
-
-	while(size > LV_HOR_RES) {
-		ili9341_send_data(self, buf, LV_HOR_RES * 2);
-		size -= LV_HOR_RES;
-	}
-
-	ili9341_send_data(self, buf, size * 2);	/*Send the remaining data*/
-}
-
-
-STATIC void ili9431_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_map)
-{
-	uint8_t data[4];
-
-    ILI9341_t *self = g_ILI9341;
-
-	/*Column addresses*/
-	ili9441_send_cmd(self, 0x2A);
-	data[0] = (x1 >> 8) & 0xFF;
-	data[1] = x1 & 0xFF;
-	data[2] = (x2 >> 8) & 0xFF;
-	data[3] = x2 & 0xFF;
-	ili9341_send_data(self, data, 4);
-
-	/*Page addresses*/
-	ili9441_send_cmd(self, 0x2B);
-	data[0] = (y1 >> 8) & 0xFF;
-	data[1] = y1 & 0xFF;
-	data[2] = (y2 >> 8) & 0xFF;
-	data[3] = y2 & 0xFF;
-	ili9341_send_data(self, data, 4);
-
-	/*Memory write*/
-	ili9441_send_cmd(self, 0x2C);
-
-	uint32_t size = (x2 - x1 + 1) * (y2 - y1 + 1);
+	uint32_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
 
 	/*Byte swapping is required*/
 	uint32_t i;
-	uint8_t * color_u8 = (uint8_t *) color_map;
+	uint8_t * color_u8 = (uint8_t *) color_p;
 	uint8_t color_tmp;
 	for(i = 0; i < size * 2; i += 2) {
 		color_tmp = color_u8[i + 1];
@@ -401,19 +336,18 @@ STATIC void ili9431_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const 
 		color_u8[i] = color_tmp;
 	}
 
-	ili9341_send_data(self, (void*)color_map, size * 2);
+	ili9341_send_data(self, (void*)color_p, size * 2);
 
 	/*
 	while(size > LV_HOR_RES) {
 
-		ili9341_send_data((void*)color_map, LV_HOR_RES * 2);
+		ili9341_send_data((void*)color_p, LV_HOR_RES * 2);
 		//vTaskDelay(10 / portTICK_PERIOD_MS);
 		size -= LV_HOR_RES;
-		color_map += LV_HOR_RES;
+		color_p += LV_HOR_RES;
 	}
 
-	ili9341_send_data((void*)color_map, size * 2);	*/ /*Send the remaining data*/
+	ili9341_send_data((void*)color_p, size * 2);	*/ /*Send the remaining data*/
 
-	lv_flush_ready();
-
+	lv_disp_flush_ready(disp_drv);
 }
