@@ -64,6 +64,12 @@ STATIC mp_obj_t mp_activate_ILI9341(mp_obj_t self_in)
     return mp_const_none;
 }
 
+STATIC mp_obj_t mp_get_spi_device(mp_obj_t self_in)
+{
+    ILI9341_t *self = MP_OBJ_TO_PTR(self_in);
+    return NEW_PTR_OBJ(spi_device, self->spi);
+}
+
 STATIC void ili9431_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color);
 STATIC void ili9431_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_map);
 
@@ -71,12 +77,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_init_ILI9341_obj, mp_init_ILI9341);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_activate_ILI9341_obj, mp_activate_ILI9341);
 DEFINE_PTR_OBJ(ili9431_fill);
 DEFINE_PTR_OBJ(ili9431_flush);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_get_spi_device_obj, mp_get_spi_device);
 
 STATIC const mp_rom_map_elem_t ILI9341_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_init_ILI9341_obj) },
     { MP_ROM_QSTR(MP_QSTR_activate), MP_ROM_PTR(&mp_activate_ILI9341_obj) },
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&PTR_OBJ(ili9431_fill)) },
     { MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&PTR_OBJ(ili9431_flush)) },
+    { MP_ROM_QSTR(MP_QSTR_get_spi_device), MP_ROM_PTR(&mp_get_spi_device_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(ILI9341_locals_dict, ILI9341_locals_dict_table);
@@ -107,7 +115,7 @@ STATIC mp_obj_t ILI9341_make_new(const mp_obj_type_t *type,
     };
 
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=40}},
+        { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=20}},
         { MP_QSTR_spihost,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=HSPI_HOST}},
         { MP_QSTR_miso,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},             
         { MP_QSTR_mosi,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
