@@ -3,7 +3,8 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "../include/common.h"
-#include "lv_hal/lv_hal_indev.h"
+#include "lvgl/src/lv_hal/lv_hal_indev.h"
+#include "lvgl/src/lv_core/lv_disp.h"
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "esp_system.h"
