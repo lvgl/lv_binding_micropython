@@ -4,9 +4,9 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "../include/common.h"
-//#include "freertos/FreeRTOS.h"
-//#include "freertos/task.h"
-//#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_system.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "lvgl/src/lv_hal/lv_hal_disp.h"

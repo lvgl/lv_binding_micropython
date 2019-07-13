@@ -27,20 +27,8 @@ typedef void *lldesc_t;
 #include <stdint.h>
 typedef uint16_t TickType_t;
 
-
-#else //PYCPARSER
-
-// ESP IDF has some functions that are declared but not implemented.
-// To avoid linking errors, provide empty implementation
-
-inline void gpio_pin_wakeup_disable(void){}
-inline void gpio_pin_wakeup_enable(uint32_t i, GPIO_INT_TYPE intr_state){}
-inline void gpio_intr_ack_high(uint32_t ack_mask){}
-inline void gpio_intr_ack(uint32_t ack_mask){}
-inline uint32_t gpio_intr_pending_high(void){return 0;}
-inline uint32_t gpio_intr_pending(void){return 0;}
-inline void gpio_intr_handler_register(gpio_intr_handler_fn_t fn, void *arg){}
-inline void gpio_init(void){}
+// Micropython specific types
+typedef void *mp_obj_t;
 
 #endif //PYCPARSER
 
@@ -52,8 +40,20 @@ inline void gpio_init(void){}
 
 // We don't want the whole FreeRTOS, only selected functions
 
-static inline void task_delay_ms(int ms)
-{
-	vTaskDelay(ms / portTICK_RATE_MS);
-}
+void task_delay_ms(int ms);
+
+// Wrapper for safe ISR callbacks from micropython
+// Need to call both spi_transaction_set_cb and set spi_pre/post_cb_isr!
+
+// Use this to set pre/post callbacks for spi transaction.
+// pre_cb/post_cb should be either a callable object or "None".
+// Result should be set to spi_transaction_t user field.
+// Allocates RAM.
+
+void *spi_transaction_set_cb(mp_obj_t pre_cb, mp_obj_t post_cb);
+
+// These functions can be set into pre_cb/post_cb of spi_device_interface_config_t
+
+void spi_pre_cb_isr(spi_transaction_t *trans);
+void spi_post_cb_isr(spi_transaction_t *trans);
 

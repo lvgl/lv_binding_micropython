@@ -289,6 +289,7 @@ class MissingConversionException(ValueError):
     pass
 
 mp_to_lv = {
+    'mp_obj_t'                  : '(mp_obj_t)',
     'void *'                    : 'mp_to_ptr',
     'const uint8_t *'           : 'mp_to_ptr',
     'const void *'              : 'mp_to_ptr',
@@ -313,6 +314,7 @@ mp_to_lv = {
 }
 
 lv_to_mp = {
+    'mp_obj_t'                  : '(mp_obj_t)',
     'void *'                    : 'ptr_to_mp',
     'const uint8_t *'           : 'ptr_to_mp',
     'const void *'              : 'ptr_to_mp',
@@ -723,11 +725,22 @@ STATIC mp_obj_t mp_lv_cast(mp_obj_t type_obj, mp_obj_t ptr_obj)
         .base = {(const mp_obj_type_t*)type_obj}, 
         .data = mp_to_ptr(ptr_obj)
     };
-    return self;
+    return MP_OBJ_FROM_PTR(self);
+}
+
+// Cast instance. Can be used in ISR when memory allocation is prohibited
+
+STATIC inline mp_obj_t mp_lv_cast_instance(mp_obj_t self_in, mp_obj_t ptr_obj)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    self->data = mp_to_ptr(ptr_obj);
+    return self_in;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_lv_cast_obj, mp_lv_cast);
 STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(mp_lv_cast_class_method, MP_ROM_PTR(&mp_lv_cast_obj));
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_lv_cast_instance_obj, mp_lv_cast_instance);
 
 // Dereference a struct/blob. This allows access to the raw data the struct holds
 
@@ -1046,6 +1059,7 @@ STATIC void mp_{struct_name}_print(const mp_print_t *print,
 STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
+    {{ MP_ROM_QSTR(MP_QSTR_cast_instance), MP_ROM_PTR(&mp_lv_cast_instance_obj) }},
 //    {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
 }};
 
