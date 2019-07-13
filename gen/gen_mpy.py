@@ -690,8 +690,10 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
     mp_buffer_info_t buffer_info;
     if (self_in == mp_const_none)
         return NULL;
+
 //    if (MP_OBJ_IS_INT(self_in))
 //        return (void*)mp_obj_get_int(self_in);
+
     mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
     if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
         MP_OBJ_IS_TYPE(self_in, &mp_type_bytearray) ||
