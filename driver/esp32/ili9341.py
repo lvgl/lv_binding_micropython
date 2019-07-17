@@ -25,7 +25,7 @@ class ili9341:
     disp_buf = lv.disp_buf_t()
     disp_drv = lv.disp_drv_t()
 
-    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2, spihost=esp.enum.HSPI_HOST, mhz=40, factor=5):
+    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2, spihost=esp.enum.HSPI_HOST, mhz=40, factor=4):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -46,13 +46,23 @@ class ili9341:
         self.spihost = spihost
         self.mhz = mhz
 
+        self.buf_size = (self.width * self.height * lv.color_t.SIZE) // factor
+
         self.init()
 
         # Register display driver 
 
-        buf_size = (self.width * self.height * lv.color_t.SIZE) // factor
+        self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.CAP.DMA)
+        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.CAP.DMA)
+        
+        if self.buf1 and self.buf2:
+            print("Double buffer")
+        elif self.buf1:
+            print("Single buffer")
+        else:
+            raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
 
-        lv.disp_buf_init(self.disp_buf, bytearray(buf_size), bytearray(buf_size), buf_size // lv.color_t.SIZE)
+        lv.disp_buf_init(self.disp_buf, self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
         lv.disp_drv_init(self.disp_drv)
 
         self.disp_drv.buffer = self.disp_buf
@@ -102,7 +112,7 @@ class ili9341:
 	    "sclk_io_num": self.clk,
 	    "quadwp_io_num": -1,
 	    "quadhd_io_num": -1,
-	    "max_transfer_sz": 128*1024,
+	    "max_transfer_sz": self.buf_size,
 	})
 
 	devcfg = esp.spi_device_interface_config_t({
@@ -112,7 +122,7 @@ class ili9341:
             "queue_size": 2,
             "pre_cb": esp.spi_pre_cb_isr,
             "post_cb": esp.spi_post_cb_isr,
-            "flags": 1<<4,                          # SPI_DEVICE_HALFDUPLEX
+            "flags": esp.ESP.HALF_DUPLEX,
             "duty_cycle_pos": 128,
 	})
 
@@ -152,6 +162,9 @@ class ili9341:
         # Called in ISR context!
         def flush_isr(spi_transaction_ptr):
             lv.disp_flush_ready(self.disp_drv)
+            # esp.spi_device_release_bus(self.spi)
+            esp.get_ccount(self.end_time_ptr)
+
             # cast_spi_transaction_instance(completed_spi_transaction, spi_transaction_ptr)
             # self.bytes_transmitted += completed_spi_transaction.length
             # try:
@@ -163,34 +176,46 @@ class ili9341:
 
     ######################################################
 
-    trans = esp.spi_transaction_t()
-    trans_res = esp.spi_transaction_t()
+    trans = esp.spi_transaction_t() # .cast(
+#                esp.heap_caps_malloc(
+#                    esp.spi_transaction_t.SIZE, esp.CAP.DMA))
 
-    def disp_spi_send(self, data, dma=False):
-        if len(data) == 0: return      # no need to send anything
-
-        self.trans.length = len(data) * 8 # Length is in bytes, transaction length is in bits. 
-        self.trans.tx_buffer = data
-
+    def spi_send(self, data, dma=False):
+        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
+        self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         if dma:
             self.trans.user = self.spi_callbacks
             esp.spi_device_queue_trans(self.spi, self.trans, -1)
         else:
             self.trans.user = None
             esp.spi_device_polling_transmit(self.spi, self.trans)
-
+    
     ######################################################
 
-    cmd_data = bytearray(1)
+    trans_buffer_len = const(16)
+    trans_buffer = esp.heap_caps_malloc(trans_buffer_len, esp.CAP.DMA)
+    cmd_trans_data = trans_buffer.__dereference__(1)
+    word_trans_data = trans_buffer.__dereference__(4)
 
     def send_cmd(self, cmd):
-        self.cmd_data[0] = cmd
-	esp.gpio_set_level(self.dc, 0)	 # Command mode
-	self.disp_spi_send(self.cmd_data)
+        esp.gpio_set_level(self.dc, 0)	    # Command mode
+        self.cmd_trans_data[0] = cmd
+	self.spi_send(self.cmd_trans_data)
 
-    def send_data(self, data, dma=False):
-	esp.gpio_set_level(self.dc, 1)	 # Data mode
-	self.disp_spi_send(data, dma=dma)
+    def send_data(self, data):
+	esp.gpio_set_level(self.dc, 1)	    # Data mode
+        if len(data) > self.trans_buffer_len: raise RuntimeError('Data too long, please use DMA!')
+        trans_data = self.trans_buffer.__dereference__(len(data))
+        trans_data[:] = data[:]
+	self.spi_send(trans_data)
+
+    def send_trans_word(self):
+	esp.gpio_set_level(self.dc, 1)	    # Data mode
+	self.spi_send(self.word_trans_data)
+
+    def send_data_dma(self, data):          # data should be allocated as DMA-able memory
+        esp.gpio_set_level(self.dc, 1)      # Data mode
+	self.spi_send(data, dma=True)
 
     ######################################################
 
@@ -229,27 +254,39 @@ class ili9341:
     
     ######################################################
 
-    flush_data = bytearray(4)
+    start_time_ptr = esp.C_Pointer()
+    end_time_ptr = esp.C_Pointer()
+    flush_acc_setup_cycles = 0
+    flush_acc_dma_cycles = 0
 
     def flush(self, disp_drv, area, color_p):
 
+        if self.end_time_ptr.int_val and self.end_time_ptr.int_val > self.start_time_ptr.int_val:
+            self.flush_acc_dma_cycles +=  self.end_time_ptr.int_val - self.start_time_ptr.int_val
+
+        esp.get_ccount(self.start_time_ptr)
+
+        # esp.spi_device_acquire_bus(self.spi, esp.ESP.MAX_DELAY)
+
 	# Column addresses
 
-	self.send_cmd(0x2A);
-        self.flush_data[0] = (area.x1 >> 8) & 0xFF
-        self.flush_data[1] = area.x1 & 0xFF
-        self.flush_data[2] = (area.x2 >> 8) & 0xFF
-        self.flush_data[3] = area.x2 & 0xFF
-        self.send_data(self.flush_data)
+        self.send_cmd(0x2A);
+
+        self.word_trans_data[0] = (area.x1 >> 8) & 0xFF
+        self.word_trans_data[1] = area.x1 & 0xFF
+        self.word_trans_data[2] = (area.x2 >> 8) & 0xFF
+        self.word_trans_data[3] = area.x2 & 0xFF
+        self.send_trans_word()
 
 	# Page addresses
 
 	self.send_cmd(0x2B);
-        self.flush_data[0] = (area.y1 >> 8) & 0xFF
-        self.flush_data[1] = area.y1 & 0xFF
-        self.flush_data[2] = (area.y2 >> 8) & 0xFF
-        self.flush_data[3] = area.y2 & 0xFF
-        self.send_data(self.flush_data)
+
+        self.word_trans_data[0] = (area.y1 >> 8) & 0xFF
+        self.word_trans_data[1] = area.y1 & 0xFF
+        self.word_trans_data[2] = (area.y2 >> 8) & 0xFF
+        self.word_trans_data[3] = area.y2 & 0xFF
+        self.send_trans_word()
 
 	# Memory write by DMA, disp_flush_ready when finished
 
@@ -258,13 +295,19 @@ class ili9341:
 	size = (area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1)
         data_view = color_p.__dereference__(size * lv.color_t.SIZE)
 
-        self.send_data(data_view, dma=True)
+        esp.get_ccount(self.end_time_ptr)
+        if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
+            self.flush_acc_setup_cycles += self.end_time_ptr.int_val - self.start_time_ptr.int_val
+        esp.get_ccount(self.start_time_ptr)
+        self.send_data_dma(data_view)
 	
     ######################################################
 
     monitor_acc_time = 0
     monitor_acc_px = 0
     monitor_count = 0
+
+    cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
 
     def monitor(self, disp_drv, time, px):
         self.monitor_acc_time += time
@@ -276,12 +319,17 @@ class ili9341:
             return None
 
         time = self.monitor_acc_time // self.monitor_count
+        setup = self.flush_acc_setup_cycles // (self.monitor_count * self.cycles_in_ms)
+        dma = self.flush_acc_dma_cycles // (self.monitor_count * self.cycles_in_ms)
         px = self.monitor_acc_px // self.monitor_count
+
         self.monitor_acc_time = 0
         self.monitor_acc_px = 0
         self.monitor_count = 0
+        self.flush_acc_setup_cycles = 0
+        self.flush_acc_dma_cycles = 0
 
-        return time, px
+        return time, setup, dma, px
 
 
 ##########################

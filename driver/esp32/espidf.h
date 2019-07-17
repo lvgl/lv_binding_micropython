@@ -25,10 +25,21 @@ typedef void *lldesc_t;
 
 // FreeRTOS portmaco is excluded, but we still need TickType_t
 #include <stdint.h>
-typedef uint16_t TickType_t;
+typedef uint32_t TickType_t;
 
 // Micropython specific types
 typedef void *mp_obj_t;
+
+static inline void get_ccount(int *ccount);
+
+#else // PYCPARSER
+
+// Helper function to measure CPU cycles
+//
+static inline void get_ccount(int *ccount)
+{
+	asm volatile("rsr.ccount %0" : "=a"(*ccount));
+}
 
 #endif //PYCPARSER
 
@@ -37,6 +48,9 @@ typedef void *mp_obj_t;
 
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
+#include "esp_heap_caps.h"
+#include "esp_log.h"
+#include "esp_clk.h"
 
 // We don't want the whole FreeRTOS, only selected functions
 
@@ -57,3 +71,26 @@ void *spi_transaction_set_cb(mp_obj_t pre_cb, mp_obj_t post_cb);
 void spi_pre_cb_isr(spi_transaction_t *trans);
 void spi_post_cb_isr(spi_transaction_t *trans);
 
+// Useful constants
+
+enum{
+    ESP_MAX_DELAY = portMAX_DELAY,
+    ESP_HALF_DUPLEX = SPI_DEVICE_HALFDUPLEX
+};
+
+
+enum{
+    TRANS_MODE_DIO = SPI_TRANS_MODE_DIO,
+    TRANS_MODE_QIO = SPI_TRANS_MODE_QIO,
+    TRANS_USE_RXDATA = SPI_TRANS_USE_RXDATA,
+    TRANS_USE_TXDATA = SPI_TRANS_USE_TXDATA,
+    TRANS_MODE_DIOQIO_ADDR = SPI_TRANS_MODE_DIOQIO_ADDR,
+    TRANS_VARIABLE_CMD = SPI_TRANS_VARIABLE_CMD,
+    TRANS_VARIABLE_ADDR = SPI_TRANS_VARIABLE_ADDR,
+};
+
+enum{
+    CAP_DMA = MALLOC_CAP_DMA,
+    CAP_INTERNAL = MALLOC_CAP_INTERNAL,
+    CAP_SPIRAM = MALLOC_CAP_SPIRAM
+};

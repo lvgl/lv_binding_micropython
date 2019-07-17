@@ -302,6 +302,7 @@ mp_to_lv = {
     'uint16_t'                  : '(uint16_t)mp_obj_get_int',
     'uint32_t'                  : '(uint32_t)mp_obj_get_int',
     'unsigned'                  : '(unsigned)mp_obj_get_int',
+    'unsigned int'              : '(unsigned int)mp_obj_get_int',
     'unsigned char'             : '(unsigned char)mp_obj_get_int',
     'unsigned short'            : '(unsigned short)mp_obj_get_int',
     'int8_t'                    : '(int8_t)mp_obj_get_int',
@@ -327,6 +328,7 @@ lv_to_mp = {
     'uint16_t'                  : 'mp_obj_new_int_from_uint',
     'uint32_t'                  : 'mp_obj_new_int_from_uint',
     'unsigned'                  : 'mp_obj_new_int_from_uint',
+    'unsigned int'              : 'mp_obj_new_int_from_uint',
     'unsigned char'             : 'mp_obj_new_int_from_uint',
     'unsigned short'            : 'mp_obj_new_int_from_uint',
     'int8_t'                    : 'mp_obj_new_int',
@@ -1245,6 +1247,7 @@ create_helper_struct('''
 typedef union {
     void *ptr_val;
     int int_val;
+    unsigned int uint_val;
     const char *str_val;
 } C_Pointer;
 ''')
@@ -1413,8 +1416,8 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_{func}_obj, {count}, mp_{func}, {func})
         func=func.name, 
         print_func=gen.visit(func),
         count=param_count, 
-        build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name, args[0]) for i,arg in enumerate(args) if arg.name]), 
-        send_args=", ".join(arg.name for arg in args if arg.name),
+        build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name, args[0]) for i,arg in enumerate(args) if hasattr(arg, 'name') and arg.name]), 
+        send_args=", ".join(arg.name for arg in args if hasattr(arg, 'name') and arg.name),
         build_result=build_result,
         build_return_value=build_return_value))
     generated_funcs[func.name] = True
