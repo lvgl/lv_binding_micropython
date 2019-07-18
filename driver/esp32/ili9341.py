@@ -4,6 +4,11 @@
 # Build micropython with LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
 # (make parameter) to configure LVGL use the same color format as ili9341
 # and prevent the need to loop over all pixels to translate them.
+#
+# If micropython was built with demo flush code (ENABLE_ILI9341_DEMO_FLUSH)
+# then use the more efficient C code instead pure micropython code.
+# It was built to compare pure micropython performance with C performance.
+#
 ##############################################################################
 
 import espidf as esp
@@ -66,12 +71,13 @@ class ili9341:
         lv.disp_drv_init(self.disp_drv)
 
         self.disp_drv.buffer = self.disp_buf
-        self.disp_drv.flush_cb = self.flush
+        self.disp_drv.flush_cb = esp.flush_demo if hasattr(esp, 'flush_demo') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
         
         lv.disp_drv_register(self.disp_drv)
+
 
     ######################################################
 
@@ -120,11 +126,16 @@ class ili9341:
             "mode": 0,                              # SPI mode 0
             "spics_io_num": self.cs,                # CS pin
             "queue_size": 2,
-            "pre_cb": esp.spi_pre_cb_isr,
-            "post_cb": esp.spi_post_cb_isr,
             "flags": esp.ESP.HALF_DUPLEX,
             "duty_cycle_pos": 128,
 	})
+
+        if hasattr(esp, 'demo_post_cb_isr'):
+            devcfg.pre_cb = None
+            devcfg.post_cb = esp.demo_post_cb_isr
+        else:
+            devcfg.pre_cb = esp.spi_pre_cb_isr
+            devcfg.post_cb = esp.spi_post_cb_isr
 
 	esp.gpio_pad_select_gpio(self.miso)
         esp.gpio_pad_select_gpio(self.mosi)
@@ -180,16 +191,19 @@ class ili9341:
 #                esp.heap_caps_malloc(
 #                    esp.spi_transaction_t.SIZE, esp.CAP.DMA))
 
-    def spi_send(self, data, dma=False):
+    def spi_send(self, data):
         self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
-        if dma:
-            self.trans.user = self.spi_callbacks
-            esp.spi_device_queue_trans(self.spi, self.trans, -1)
-        else:
-            self.trans.user = None
-            esp.spi_device_polling_transmit(self.spi, self.trans)
+        self.trans.user = None
+        esp.spi_device_polling_transmit(self.spi, self.trans)
     
+    def spi_send_dma(self, data):
+        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
+        self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
+        self.trans.user = self.spi_callbacks
+        esp.spi_device_queue_trans(self.spi, self.trans, -1)
+    
+    ######################################################
     ######################################################
 
     trans_buffer_len = const(16)
@@ -215,12 +229,14 @@ class ili9341:
 
     def send_data_dma(self, data):          # data should be allocated as DMA-able memory
         esp.gpio_set_level(self.dc, 1)      # Data mode
-	self.spi_send(data, dma=True)
+	self.spi_send_dma(data)
 
     ######################################################
 
     def init(self):
         self.disp_spi_init()
+        if hasattr(esp, 'setup_demo'): esp.setup_demo(self.dc, self.spi)
+
         esp.gpio_pad_select_gpio(self.dc)
 
 	# Initialize non-SPI GPIOs
@@ -299,6 +315,7 @@ class ili9341:
         if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
             self.flush_acc_setup_cycles += self.end_time_ptr.int_val - self.start_time_ptr.int_val
         esp.get_ccount(self.start_time_ptr)
+
         self.send_data_dma(data_view)
 	
     ######################################################

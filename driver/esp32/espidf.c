@@ -117,3 +117,96 @@ void spi_post_cb_isr(spi_transaction_t *trans)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Demo code of ili9341 flush in C
+// Built to compare with micropython performance
+
+#ifdef ENABLE_ILI9341_DEMO_FLUSH
+
+#include "../../lvgl/lvgl.h"
+
+static int g_dc = -1;
+static spi_device_handle_t g_spi = NULL;
+
+void setup_demo(int dc, void* _spi)
+{
+    spi_device_handle_t spi = _spi;
+
+    g_dc = dc;
+    g_spi = spi;
+}
+
+static void spi_send_value(const uint8_t *value, uint8_t size)
+{
+    static spi_transaction_t trans = {0};
+    trans.length = size*8;
+    trans.tx_buffer = value;
+    trans.user = NULL;
+    spi_device_polling_transmit(g_spi, &trans);
+}
+
+static inline void send_cmd(uint8_t cmd)
+{
+   DMA_ATTR static uint8_t value[4] = {0};
+   value[0] = cmd;
+   gpio_set_level(g_dc, 0);
+   spi_send_value(value, 1);
+}
+
+static inline void send_data(const uint8_t *value)
+{
+   gpio_set_level(g_dc, 1);
+   spi_send_value(value, 4);
+}
+
+
+static void send_data_dma(void *disp_drv, void *data, size_t size)
+{
+    static spi_transaction_t trans = {0};
+    gpio_set_level(g_dc, 1);
+    trans.length = size*8;
+    trans.tx_buffer = data;
+    trans.user = disp_drv;
+    spi_device_queue_trans(g_spi, &trans, -1);
+}
+
+void demo_post_cb_isr(spi_transaction_t *trans)
+{
+    if (trans->user)
+        lv_disp_flush_ready(trans->user);
+}
+
+void flush_demo(void *disp_drv, const void *_area, void *_color_p)
+{
+    const lv_area_t *area = _area;
+    lv_color_t *color_p = _color_p;
+
+    DMA_ATTR static uint8_t buf[4] = {0};
+   
+    send_cmd(0x2A);
+
+    buf[0] = (area->x1 >> 8) & 0xFF;
+    buf[1] = area->x1 & 0xFF;
+    buf[2] = (area->x2 >> 8) & 0xFF;
+    buf[3] = area->x2 & 0xFF;
+    send_data(buf);
+
+	// Page addresses
+
+	send_cmd(0x2B);
+
+    buf[0] = (area->y1 >> 8) & 0xFF;
+    buf[1] = area->y1 & 0xFF;
+    buf[2] = (area->y2 >> 8) & 0xFF;
+    buf[3] = area->y2 & 0xFF;
+    send_data(buf);
+
+	// Memory write by DMA, disp_flush_ready when finished
+
+	send_cmd(0x2C);
+
+	size_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
+    send_data_dma(disp_drv, color_p, size * 2);
+}
+
+#endif

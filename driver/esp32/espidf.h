@@ -94,3 +94,18 @@ enum{
     CAP_INTERNAL = MALLOC_CAP_INTERNAL,
     CAP_SPIRAM = MALLOC_CAP_SPIRAM
 };
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Demo code of ili9341 flush in C
+//
+
+
+#ifdef ENABLE_ILI9341_DEMO_FLUSH
+
+void setup_demo(int dc, void *spi);
+void demo_post_cb_isr(spi_transaction_t *trans);
+void flush_demo(void *disp_drv, const void *area, void *color_p);
+
+#endif
+
