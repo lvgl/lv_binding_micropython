@@ -458,6 +458,12 @@ STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
 
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type);
 
+STATIC mp_obj_t make_new_lv_struct(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args);
+
 STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
 {
     mp_obj_t *res = NULL;
@@ -466,7 +472,7 @@ STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
         if (res){
             const mp_obj_type_t *res_type = ((mp_obj_base_t*)res)->type;
             if (res_type != mp_type){
-                if (res_type == &mp_type_dict) res = dict_to_struct(res, mp_type);
+                if (res_type == &mp_type_dict && mp_type->make_new == &make_new_lv_struct) res = dict_to_struct(res, mp_type);
                 else res = NULL;
             }
         }
@@ -596,6 +602,10 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t n_kw,
     const mp_obj_t *args)
 {
+    if ((!MP_OBJ_IS_TYPE(type, &mp_type_type)) || type->make_new != &make_new_lv_struct)
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, "Argument is not a struct type!"));
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
@@ -643,12 +653,47 @@ STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
         mp_obj_t key = map->table[i].key;
         mp_obj_t value = map->table[i].value;
         if (key != MP_OBJ_NULL) {
-            type->attr(mp_struct, mp_obj_str_get_qstr(key), (mp_obj_t[]){MP_OBJ_SENTINEL, value});
+            mp_obj_t dest[] = {MP_OBJ_SENTINEL, value};
+            type->attr(mp_struct, mp_obj_str_get_qstr(key), dest);
+            if (dest[0]) nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, "Cannot set field %s on struct %s!", qstr_str(mp_obj_str_get_qstr(key)), qstr_str(type->name)));
         }
     }
     return mp_struct;
 }
 
+// Convert mp object to ptr
+
+STATIC void* mp_to_ptr(mp_obj_t self_in)
+{
+    mp_buffer_info_t buffer_info;
+    if (self_in == mp_const_none)
+        return NULL;
+
+//    if (MP_OBJ_IS_INT(self_in))
+//        return (void*)mp_obj_get_int(self_in);
+
+    if (!mp_get_buffer(self_in, &buffer_info, MP_BUFFER_READ)) {
+        return MP_OBJ_TO_PTR(self_in);
+    }
+
+    if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
+        MP_OBJ_IS_TYPE(self_in, &mp_type_bytearray) ||
+        MP_OBJ_IS_TYPE(self_in, &mp_type_memoryview))
+            return buffer_info.buf;
+    else
+    {
+        void *result;
+        if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
+            nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(self_in)));
+        }
+        memcpy(&result, buffer_info.buf, sizeof(result));
+        return result;
+    }
+}
 
 // Blob is a wrapper for void* 
 
@@ -669,11 +714,26 @@ STATIC mp_int_t mp_blob_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
     return 0;
 }
 
-
 STATIC const mp_obj_fun_builtin_var_t mp_lv_dereference_obj;
+
+STATIC mp_obj_t mp_blob_cast(size_t argc, const mp_obj_t *argv)
+{
+    mp_obj_t self = argv[0];
+    void *ptr = mp_to_ptr(self);
+    if (argc == 1) return MP_OBJ_FROM_PTR(ptr);
+    mp_obj_t type = argv[1];
+    if (!MP_OBJ_IS_TYPE(type, &mp_type_type))
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, "Cast argument must be a type!"));
+    return cast(MP_OBJ_FROM_PTR(ptr), type);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_blob_cast_obj, 1, 2, mp_blob_cast);
 
 STATIC const mp_rom_map_elem_t mp_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_blob_cast_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_blob_locals_dict, mp_blob_locals_dict_table);
@@ -686,33 +746,6 @@ STATIC const mp_obj_type_t mp_blob_type = {
     .locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
     .buffer_p = { .get_buffer = mp_blob_get_buffer }
 };
-
-STATIC void* mp_to_ptr(mp_obj_t self_in)
-{
-    mp_buffer_info_t buffer_info;
-    if (self_in == mp_const_none)
-        return NULL;
-
-//    if (MP_OBJ_IS_INT(self_in))
-//        return (void*)mp_obj_get_int(self_in);
-
-    mp_get_buffer_raise(self_in, &buffer_info, MP_BUFFER_READ);
-    if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
-        MP_OBJ_IS_TYPE(self_in, &mp_type_bytearray) ||
-        MP_OBJ_IS_TYPE(self_in, &mp_type_memoryview))
-            return buffer_info.buf;
-    else
-    {
-        void *result;
-        if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
-            nlr_raise(
-                mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(self_in)));
-        }
-        memcpy(&result, buffer_info.buf, sizeof(result));
-        return result;
-    }
-}
 
 STATIC inline mp_obj_t ptr_to_mp(void *data)
 {
