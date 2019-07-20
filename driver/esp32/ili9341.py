@@ -1,13 +1,16 @@
 ##############################################################################
-# Pure micropython lvgl display driver for ili9341 on ESP32
+# Pure/Hybrid micropython lvgl display driver for ili9341 on ESP32
 #
 # Build micropython with LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
 # (make parameter) to configure LVGL use the same color format as ili9341
 # and prevent the need to loop over all pixels to translate them.
 #
-# If micropython was built with demo flush code (ENABLE_ILI9341_DEMO_FLUSH)
-# then use the more efficient C code instead pure micropython code.
-# It was built to compare pure micropython performance with C performance.
+# Critical function for high FPS are flush and ISR.
+# when "hybrid=True", use C implementation for these functions instead of
+# pure python implementation. This improves each frame in about 15ms!
+#
+# When hybrid=False driver is pure micropython.
+# Pure Micropython could be viable when ESP32 supports Viper code emitter.
 #
 ##############################################################################
 
@@ -30,7 +33,7 @@ class ili9341:
     disp_buf = lv.disp_buf_t()
     disp_drv = lv.disp_drv_t()
 
-    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2, spihost=esp.enum.HSPI_HOST, mhz=40, factor=4):
+    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2, spihost=esp.enum.HSPI_HOST, mhz=40, factor=4, hybrid=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -50,6 +53,8 @@ class ili9341:
         self.backlight = backlight
         self.spihost = spihost
         self.mhz = mhz
+        self.factor = factor
+        self.hybrid = hybrid
 
         self.buf_size = (self.width * self.height * lv.color_t.SIZE) // factor
 
@@ -70,8 +75,9 @@ class ili9341:
         lv.disp_buf_init(self.disp_buf, self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
         lv.disp_drv_init(self.disp_drv)
 
+        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi}
         self.disp_drv.buffer = self.disp_buf
-        self.disp_drv.flush_cb = esp.flush_demo if hasattr(esp, 'flush_demo') else self.flush
+        self.disp_drv.flush_cb = esp.ili9341_flush if self.hybrid and hasattr(esp, 'ili9341_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
@@ -130,9 +136,9 @@ class ili9341:
             "duty_cycle_pos": 128,
 	})
 
-        if hasattr(esp, 'demo_post_cb_isr'):
+        if self.hybrid and hasattr(esp, 'ili9341_post_cb_isr'):
             devcfg.pre_cb = None
-            devcfg.post_cb = esp.demo_post_cb_isr
+            devcfg.post_cb = esp.ili9341_post_cb_isr
         else:
             devcfg.pre_cb = esp.spi_pre_cb_isr
             devcfg.post_cb = esp.spi_post_cb_isr
@@ -235,7 +241,6 @@ class ili9341:
 
     def init(self):
         self.disp_spi_init()
-        if hasattr(esp, 'setup_demo'): esp.setup_demo(self.dc, self.spi)
 
         esp.gpio_pad_select_gpio(self.dc)
 
@@ -365,10 +370,10 @@ class Anim(lv.anim_t):
         lv.anim_init(self)
         lv.anim_set_time(self, time, 0)
         lv.anim_set_values(self, val, val+size)
-        try:
-            lv.anim_set_exec_cb(self, obj, exec_cb)
-        except TypeError:
+        if callable(exec_cb):
             lv.anim_set_custom_exec_cb(self, exec_cb)
+        else:
+            lv.anim_set_exec_cb(self, obj, exec_cb)
         lv.anim_set_path_cb(self, path_cb )
         if playback: lv.anim_set_playback(self, 0)
         if ready_cb: lv.anim_set_ready_cb(self, ready_cb)

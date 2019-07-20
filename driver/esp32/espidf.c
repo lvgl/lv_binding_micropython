@@ -118,95 +118,88 @@ void spi_post_cb_isr(spi_transaction_t *trans)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Demo code of ili9341 flush in C
-// Built to compare with micropython performance
-
-#ifdef ENABLE_ILI9341_DEMO_FLUSH
+// ILI9341 flush and ISR implementation in C
 
 #include "../../lvgl/lvgl.h"
 
-static int g_dc = -1;
-static spi_device_handle_t g_spi = NULL;
+DMA_ATTR static uint8_t dma_buf[4] = {0};
+DMA_ATTR static spi_transaction_t spi_trans = {0};
 
-void setup_demo(int dc, void* _spi)
+static void spi_send_value(const uint8_t *value, uint8_t size, spi_device_handle_t spi)
 {
-    spi_device_handle_t spi = _spi;
-
-    g_dc = dc;
-    g_spi = spi;
+    spi_trans.length = size*8;
+    spi_trans.tx_buffer = value;
+    spi_trans.user = NULL;
+    spi_device_polling_transmit(spi, &spi_trans);
 }
 
-static void spi_send_value(const uint8_t *value, uint8_t size)
+static inline void ili9341_send_cmd(uint8_t cmd, int dc, spi_device_handle_t spi)
 {
-    static spi_transaction_t trans = {0};
-    trans.length = size*8;
-    trans.tx_buffer = value;
-    trans.user = NULL;
-    spi_device_polling_transmit(g_spi, &trans);
+   dma_buf[0] = cmd;
+   gpio_set_level(dc, 0);
+   spi_send_value(dma_buf, 1, spi);
 }
 
-static inline void send_cmd(uint8_t cmd)
+static inline void ili9341_send_data(const uint8_t *value, int dc, spi_device_handle_t spi)
 {
-   DMA_ATTR static uint8_t value[4] = {0};
-   value[0] = cmd;
-   gpio_set_level(g_dc, 0);
-   spi_send_value(value, 1);
+   gpio_set_level(dc, 1);
+   spi_send_value(value, 4, spi);
 }
 
-static inline void send_data(const uint8_t *value)
+static void ili9341_send_data_dma(void *disp_drv, void *data, size_t size, int dc, spi_device_handle_t spi)
 {
-   gpio_set_level(g_dc, 1);
-   spi_send_value(value, 4);
+    gpio_set_level(dc, 1);
+    spi_trans.length = size*8;
+    spi_trans.tx_buffer = data;
+    spi_trans.user = disp_drv;
+    spi_device_queue_trans(spi, &spi_trans, -1);
 }
 
-
-static void send_data_dma(void *disp_drv, void *data, size_t size)
-{
-    static spi_transaction_t trans = {0};
-    gpio_set_level(g_dc, 1);
-    trans.length = size*8;
-    trans.tx_buffer = data;
-    trans.user = disp_drv;
-    spi_device_queue_trans(g_spi, &trans, -1);
-}
-
-void demo_post_cb_isr(spi_transaction_t *trans)
+void ili9341_post_cb_isr(spi_transaction_t *trans)
 {
     if (trans->user)
         lv_disp_flush_ready(trans->user);
 }
 
-void flush_demo(void *disp_drv, const void *_area, void *_color_p)
+void ili9341_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
+    lv_disp_drv_t *disp_drv = _disp_drv;
     const lv_area_t *area = _area;
     lv_color_t *color_p = _color_p;
 
-    DMA_ATTR static uint8_t buf[4] = {0};
-   
-    send_cmd(0x2A);
+    // We use disp_drv->user_data to pass data from MP to C
+    // The following lines extract dc and spi
+    
+    int dc = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_dc)));
+    mp_buffer_info_t buffer_info;
+    mp_get_buffer_raise(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
+    spi_device_handle_t *spi_ptr = buffer_info.buf;
 
-    buf[0] = (area->x1 >> 8) & 0xFF;
-    buf[1] = area->x1 & 0xFF;
-    buf[2] = (area->x2 >> 8) & 0xFF;
-    buf[3] = area->x2 & 0xFF;
-    send_data(buf);
+	// Column addresses
+
+    ili9341_send_cmd(0x2A, dc, *spi_ptr);
+
+    dma_buf[0] = (area->x1 >> 8) & 0xFF;
+    dma_buf[1] = area->x1 & 0xFF;
+    dma_buf[2] = (area->x2 >> 8) & 0xFF;
+    dma_buf[3] = area->x2 & 0xFF;
+    ili9341_send_data(dma_buf, dc, *spi_ptr);
 
 	// Page addresses
 
-	send_cmd(0x2B);
+	ili9341_send_cmd(0x2B, dc, *spi_ptr);
 
-    buf[0] = (area->y1 >> 8) & 0xFF;
-    buf[1] = area->y1 & 0xFF;
-    buf[2] = (area->y2 >> 8) & 0xFF;
-    buf[3] = area->y2 & 0xFF;
-    send_data(buf);
+    dma_buf[0] = (area->y1 >> 8) & 0xFF;
+    dma_buf[1] = area->y1 & 0xFF;
+    dma_buf[2] = (area->y2 >> 8) & 0xFF;
+    dma_buf[3] = area->y2 & 0xFF;
+    ili9341_send_data(dma_buf, dc, *spi_ptr);
 
 	// Memory write by DMA, disp_flush_ready when finished
 
-	send_cmd(0x2C);
+	ili9341_send_cmd(0x2C, dc, *spi_ptr);
 
 	size_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
-    send_data_dma(disp_drv, color_p, size * 2);
+    ili9341_send_data_dma(disp_drv, color_p, size * 2, dc, *spi_ptr);
 }
 
-#endif

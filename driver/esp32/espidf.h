@@ -97,15 +97,13 @@ enum{
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// Demo code of ili9341 flush in C
+// ili9341 flush and ISR in C
 //
+// disp_drv->user_data should be a dict that contains dc and spi, setup by micropython.
+// like this: "self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi}"
 
 
-#ifdef ENABLE_ILI9341_DEMO_FLUSH
+void ili9341_post_cb_isr(spi_transaction_t *trans);
+void ili9341_flush(void *disp_drv, const void *area, void *color_p);
 
-void setup_demo(int dc, void *spi);
-void demo_post_cb_isr(spi_transaction_t *trans);
-void flush_demo(void *disp_drv, const void *area, void *color_p);
-
-#endif
 

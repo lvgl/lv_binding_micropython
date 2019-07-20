@@ -102,10 +102,10 @@ class Anim(lv.anim_t):
         lv.anim_init(self)
         lv.anim_set_time(self, time, 0)
         lv.anim_set_values(self, val, val+size)
-        try:
-            lv.anim_set_exec_cb(self, obj, exec_cb)
-        except TypeError:
+        if callable(exec_cb):
             lv.anim_set_custom_exec_cb(self, exec_cb)
+        else:
+            lv.anim_set_exec_cb(self, obj, exec_cb)
         lv.anim_set_path_cb(self, path_cb )
         if playback: lv.anim_set_playback(self, 0)
         if ready_cb: lv.anim_set_ready_cb(self, ready_cb)

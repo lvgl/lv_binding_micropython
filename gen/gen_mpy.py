@@ -569,7 +569,7 @@ STATIC inline mp_obj_t convert_to_bool(bool b)
 
 STATIC inline mp_obj_t convert_to_str(const char *str)
 {
-    return mp_obj_new_str(str, strlen(str));
+    return str? mp_obj_new_str(str, strlen(str)): mp_const_none;
 }
 
 // struct handling
@@ -675,7 +675,14 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
 //        return (void*)mp_obj_get_int(self_in);
 
     if (!mp_get_buffer(self_in, &buffer_info, MP_BUFFER_READ)) {
-        return MP_OBJ_TO_PTR(self_in);
+        // No buffer protocol - this is not a Struct or a Blob, it's some other mp object.
+        // We only allow setting dict directly, since it's useful to setting user_data for passing data to C.
+        // On other cases throw an exception, to avoid a crash later
+        if (MP_OBJ_IS_TYPE(self_in, &mp_type_dict))
+            return MP_OBJ_TO_PTR(self_in);
+        else nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, "Cannot convert '%s' to pointer!", mp_obj_get_type_str(self_in)));
     }
 
     if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
@@ -688,7 +695,7 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
         if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
             nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot convert %s to pointer!", mp_obj_get_type_str(self_in)));
+                    &mp_type_SyntaxError, "Cannot convert %s to pointer! (buffer does not represent a pointer)", mp_obj_get_type_str(self_in)));
         }
         memcpy(&result, buffer_info.buf, sizeof(result));
         return result;
@@ -715,6 +722,10 @@ STATIC mp_int_t mp_blob_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
 }
 
 STATIC const mp_obj_fun_builtin_var_t mp_lv_dereference_obj;
+
+// Sometimes (but not always!) Blob represents a Micropython object.
+// In such cases it's safe to cast the Blob back to the Micropython object
+// cast argument is the underlying object type, and it's optional.
 
 STATIC mp_obj_t mp_blob_cast(size_t argc, const mp_obj_t *argv)
 {
