@@ -6,65 +6,58 @@ import lvgl as lv
 lv.init()
 
 class driver:
-    def init_gui_SDL(self):
 
-        import SDL
-        SDL.init()
-
-        # Register SDL display driver.
-
+    def init_disp_drv(self, flush, hor_res, ver_res, buf_size = 0):
         disp_buf1 = lv.disp_buf_t()
-        buf1_1 = bytearray(480*10)
+        if not buf_size: buf_size = (hor_res*ver_res)//4
+        buf1_1 = bytearray(buf_size)
         lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
         disp_drv.buffer = disp_buf1
-        disp_drv.flush_cb = SDL.monitor_flush
-        disp_drv.hor_res = 480
-        disp_drv.ver_res = 320
+        disp_drv.flush_cb = flush
+        disp_drv.hor_res = hor_res
+        disp_drv.ver_res = ver_res
         lv.disp_drv_register(disp_drv)
 
-        # Regsiter SDL mouse driver
-
+    def init_indev_drv(self, mouse_read):
         indev_drv = lv.indev_drv_t()
         lv.indev_drv_init(indev_drv) 
         indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read_cb = SDL.mouse_read;
+        indev_drv.read_cb = mouse_read
         lv.indev_drv_register(indev_drv);
+ 
+
+    def init_gui_fb(self):
+        import fb
+        fb.init()
+        if self.init_disp_drv(fb.flush, 480, 320):
+            print('Initialized Linux Frame Buffer device')
+            return True
+        else:
+            fb.deinit()
+            return False
+
+    def init_gui_SDL(self):
+        import SDL
+        SDL.init()
+        self.init_disp_drv(SDL.monitor_flush, 480, 320)
+        self.init_indev_drv(SDL.mouse_read)
+        print('Initialized SDL device')
+        return True
         
     def init_gui_esp32(self):
-
         import lvesp32
         import ILI9341 as ili
-
-        # Initialize ILI9341 display
-
         disp = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
         disp.init()
-
-        # Register display driver 
-
-        disp_buf1 = lv.disp_buf_t()
-        buf1_1 = bytearray(480*10)
-        lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
-        disp_drv = lv.disp_drv_t()
-        lv.disp_drv_init(disp_drv)
-        disp_drv.buffer = disp_buf1
-        disp_drv.flush_cb = disp.flush
-        disp_drv.hor_res = 240
-        disp_drv.ver_res = 320
-        lv.disp_drv_register(disp_drv)
-
-        # Register raw resistive touch driver
-
+        self.init_disp_drv(disp.flush, 240, 320)
         import rtch
         touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33)
         touch.init()
-        indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv) 
-        indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read_cb = touch.read;
-        lv.indev_drv_register(indev_drv);
+        self.init_indev_drv(touch_read)
+        print('Initialized ILI9341 device')
+        return True
 
     
     def init_gui(self):
@@ -72,12 +65,20 @@ class driver:
         # Identify platform and initialize it
 
         try:
-            self.init_gui_esp32()
+            if self.init_gui_esp32():
+                return
         except ImportError:
             pass
     
+        # try:
+        #     if self.init_gui_fb():
+        #         return
+        # except ImportError:
+        #     pass
+ 
         try:
-            self.init_gui_SDL()
+            if self.init_gui_SDL():
+                return
         except ImportError:
             pass
 
@@ -92,10 +93,10 @@ class Anim(lv.anim_t):
         lv.anim_init(self)
         lv.anim_set_time(self, time, 0)
         lv.anim_set_values(self, val, val+size)
-        try:
-            lv.anim_set_exec_cb(self, obj, exec_cb)
-        except TypeError:
+        if callable(exec_cb):
             lv.anim_set_custom_exec_cb(self, exec_cb)
+        else:
+            lv.anim_set_exec_cb(self, obj, exec_cb)
         lv.anim_set_path_cb(self, path_cb )
         if playback: lv.anim_set_playback(self, 0)
         if ready_cb: lv.anim_set_ready_cb(self, ready_cb)
