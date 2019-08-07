@@ -991,7 +991,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
             parent_name = struct_name
             child_name = decl.type.declname
             type_name = '%s_%s_t' % (parent_name[:-2], child_name) 
-            print('typedef typeof( (({parent}*)(0))->{child} ) {new_struct};'.format(
+            print('typedef __typeof__( (({parent}*)(0))->{child} ) {new_struct};'.format(
                 parent = parent_name, child = child_name, new_struct = type_name))
             try_generate_struct(type_name, decl.type.type)
 
