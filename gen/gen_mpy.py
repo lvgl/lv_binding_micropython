@@ -550,6 +550,23 @@ STATIC mp_obj_t make_new(
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC void* mp_to_ptr(mp_obj_t self_in);
+
+STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
+{
+    mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
+    *self = (mp_lv_obj_t){
+        .base = {(const mp_obj_type_t*)type_obj},
+        .lv_obj = mp_to_ptr(obj),
+        .callbacks = NULL,
+    };
+    if (!self->lv_obj) return mp_const_none;
+    return MP_OBJ_FROM_PTR(self);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(cast_obj_obj, cast_obj);
+STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(cast_obj_class_method, MP_ROM_PTR(&cast_obj_obj));
+
 STATIC mp_int_t mp_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
     (void)flags;
     mp_lv_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -1179,14 +1196,18 @@ STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
     mp_obj_t item;
     size_t i = 0;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {{
-        lv_arr[i++] = {convertor}(item);
+        lv_arr[i++] = {mp_to_lv_convertor}(item);
     }}
     return ({qualified_type} *)lv_arr;
 }}
     
 STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
 {{
-    return ptr_to_mp((void*)arr); // TODO: return custom iterable object!
+    mp_obj_t obj_arr[{dim}];
+    for (int i=0; i<{dim}; i++){{
+        obj_arr[i] = {lv_to_mp_convertor}(arr[i]);
+    }}
+    return mp_obj_new_list({dim}, obj_arr); // TODO: return custom iterable object!
 }}
     '''.format(
         arr_to_c_convertor_name = arr_to_c_convertor_name,
@@ -1195,7 +1216,9 @@ STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
         type = element_type,
         qualified_type = qualified_element_type,
         check_dim = '//TODO check dim!' if dim else '',
-        convertor = mp_to_lv[element_type],
+        mp_to_lv_convertor = mp_to_lv[element_type],
+        lv_to_mp_convertor = lv_to_mp[element_type],
+        dim = dim if dim else 1,
         ))
     mp_to_lv[arr_name] = arr_to_c_convertor_name
     mp_to_lv['const %s' % arr_name] = arr_to_c_convertor_name
@@ -1490,6 +1513,7 @@ enum_referenced = collections.OrderedDict()
 
 def gen_obj_methods(obj_name):
     global enums
+    helper_members = ["{ MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&cast_obj_class_method) }"] if len(obj_names) > 0 and obj_name == base_obj_name else []
     members = ["{{ MP_ROM_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".
                     format(method=method.name, method_name=method_name_from_func_name(method.name)) for method in get_methods(obj_name)]
     # add parent methods
@@ -1501,11 +1525,11 @@ def gen_obj_methods(obj_name):
                     format(enum_member = get_enum_member_name(enum_memebr_name), enum_member_value = get_enum_value(obj_name, enum_memebr_name)) for enum_memebr_name in get_enum_members(obj_name)]
     # add enums that match object name
     obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
-    enums_memebrs = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
+    enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
                     format(name=method_name_from_func_name(enum_name), enum=enum_name) for enum_name in obj_enums]
     for enum_name in obj_enums:
         enum_referenced[enum_name] = True
-    return members + parent_members + enum_members + enums_memebrs
+    return members + parent_members + enum_members + enum_types + helper_members
 
 def gen_obj(obj_name):
     is_obj = has_ctor(obj_name)
