@@ -3,7 +3,7 @@
  * Auto-Generated file, DO NOT EDIT!
  *
  * Command line:
- * gen_mpy.py -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h
+ * gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h
  *
  * Preprocessing command:
  * gcc -E -std=c99 -DPYCPARSER  -I ../../berkeley-db-1.xx/PORT/include -I ../../lv_bindings -I . -I ../.. -I build -I ../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include -include ../../lv_bindings/lvgl/lvgl.h ../../lv_bindings/lvgl/lvgl.h
@@ -3584,8 +3584,8 @@ STATIC mp_obj_t mp_lv_obj_set_ext_click_area(size_t mp_n_args, const mp_obj_t *m
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_ext_click_area_obj, 5, mp_lv_obj_set_ext_click_area, lv_obj_set_ext_click_area);
 
  
-typedef typeof( ((lv_style_t*)(0))->body ) lv_style_body_t;
-typedef typeof( ((lv_color32_t*)(0))->ch ) lv_color32_ch_t;
+typedef __typeof__( ((lv_style_t*)(0))->body ) lv_style_body_t;
+typedef __typeof__( ((lv_color32_t*)(0))->ch ) lv_color32_ch_t;
 
 /*
  * Struct lv_color32_ch_t
@@ -3764,7 +3764,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_color32_t_type()
     return &mp_lv_color32_t_type;
 }
     
-typedef typeof( ((lv_style_body_t*)(0))->border ) lv_style_body_border_t;
+typedef __typeof__( ((lv_style_body_t*)(0))->border ) lv_style_body_border_t;
 
 /*
  * Struct lv_style_body_border_t
@@ -3856,7 +3856,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_body_border_t_type()
     return &mp_lv_style_body_border_t_type;
 }
     
-typedef typeof( ((lv_style_body_t*)(0))->shadow ) lv_style_body_shadow_t;
+typedef __typeof__( ((lv_style_body_t*)(0))->shadow ) lv_style_body_shadow_t;
 
 /*
  * Struct lv_style_body_shadow_t
@@ -3946,7 +3946,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_body_shadow_t_type()
     return &mp_lv_style_body_shadow_t_type;
 }
     
-typedef typeof( ((lv_style_body_t*)(0))->padding ) lv_style_body_padding_t;
+typedef __typeof__( ((lv_style_body_t*)(0))->padding ) lv_style_body_padding_t;
 
 /*
  * Struct lv_style_body_padding_t
@@ -4137,7 +4137,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_body_t_type()
     return &mp_lv_style_body_t_type;
 }
     
-typedef typeof( ((lv_style_t*)(0))->text ) lv_style_text_t;
+typedef __typeof__( ((lv_style_t*)(0))->text ) lv_style_text_t;
 STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_struct *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
 STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_struct *, uint32_t);
 
@@ -4330,7 +4330,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_text_t_type()
     return &mp_lv_style_text_t_type;
 }
     
-typedef typeof( ((lv_style_t*)(0))->image ) lv_style_image_t;
+typedef __typeof__( ((lv_style_t*)(0))->image ) lv_style_image_t;
 
 /*
  * Struct lv_style_image_t
@@ -4420,7 +4420,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_image_t_type()
     return &mp_lv_style_image_t_type;
 }
     
-typedef typeof( ((lv_style_t*)(0))->line ) lv_style_line_t;
+typedef __typeof__( ((lv_style_t*)(0))->line ) lv_style_line_t;
 
 /*
  * Struct lv_style_line_t
@@ -22993,8 +22993,8 @@ STATIC mp_obj_t mp_lv_indev_drv_init(size_t mp_n_args, const mp_obj_t *mp_args)
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_init_obj, 1, mp_lv_indev_drv_init, lv_indev_drv_init);
 
  
-typedef typeof( ((lv_indev_proc_t*)(0))->types ) lv_indev_proc_types_t;
-typedef typeof( ((lv_indev_proc_types_t*)(0))->pointer ) lv_indev_proc_types_pointer_t;
+typedef __typeof__( ((lv_indev_proc_t*)(0))->types ) lv_indev_proc_types_t;
+typedef __typeof__( ((lv_indev_proc_types_t*)(0))->pointer ) lv_indev_proc_types_pointer_t;
 
 /*
  * Struct lv_indev_proc_types_pointer_t
@@ -23098,7 +23098,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_indev_proc_types_pointer_t_type()
     return &mp_lv_indev_proc_types_pointer_t_type;
 }
     
-typedef typeof( ((lv_indev_proc_types_t*)(0))->keypad ) lv_indev_proc_types_keypad_t;
+typedef __typeof__( ((lv_indev_proc_types_t*)(0))->keypad ) lv_indev_proc_types_keypad_t;
 
 /*
  * Struct lv_indev_proc_types_keypad_t
@@ -25062,8 +25062,8 @@ STATIC mp_obj_t mp_lv_disp_trig_activity(size_t mp_n_args, const mp_obj_t *mp_ar
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_trig_activity_obj, 1, mp_lv_disp_trig_activity, lv_disp_trig_activity);
 
  
-typedef typeof( ((lv_theme_t*)(0))->style ) lv_theme_style_t;
-typedef typeof( ((lv_theme_style_t*)(0))->btn ) lv_theme_style_btn_t;
+typedef __typeof__( ((lv_theme_t*)(0))->style ) lv_theme_style_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->btn ) lv_theme_style_btn_t;
 
 /*
  * Struct lv_theme_style_btn_t
@@ -25157,7 +25157,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_btn_t_type()
     return &mp_lv_theme_style_btn_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->imgbtn ) lv_theme_style_imgbtn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->imgbtn ) lv_theme_style_imgbtn_t;
 
 /*
  * Struct lv_theme_style_imgbtn_t
@@ -25251,7 +25251,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_imgbtn_t_type()
     return &mp_lv_theme_style_imgbtn_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->label ) lv_theme_style_label_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->label ) lv_theme_style_label_t;
 
 /*
  * Struct lv_theme_style_label_t
@@ -25341,7 +25341,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_label_t_type()
     return &mp_lv_theme_style_label_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->img ) lv_theme_style_img_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->img ) lv_theme_style_img_t;
 
 /*
  * Struct lv_theme_style_img_t
@@ -25429,7 +25429,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_img_t_type()
     return &mp_lv_theme_style_img_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->line ) lv_theme_style_line_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->line ) lv_theme_style_line_t;
 
 /*
  * Struct lv_theme_style_line_t
@@ -25515,7 +25515,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_line_t_type()
     return &mp_lv_theme_style_line_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->bar ) lv_theme_style_bar_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->bar ) lv_theme_style_bar_t;
 
 /*
  * Struct lv_theme_style_bar_t
@@ -25603,7 +25603,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_bar_t_type()
     return &mp_lv_theme_style_bar_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->slider ) lv_theme_style_slider_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->slider ) lv_theme_style_slider_t;
 
 /*
  * Struct lv_theme_style_slider_t
@@ -25693,7 +25693,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_slider_t_type()
     return &mp_lv_theme_style_slider_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->sw ) lv_theme_style_sw_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->sw ) lv_theme_style_sw_t;
 
 /*
  * Struct lv_theme_style_sw_t
@@ -25785,7 +25785,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_sw_t_type()
     return &mp_lv_theme_style_sw_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->calendar ) lv_theme_style_calendar_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->calendar ) lv_theme_style_calendar_t;
 
 /*
  * Struct lv_theme_style_calendar_t
@@ -25885,8 +25885,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_calendar_t_type()
     return &mp_lv_theme_style_calendar_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->cb ) lv_theme_style_cb_t;
-typedef typeof( ((lv_theme_style_cb_t*)(0))->box ) lv_theme_style_cb_box_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->cb ) lv_theme_style_cb_t;
+typedef __typeof__( ((lv_theme_style_cb_t*)(0))->box ) lv_theme_style_cb_box_t;
 
 /*
  * Struct lv_theme_style_cb_box_t
@@ -26067,8 +26067,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_cb_t_type()
     return &mp_lv_theme_style_cb_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->btnm ) lv_theme_style_btnm_t;
-typedef typeof( ((lv_theme_style_btnm_t*)(0))->btn ) lv_theme_style_btnm_btn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->btnm ) lv_theme_style_btnm_t;
+typedef __typeof__( ((lv_theme_style_btnm_t*)(0))->btn ) lv_theme_style_btnm_btn_t;
 
 /*
  * Struct lv_theme_style_btnm_btn_t
@@ -26249,8 +26249,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_btnm_t_type()
     return &mp_lv_theme_style_btnm_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->kb ) lv_theme_style_kb_t;
-typedef typeof( ((lv_theme_style_kb_t*)(0))->btn ) lv_theme_style_kb_btn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->kb ) lv_theme_style_kb_t;
+typedef __typeof__( ((lv_theme_style_kb_t*)(0))->btn ) lv_theme_style_kb_btn_t;
 
 /*
  * Struct lv_theme_style_kb_btn_t
@@ -26431,8 +26431,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_kb_t_type()
     return &mp_lv_theme_style_kb_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->mbox ) lv_theme_style_mbox_t;
-typedef typeof( ((lv_theme_style_mbox_t*)(0))->btn ) lv_theme_style_mbox_btn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->mbox ) lv_theme_style_mbox_t;
+typedef __typeof__( ((lv_theme_style_mbox_t*)(0))->btn ) lv_theme_style_mbox_btn_t;
 
 /*
  * Struct lv_theme_style_mbox_btn_t
@@ -26609,7 +26609,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_mbox_t_type()
     return &mp_lv_theme_style_mbox_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->page ) lv_theme_style_page_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->page ) lv_theme_style_page_t;
 
 /*
  * Struct lv_theme_style_page_t
@@ -26699,7 +26699,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_page_t_type()
     return &mp_lv_theme_style_page_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->ta ) lv_theme_style_ta_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->ta ) lv_theme_style_ta_t;
 
 /*
  * Struct lv_theme_style_ta_t
@@ -26791,7 +26791,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_ta_t_type()
     return &mp_lv_theme_style_ta_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->spinbox ) lv_theme_style_spinbox_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->spinbox ) lv_theme_style_spinbox_t;
 
 /*
  * Struct lv_theme_style_spinbox_t
@@ -26881,8 +26881,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_spinbox_t_type()
     return &mp_lv_theme_style_spinbox_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->list ) lv_theme_style_list_t;
-typedef typeof( ((lv_theme_style_list_t*)(0))->btn ) lv_theme_style_list_btn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->list ) lv_theme_style_list_t;
+typedef __typeof__( ((lv_theme_style_list_t*)(0))->btn ) lv_theme_style_list_btn_t;
 
 /*
  * Struct lv_theme_style_list_btn_t
@@ -27067,7 +27067,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_list_t_type()
     return &mp_lv_theme_style_list_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->ddlist ) lv_theme_style_ddlist_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->ddlist ) lv_theme_style_ddlist_t;
 
 /*
  * Struct lv_theme_style_ddlist_t
@@ -27157,7 +27157,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_ddlist_t_type()
     return &mp_lv_theme_style_ddlist_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->roller ) lv_theme_style_roller_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->roller ) lv_theme_style_roller_t;
 
 /*
  * Struct lv_theme_style_roller_t
@@ -27245,8 +27245,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_roller_t_type()
     return &mp_lv_theme_style_roller_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->tabview ) lv_theme_style_tabview_t;
-typedef typeof( ((lv_theme_style_tabview_t*)(0))->btn ) lv_theme_style_tabview_btn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->tabview ) lv_theme_style_tabview_t;
+typedef __typeof__( ((lv_theme_style_tabview_t*)(0))->btn ) lv_theme_style_tabview_btn_t;
 
 /*
  * Struct lv_theme_style_tabview_btn_t
@@ -27429,7 +27429,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_tabview_t_type()
     return &mp_lv_theme_style_tabview_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->tileview ) lv_theme_style_tileview_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->tileview ) lv_theme_style_tileview_t;
 
 /*
  * Struct lv_theme_style_tileview_t
@@ -27519,7 +27519,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_tileview_t_type()
     return &mp_lv_theme_style_tileview_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->table ) lv_theme_style_table_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->table ) lv_theme_style_table_t;
 
 /*
  * Struct lv_theme_style_table_t
@@ -27607,8 +27607,8 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_table_t_type()
     return &mp_lv_theme_style_table_t_type;
 }
     
-typedef typeof( ((lv_theme_style_t*)(0))->win ) lv_theme_style_win_t;
-typedef typeof( ((lv_theme_style_win_t*)(0))->btn ) lv_theme_style_win_btn_t;
+typedef __typeof__( ((lv_theme_style_t*)(0))->win ) lv_theme_style_win_t;
+typedef __typeof__( ((lv_theme_style_win_t*)(0))->btn ) lv_theme_style_win_btn_t;
 
 /*
  * Struct lv_theme_style_win_btn_t
@@ -27938,7 +27938,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_style_t_type()
     return &mp_lv_theme_style_t_type;
 }
     
-typedef typeof( ((lv_theme_t*)(0))->group ) lv_theme_group_t;
+typedef __typeof__( ((lv_theme_t*)(0))->group ) lv_theme_group_t;
 
 /*
  * Function NOT generated:
