@@ -1,7 +1,8 @@
 
 # Bindings for LittelvGL
 
-See also [Micropython + LittlevGL](https://blog.littlevgl.com/2019-02-20/micropython-bindings) blog post.
+See also [Micropython + LittlevGL](https://blog.littlevgl.com/2019-02-20/micropython-bindings) blog post.  
+For advanced features, see [Pure Micropython Display Driver](https://blog.littlevgl.com/2019-08-05/micropython-pure-display-driver) blog post.
 
 ## Micropython
 
@@ -10,7 +11,7 @@ The module is generated automatically by the script [`gen_mpy.py`](https://githu
 This script reads, preprocesses and parses lvgl header files, and generates a C file `lv_mpy.c` which defines the Micropython module (API) for accessing lvgl from Micropython.  
 Micopython's build script (Makefile) should run `gen_mpy.py` automatically to generate and compile `lv_mpy.c`.
 
-- If you would like to see an example of how a generated `lv_mpy.c` looks like, have a look at [`v_mpy_example.c`](https://github.com/littlevgl/lv_bindings/blob/master/micropython/lv_mpy_example.c). Note that its only exported (non static) symbol is `mp_module_lvgl` which should be registered in Micropython as a module.  
+- If you would like to see an example of how a generated `lv_mpy.c` looks like, have a look at [`v_mpy_example.c`](https://raw.githubusercontent.com/littlevgl/lv_binding_micropython/master/gen/lv_mpy_example.c). Note that its only exported (non static) symbol is `mp_module_lvgl` which should be registered in Micropython as a module.  
 - An example project that builds Micropython + lvgl + lvgl-bindings: [`lv_mpy`](https://github.com/littlevgl/lv_mpy)
 
 It's worth noting that the Mircopython Bindings module (`lv_mpy.c`) is dependant on lvgl configuration. lvgl is configured by `lv_conf.h` where different objects and features could be enabled or disabled. lvgl bindings are generated only for the enabled objects and features. Changing `lv_conf.h` requires re running `gen_mpy.py`, therfore it's useful to run it automatically in the build script.
@@ -28,7 +29,7 @@ No synchronization means (locks, mutexes) are taken.
 However, asynchronous calls to lvgl still take place periodically for screen refresh and other lvgl tasks such as animation.
 
 This is achieved by using the internal Micropython scheduler (that must be enabled), by calling `mp_sched_schedule`.  
-`mp_sched_schedule` is called when screen needs to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/littlevgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting). This is ususally handled in the display device driver.
+`mp_sched_schedule` is called when screen needs to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/littlevgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting)). This is ususally handled in the display device driver.  
 Here is [an example](https://github.com/littlevgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L23) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing lvgl. [`mp_lv_task_handler`](https://github.com/littlevgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L7) is scheduled to run on the same thread Micropython is running, and it calls both `lv_task_handler` for lvgl task handling and `monitor_sdl_refr_core` for refreshing the display and handling mouse events.  
 
 With REPL (interactive console), when waiting for the user input, asynchronous events can also happen. In [this example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/unix_mphal.c#L176) we just call `mp_handle_pending` periodically when waiting for a keypress. `mp_handle_pending` takes care of dispatching asynchronous events registered with `mp_sched_schedule`.
