@@ -147,16 +147,18 @@ Here is a procedure for adding lvgl to an existing Micropython project. (The exa
 
 - Add [`lv_bindings`](https://github.com/littlevgl/lv_bindings) as a sub-module under `lib`.
 - Add `lv_conf.h` in `lib`
-- Edit the Makefile to run `gen_mpy.py` and build its product automatically. Here is [an example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/py/py.mk#L122).
-- Register lvgl module and display/input drivers in Micropython as a builtin module. [An example](https://github.com/littlevgl/lv_micropython/blob/9aded358b13acbcc8c86ff48d2661e8b0a6fe1e3/ports/unix/mpconfigport.h#L227).
-- Add lvgl roots to gc roots. [An example](https://github.com/littlevgl/lv_micropython/blob/9aded358b13acbcc8c86ff48d2661e8b0a6fe1e3/ports/unix/mpconfigport.h#L311). Configure lvgl to use *Garbage Collection* by setting several `LV_MEM_CUSTOM_*` and `LV_GC_*` macros [example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/lib/lv_conf.h#L28)
+- Edit the Makefile to run `gen_mpy.py` and build its product automatically. Here is [an example](https://github.com/littlevgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/py/py.mk#L22-L38).
+- Register lvgl module and display/input drivers in Micropython as a builtin module. [An example](https://github.com/littlevgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/ports/unix/mpconfigport.h#L230).
+- Add lvgl roots to gc roots. [An example](https://github.com/littlevgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/ports/unix/mpconfigport.h#L317-L318). 
+- ~Configure lvgl to use *Garbage Collection* by setting several `LV_MEM_CUSTOM_*` and `LV_GC_*` macros [example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/lib/lv_conf.h#L28)~ lv_conf.h was moved to lv_binding_micropython git module.
 - Something I forgot? Please let me know.
 
 
 ### gen_mpy.py syntax
 ```
 usage: gen_mpy.py [-h] [-I <Include Path>] [-D <Macro Name>]
-                  [-E <Preprocessed File>]
+                  [-E <Preprocessed File>] [-M <Module name string>]
+                  [-MP <Prefix string>] [-MD <MetaData File Name>]
                   input [input ...]
 
 positional arguments:
@@ -171,13 +173,25 @@ optional arguments:
   -E <Preprocessed File>, --external-preprocessing <Preprocessed File>
                         Prevent preprocessing. Assume input file is already
                         preprocessed
+  -M <Module name string>, --module_name <Module name string>
+                        Module name
+  -MP <Prefix string>, --module_prefix <Prefix string>
+                        Module prefix that starts every function name
+  -MD <MetaData File Name>, --metadata <MetaData File Name>
+                        Optional file to emit metadata (introspection)
 ```
 
 Example: 
 
 ```
-python gen_mpy.py -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h > lv_mpy_example.c
+python gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h
 ```
+
+### Binding other C libraries
+
+The lvgl binding script can be used to bind other C libraries to Micropython.  
+I used it with [lodepng](https://github.com/lvandeve/lodepng) and with parts of ESP-IDF.  
+For more details please read [this blog post](https://blog.littlevgl.com/2019-08-05/micropython-pure-display-driver).
 
 ## Micropython Bindings Usage
 
