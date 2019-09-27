@@ -49,7 +49,7 @@ class driver:
     def init_gui_esp32(self):
         import lvesp32
         import ILI9341 as ili
-        disp = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
+        disp = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15)
         disp.init()
         self.init_disp_drv(disp.flush, 240, 320)
         import rtch

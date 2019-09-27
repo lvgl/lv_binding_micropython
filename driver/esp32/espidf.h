@@ -14,6 +14,9 @@
 #define INC_FREERTOS_H
 #define QUEUE_H
 #define SEMAPHORE_H
+#define XTENSA_HAL_H
+#define _SOC_I2S_STRUCT_H_
+#define XTRUNTIME_H
 
 // Exclude SOC just because it contains large structs that don't interest the user
 #define _SOC_SPI_PERIPH_H_
@@ -51,6 +54,8 @@ static inline void get_ccount(int *ccount)
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_clk.h"
+#include "driver/adc.h"
+#include "driver/i2s.h"
 
 // We don't want the whole FreeRTOS, only selected functions
 

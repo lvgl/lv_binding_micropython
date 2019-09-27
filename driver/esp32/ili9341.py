@@ -33,7 +33,9 @@ class ili9341:
     disp_buf = lv.disp_buf_t()
     disp_drv = lv.disp_drv_t()
 
-    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2, spihost=esp.enum.HSPI_HOST, mhz=40, factor=4, hybrid=True):
+    # "power" and "backlight" are reversed logic! 0 means ON.
+
+    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, spihost=esp.enum.HSPI_HOST, mhz=40, factor=4, hybrid=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -50,6 +52,7 @@ class ili9341:
         self.cs = cs
         self.dc = dc
         self.rst = rst
+        self.power = power
         self.backlight = backlight
         self.spihost = spihost
         self.mhz = mhz
@@ -242,13 +245,23 @@ class ili9341:
     def init(self):
         self.disp_spi_init()
 
-        esp.gpio_pad_select_gpio(self.dc)
-
 	# Initialize non-SPI GPIOs
+
+        esp.gpio_pad_select_gpio(self.dc)
+        esp.gpio_pad_select_gpio(self.rst)
+        if self.backlight != -1: esp.gpio_pad_select_gpio(self.backlight)
+        if self.power != -1: esp.gpio_pad_select_gpio(self.power)
 
 	esp.gpio_set_direction(self.dc, esp.GPIO_MODE.OUTPUT)
 	esp.gpio_set_direction(self.rst, esp.GPIO_MODE.OUTPUT)
         if self.backlight != -1: esp.gpio_set_direction(self.backlight, esp.GPIO_MODE.OUTPUT)
+        if self.power != -1: esp.gpio_set_direction(self.power, esp.GPIO_MODE.OUTPUT)
+
+        # Power the display
+
+        if self.power != -1:
+            esp.gpio_set_level(self.power, 0)
+            esp.task_delay_ms(100)
 
 	# Reset the display
 
@@ -271,7 +284,7 @@ class ili9341:
 
         if self.backlight != -1:
             print("Enable backlight")
-            esp.gpio_set_level(self.backlight, 1)       
+            esp.gpio_set_level(self.backlight, 0)
     
     ######################################################
 
@@ -361,6 +374,14 @@ class ili9341:
 lv.init()
 disp = ili9341()
 
+import rtch
+touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33)
+touch.init()
+indev_drv = lv.indev_drv_t()
+lv.indev_drv_init(indev_drv)
+indev_drv.type = lv.INDEV_TYPE.POINTER;
+indev_drv.read_cb = touch.read;
+lv.indev_drv_register(indev_drv);
 
 # Animation helper class
 
