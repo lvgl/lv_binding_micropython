@@ -1496,6 +1496,13 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
 
 def gen_mp_func(func, obj_name):
     # eprint("/*\n{ast}\n*/".format(ast=func))
+    if func.name in generated_funcs:
+        print("""
+/*
+ * WARNING: %s was declared more than once!
+ */
+        """ % func.name)
+        return
     func_metadata[func.name] = {'type': 'function', 'args':[]}
     args = func.type.args.params if func.type.args else []
     # Handle the case of a single function argument which is "void"

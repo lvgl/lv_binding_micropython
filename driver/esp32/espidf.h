@@ -3,6 +3,8 @@
  * It is used as input to gen_mpy.py to create a micropython module
  **/ 
 
+#include "esp_idf_version.h"
+
 // Disable some macros and includes that make pycparser choke
 
 #ifdef PYCPARSER
@@ -17,6 +19,9 @@
 #define XTENSA_HAL_H
 #define _SOC_I2S_STRUCT_H_
 #define XTRUNTIME_H
+#define _SOC_SPI_STRUCT_H_
+#define _SOC_RTC_CNTL_STRUCT_H_
+#define __XTENSA_API_H__
 
 // Exclude SOC just because it contains large structs that don't interest the user
 #define _SOC_SPI_PERIPH_H_
@@ -49,11 +54,16 @@ static inline void get_ccount(int *ccount)
 // The following includes are the source of the esp-idf micropython module.
 // All included files are API we want to include in the module
 
+#if ESP_IDF_VERSION_MAJOR >= 4
+#   include "esp32/clk.h"
+#else
+#   include "esp_clk.h"
+#endif
+
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
-#include "esp_clk.h"
 #include "driver/adc.h"
 #include "driver/i2s.h"
 
