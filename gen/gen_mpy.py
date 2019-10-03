@@ -142,16 +142,17 @@ lv_str_enum_pattern = re.compile('^_{prefix}_STR_(.+)'.format(prefix=module_pref
 lv_callback_type_pattern = re.compile('({prefix}_){{0,1}}(.+)_cb(_t){{0,1}}'.format(prefix=module_prefix))
 lv_global_callback_pattern = re.compile('.*g_cb_t')
 lv_func_returns_array = re.compile('.*_array$')
+lv_enum_name_pattern = re.compile('^(ENUM_){{0,1}}({prefix}_){{0,1}}(.*)'.format(prefix=module_prefix.upper()))
 
 def simplify_identifier(id):
-    match_result = re.match(lv_func_pattern, id)
+    match_result = lv_func_pattern.match(id)
     return match_result.group(1) if match_result else id
 
 def obj_name_from_ext_name(ext_name):
-    return re.match(lv_ext_pattern, ext_name).group(1)
+    return lv_ext_pattern.match(ext_name).group(1)
 
 def obj_name_from_func_name(func_name):
-    return re.match(lv_obj_pattern, func_name).group(1)
+    return lv_obj_pattern.match(func_name).group(1)
 
 def ctor_name_from_obj_name(obj_name):
     return '{prefix}_{obj}_create'.format(prefix=module_prefix, obj=obj_name)
@@ -160,21 +161,20 @@ def is_method_of(func_name, obj_name):
     return func_name.lower().startswith('{prefix}_{obj}_'.format(prefix=module_prefix, obj=obj_name).lower())
     
 def method_name_from_func_name(func_name):
-    res = re.match(lv_method_pattern, func_name).group(1)
+    res = lv_method_pattern.match(func_name).group(1)
     return res if res != "del" else "delete" # del is a resrved name, don't use it
 
 def get_enum_name(enum):
-    prefix = '%s_' % module_prefix.upper()
-    fixed_enum_name = enum[len(prefix):]
-    return fixed_enum_name if fixed_enum_name and enum[:len(prefix)] == prefix else enum
+    match_result = lv_enum_name_pattern.match(enum)
+    return match_result.group(3) if match_result else enum
 
 def str_enum_to_str(str_enum):
-    res = re.match(lv_str_enum_pattern, str_enum).group(1)
+    res = lv_str_enum_pattern.match(str_enum).group(1)
     return ('%s_' % module_prefix.upper()) + res
 
 def user_data_from_callback_func(callback_func_name):
     return 'user_data'
-    # res = re.match(lv_callback_type_pattern, callback_func_name)
+    # res = lv_callback_type_pattern.match(callback_func_name)
     # return res.group(2) + '_user_data' if res and res.group(2) else None
 
 def is_obj_ctor(func):
@@ -217,7 +217,7 @@ funcs = func_defs + func_decls
 obj_ctors = [func for func in funcs if is_obj_ctor(func)]
 for obj_ctor in obj_ctors:
     funcs.remove(obj_ctor)
-obj_names = [re.match(create_obj_pattern, ctor.name).group(1) for ctor in obj_ctors]
+obj_names = [create_obj_pattern.match(ctor.name).group(1) for ctor in obj_ctors]
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
 # print('... %s' % str(typedefs))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
@@ -286,6 +286,8 @@ blobs = collections.OrderedDict((decl.name, decl.type.type) for decl in ast.ext 
         and 'extern' in decl.storage \
         and hasattr(decl, 'type') \
         and isinstance(decl.type, c_ast.TypeDecl))
+
+int_constants = []
 
 #
 # Type convertors
@@ -916,14 +918,17 @@ for enum_def in enum_defs:
         if member.name.startswith('_'):
             continue
         member_name = member.name[len(enum_name)+1:] if len(enum_name) > 0 else member.name
-        enum[member_name] = 'MP_ROM_INT(%s)' % member.name
-    if len(enum) > 0:
-        real_enum_name = enum_name if len(enum_name) > 0 else 'enum'
-        prev_enum = enums.get(real_enum_name)
-        if prev_enum:
-            prev_enum.update(enum)
+        if len(enum_name) > 0 and get_enum_name(enum_name) != 'ENUM':
+            enum[member_name] = 'MP_ROM_INT(%s)' % member.name
         else:
-            enums[real_enum_name] =enum
+            int_constants.append(member.name)
+    if len(enum) > 0:
+        if len(get_enum_name(enum_name)) > 0:
+            prev_enum = enums.get(enum_name)
+            if prev_enum:
+                prev_enum.update(enum)
+            else:
+                enums[enum_name] = enum
 
 # Add special string enums
 
@@ -944,7 +949,12 @@ for enum_def in enum_defs:
             member_name = full_name[len(enum_name)+1:]
             print('MP_DEFINE_STR_OBJ(mp_%s, %s);' % (full_name, full_name))
             enum[member_name] = '&mp_%s' % full_name
-        if len(enum) > 0: enums[enum_name] = enum
+        if len(enum) > 0:
+            if enum_name in enums:
+                enums[enum_name].update(enum)
+            else:
+                enums[enum_name] = enum
+
 
 # eprint('--> enums: \n%s' % enums)
 
@@ -1808,6 +1818,7 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
     {structs}
     {struct_aliases}
     {blobs}
+    {int_constants}
 }};
 """.format(
         module_name = module_name,
@@ -1822,7 +1833,9 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
         struct_aliases = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{alias_name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
             format(struct_name = struct_name, alias_name = simplify_identifier(struct_aliases[struct_name])) for struct_name in struct_aliases.keys()]),
         blobs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{global_name}) }},\n    '.
-            format(name = simplify_identifier(global_name), global_name = global_name) for global_name in generated_globals])))
+            format(name = simplify_identifier(global_name), global_name = global_name) for global_name in generated_globals]),
+        int_constants = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(MP_ROM_INT({value})) }},\n    '.
+            format(name = get_enum_name(int_constant), value = int_constant) for int_constant in int_constants])))
         
 
 print("""
@@ -1849,6 +1862,7 @@ if args.metadata:
     metadata['structs'] = [simplify_identifier(struct_name) for struct_name in structs.keys() if struct_name in generated_structs]
     metadata['structs'] += [simplify_identifier(struct_aliases[struct_name]) for struct_name in struct_aliases.keys()]
     metadata['blobs'] = [simplify_identifier(global_name) for global_name in generated_globals]
+    metadata['int_constants'] = [get_enum_name(int_constant) for int_constant in int_constants]
 
     with open(args.metadata, 'w') as metadata_file:
         json.dump(metadata, metadata_file, indent=4)

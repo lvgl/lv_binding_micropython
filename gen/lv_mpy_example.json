@@ -846,6 +846,16 @@
             "args": [], 
             "type": "function"
         }, 
+        "debug_check_str": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "pointer", 
+                    "name": "str"
+                }
+            ], 
+            "type": "function"
+        }, 
         "disp_flush_ready": {
             "return_type": "NoneType", 
             "args": [
@@ -1557,6 +1567,16 @@
             ], 
             "type": "function"
         }, 
+        "debug_check_style": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "pointer", 
+                    "name": "str"
+                }
+            ], 
+            "type": "function"
+        }, 
         "indev_get_type": {
             "return_value": "int", 
             "args": [
@@ -1592,6 +1612,16 @@
                 {
                     "type": "group_t", 
                     "name": "group"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "debug_check_null": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "pointer", 
+                    "name": "p"
                 }
             ], 
             "type": "function"
@@ -1842,6 +1872,16 @@
                 {
                     "type": "anim_t", 
                     "name": "a"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "debug_check_obj_valid": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "object", 
+                    "name": "obj"
                 }
             ], 
             "type": "function"
@@ -2540,6 +2580,32 @@
             ], 
             "type": "function"
         }, 
+        "draw_img": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "area_t", 
+                    "name": "coords"
+                }, 
+                {
+                    "type": "area_t", 
+                    "name": "mask"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "src"
+                }, 
+                {
+                    "type": "style_t", 
+                    "name": "style"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "opa_scale"
+                }
+            ], 
+            "type": "function"
+        }, 
         "area_is_point_on": {
             "return_value": "bool", 
             "args": [
@@ -2682,6 +2748,20 @@
                 {
                     "type": "group_t", 
                     "name": "group"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "debug_check_obj_type": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "object", 
+                    "name": "obj"
+                }, 
+                {
+                    "type": "str", 
+                    "name": "obj_type"
                 }
             ], 
             "type": "function"
@@ -3172,28 +3252,28 @@
             ], 
             "type": "function"
         }, 
-        "draw_img": {
+        "draw_px": {
             "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "area_t", 
-                    "name": "coords"
-                }, 
-                {
-                    "type": "area_t", 
-                    "name": "mask"
-                }, 
-                {
-                    "type": "pointer", 
-                    "name": "src"
-                }, 
-                {
-                    "type": "style_t", 
-                    "name": "style"
+                    "type": "int", 
+                    "name": "x"
                 }, 
                 {
                     "type": "int", 
-                    "name": "opa_scale"
+                    "name": "y"
+                }, 
+                {
+                    "type": "area_t", 
+                    "name": "mask_p"
+                }, 
+                {
+                    "type": "color32_t", 
+                    "name": "color"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "opa"
                 }
             ], 
             "type": "function"
@@ -3378,28 +3458,16 @@
             ], 
             "type": "function"
         }, 
-        "draw_px": {
+        "debug_log_error": {
             "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "int", 
-                    "name": "x"
+                    "type": "str", 
+                    "name": "msg"
                 }, 
                 {
                     "type": "int", 
-                    "name": "y"
-                }, 
-                {
-                    "type": "area_t", 
-                    "name": "mask_p"
-                }, 
-                {
-                    "type": "color32_t", 
-                    "name": "color"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "opa"
+                    "name": "value"
                 }
             ], 
             "type": "function"
@@ -3451,6 +3519,24 @@
             "type": "function"
         }
     }, 
+    "int_constants": [], 
+    "blobs": [
+        "font_roboto_16", 
+        "font_roboto_28", 
+        "style_scr", 
+        "style_transp", 
+        "style_transp_fit", 
+        "style_transp_tight", 
+        "style_plain", 
+        "style_plain_color", 
+        "style_pretty", 
+        "style_pretty_color", 
+        "style_btn_rel", 
+        "style_btn_pr", 
+        "style_btn_tgl_rel", 
+        "style_btn_tgl_pr", 
+        "style_btn_ina"
+    ], 
     "objects": {
         "cont": {
             "members": {
@@ -3759,6 +3845,20 @@
                         {
                             "type": "int", 
                             "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -4938,6 +5038,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -6097,6 +6211,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "is_checked": {
                     "return_value": "bool", 
                     "args": [
@@ -7233,6 +7361,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -8406,6 +8548,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -9635,6 +9791,20 @@
                         {
                             "type": "bool", 
                             "name": "crop"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -11000,6 +11170,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -11499,7 +11683,7 @@
                         }, 
                         {
                             "type": "mp_arr_to_char_ptrptr", 
-                            "name": "day_names"
+                            "name": "month_names"
                         }
                     ], 
                     "type": "function"
@@ -12210,6 +12394,20 @@
                         {
                             "type": "int", 
                             "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -13546,6 +13744,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -15456,6 +15668,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_drag_parent": {
                     "return_value": "bool", 
                     "args": [
@@ -16314,6 +16540,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "allocate_ext_attr": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "ext_size"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_ext_draw_pad": {
                     "return_value": "int", 
                     "args": [
@@ -16532,6 +16772,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -16669,16 +16923,20 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_opa_scale_enable": {
-                    "return_type": "NoneType", 
+                "buf_get_img_size": {
+                    "return_value": "int", 
                     "args": [
                         {
-                            "type": "object", 
-                            "name": "obj"
+                            "type": "int", 
+                            "name": "w"
                         }, 
                         {
-                            "type": "bool", 
-                            "name": "en"
+                            "type": "int", 
+                            "name": "h"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "cf"
                         }
                     ], 
                     "type": "function"
@@ -16784,6 +17042,24 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "buf_alloc": {
+                    "return_value": "img_dsc_t", 
+                    "args": [
+                        {
+                            "type": "int", 
+                            "name": "w"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "h"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "cf"
                         }
                     ], 
                     "type": "function"
@@ -17025,6 +17301,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_parent_event": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_height_fit": {
                     "return_value": "int", 
                     "args": [
@@ -17035,16 +17325,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "allocate_ext_attr": {
-                    "return_value": "pointer", 
+                "buf_free": {
+                    "return_type": "NoneType", 
                     "args": [
                         {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "ext_size"
+                            "type": "img_dsc_t", 
+                            "name": "dsc"
                         }
                     ], 
                     "type": "function"
@@ -17398,7 +17684,7 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_parent_event": {
+                "set_opa_scale_enable": {
                     "return_type": "NoneType", 
                     "args": [
                         {
@@ -18102,6 +18388,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "cut_text": {
                     "return_type": "NoneType", 
                     "args": [
@@ -18272,12 +18572,16 @@
                     ], 
                     "type": "function"
                 }, 
-                "refresh_style": {
+                "set_text_fmt": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "obj"
+                            "name": "label"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "fmt"
                         }
                     ], 
                     "type": "function"
@@ -18577,20 +18881,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_pos": {
+                "refresh_style": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "x"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "y"
                         }
                     ], 
                     "type": "function"
@@ -19127,6 +19423,24 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_pos": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "x"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "y"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "delete": {
                     "return_value": "int", 
                     "args": [
@@ -19440,6 +19754,20 @@
                         {
                             "type": "int", 
                             "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -20622,12 +20950,16 @@
                     ], 
                     "type": "function"
                 }, 
-                "count_children": {
+                "handle_get_type_signal": {
                     "return_value": "int", 
                     "args": [
                         {
-                            "type": "object", 
-                            "name": "obj"
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -21434,6 +21766,16 @@
                     ], 
                     "type": "function"
                 }, 
+                "count_children": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_child": {
                     "return_value": "object", 
                     "args": [
@@ -21965,6 +22307,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -22321,6 +22677,29 @@
                     ], 
                     "type": "function"
                 }, 
+                "STYLE": {
+                    "type": "enum_type", 
+                    "members": {
+                        "CONTENT": {
+                            "type": "enum_member"
+                        }, 
+                        "HEADER": {
+                            "type": "enum_member"
+                        }, 
+                        "BG": {
+                            "type": "enum_member"
+                        }, 
+                        "SB": {
+                            "type": "enum_member"
+                        }, 
+                        "BTN_PR": {
+                            "type": "enum_member"
+                        }, 
+                        "BTN_REL": {
+                            "type": "enum_member"
+                        }
+                    }
+                }, 
                 "get_title": {
                     "return_value": "str", 
                     "args": [
@@ -22523,28 +22902,23 @@
                     ], 
                     "type": "function"
                 }, 
-                "STYLE": {
-                    "type": "enum_type", 
-                    "members": {
-                        "CONTENT": {
-                            "type": "enum_member"
+                "set_content_size": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "win"
                         }, 
-                        "HEADER": {
-                            "type": "enum_member"
+                        {
+                            "type": "int", 
+                            "name": "w"
                         }, 
-                        "BG": {
-                            "type": "enum_member"
-                        }, 
-                        "SB": {
-                            "type": "enum_member"
-                        }, 
-                        "BTN_PR": {
-                            "type": "enum_member"
-                        }, 
-                        "BTN_REL": {
-                            "type": "enum_member"
+                        {
+                            "type": "int", 
+                            "name": "h"
                         }
-                    }
+                    ], 
+                    "type": "function"
                 }, 
                 "set_style": {
                     "return_type": "NoneType", 
@@ -23221,6 +23595,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -24065,6 +24453,814 @@
         }, 
         "ta": {
             "members": {
+                "get_text": {
+                    "return_value": "str", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "invalidate": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_top": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_event_cb": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "function": {
+                                "return_type": "NoneType", 
+                                "args": [
+                                    {
+                                        "type": "object", 
+                                        "name": "obj"
+                                    }, 
+                                    {
+                                        "type": "int", 
+                                        "name": "event"
+                                    }
+                                ]
+                            }, 
+                            "type": "callback", 
+                            "name": "event_cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_protect": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "text_is_selected": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_height_fit": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_x": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_draw_pad": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_disp": {
+                    "return_value": "disp_t", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_design_cb": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "function": {
+                                "return_type": "bool", 
+                                "args": [
+                                    {
+                                        "type": "object", 
+                                        "name": "obj"
+                                    }, 
+                                    {
+                                        "type": "area_t", 
+                                        "name": "mask_p"
+                                    }, 
+                                    {
+                                        "type": "int", 
+                                        "name": "mode"
+                                    }
+                                ]
+                            }, 
+                            "type": "callback", 
+                            "name": "design_cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_max_length": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "num"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag_parent": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_event_cb": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "cursor_left": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_child_back": {
+                    "return_value": "object", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "child"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "refresh_style": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_parent_event": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_top": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag_throw": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_pwd_show_time": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "time"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "count_children_recursive": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_cursor_type": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "is_focused": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_top": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_user_data": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "pointer", 
+                            "name": "data"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag_parent": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_placeholder_text": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "txt"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "add_char": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "c"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_size": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "w"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "h"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_design_cb": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "clear_protect": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_user_data": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_coords": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "area_t", 
+                            "name": "cords_p"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "STYLE": {
+                    "type": "enum_type", 
+                    "members": {
+                        "CURSOR": {
+                            "type": "enum_member"
+                        }, 
+                        "SB": {
+                            "type": "enum_member"
+                        }, 
+                        "BG": {
+                            "type": "enum_member"
+                        }, 
+                        "PLACEHOLDER": {
+                            "type": "enum_member"
+                        }, 
+                        "EDGE_FLASH": {
+                            "type": "enum_member"
+                        }
+                    }
+                }, 
+                "set_parent": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "parent"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_protect": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "drag_dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_accepted_chars": {
+                    "return_value": "str", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "add_text": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "txt"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "realign": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_bottom": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_text_sel_en": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "cursor_down": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_text_align": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "align"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_x": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "x"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_style": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "style_t", 
+                            "name": "style"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_height": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "h"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_parent_event": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_cursor_pos": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "pos"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "report_style_mod": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "style_t", 
+                            "name": "style"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_text": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "txt"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_sb_mode": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "mode"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_auto_realign": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_one_line": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "count_children": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_inner_coords": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "area_t", 
+                            "name": "coords_p"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "is_protected": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_width": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "delete": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "cursor_up": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "ta"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_sb_mode": {
                     "return_value": "int", 
                     "args": [
@@ -24140,40 +25336,6 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_text": {
-                    "return_value": "str", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "invalidate": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_top": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "get_drag_throw": {
                     "return_value": "bool", 
                     "args": [
@@ -24184,7 +25346,7 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_event_cb": {
+                "get_type": {
                     "return_type": "NoneType", 
                     "args": [
                         {
@@ -24192,55 +25354,8 @@
                             "name": "obj"
                         }, 
                         {
-                            "function": {
-                                "return_type": "NoneType", 
-                                "args": [
-                                    {
-                                        "type": "object", 
-                                        "name": "obj"
-                                    }, 
-                                    {
-                                        "type": "int", 
-                                        "name": "event"
-                                    }
-                                ]
-                            }, 
-                            "type": "callback", 
-                            "name": "event_cb"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_height": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "h"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_protect": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "text_is_selected": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
+                            "type": "obj_type_t", 
+                            "name": "buf"
                         }
                     ], 
                     "type": "function"
@@ -24255,64 +25370,6 @@
                         {
                             "type": "bool", 
                             "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_height_fit": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_x": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_drag": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_ext_draw_pad": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_child": {
-                    "return_value": "object", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "object", 
-                            "name": "child"
                         }
                     ], 
                     "type": "function"
@@ -24341,63 +25398,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_disp": {
-                    "return_value": "disp_t", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "realign": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "get_pwd_show_time": {
                     "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_design_cb": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "function": {
-                                "return_type": "bool", 
-                                "args": [
-                                    {
-                                        "type": "object", 
-                                        "name": "obj"
-                                    }, 
-                                    {
-                                        "type": "area_t", 
-                                        "name": "mask_p"
-                                    }, 
-                                    {
-                                        "type": "int", 
-                                        "name": "mode"
-                                    }
-                                ]
-                            }, 
-                            "type": "callback", 
-                            "name": "design_cb"
                         }
                     ], 
                     "type": "function"
@@ -24434,6 +25440,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -24492,26 +25512,16 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_max_length": {
+                "set_click": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "ta"
+                            "name": "obj"
                         }, 
                         {
-                            "type": "int", 
-                            "name": "num"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_drag": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
+                            "type": "bool", 
+                            "name": "en"
                         }
                     ], 
                     "type": "function"
@@ -24550,16 +25560,6 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_event_cb": {
-                    "return_value": "pointer", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "set_opa_scale_enable": {
                     "return_type": "NoneType", 
                     "args": [
@@ -24574,16 +25574,6 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_max_length": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "get_edge_flash": {
                     "return_value": "bool", 
                     "args": [
@@ -24594,28 +25584,8 @@
                     ], 
                     "type": "function"
                 }, 
-                "refresh_style": {
+                "move_foreground": {
                     "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_drag_dir": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_parent_event": {
-                    "return_value": "bool", 
                     "args": [
                         {
                             "type": "object", 
@@ -24630,64 +25600,6 @@
                         {
                             "type": "object", 
                             "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "cursor_up": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "delete": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_drag_throw": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_pwd_show_time": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "time"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "count_children_recursive": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -24718,60 +25630,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_cursor_type": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "is_focused": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_child_back": {
-                    "return_value": "object", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "object", 
-                            "name": "child"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "get_cursor_blink_time": {
                     "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_user_data": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "pointer", 
-                            "name": "data"
                         }
                     ], 
                     "type": "function"
@@ -24790,68 +25654,18 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_type": {
-                    "return_type": "NoneType", 
+                "get_width_fit": {
+                    "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
-                        }, 
-                        {
-                            "type": "obj_type_t", 
-                            "name": "buf"
                         }
                     ], 
                     "type": "function"
                 }, 
-                "set_placeholder_text": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "str", 
-                            "name": "txt"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "add_char": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "c"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_size": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "w"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "h"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_design_cb": {
-                    "return_value": "pointer", 
+                "get_opa_scale": {
+                    "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
@@ -24870,54 +25684,6 @@
                     ], 
                     "type": "function"
                 }, 
-                "clear_protect": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "prot"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_user_data": {
-                    "return_value": "pointer", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_signal_cb": {
-                    "return_value": "pointer", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_coords": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "area_t", 
-                            "name": "cords_p"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "set_accepted_chars": {
                     "return_type": "NoneType", 
                     "args": [
@@ -24931,26 +25697,6 @@
                         }
                     ], 
                     "type": "function"
-                }, 
-                "STYLE": {
-                    "type": "enum_type", 
-                    "members": {
-                        "CURSOR": {
-                            "type": "enum_member"
-                        }, 
-                        "SB": {
-                            "type": "enum_member"
-                        }, 
-                        "BG": {
-                            "type": "enum_member"
-                        }, 
-                        "PLACEHOLDER": {
-                            "type": "enum_member"
-                        }, 
-                        "EDGE_FLASH": {
-                            "type": "enum_member"
-                        }
-                    }
                 }, 
                 "get_one_line": {
                     "return_value": "bool", 
@@ -24976,73 +25722,7 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_parent": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "object", 
-                            "name": "parent"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_protect": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "prot"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_click": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_top": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_drag_dir": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "drag_dir"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_ext_click_pad_top": {
+                "get_ext_click_pad_left": {
                     "return_value": "int", 
                     "args": [
                         {
@@ -25054,60 +25734,6 @@
                 }, 
                 "get_hidden": {
                     "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_ext_click_pad_right": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_accepted_chars": {
-                    "return_value": "str", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "add_text": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "str", 
-                            "name": "txt"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_drag_parent": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_ext_attr": {
-                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
@@ -25154,16 +25780,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_drag_parent": {
-                    "return_type": "NoneType", 
+                "get_ext_click_pad_right": {
+                    "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
                         }
                     ], 
                     "type": "function"
@@ -25188,74 +25810,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_text_sel_en": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_width_fit": {
+                "get_max_length": {
                     "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "cursor_down": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
                             "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_width": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "w"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_text_align": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "align"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_x": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "x"
                         }
                     ], 
                     "type": "function"
@@ -25266,20 +25826,6 @@
                         {
                             "type": "object", 
                             "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_style": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "style_t", 
-                            "name": "style"
                         }
                     ], 
                     "type": "function"
@@ -25330,20 +25876,6 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_parent_event": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
                 "clear_selection": {
                     "return_type": "NoneType", 
                     "args": [
@@ -25354,88 +25886,40 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_cursor_pos": {
+                "refresh_ext_draw_pad": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "ta"
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_child": {
+                    "return_value": "object", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "child"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_width": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }, 
                         {
                             "type": "int", 
-                            "name": "pos"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_ext_click_pad_left": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_opa_scale": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_text": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "str", 
-                            "name": "txt"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_sb_mode": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "mode"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_auto_realign": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "move_foreground": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
+                            "name": "w"
                         }
                     ], 
                     "type": "function"
@@ -25454,84 +25938,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "cursor_left": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "report_style_mod": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "style_t", 
-                            "name": "style"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "set_one_line": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "ta"
-                        }, 
-                        {
-                            "type": "bool", 
-                            "name": "en"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "count_children": {
-                    "return_value": "int", 
+                "get_ext_attr": {
+                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_inner_coords": {
-                    "return_type": "NoneType", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "area_t", 
-                            "name": "coords_p"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "get_ext_click_pad_bottom": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "is_protected": {
-                    "return_value": "bool", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }, 
-                        {
-                            "type": "int", 
-                            "name": "prot"
                         }
                     ], 
                     "type": "function"
@@ -25566,18 +25978,8 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_width": {
-                    "return_value": "int", 
-                    "args": [
-                        {
-                            "type": "object", 
-                            "name": "obj"
-                        }
-                    ], 
-                    "type": "function"
-                }, 
-                "refresh_ext_draw_pad": {
-                    "return_type": "NoneType", 
+                "get_signal_cb": {
+                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
@@ -25888,6 +26290,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -26262,6 +26678,9 @@
                 "TYPE": {
                     "type": "enum_type", 
                     "members": {
+                        "CONSTANT_ARC": {
+                            "type": "enum_member"
+                        }, 
                         "FILLSPIN_ARC": {
                             "type": "enum_member"
                         }, 
@@ -27100,6 +27519,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -28249,6 +28682,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_opa_scale": {
                     "return_type": "NoneType", 
                     "args": [
@@ -29240,29 +29687,20 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_event_cb": {
+                "set_secondary_y_tick_length": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "obj"
+                            "name": "chart"
                         }, 
                         {
-                            "function": {
-                                "return_type": "NoneType", 
-                                "args": [
-                                    {
-                                        "type": "object", 
-                                        "name": "obj"
-                                    }, 
-                                    {
-                                        "type": "int", 
-                                        "name": "event"
-                                    }
-                                ]
-                            }, 
-                            "type": "callback", 
-                            "name": "event_cb"
+                            "type": "int", 
+                            "name": "major_tick_len"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "minor_tick_len"
                         }
                     ], 
                     "type": "function"
@@ -29368,6 +29806,9 @@
                             "type": "enum_member"
                         }, 
                         "SKIP_LAST_TICK": {
+                            "type": "enum_member"
+                        }, 
+                        "INVERSE_LABELS_ORDER": {
                             "type": "enum_member"
                         }
                     }
@@ -29655,6 +30096,33 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_event_cb": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "function": {
+                                "return_type": "NoneType", 
+                                "args": [
+                                    {
+                                        "type": "object", 
+                                        "name": "obj"
+                                    }, 
+                                    {
+                                        "type": "int", 
+                                        "name": "event"
+                                    }
+                                ]
+                            }, 
+                            "type": "callback", 
+                            "name": "event_cb"
                         }
                     ], 
                     "type": "function"
@@ -30107,6 +30575,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_drag_parent": {
                     "return_value": "bool", 
                     "args": [
@@ -30123,6 +30605,28 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_secondary_y_tick_texts": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "chart"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "list_of_values"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "num_tick_marks"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "options"
                         }
                     ], 
                     "type": "function"
@@ -30827,6 +31331,16 @@
                     ], 
                     "type": "function"
                 }, 
+                "get_sym": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "slider"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_x": {
                     "return_type": "NoneType", 
                     "args": [
@@ -30960,6 +31474,20 @@
                         {
                             "type": "int", 
                             "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -31236,12 +31764,12 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_drag_parent": {
+                "set_sym": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "obj"
+                            "name": "slider"
                         }, 
                         {
                             "type": "bool", 
@@ -31484,12 +32012,16 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_ext_click_pad_right": {
-                    "return_value": "int", 
+                "set_drag_parent": {
+                    "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
                         }
                     ], 
                     "type": "function"
@@ -31562,6 +32094,16 @@
                         {
                             "type": "int", 
                             "name": "h"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_anim_time": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "slider"
                         }
                     ], 
                     "type": "function"
@@ -31686,6 +32228,16 @@
                         {
                             "type": "int", 
                             "name": "opa_scale"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_right": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -32061,6 +32613,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -33099,6 +33665,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -34275,12 +34855,16 @@
                     ], 
                     "type": "function"
                 }, 
-                "count_children": {
+                "handle_get_type_signal": {
                     "return_value": "int", 
                     "args": [
                         {
-                            "type": "object", 
-                            "name": "obj"
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -35037,6 +35621,16 @@
                     ], 
                     "type": "function"
                 }, 
+                "count_children": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_child": {
                     "return_value": "object", 
                     "args": [
@@ -35496,6 +36090,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -35517,6 +36125,9 @@
                             "type": "enum_member"
                         }, 
                         "NUM": {
+                            "type": "enum_member"
+                        }, 
+                        "TEXT_UPPER": {
                             "type": "enum_member"
                         }
                     }
@@ -36757,6 +37368,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -37893,6 +38518,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -39136,6 +39775,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_parent": {
                     "return_type": "NoneType", 
                     "args": [
@@ -40263,6 +40916,16 @@
                     ], 
                     "type": "function"
                 }, 
+                "get_user_data_ptr": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_x": {
                     "return_type": "NoneType", 
                     "args": [
@@ -40398,6 +41061,20 @@
                         {
                             "type": "int", 
                             "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -40568,6 +41245,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_y": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "y"
                         }
                     ], 
                     "type": "function"
@@ -41112,26 +41803,26 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_y": {
+                "set_layout": {
                     "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "obj"
+                            "name": "list"
                         }, 
                         {
                             "type": "int", 
-                            "name": "y"
+                            "name": "layout"
                         }
                     ], 
                     "type": "function"
                 }, 
-                "get_user_data_ptr": {
-                    "return_value": "pointer", 
+                "get_layout": {
+                    "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
-                            "name": "obj"
+                            "name": "list"
                         }
                     ], 
                     "type": "function"
@@ -41753,6 +42444,20 @@
                         {
                             "type": "int", 
                             "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
                         }
                     ], 
                     "type": "function"
@@ -43060,6 +43765,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_scroll_propagation": {
                     "return_value": "bool", 
                     "args": [
@@ -44099,43 +44818,14 @@
             }
         }
     }, 
-    "structs": [
-        "mem_monitor_t", 
-        "ll_t", 
-        "task_t", 
-        "color32_t", 
-        "color_hsv_t", 
-        "point_t", 
-        "area_t", 
-        "disp_buf_t", 
-        "disp_drv_t", 
-        "disp_t", 
-        "indev_data_t", 
-        "indev_drv_t", 
-        "indev_proc_t", 
-        "indev_t", 
-        "font_glyph_dsc_t", 
-        "font_t", 
-        "anim_t", 
-        "style_t", 
-        "obj_type_t", 
-        "group_t", 
-        "theme_t", 
-        "fs_drv_t", 
-        "fs_file_t", 
-        "fs_dir_t", 
-        "img_header_t", 
-        "img_dsc_t", 
-        "img_decoder_t", 
-        "img_decoder_dsc_t", 
-        "draw_label_hint_t", 
-        "chart_series_t", 
-        "calendar_date_t", 
-        "img_cache_entry_t", 
-        "C_Pointer", 
-        "color_t"
-    ], 
     "enums": {
+        "CHART_POINT": {
+            "members": {
+                "DEF": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
         "ANIM": {
             "members": {
                 "ON": {
@@ -44430,6 +45120,41 @@
                 }
             }
         }, 
+        "BAR_ANIM_STATE": {
+            "members": {
+                "START": {
+                    "type": "enum_member"
+                }, 
+                "INV": {
+                    "type": "enum_member"
+                }, 
+                "END": {
+                    "type": "enum_member"
+                }, 
+                "NORM": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "LOG_LEVEL": {
+            "members": {
+                "INFO": {
+                    "type": "enum_member"
+                }, 
+                "WARN": {
+                    "type": "enum_member"
+                }, 
+                "NONE": {
+                    "type": "enum_member"
+                }, 
+                "TRACE": {
+                    "type": "enum_member"
+                }, 
+                "ERROR": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
         "SB_MODE": {
             "members": {
                 "OFF": {
@@ -44487,6 +45212,20 @@
                     "type": "enum_member"
                 }, 
                 "REL": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "LABEL_POS": {
+            "members": {
+                "LAST": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "LABEL_TEXT_SEL": {
+            "members": {
+                "OFF": {
                     "type": "enum_member"
                 }
             }
@@ -44618,6 +45357,13 @@
                 }
             }
         }, 
+        "TA_CURSOR": {
+            "members": {
+                "LAST": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
         "DRAG_DIR": {
             "members": {
                 "HOR": {
@@ -44627,6 +45373,30 @@
                     "type": "enum_member"
                 }, 
                 "VER": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "COORD": {
+            "members": {
+                "MAX": {
+                    "type": "enum_member"
+                }, 
+                "MIN": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "LABEL_DOT": {
+            "members": {
+                "NUM": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "RADIUS": {
+            "members": {
+                "CIRCLE": {
                     "type": "enum_member"
                 }
             }
@@ -44672,6 +45442,20 @@
                     "type": "enum_member"
                 }, 
                 "NEXT": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "BTNM_BTN": {
+            "members": {
+                "NONE": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
+        "CHART_TICK_LENGTH": {
+            "members": {
+                "AUTO": {
                     "type": "enum_member"
                 }
             }
@@ -44941,21 +45725,40 @@
             }
         }
     }, 
-    "blobs": [
-        "font_roboto_16", 
-        "font_roboto_28", 
-        "style_scr", 
-        "style_transp", 
-        "style_transp_fit", 
-        "style_transp_tight", 
-        "style_plain", 
-        "style_plain_color", 
-        "style_pretty", 
-        "style_pretty_color", 
-        "style_btn_rel", 
-        "style_btn_pr", 
-        "style_btn_tgl_rel", 
-        "style_btn_tgl_pr", 
-        "style_btn_ina"
+    "structs": [
+        "mem_monitor_t", 
+        "ll_t", 
+        "task_t", 
+        "color32_t", 
+        "color_hsv_t", 
+        "point_t", 
+        "area_t", 
+        "disp_buf_t", 
+        "disp_drv_t", 
+        "disp_t", 
+        "indev_data_t", 
+        "indev_drv_t", 
+        "indev_proc_t", 
+        "indev_t", 
+        "font_glyph_dsc_t", 
+        "font_t", 
+        "anim_t", 
+        "style_t", 
+        "obj_type_t", 
+        "group_t", 
+        "theme_t", 
+        "fs_drv_t", 
+        "fs_file_t", 
+        "fs_dir_t", 
+        "img_header_t", 
+        "img_dsc_t", 
+        "img_decoder_t", 
+        "img_decoder_dsc_t", 
+        "draw_label_hint_t", 
+        "chart_series_t", 
+        "calendar_date_t", 
+        "img_cache_entry_t", 
+        "C_Pointer", 
+        "color_t"
     ]
 }
