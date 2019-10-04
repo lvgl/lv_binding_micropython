@@ -2,8 +2,9 @@
  * This file defines the Micorpython API to ESP-IDF
  * It is used as input to gen_mpy.py to create a micropython module
  **/ 
-
-#include "esp_idf_version.h"
+#if __has_include("esp_idf_version.h")
+#   include "esp_idf_version.h"
+#endif
 
 // Disable some macros and includes that make pycparser choke
 
@@ -54,7 +55,7 @@ static inline void get_ccount(int *ccount)
 // The following includes are the source of the esp-idf micropython module.
 // All included files are API we want to include in the module
 
-#if ESP_IDF_VERSION_MAJOR >= 4
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
 #   include "esp32/clk.h"
 #else
 #   include "esp_clk.h"
