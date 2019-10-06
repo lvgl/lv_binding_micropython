@@ -3,6 +3,8 @@
 // Includes
 //////////////////////////////////////////////////////////////////////////////
 
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+
 #include "../include/common.h"
 #include "driver/gpio.h"
 #include "driver/adc.h"
@@ -13,7 +15,6 @@
 #include "lvgl/src/lv_hal/lv_hal_indev.h"
 #include "lvgl/src/lv_core/lv_disp.h"  
 
-// #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include "esp_log.h"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -24,7 +25,7 @@ static const char TAG[] = "[RTCH]";
 
 #define INVALID_MEASUREMENT INT32_MIN
 
-#define RTCH_TASK_STACK_SIZE (2*1024)
+#define RTCH_TASK_STACK_SIZE (4*1024)
 #define RTCH_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
 
 #ifndef RTCH_MAX_TOUCH_SAMPLES
@@ -84,8 +85,8 @@ typedef struct _rtch_t
 
     uint32_t screen_width;
     uint32_t screen_height;
-    uint32_t cal_x;
-    uint32_t cal_y;
+    uint32_t cal_x0, cal_x1;
+    uint32_t cal_y0, cal_y1;
     uint32_t touch_samples; // number of samples to take on every touch measurement
     uint32_t touch_samples_threshold; // max distance between touch sample measurements for a valid touch reading
 
@@ -178,8 +179,10 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
 
         ARG_screen_width,
         ARG_screen_height,
-        ARG_cal_x,
-        ARG_cal_y,
+        ARG_cal_x0,
+        ARG_cal_x1,
+        ARG_cal_y0,
+        ARG_cal_y1,
         ARG_touch_samples, // number of samples to take on every touch measurement
         ARG_touch_samples_threshold, // max distance between touch sample measurements for a valid touch reading
      };
@@ -194,8 +197,10 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
 
         { MP_QSTR_screen_width, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
         { MP_QSTR_screen_height, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
-        { MP_QSTR_cal_x, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=29821466}},
-        { MP_QSTR_cal_y, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=14944964}},
+        { MP_QSTR_cal_x0, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=520}},
+        { MP_QSTR_cal_x1, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=3605}},
+        { MP_QSTR_cal_y0, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=314}},
+        { MP_QSTR_cal_y1, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=3525}},
         { MP_QSTR_touch_samples, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=9}}, 
         { MP_QSTR_touch_samples_threshold, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=500}}, 
    };
@@ -215,8 +220,10 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
     if (self->screen_width == -1) self->screen_width = LV_HOR_RES;
     self->screen_height = args[ARG_screen_height].u_int;
     if (self->screen_height == -1) self->screen_height = LV_VER_RES;
-    self->cal_x = args[ARG_cal_x].u_int;
-    self->cal_y = args[ARG_cal_y].u_int;
+    self->cal_x0 = args[ARG_cal_x0].u_int;
+    self->cal_x1 = args[ARG_cal_x1].u_int;
+    self->cal_y0 = args[ARG_cal_y0].u_int;
+    self->cal_y1 = args[ARG_cal_y1].u_int;
     self->touch_samples = args[ARG_touch_samples].u_int;
     self->touch_samples_threshold = args[ARG_touch_samples_threshold].u_int;
 
@@ -273,9 +280,9 @@ STATIC void enable_touch_sense(rtch_t *self)
 STATIC mp_obj_t mp_rtch_init(mp_obj_t self_in)
 {
     rtch_t *self = MP_OBJ_TO_PTR(self_in);
-    // esp_log_level_set(TAG, ESP_LOG_DEBUG);
-    // esp_log_level_set("gpio", ESP_LOG_DEBUG);
-    // esp_log_level_set("RTC_MODULE", ESP_LOG_DEBUG);
+    esp_log_level_set(TAG, ESP_LOG_DEBUG);
+    esp_log_level_set("gpio", ESP_LOG_DEBUG);
+    esp_log_level_set("RTC_MODULE", ESP_LOG_DEBUG);
 
     self->rtch_info_mutex = xSemaphoreCreateMutex();
 
@@ -472,13 +479,9 @@ STATIC void rtch_task(void* arg)
             // If measurements valid, calculate calibrated X and Y
             if (x != INVALID_MEASUREMENT && y != INVALID_MEASUREMENT)
             {
-                int xleft   = (self->cal_x >> 16) & 0x3FFF;
-                int xright  = self->cal_x & 0x3FFF;
-                int ytop    = (self->cal_y >> 16) & 0x3FFF;
-                int ybottom = self->cal_y & 0x3FFF;
-                x = ((x - xleft) * self->screen_width) / (xright - xleft);
-                y = ((y - ytop) * self->screen_height) / (ybottom - ytop);
-                if (x >= 0 && y >= 0 && x < self->screen_width && y < self->screen_height)
+                x = ((x - self->cal_x0) * self->screen_width) / (self->cal_x1 - self->cal_x0);
+                y = ((y - self->cal_y0) * self->screen_height) / (self->cal_y1 - self->cal_y0);
+                if (1) // (x >= 0 && y >= 0 && x < self->screen_width && y < self->screen_height)
                 {
                     ESP_LOGD(TAG, "[%d, %d]", x, y);
 
