@@ -3,7 +3,8 @@
 // Includes
 //////////////////////////////////////////////////////////////////////////////
 
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+// Uncomment the following line to see logs!
+// #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 
 #include "../include/common.h"
 #include "driver/gpio.h"
@@ -85,8 +86,8 @@ typedef struct _rtch_t
 
     uint32_t screen_width;
     uint32_t screen_height;
-    uint32_t cal_x0, cal_x1;
-    uint32_t cal_y0, cal_y1;
+    uint32_t cal_x0, cal_y0;
+    uint32_t cal_x1, cal_y1;
     uint32_t touch_samples; // number of samples to take on every touch measurement
     uint32_t touch_samples_threshold; // max distance between touch sample measurements for a valid touch reading
 
@@ -124,17 +125,20 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
 
 STATIC mp_obj_t mp_rtch_init(mp_obj_t self_in);
 STATIC mp_obj_t mp_rtch_deinit(mp_obj_t self_in);
+STATIC mp_obj_t calibrate(mp_uint_t n_args, const mp_obj_t *args);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_init_rtch_obj, mp_rtch_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_deinit_rtch_obj, mp_rtch_deinit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_activate_rtch_obj, mp_activate_rtch);
 DEFINE_PTR_OBJ(touch_read);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(calibrate_obj, 5, 5, calibrate);
 
 STATIC const mp_rom_map_elem_t rtch_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_init_rtch_obj) },
     { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_deinit_rtch_obj) },
     { MP_ROM_QSTR(MP_QSTR_activate), MP_ROM_PTR(&mp_activate_rtch_obj) },
     { MP_ROM_QSTR(MP_QSTR_read), MP_ROM_PTR(&PTR_OBJ(touch_read)) },
+    { MP_ROM_QSTR(MP_QSTR_calibrate), MP_ROM_PTR(&calibrate_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(rtch_locals_dict, rtch_locals_dict_table);
@@ -180,8 +184,8 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
         ARG_screen_width,
         ARG_screen_height,
         ARG_cal_x0,
-        ARG_cal_x1,
         ARG_cal_y0,
+        ARG_cal_x1,
         ARG_cal_y1,
         ARG_touch_samples, // number of samples to take on every touch measurement
         ARG_touch_samples_threshold, // max distance between touch sample measurements for a valid touch reading
@@ -197,10 +201,10 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
 
         { MP_QSTR_screen_width, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
         { MP_QSTR_screen_height, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
-        { MP_QSTR_cal_x0, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=520}},
-        { MP_QSTR_cal_x1, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=3605}},
-        { MP_QSTR_cal_y0, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=314}},
-        { MP_QSTR_cal_y1, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=3525}},
+        { MP_QSTR_cal_x0, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=400}},
+        { MP_QSTR_cal_y0, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=200}},
+        { MP_QSTR_cal_x1, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=3500}},
+        { MP_QSTR_cal_y1, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=3470}},
         { MP_QSTR_touch_samples, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=9}}, 
         { MP_QSTR_touch_samples_threshold, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=500}}, 
    };
@@ -221,8 +225,8 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
     self->screen_height = args[ARG_screen_height].u_int;
     if (self->screen_height == -1) self->screen_height = LV_VER_RES;
     self->cal_x0 = args[ARG_cal_x0].u_int;
-    self->cal_x1 = args[ARG_cal_x1].u_int;
     self->cal_y0 = args[ARG_cal_y0].u_int;
+    self->cal_x1 = args[ARG_cal_x1].u_int;
     self->cal_y1 = args[ARG_cal_y1].u_int;
     self->touch_samples = args[ARG_touch_samples].u_int;
     self->touch_samples_threshold = args[ARG_touch_samples_threshold].u_int;
@@ -234,6 +238,16 @@ STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC mp_obj_t calibrate(mp_uint_t n_args, const mp_obj_t *args)
+{
+    (void)n_args; // unused, we know it's 5
+    rtch_t *self = MP_OBJ_TO_PTR(args[0]);
+    self->cal_x0 = mp_obj_get_int(args[1]);
+    self->cal_y0 = mp_obj_get_int(args[2]);
+    self->cal_x1 = mp_obj_get_int(args[3]);
+    self->cal_y1 = mp_obj_get_int(args[4]);
+    return mp_const_none;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // RTCH implemenation
