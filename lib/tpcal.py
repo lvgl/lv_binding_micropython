@@ -3,42 +3,19 @@ lv.init()
 
 lv.log_register_print_cb(lambda level,path,line,msg: print('LOG: %s(%d): %s' % (path, line, msg)))
 
-'''
-import SDL
-SDL.init()
-
-# Register SDL display driver.
-
-disp_buf1 = lv.disp_buf_t()
-buf1_1 = bytes(480*10)
-lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
-disp_drv = lv.disp_drv_t()
-lv.disp_drv_init(disp_drv)
-disp_drv.buffer = disp_buf1
-disp_drv.flush_cb = SDL.monitor_flush
-disp_drv.hor_res = 480
-disp_drv.ver_res = 320
-lv.disp_drv_register(disp_drv)
-
-# Regsiter SDL mouse driver
-
-indev_drv = lv.indev_drv_t()
-lv.indev_drv_init(indev_drv) 
-indev_drv.type = lv.INDEV_TYPE.POINTER;
-indev_drv.read_cb = SDL.mouse_read;
-lv.indev_drv_register(indev_drv);
-'''
-
 # Initialize ILI9341 display
 
 import lvesp32
 from ili9341 import ili9341
 disp = ili9341()
 
+HRES = lv.disp_get_hor_res(lv.disp_t.cast(None))
+VRES = lv.disp_get_ver_res(lv.disp_t.cast(None))
+
 # Register raw resistive touch driver
 
 import rtch
-touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33, cal_x0=0, cal_x1 = 240, cal_y0=0, cal_y1 = 320)
+touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33, cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
 touch.init()
 indev_drv = lv.indev_drv_t()
 lv.indev_drv_init(indev_drv) 
@@ -46,6 +23,7 @@ indev_drv.type = lv.INDEV_TYPE.POINTER;
 indev_drv.read_cb = touch.read;
 lv.indev_drv_register(indev_drv);
 
+# Point class, with both display and touch coordiantes
 
 class Tpcal_point():
     def __init__(self, x, y, name):
@@ -58,28 +36,26 @@ class Tpcal_point():
                 self.touch_coordinate.x,
                 self.touch_coordinate.y)
 
+# Calibration helper class
+
 class Tpcal():
         
     # Create a screen with a button and a label
 
     CIRCLE_SIZE = const(20)
     CIRCLE_OFFSET = const(20)
-    TP_MAX_VALUE = const(5000)
-    TOUCH_NUMBER = const(3)
+    TP_MAX_VALUE = const(10000)
 
     LV_COORD_MAX = const((1 << (8 * 2 - 1)) - 1000)
-    LV_RADIUS_CIRCLE = const(LV_COORD_MAX)
+    LV_RADIUS_CIRCLE = const(LV_COORD_MAX) # TODO use lv.RADIUS_CIRCLE constant when it's available!
 
-    def __init__(self, points, output, touch_count = 3):
+    def __init__(self, points, calibrate, touch_count = 5):
 
         self.points = points
-        self.output = output
+        self.calibrate = calibrate
         self.touch_count = touch_count
 
-        self.avr = [lv.point_t() for i in range(0,self.touch_count)] # Storage point to calculate average
-
-        self.hres = lv.disp_get_hor_res(lv.disp_t.cast(None))
-        self.vres = lv.disp_get_ver_res(lv.disp_t.cast(None))
+        self.med = [lv.point_t() for i in range(0,self.touch_count)] # Storage point to calculate median
 
         self.cur_point = 0
         self.cur_touch = 0
@@ -90,12 +66,14 @@ class Tpcal():
 
         # Create a big transparent button screen to receive clicks
 
-        big_btn = lv.btn(lv.scr_act(), None)
-        big_btn.set_size(TP_MAX_VALUE, TP_MAX_VALUE)
-        big_btn.set_style(lv.btn.STYLE.REL, lv.style_transp)
-        big_btn.set_style(lv.btn.STYLE.PR, lv.style_transp)
-        big_btn.set_layout(lv.LAYOUT.OFF)
-        big_btn.set_event_cb(lambda obj, event, self=self: self.calibrate() if event == lv.EVENT.CLICKED else None) 
+        self.big_btn = lv.btn(lv.scr_act(), None)
+        self.big_btn.set_size(TP_MAX_VALUE, TP_MAX_VALUE)
+        self.big_btn.set_style(lv.btn.STYLE.REL, lv.style_transp)
+        self.big_btn.set_style(lv.btn.STYLE.PR, lv.style_transp)
+        self.big_btn.set_layout(lv.LAYOUT.OFF)
+        self.big_btn.set_event_cb(lambda obj, event, self=self: self.calibrate_clicked() if event == lv.EVENT.CLICKED else None) 
+
+        # Create the screen, circle and label
 
         self.label_main = lv.label(lv.scr_act(), None)
 
@@ -110,37 +88,33 @@ class Tpcal():
 
         self.show_circle()
 
+    def show_text(self, txt):
+        self.label_main.set_text(txt)
+        self.label_main.set_align(lv.label.ALIGN.CENTER)
+        self.label_main.set_pos((HRES - self.label_main.get_width() ) // 2,
+                           (VRES - self.label_main.get_height()) // 2)
     def show_circle(self):
         point = self.points[self.cur_point]
-        buf = "Click the circle in\n" + \
+        self.show_text("Click the circle in\n" + \
               point.name + "\n" + \
-              "%d left" % (self.touch_count - self.cur_touch)
-        self.label_main.set_text(buf)
-        self.label_main.set_align(lv.label.ALIGN.CENTER)
+              "%d left" % (self.touch_count - self.cur_touch))
+        if point.display_coordinates.x < 0: point.display_coordinates.x += HRES
+        if point.display_coordinates.y < 0: point.display_coordinates.y += VRES
+        self.circ_area.set_pos(point.display_coordinates.x - CIRCLE_SIZE // 2,
+                               point.display_coordinates.y - CIRCLE_SIZE // 2)
 
-        self.label_main.set_pos((self.hres - self.label_main.get_width() ) // 2,
-                           (self.vres - self.label_main.get_height()) // 2)
-
-        if point.display_coordinates.x < 0: point.display_coordinates.x += self.hres
-        if point.display_coordinates.y < 0: point.display_coordinates.y += self.vres
-        self.circ_area.set_pos(point.display_coordinates.x, point.display_coordinates.y)
-
-
-    def calibrate(self):
+    def calibrate_clicked(self):
         point = self.points[self.cur_point]
         indev = lv.indev_get_act()
-        lv.indev_get_point(indev, self.avr[self.cur_touch])
+        lv.indev_get_point(indev, self.med[self.cur_touch])
 
         self.cur_touch += 1
 
         if self.cur_touch == self.touch_count:
-            x_sum = 0
-            y_sum = 0
-            for i in range(0, self.touch_count):
-                x_sum += self.avr[i].x - self.CIRCLE_SIZE // 2
-                y_sum += self.avr[i].y - self.CIRCLE_SIZE // 2
-            x = x_sum // TOUCH_NUMBER
-            y = y_sum // TOUCH_NUMBER
+            med_x = sorted([med.x for med in self.med])
+            med_y = sorted([med.y for med in self.med])
+            x = med_x[len(med_x) // 2]
+            y = med_y[len(med_y) // 2]
             point.touch_coordinate = lv.point_t({
                 'x': x,
                 'y': y})
@@ -149,13 +123,24 @@ class Tpcal():
             self.cur_touch = 0
 
         if self.cur_point == len(self.points):
-            self.output(self.points)
+            self.calibrate(self.points)
             self.cur_point = 0
+            self.show_text("Click/drag on screen\n" + \
+                           "to check calibration")
+            self.big_btn.set_event_cb(lambda obj, event, self=self: self.check() if event == lv.EVENT.PRESSING else None) 
+        else:
+            self.show_circle()
 
-        self.show_circle()
+    def check(self):
+        point = lv.point_t()
+        indev = lv.indev_get_act()
+        lv.indev_get_point(indev, point)
+        self.circ_area.set_pos(point.x - CIRCLE_SIZE // 2,
+                               point.y - CIRCLE_SIZE // 2)
 
+# Calculate calibration, and calibrate
 
-def tpcal_output(points):
+def calibrate(points):
     visual_width = points[1].display_coordinates.x - points[0].display_coordinates.x
     visual_height = points[1].display_coordinates.y - points[0].display_coordinates.y
     touch_width = points[1].touch_coordinate.x - points[0].touch_coordinate.x
@@ -167,20 +152,18 @@ def tpcal_output(points):
     x0 = points[0].touch_coordinate.x - points[0].display_coordinates.x * pixel_width
     y0 = points[0].touch_coordinate.y - points[0].display_coordinates.y * pixel_height
 
-    screen_width = lv.disp_get_hor_res(lv.disp_t.cast(None))
-    screen_height = vres = lv.disp_get_ver_res(lv.disp_t.cast(None))
-
-    x1 = points[1].touch_coordinate.x + (screen_width - points[1].display_coordinates.x) * pixel_width
-    y1 = points[1].touch_coordinate.y + (screen_height - points[1].display_coordinates.y) * pixel_height
+    x1 = points[1].touch_coordinate.x + (HRES - points[1].display_coordinates.x) * pixel_width
+    y1 = points[1].touch_coordinate.y + (VRES - points[1].display_coordinates.y) * pixel_height
 
     print("Calibration result: x0=%d, y0=%d, x1=%d, y1=%d" % (round(x0), round(y0), round(x1), round(y1)))
+    touch.calibrate(round(x0), round(y0), round(x1), round(y1))
     
-
+# Run calibrationh
 
 tpcal = Tpcal([
         Tpcal_point(20,  20, "upper left-hand corner"),
         Tpcal_point(-40, -40, "lower right-hand corner"),
-    ], tpcal_output)
+    ], calibrate)
 
 # while True:
 #    pass
