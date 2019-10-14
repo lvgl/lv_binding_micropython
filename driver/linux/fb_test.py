@@ -6,11 +6,16 @@ import lvgl as lv
 lv.init()
 import fb
 fb.init()
+
+disp_buf1 = lv.disp_buf_t()
+buf1_1 = bytes(480*10)
+lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 lv.disp_drv_init(disp_drv)
-disp_drv.disp_flush = fb.flush
-disp_drv.disp_fill = fb.fill
-disp_drv.disp_map = fb.map
+disp_drv.buffer = disp_buf1
+disp_drv.flush_cb = fb.flush
+disp_drv.hor_res = 480
+disp_drv.ver_res = 320
 lv.disp_drv_register(disp_drv)
 
 scr = lv.obj()
@@ -23,5 +28,5 @@ label.set_text("Button")
 
 lv.scr_load(scr)
 
-# while True:
-#    pass
+while True:
+   pass
