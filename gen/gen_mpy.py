@@ -313,6 +313,8 @@ mp_to_lv = {
     'unsigned int'              : '(unsigned int)mp_obj_get_int',
     'unsigned char'             : '(unsigned char)mp_obj_get_int',
     'unsigned short'            : '(unsigned short)mp_obj_get_int',
+    'unsigned long'             : '(unsigned long)mp_obj_get_int',
+    'unsigned long int'         : '(unsigned long int)mp_obj_get_int',
     'int8_t'                    : '(int8_t)mp_obj_get_int',
     'int16_t'                   : '(int16_t)mp_obj_get_int',
     'int32_t'                   : '(int32_t)mp_obj_get_int',
@@ -320,6 +322,8 @@ mp_to_lv = {
     'int'                       : '(int)mp_obj_get_int',
     'char'                      : '(char)mp_obj_get_int',
     'short'                     : '(short)mp_obj_get_int',
+    'long'                      : '(long)mp_obj_get_int',
+    'long int'                  : '(long int)mp_obj_get_int',
 }
 
 lv_to_mp = {
@@ -339,6 +343,8 @@ lv_to_mp = {
     'unsigned int'              : 'mp_obj_new_int_from_uint',
     'unsigned char'             : 'mp_obj_new_int_from_uint',
     'unsigned short'            : 'mp_obj_new_int_from_uint',
+    'unsigned long'             : 'mp_obj_new_int_from_uint',
+    'unsigned long int'         : 'mp_obj_new_int_from_uint',
     'int8_t'                    : 'mp_obj_new_int',
     'int16_t'                   : 'mp_obj_new_int',
     'int32_t'                   : 'mp_obj_new_int',
@@ -346,6 +352,8 @@ lv_to_mp = {
     'int'                       : 'mp_obj_new_int',
     'char'                      : 'mp_obj_new_int',
     'short'                     : 'mp_obj_new_int',
+    'long'                      : 'mp_obj_new_int',
+    'long int'                  : 'mp_obj_new_int',
 }
 
 lv_mp_type = {
@@ -365,6 +373,8 @@ lv_mp_type = {
     'unsigned int'              : 'int',
     'unsigned char'             : 'int',
     'unsigned short'            : 'int',
+    'unsigned long'             : 'int',
+    'unsigned long int'         : 'int',
     'int8_t'                    : 'int',
     'int16_t'                   : 'int',
     'int32_t'                   : 'int',
@@ -372,6 +382,8 @@ lv_mp_type = {
     'int'                       : 'int',
     'char'                      : 'int',
     'short'                     : 'int',
+    'long'                      : 'int',
+    'long int'                  : 'int',
     'void'                      : 'NoneType',
 }
 
@@ -1093,7 +1105,7 @@ def try_generate_struct(struct_name, struct, structs_in_progress = None):
             user_data = None
             # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
             if isinstance(decl.type, c_ast.ArrayDecl):
-                memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), decl.type.dim.value)
+                memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), gen.visit(decl.type.dim))
                 write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
                     format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
                 read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
@@ -1281,7 +1293,9 @@ STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
 def get_arg_name(arg):
     if isinstance(arg, c_ast.PtrDecl) or isinstance(arg, c_ast.FuncDecl):
         return get_arg_name(arg.type)
-    return arg.declname if hasattr(arg, 'declname') else arg.name
+    if hasattr(arg, 'declname'): return arg.declname
+    if hasattr(arg, 'name'): return name
+    return 'unnamed_arg'
 
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
 
