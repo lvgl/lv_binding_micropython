@@ -1235,7 +1235,14 @@ def try_generate_array_type(type_ast, structs_in_progress = None):
         try_generate_type(type_ast.type, structs_in_progress = structs_in_progress)
         if not element_type in mp_to_lv:
             raise MissingConversionException('Missing conversion to %s while generating array type conversion' % element_type)
-    array_convertor_suffix = arr_name.replace(' ','_').replace('*','ptr').replace('[','__').replace(']','__')
+    array_convertor_suffix = arr_name.\
+        replace(' ','_').\
+        replace('*','ptr').\
+        replace('[','__').\
+        replace(']','__').\
+        replace('(','__').\
+        replace(')','__').\
+        replace('/','_div_')
     arr_to_c_convertor_name = 'mp_arr_to_%s' % array_convertor_suffix
     arr_to_mp_convertor_name = 'mp_arr_from_%s' % array_convertor_suffix
     print('''
@@ -1379,10 +1386,14 @@ print('''
 
 create_helper_struct('''
 typedef union {
-    void *ptr_val;
-    int int_val;
-    unsigned int uint_val;
-    const char *str_val;
+    void*           ptr_val;
+    const char*     str_val;
+    int             int_val;
+    unsigned int    uint_val;
+    short           short_val[sizeof(void*) / sizeof(short)];
+    unsigned short  ushort_val[sizeof(void*) / sizeof(unsigned short)];
+    char            char_val[sizeof(void*) / sizeof(char)];
+    unsigned char   uchar_val[sizeof(void*) / sizeof(unsigned char)];
 } C_Pointer;
 ''')
 

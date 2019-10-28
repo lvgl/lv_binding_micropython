@@ -35,7 +35,7 @@ class ili9341:
 
     # "power" and "backlight" are reversed logic! 0 means ON.
 
-    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, spihost=esp.enum.HSPI_HOST, mhz=40, factor=4, hybrid=True):
+    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -65,8 +65,8 @@ class ili9341:
 
         # Register display driver 
 
-        self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.CAP.DMA)
-        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.CAP.DMA)
+        self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
+        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
         
         if self.buf1 and self.buf2:
             print("Double buffer")
@@ -135,7 +135,7 @@ class ili9341:
             "mode": 0,                              # SPI mode 0
             "spics_io_num": self.cs,                # CS pin
             "queue_size": 2,
-            "flags": esp.ESP.HALF_DUPLEX,
+            "flags": esp.SPI_DEVICE.HALFDUPLEX,
             "duty_cycle_pos": 128,
 	})
 
@@ -198,7 +198,7 @@ class ili9341:
 
     trans = esp.spi_transaction_t() # .cast(
 #                esp.heap_caps_malloc(
-#                    esp.spi_transaction_t.SIZE, esp.CAP.DMA))
+#                    esp.spi_transaction_t.SIZE, esp.MALLOC_CAP.DMA))
 
     def spi_send(self, data):
         self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
@@ -216,7 +216,7 @@ class ili9341:
     ######################################################
 
     trans_buffer_len = const(16)
-    trans_buffer = esp.heap_caps_malloc(trans_buffer_len, esp.CAP.DMA)
+    trans_buffer = esp.heap_caps_malloc(trans_buffer_len, esp.MALLOC_CAP.DMA)
     cmd_trans_data = trans_buffer.__dereference__(1)
     word_trans_data = trans_buffer.__dereference__(4)
 
@@ -371,7 +371,7 @@ class ili9341:
 # TESTING - only if running as main
 #####################################
 
-if __name__ == '__main__':
+if True or __name__ == '__main__':
 
     lv.init()
     disp = ili9341()
