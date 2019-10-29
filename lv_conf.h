@@ -98,12 +98,6 @@ typedef int16_t lv_coord_t;
 #  define LV_GC_ROOT(x) MP_STATE_PORT(x)
 #endif /* LV_ENABLE_GC */
 
-/* Export integer constant to binding.
- * This macro is used with constants in the form of LV_<CONST> that
- * should also appear on lvgl binding API such as Micropython
- */
-#define LV_EXPORT_CONST_INT(int_value) enum {ENUM_##int_value = int_value}
-
 /*=======================
    Input device settings
  *=======================*/
@@ -201,6 +195,14 @@ typedef void * lv_img_decoder_user_data_t;
 /* Attribute to mark large constant arrays for example
  * font's bitmaps */
 #define LV_ATTRIBUTE_LARGE_CONST
+
+/* Export integer constant to binding.
+ * This macro is used with constants in the form of LV_<CONST> that
+ * should also appear on lvgl binding API such as Micropython
+ *
+ * The default value just prevents a GCC warning.
+ */
+#define LV_EXPORT_CONST_INT(int_value) enum {ENUM_##int_value = int_value}
 
 /*===================
  *  HAL settings
@@ -315,7 +317,7 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
  * #define LV_FONT_CUSTOM_DECLARE LV_FONT_DECLARE(my_font_1) \
  *                                LV_FONT_DECLARE(my_font_2)
  */
-#define LV_FONT_CUSTOM_DECLARE // LV_FONT_DECLARE(lv_font_heb_16)
+#define LV_FONT_CUSTOM_DECLARE
 
 /*Always set a default font from the built-in fonts*/
 #define LV_FONT_DEFAULT        &lv_font_roboto_16
@@ -358,6 +360,12 @@ typedef void * lv_font_user_data_t;
 #  define lv_snprintf     snprintf
 #  define lv_vsnprintf    vsnprintf
 #endif  /*LV_SPRINTF_CUSTOM*/
+
+ /* Set the pixel order of the display.
+  * Important only if "subpx fonts" are used.
+  * With "normal" font it doesn't matter.
+  */
+ #define LV_SUBPX_BGR    0
 
 /*===================
  *  LV_OBJ SETTINGS

@@ -371,7 +371,7 @@ class ili9341:
 # TESTING - only if running as main
 #####################################
 
-if True or __name__ == '__main__':
+if __name__ == '__main__':
 
     lv.init()
     disp = ili9341()
