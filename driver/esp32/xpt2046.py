@@ -11,7 +11,7 @@ class xpt2046:
 
     MAX_RAW_COORD = const((1<<12) - 1)
 
-    def __init__(self, miso=-1, mosi=-1, clk=-1, cs=25, irq=26, spihost=esp.HSPI_HOST, mhz=5, max_cmds=16, cal_x0 = 1892, cal_y0 = 1967, cal_x1 = 121, cal_y1 = 194, transpose = True):
+    def __init__(self, miso=-1, mosi=-1, clk=-1, cs=25, spihost=esp.HSPI_HOST, mhz=5, max_cmds=16, cal_x0 = 1892, cal_y0 = 1967, cal_x1 = 121, cal_y1 = 194, transpose = True):
 
         # Initializations
 
@@ -21,7 +21,6 @@ class xpt2046:
         self.mosi = mosi
         self.clk = clk
         self.cs = cs
-        self.irq = irq
         self.spihost = spihost
         self.mhz = mhz
         self.max_cmds = max_cmds
@@ -30,14 +29,7 @@ class xpt2046:
         self.cal_x1 = cal_x1
         self.cal_y1 = cal_y1
         self.transpose = transpose
-        self.touched = False
         
-        def handle_irq(p):
-            self.touched = (p.value() == 0)
-        
-        self.irq_pin = Pin(self.irq, Pin.IN)
-        self.irq_pin.irq(trigger = Pin.IRQ_FALLING | Pin.IRQ_RISING, handler = handle_irq)
-
         self.spi_init()
         
     def calibrate(self, x0, y0, x1, y1):
@@ -86,7 +78,7 @@ class xpt2046:
                 ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
                 if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
-	# Attach the LCD to the SPI bus
+	# Attach the xpt2046 to the SPI bus
 
         ptr_to_spi = esp.C_Pointer()
 	ret = esp.spi_bus_add_device(self.spihost, devcfg, ptr_to_spi)
@@ -95,10 +87,10 @@ class xpt2046:
         
         # Prepare transactions
 
-        self.trans = [esp.spi_transaction_t() for i in range(0, self.max_cmds)]
-        for trans in self.trans:
-            trans.rx_buffer = bytearray(2)
-            trans.rxlength = 16
+        self.trans = [esp.spi_transaction_t({
+            'rx_buffer': bytearray(2),
+            'rxlength': 16
+            }) for i in range(0, self.max_cmds)]
 
     trans_result_ptr = esp.C_Pointer()
 
@@ -127,21 +119,23 @@ class xpt2046:
         # y_values = sorted(values[count:])
         x_values = sorted([x for x,y in values])
         y_values = sorted([y for x,y in values])
-        if 0 in x_values or 0 in y_values: return 0,0
+        if 0 in x_values or 0 in y_values: None
         return x_values[mid], y_values[mid]
 
     def get_coords(self):
+        med_coords = self.get_med_coords()
+        if not med_coords: return None
         if self.transpose:
-            raw_y, raw_x = self.get_med_coords() 
+            raw_y, raw_x = med_coords
         else:
-            raw_x, raw_y = self.get_med_coords() 
+            raw_x, raw_y = med_coords
 
         if raw_x != 0 and raw_y != 0:
             x = ((raw_x - self.cal_x0) * self.screen_width) // (self.cal_x1 - self.cal_x0)
             y = ((raw_y - self.cal_y0) * self.screen_height) // (self.cal_y1 - self.cal_y0)
             # print('(%d, %d) ==> (%d, %d)' % (raw_x, raw_y, x, y))
             return x,y
-        else: return -1,-1
+        else: return None
 
     def get_pressure(self, factor):
         z1, z2, x = self.xpt_cmds([self.CMD_Z1_READ, self.CMD_Z2_READ, self.CMD_X_READ])
@@ -149,21 +143,11 @@ class xpt2046:
         return ( (x*factor)/4096 )*( z2/z1 -1 )
 
     def read(self, indev_drv, data):
-        if self.touched:
-            data.point.x ,data.point.y = self.get_coords()
+        coords = self.get_coords()
+        if coords:
+            data.point.x ,data.point.y = coords
             data.state = lv.INDEV_STATE.PR
-        else:
-            data.state = lv.INDEV_STATE.REL
+            return False
+        data.state = lv.INDEV_STATE.REL
         return False
 
-'''
-device = xpt2046()
-
-def handle_irq(p):
-    x,y = device.get_med_coords()
-    if x != 0 and y != 0:
-        print('%d, %d' % (x,y))
-
-irq_pin = Pin(26, Pin.IN)
-irq_pin.irq(trigger=Pin.IRQ_FALLING, handler=handle_irq)
-'''
