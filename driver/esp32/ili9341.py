@@ -146,21 +146,25 @@ class ili9341:
             devcfg.pre_cb = esp.spi_pre_cb_isr
             devcfg.post_cb = esp.spi_post_cb_isr
 
-	esp.gpio_pad_select_gpio(self.miso)
-        esp.gpio_pad_select_gpio(self.mosi)
-        esp.gpio_pad_select_gpio(self.clk)
-
-        esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
-        esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
-        esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
-        esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
-
         esp.gpio_pad_select_gpio(self.cs)
 
-	# Initialize the SPI bus
+	# Initialize the SPI bus, if needed.
 
-	ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
-        if ret != 0: raise RuntimeError("Failed initializing SPI bus")
+        if buscfg.miso_io_num >= 0 and \
+           buscfg.mosi_io_num >= 0 and \
+           buscfg.sclk_io_num >= 0:
+
+                esp.gpio_pad_select_gpio(self.miso)
+                esp.gpio_pad_select_gpio(self.mosi)
+                esp.gpio_pad_select_gpio(self.clk)
+
+                esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
+                esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
+                esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
+                esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
+
+                ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
+                if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
 	# Attach the LCD to the SPI bus
 

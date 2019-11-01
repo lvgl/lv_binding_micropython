@@ -134,12 +134,15 @@ Starting from version 6.0, lvgl supports setting the display settings (width, le
 Currently supported drivers for Micropyton are 
 
 - SDL unix drivers (display and mouse)
-- ILI9341 driver for ESP32.  
+- Linux Frame Buffer (`/dev/fb0`)
+- ILI9341 driver for ESP32
+- XPT2046 driver for ESP32
 - Raw Resistive Touch for ESP32 (ADC connected to screen directly, no touch IC)
 
 Driver code is under `/driver` directory.
 
 Drivers can also be implemented in pure Micropython, by providing callbacks (`disp_drv.flush_cb`, `indev_drv.read_cb` etc.)
+Currently the supported ILI9341 and XPT2046 are pure micropython drivers
 
 ### Adding Micropython Bindings to a project
 
@@ -153,7 +156,6 @@ Here is a procedure for adding lvgl to an existing Micropython project. (The exa
 - Add lvgl roots to gc roots. [An example](https://github.com/littlevgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/ports/unix/mpconfigport.h#L317-L318). 
 - ~Configure lvgl to use *Garbage Collection* by setting several `LV_MEM_CUSTOM_*` and `LV_GC_*` macros [example](https://github.com/littlevgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/lib/lv_conf.h#L28)~ lv_conf.h was moved to lv_binding_micropython git module.
 - Something I forgot? Please let me know.
-
 
 ### gen_mpy.py syntax
 ```
@@ -232,29 +234,30 @@ lv.indev_drv_register(indev_drv)
 ```
 In this example, SDL display and input drivers are registered on a unix port of Micropython.
 
-Here is an alternative example for ESP32 + ILI9341 drivers:
+Here is an alternative example for ESP32 ILI9341 + XPT2046 drivers:
 
 ```python
-# Import ESP32 driver 
-
+import lvgl as lv
 import lvesp32
 
-#Import ILI9341, initialize it and register it with LittlevGL
+# Import ILI9341 driver and initialized it
 
-import ILI9341 as ili
-d = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
-d.init()
-disp_buf1 = lv.disp_buf_t()
-buf1_1 = bytes(480*10)
-lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
-disp_drv = lv.disp_drv_t()
-lv.disp_drv_init(disp_drv)
-disp_drv.buffer = disp_buf1
-disp_drv.flush_cb = d.flus
-disp_drv.hor_res = 480
-disp_drv.ver_res = 320
-lv.disp_drv_register(disp_drv)
+from ili9341 import ili9341
+disp = ili9341()
+
+# Import XPT2046 driver and initalize it
+
+from xpt2046 import xpt2046
+touch = xpt2046()
 ```
+
+By default, both ILI9341 and XPT2046 are initialized on the same SPI bus with the following parameters:
+
+- ILI9341: `miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True`
+- XPT2046: `cs=25, spihost=esp.HSPI_HOST, mhz=5, max_cmds=16, cal_x0 = 3783, cal_y0 = 3948, cal_x1 = 242, cal_y1 = 423, transpose = True, samples = 3`
+
+You can change any of these parameters on ili9341/xpt2046 constructor.
+You can also initalize them on different SPI buses if you want, by providing miso/mosi/clk parameters. Set them to -1 to use existing (initialized) spihost bus.
 
 ### Creating a screen with a button and a label
 ```python
@@ -312,8 +315,4 @@ print('\n'.join(dir(lvgl)))
 print('\n'.join(dir(lvgl.btn)))
 ...
 ```
-
-
-
-
 

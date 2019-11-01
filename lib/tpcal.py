@@ -17,17 +17,16 @@ VRES = lv.disp_get_ver_res(lv.disp_t.cast(None))
 import rtch
 touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33, cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
 touch.init()
-'''
-
-# Register xpt touch driver
-import xpt2046
-touch = xpt2046.xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
-    
 indev_drv = lv.indev_drv_t()
 lv.indev_drv_init(indev_drv) 
 indev_drv.type = lv.INDEV_TYPE.POINTER;
 indev_drv.read_cb = touch.read;
 lv.indev_drv_register(indev_drv);
+'''
+
+# Register xpt touch driver
+import xpt2046a as xpt2046
+touch = xpt2046.xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
 
 # Point class, with both display and touch coordiantes
 
@@ -50,7 +49,7 @@ class Tpcal():
 
     CIRCLE_SIZE = const(20)
     CIRCLE_OFFSET = const(20)
-    TP_MAX_VALUE = const((1 << 12) - 1)
+    TP_MAX_VALUE = const(10000)
 
     LV_COORD_MAX = const((1 << (8 * 2 - 1)) - 1000)
     LV_RADIUS_CIRCLE = const(LV_COORD_MAX) # TODO use lv.RADIUS_CIRCLE constant when it's available!
