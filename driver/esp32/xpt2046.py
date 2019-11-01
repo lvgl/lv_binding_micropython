@@ -29,6 +29,9 @@ class xpt2046:
         self.cal_x1 = cal_x1
         self.cal_y1 = cal_y1
         self.transpose = transpose
+
+        self.touch_count = 0
+        self.touch_cycles = 0
         
         self.spi_init()
         
@@ -142,12 +145,28 @@ class xpt2046:
         if z1 == 0: return -1
         return ( (x*factor)/4096 )*( z2/z1 -1 )
 
+    start_time_ptr = esp.C_Pointer()
+    end_time_ptr = esp.C_Pointer()
+    cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
+
     def read(self, indev_drv, data):
+
+        esp.get_ccount(self.start_time_ptr)
         coords = self.get_coords()
+        esp.get_ccount(self.end_time_ptr)
+
+        if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
+            self.touch_cycles +=  self.end_time_ptr.int_val - self.start_time_ptr.int_val
+            self.touch_count += 1
+
         if coords:
             data.point.x ,data.point.y = coords
             data.state = lv.INDEV_STATE.PR
             return False
         data.state = lv.INDEV_STATE.REL
         return False
+
+    def stat(self):
+        return self.touch_cycles / (self.touch_count * self.cycles_in_ms) 
+
 
