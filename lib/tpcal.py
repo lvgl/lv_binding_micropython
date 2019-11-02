@@ -25,7 +25,7 @@ lv.indev_drv_register(indev_drv);
 '''
 
 # Register xpt touch driver
-import xpt2046a as xpt2046
+import xpt2046 as xpt2046
 touch = xpt2046.xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
 
 # Point class, with both display and touch coordiantes
