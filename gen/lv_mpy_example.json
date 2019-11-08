@@ -230,15 +230,15 @@
             "args": [
                 {
                     "type": "int", 
-                    "name": "r"
+                    "name": "r8"
                 }, 
                 {
                     "type": "int", 
-                    "name": "g"
+                    "name": "g8"
                 }, 
                 {
                     "type": "int", 
-                    "name": "b"
+                    "name": "b8"
                 }
             ], 
             "type": "function"
@@ -462,6 +462,32 @@
             ], 
             "type": "function"
         }, 
+        "draw_polygon": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "point_t", 
+                    "name": "points"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "point_cnt"
+                }, 
+                {
+                    "type": "area_t", 
+                    "name": "mask"
+                }, 
+                {
+                    "type": "style_t", 
+                    "name": "style"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "opa_scale"
+                }
+            ], 
+            "type": "function"
+        }, 
         "style_anim_init": {
             "return_type": "NoneType", 
             "args": [
@@ -472,20 +498,28 @@
             ], 
             "type": "function"
         }, 
-        "draw_aa_get_opa": {
+        "txt_get_width": {
             "return_value": "int", 
             "args": [
                 {
-                    "type": "int", 
-                    "name": "seg"
+                    "type": "str", 
+                    "name": "txt"
                 }, 
                 {
                     "type": "int", 
-                    "name": "px_id"
+                    "name": "length"
+                }, 
+                {
+                    "type": "font_t", 
+                    "name": "font"
                 }, 
                 {
                     "type": "int", 
-                    "name": "base_opa"
+                    "name": "letter_space"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "flag"
                 }
             ], 
             "type": "function"
@@ -956,38 +990,26 @@
             "args": [], 
             "type": "function"
         }, 
-        "indev_reset_long_press": {
-            "return_type": "NoneType", 
+        "color_to_hsv": {
+            "return_value": "color_hsv_t", 
             "args": [
                 {
-                    "type": "indev_t", 
-                    "name": "indev"
+                    "type": "color32_t", 
+                    "name": "color"
                 }
             ], 
             "type": "function"
         }, 
-        "txt_get_width": {
-            "return_value": "int", 
+        "area_increment": {
+            "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "str", 
-                    "name": "txt"
+                    "type": "area_t", 
+                    "name": "a_p"
                 }, 
                 {
                     "type": "int", 
-                    "name": "length"
-                }, 
-                {
-                    "type": "font_t", 
-                    "name": "font"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "letter_space"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "flag"
+                    "name": "amount"
                 }
             ], 
             "type": "function"
@@ -1571,8 +1593,8 @@
             "return_value": "bool", 
             "args": [
                 {
-                    "type": "pointer", 
-                    "name": "str"
+                    "type": "style_t", 
+                    "name": "style"
                 }
             ], 
             "type": "function"
@@ -2037,12 +2059,8 @@
                     "name": "offset"
                 }, 
                 {
-                    "type": "int", 
-                    "name": "sel_start"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "sel_end"
+                    "type": "draw_label_txt_sel_t", 
+                    "name": "sel"
                 }, 
                 {
                     "type": "draw_label_hint_t", 
@@ -2370,6 +2388,16 @@
             "args": [], 
             "type": "function"
         }, 
+        "indev_reset_long_press": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "indev_t", 
+                    "name": "indev"
+                }
+            ], 
+            "type": "function"
+        }, 
         "event_get_data": {
             "return_value": "pointer", 
             "args": [], 
@@ -2580,28 +2608,20 @@
             ], 
             "type": "function"
         }, 
-        "draw_img": {
-            "return_type": "NoneType", 
+        "draw_aa_get_opa": {
+            "return_value": "int", 
             "args": [
                 {
-                    "type": "area_t", 
-                    "name": "coords"
-                }, 
-                {
-                    "type": "area_t", 
-                    "name": "mask"
-                }, 
-                {
-                    "type": "pointer", 
-                    "name": "src"
-                }, 
-                {
-                    "type": "style_t", 
-                    "name": "style"
+                    "type": "int", 
+                    "name": "seg"
                 }, 
                 {
                     "type": "int", 
-                    "name": "opa_scale"
+                    "name": "px_id"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "base_opa"
                 }
             ], 
             "type": "function"
@@ -2794,28 +2814,24 @@
             ], 
             "type": "function"
         }, 
-        "draw_polygon": {
+        "group_set_focus_cb": {
             "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "point_t", 
-                    "name": "points"
+                    "type": "group_t", 
+                    "name": "group"
                 }, 
                 {
-                    "type": "int", 
-                    "name": "point_cnt"
-                }, 
-                {
-                    "type": "area_t", 
-                    "name": "mask"
-                }, 
-                {
-                    "type": "style_t", 
-                    "name": "style"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "opa_scale"
+                    "function": {
+                        "return_type": "NoneType", 
+                        "args": [
+                            {
+                                "type": "group_t"
+                            }
+                        ]
+                    }, 
+                    "type": "callback", 
+                    "name": "focus_cb"
                 }
             ], 
             "type": "function"
@@ -2849,6 +2865,16 @@
                 {
                     "type": "point_t", 
                     "name": "point"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "sqrt": {
+            "return_value": "int", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "num"
                 }
             ], 
             "type": "function"
@@ -2903,6 +2929,32 @@
                 {
                     "type": "str", 
                     "name": "fn"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "draw_img": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "area_t", 
+                    "name": "coords"
+                }, 
+                {
+                    "type": "area_t", 
+                    "name": "mask"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "src"
+                }, 
+                {
+                    "type": "style_t", 
+                    "name": "style"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "opa_scale"
                 }
             ], 
             "type": "function"
@@ -3393,24 +3445,16 @@
             ], 
             "type": "function"
         }, 
-        "group_set_focus_cb": {
-            "return_type": "NoneType", 
+        "atan2": {
+            "return_value": "int", 
             "args": [
                 {
-                    "type": "group_t", 
-                    "name": "group"
+                    "type": "int", 
+                    "name": "x"
                 }, 
                 {
-                    "function": {
-                        "return_type": "NoneType", 
-                        "args": [
-                            {
-                                "type": "group_t"
-                            }
-                        ]
-                    }, 
-                    "type": "callback", 
-                    "name": "focus_cb"
+                    "type": "int", 
+                    "name": "y"
                 }
             ], 
             "type": "function"
@@ -42099,6 +42143,1341 @@
                 }
             }
         }, 
+        "cpicker": {
+            "members": {
+                "invalidate": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_opa_scale_enable": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_protect": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_signal_cb": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "function": {
+                                "return_type": "int", 
+                                "args": [
+                                    {
+                                        "type": "object", 
+                                        "name": "obj"
+                                    }, 
+                                    {
+                                        "type": "int", 
+                                        "name": "sign"
+                                    }, 
+                                    {
+                                        "type": "pointer", 
+                                        "name": "param"
+                                    }
+                                ]
+                            }, 
+                            "type": "callback", 
+                            "name": "signal_cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_y": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_top": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag_throw": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_event_cb": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "function": {
+                                "return_type": "NoneType", 
+                                "args": [
+                                    {
+                                        "type": "object", 
+                                        "name": "obj"
+                                    }, 
+                                    {
+                                        "type": "int", 
+                                        "name": "event"
+                                    }
+                                ]
+                            }, 
+                            "type": "callback", 
+                            "name": "event_cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_type": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_size": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "w"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "h"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_height_fit": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_x": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_preview": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_draw_pad": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_hue": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "hue"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_child": {
+                    "return_value": "object", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "child"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_x": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "x"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_y": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "y"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_disp": {
+                    "return_value": "disp_t", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_design_cb": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "function": {
+                                "return_type": "bool", 
+                                "args": [
+                                    {
+                                        "type": "object", 
+                                        "name": "obj"
+                                    }, 
+                                    {
+                                        "type": "area_t", 
+                                        "name": "mask_p"
+                                    }, 
+                                    {
+                                        "type": "int", 
+                                        "name": "mode"
+                                    }
+                                ]
+                            }, 
+                            "type": "callback", 
+                            "name": "design_cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_screen": {
+                    "return_value": "object", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "handle_get_type_signal": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "obj_type_t", 
+                            "name": "buf"
+                        }, 
+                        {
+                            "type": "str", 
+                            "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_parent": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "parent"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_inner_coords": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "area_t", 
+                            "name": "coords_p"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_click": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_style": {
+                    "return_value": "style_t", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_click": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_parent": {
+                    "return_value": "object", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_event_cb": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_opa_scale_enable": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_child_back": {
+                    "return_value": "object", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "child"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "refresh_style": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_parent_event": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_top": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_value": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "val"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_indic_colored": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag_throw": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "count_children_recursive": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_saturation": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "align": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "base"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "align"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "x_mod"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "is_focused": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_top": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_user_data": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "pointer", 
+                            "name": "data"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_hsv": {
+                    "return_value": "color_hsv_t", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag_parent": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_width_fit": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_hsv": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "color_hsv_t", 
+                            "name": "hsv"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_color": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "color32_t", 
+                            "name": "color"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_design_cb": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "TYPE": {
+                    "type": "enum_type", 
+                    "members": {
+                        "DISC": {
+                            "type": "enum_member"
+                        }, 
+                        "RECT": {
+                            "type": "enum_member"
+                        }
+                    }
+                }, 
+                "del_async": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "clear_protect": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "COLOR_MODE": {
+                    "type": "enum_type", 
+                    "members": {
+                        "HUE": {
+                            "type": "enum_member"
+                        }, 
+                        "SATURATION": {
+                            "type": "enum_member"
+                        }, 
+                        "VALUE": {
+                            "type": "enum_member"
+                        }
+                    }
+                }, 
+                "get_user_data": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_coords": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "area_t", 
+                            "name": "cords_p"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_pos": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "x"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "y"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "move_foreground": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_color_mode": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "mode"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "allocate_ext_attr": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "ext_size"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_ext_click_area": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "left"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "right"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "top"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "bottom"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_protect": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_height": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "h"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "drag_dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_hidden": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_hidden": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_group": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_value": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_height": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "realign": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_right": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_auto_realign": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_bottom": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_signal_cb": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_color": {
+                    "return_value": "color32_t", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "STYLE": {
+                    "type": "enum_type", 
+                    "members": {
+                        "INDICATOR": {
+                            "type": "enum_member"
+                        }, 
+                        "MAIN": {
+                            "type": "enum_member"
+                        }
+                    }
+                }, 
+                "set_style": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "style_t", 
+                            "name": "style"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_indic_colored": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "align_origo": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "base"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "align"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "x_mod"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "y_mod"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_color_mode_fixed": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_user_data_ptr": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_parent_event": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_type": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "type"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_drag": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_click_pad_left": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_saturation": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "saturation"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_opa_scale": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_drag_parent": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_color_mode_fixed": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "fixed"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_auto_realign": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_width": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "w"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_opa_scale": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "opa_scale"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "report_style_mod": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "style_t", 
+                            "name": "style"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "count_children": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_color_mode": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_preview": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }, 
+                        {
+                            "type": "bool", 
+                            "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_hue": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "cpicker"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_ext_attr": {
+                    "return_value": "pointer", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "is_protected": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "move_background": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "clean": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_width": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "refresh_ext_draw_pad": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "delete": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }
+            }
+        }, 
         "mbox": {
             "members": {
                 "invalidate": {
@@ -45723,6 +47102,22 @@
                     "type": "enum_member"
                 }
             }
+        }, 
+        "FONT_SUBPX": {
+            "members": {
+                "HOR": {
+                    "type": "enum_member"
+                }, 
+                "NONE": {
+                    "type": "enum_member"
+                }, 
+                "VER": {
+                    "type": "enum_member"
+                }, 
+                "BOTH": {
+                    "type": "enum_member"
+                }
+            }
         }
     }, 
     "structs": [
@@ -45754,6 +47149,7 @@
         "img_dsc_t", 
         "img_decoder_t", 
         "img_decoder_dsc_t", 
+        "draw_label_txt_sel_t", 
         "draw_label_hint_t", 
         "chart_series_t", 
         "calendar_date_t", 
