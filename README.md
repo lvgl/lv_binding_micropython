@@ -70,6 +70,14 @@ The callback convetion assumes the following:
 
 Another option is that the callback function pointer is just a field of a struct, in that case we expect the same struct to contain `user_data` field as well.
 
+Another option is:
+- A parameter called `void * user_data` is provided to the registration function as the last argument.
+- The callback itself recieves `void *` as the last argument
+
+In this case, the user should provide either `None` or a dict as the `user_data` argument of the registration function.
+The callback will recieve a Blob which can be casted to the dict in the last argument.
+(See `async_call` example below)
+
 As long as the convention above is followed, the lvgl Micropython binding script would automatically set and use `user_data` when callbacks are set and used.  
 
 From the user perspective, any python callable object (such as python regular function, class function, lambda etc.) can be user as an lvgl callbacks. For example:
@@ -307,6 +315,15 @@ In this example `lv.ALIGN` is an enum and `lv.ALIGN.CENTER` is an enum member (a
 ```python
 for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
     btn.set_event_cb(lambda obj=None, event=-1, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
+```
+
+Using callback with `user_data` argument:
+
+```python
+def cb(user_data):
+    print(user_data.cast()['value'])
+
+lv.async_call(cb, {'value':42})
 ```
 
 #### Listing available functions/memebers/constants etc.

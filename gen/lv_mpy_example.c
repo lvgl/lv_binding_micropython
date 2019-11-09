@@ -23520,11 +23520,19 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_create_basic_obj, 0, mp_lv_task
  
 
 /*
- * Function NOT generated:
- * Callback argument 'lv_task_cb_t task_xcb' cannot be the first argument! We assume the first argument contains the user_data
- * lv_task_cb_t task_xcb
+ * Callback function task_xcb
+ * void lv_task_cb_t(struct _lv_task_t *)
  */
-    
+
+STATIC void task_xcb_callback(lv_task_t * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = mp_read_ptr_lv_task_t((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_task_xcb)) , 1, 0, mp_args);
+    return;
+}
+
 
 /*
  * lvgl extension definition for:
@@ -23533,10 +23541,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_create_basic_obj, 0, mp_lv_task
  
 STATIC mp_obj_t mp_lv_task_create(size_t mp_n_args, const mp_obj_t *mp_args)
 {
-    lv_task_cb_t task_xcb = mp_to_ptr(mp_args[0]);
+    void *user_data = mp_to_ptr(mp_args[3]);
     uint32_t period = (uint32_t)mp_obj_get_int(mp_args[1]);
     lv_task_prio_t prio = (uint8_t)mp_obj_get_int(mp_args[2]);
-    void *user_data = mp_to_ptr(mp_args[3]);
+    void *task_xcb = mp_lv_callback(mp_args[0], &task_xcb_callback, MP_QSTR_task_xcb, &user_data);
     lv_task_t * res = lv_task_create(task_xcb, period, prio, user_data);
     return mp_read_ptr_lv_task_t((void*)res);
 }
@@ -23777,11 +23785,19 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sqrt_obj, 1, mp_lv_sqrt, lv_sqrt);
  
 
 /*
- * Function NOT generated:
- * Callback argument 'lv_async_cb_t async_xcb' cannot be the first argument! We assume the first argument contains the user_data
- * lv_async_cb_t async_xcb
+ * Callback function async_xcb
+ * void lv_async_cb_t(void *)
  */
-    
+
+STATIC void async_xcb_callback(void * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = ptr_to_mp((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_async_xcb)) , 1, 0, mp_args);
+    return;
+}
+
 
 /*
  * lvgl extension definition for:
@@ -23790,8 +23806,8 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sqrt_obj, 1, mp_lv_sqrt, lv_sqrt);
  
 STATIC mp_obj_t mp_lv_async_call(size_t mp_n_args, const mp_obj_t *mp_args)
 {
-    lv_async_cb_t async_xcb = mp_to_ptr(mp_args[0]);
     void *user_data = mp_to_ptr(mp_args[1]);
+    void *async_xcb = mp_lv_callback(mp_args[0], &async_xcb_callback, MP_QSTR_async_xcb, &user_data);
     lv_res_t res = lv_async_call(async_xcb, user_data);
     return mp_obj_new_int_from_uint(res);
 }

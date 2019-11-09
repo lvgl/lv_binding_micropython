@@ -1431,13 +1431,19 @@ def gen_callback_func(func, func_name = None):
         full_user_data = 'MP_STATE_PORT(mp_lv_user_data)'
     else:
         user_data = get_user_data(func, func_name)
-        full_user_data = 'arg0->%s' % user_data
-        # if user_data: print('/* --> callback: %s user_data found!! %s */' %(gen.visit(func), user_data))
-        # else: print('/* --> callback: user_data NOT FOUND !! %s */' % (gen.visit(func)))
-        if not user_data:
+        if user_data:
+            full_user_data = 'arg0->%s' % user_data
+            if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
+                raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
+        elif len(args) > 0 and gen.visit(args[-1]) == 'void *':
+            full_user_data = 'arg%d' % (len(args) - 1)
+        else:
+            full_user_data = None
+
+        # if full_user_data: print('/* --> callback: %s user_data found!! %s */' %(gen.visit(func), full_user_data))
+        # else: print('/* --> callback: full_user_data NOT FOUND !! %s */' % (gen.visit(func)))
+        if not full_user_data:
             raise MissingConversionException("Callback: user_data NOT FOUND! %s" % (gen.visit(func)))
-        if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
-            raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
     return_type = get_type(func.type, remove_quals = False)
     if return_type != 'void' and not return_type in mp_to_lv:
         try_generate_type(func.type)
@@ -1477,39 +1483,47 @@ STATIC {return_type} {func_name}_callback({func_args})
 
 generated_funcs = collections.OrderedDict()
 
-def build_mp_func_arg(arg, index, func, obj_name, first_arg):
-    # print('/* --> ARG: %s */' % arg)
-    # print('/* --> FIRST ARG: %s */' % first_arg)
+def build_mp_func_arg(arg, index, func, obj_name):
     fixed_arg = copy.deepcopy(arg)
     convert_array_to_ptr(fixed_arg)
     callback = decl_to_callback(arg)
+    args = func.type.args.params if func.type.args else []
+    # print('/* --> ARG: %s */' % arg)
+    # print('/* --> FIRST ARG: %s */' % first_arg)
     if callback:
+        # Callback is supported in two modes:
+        # 1) last argument is a void* user_data which is passed to callback
+        # 2) first argument is a struct with user_data field, which is passed to callback
+
         func_name, arg_type  = callback
-        # print('/* --> ARG TYPE: %s */' % arg_type)
-        struct_name = get_name(first_arg.type.type.type if hasattr(first_arg.type.type,'type') else first_arg.type.type)
-        callback_name = '&%s_%s_callback' % (struct_name, func_name)
+        # print('/* --> callback %s ARG TYPE: %s */' % (func_name, arg_type))
+
         try:
-            if is_global_callback(arg_type):
-                full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
+            if len(args) > 0 and gen.visit(args[-1].type) == 'void *' and args[-1].name == 'user_data':
+                callback_name = '%s' % (func_name)
+                full_user_data = '&user_data'
             else:
-                if index == 0:
-                    raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
+                first_arg = args[0]
+                struct_name = get_name(first_arg.type.type.type if hasattr(first_arg.type.type,'type') else first_arg.type.type)
+                callback_name = '%s_%s' % (struct_name, func_name)
                 user_data = get_user_data(arg_type, func_name)
-                if not user_data:
-                    raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
-                full_user_data = '&%s->%s' % (first_arg.name, user_data)
+                if is_global_callback(arg_type):
+                    full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
+                else:
+                    full_user_data = '&%s->%s' % (first_arg.name, user_data) if user_data else None
+                    if index == 0:
+                       raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
+                    if not full_user_data:
+                        raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
             # eprint("--> callback_metadata= %s_%s" % (struct_name, func_name))
-            gen_callback_func(arg_type, '%s_%s' % (struct_name, func_name))
-            arg_metadata = {'type': 'callback', 'function': callback_metadata['%s_%s' % (struct_name, func_name)]}
+            gen_callback_func(arg_type, '%s' % callback_name)
+            arg_metadata = {'type': 'callback', 'function': callback_metadata[callback_name]}
             if arg.name: arg_metadata['name'] = arg.name
             func_metadata[func.name]['args'].append(arg_metadata)
-            return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], {callback_name}, MP_QSTR_{struct_name}_{func_name}, {full_user_data});'.format(
+            return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], &{callback_name}_callback, MP_QSTR_{callback_name}, {full_user_data});'.format(
                 i = index,
                 arg_name = fixed_arg.name,
                 callback_name = callback_name,
-                struct_name = struct_name,
-                func_name = func_name,
-                obj = first_arg.name,
                 full_user_data = full_user_data)
         except MissingConversionException as exp:
             gen_func_error(arg, exp)
@@ -1530,7 +1544,7 @@ def build_mp_func_arg(arg, index, func, obj_name, first_arg):
             i = index) 
 
 def gen_mp_func(func, obj_name):
-    # eprint("/*\n{ast}\n*/".format(ast=func))
+    # print('/* gen_mp_func: %s : %s */' % (obj_name, func))
     if func.name in generated_funcs:
         print("""
 /*
@@ -1540,6 +1554,17 @@ def gen_mp_func(func, obj_name):
         return
     func_metadata[func.name] = {'type': 'function', 'args':[]}
     args = func.type.args.params if func.type.args else []
+    enumerated_args = enumerate(args)
+
+    # user_data argument must be handled first, if it exists
+    try:
+        i = [(arg.name if hasattr(arg, 'name') else None) for arg in args].index('user_data')
+        if i>0:
+            enumerated_args = [(i, arg) for i, arg in enumerated_args] # convert enumerate to list
+            enumerated_args[0], enumerated_args[i] = enumerated_args[i], enumerated_args[0]
+    except ValueError:
+        pass
+
     # Handle the case of a single function argument which is "void"
     if len(args)==1 and get_type(args[0].type, remove_quals = True) == "void":
         param_count = 0
@@ -1583,7 +1608,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_{func}_obj, {count}, mp_{func}, {func})
         func=func.name, 
         print_func=gen.visit(func),
         count=param_count, 
-        build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name, args[0]) for i,arg in enumerate(args) if hasattr(arg, 'name') and arg.name]), 
+        build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerated_args if hasattr(arg, 'name') and arg.name]), 
         send_args=", ".join(arg.name for arg in args if hasattr(arg, 'name') and arg.name),
         build_result=build_result,
         build_return_value=build_return_value))

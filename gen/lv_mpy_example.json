@@ -1054,11 +1054,19 @@
             "args": [
                 {
                     "type": "pointer", 
-                    "name": "async_xcb"
+                    "name": "user_data"
                 }, 
                 {
-                    "type": "pointer", 
-                    "name": "user_data"
+                    "function": {
+                        "return_type": "NoneType", 
+                        "args": [
+                            {
+                                "type": "pointer"
+                            }
+                        ]
+                    }, 
+                    "type": "callback", 
+                    "name": "async_xcb"
                 }
             ], 
             "type": "function"
@@ -3049,7 +3057,7 @@
             "args": [
                 {
                     "type": "pointer", 
-                    "name": "task_xcb"
+                    "name": "user_data"
                 }, 
                 {
                     "type": "int", 
@@ -3060,8 +3068,16 @@
                     "name": "prio"
                 }, 
                 {
-                    "type": "pointer", 
-                    "name": "user_data"
+                    "function": {
+                        "return_type": "NoneType", 
+                        "args": [
+                            {
+                                "type": "task_t"
+                            }
+                        ]
+                    }, 
+                    "type": "callback", 
+                    "name": "task_xcb"
                 }
             ], 
             "type": "function"
