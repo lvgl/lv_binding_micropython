@@ -103,7 +103,13 @@ void spi_post_cb_isr(spi_transaction_t *trans);
 
 #define EXPORT_CONST_INT(int_value) enum {ENUM_##int_value = int_value}
 
-EXPORT_CONST_INT(portMAX_DELAY);
+enum {
+    ENUM_portMAX_DELAY = portMAX_DELAY
+};
+
+enum {
+    ENUM_I2S_PIN_NO_CHANGE = I2S_PIN_NO_CHANGE
+};
 
 enum {
     ENUM_SPI_DEVICE_TXBIT_LSBFIRST = SPI_DEVICE_TXBIT_LSBFIRST,
