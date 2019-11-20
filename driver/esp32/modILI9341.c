@@ -98,7 +98,7 @@ STATIC mp_obj_t ILI9341_make_new(const mp_obj_type_t *type,
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_mhz,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=40}},
         { MP_QSTR_spihost,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=HSPI_HOST}},
-        { MP_QSTR_miso,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},             
+        { MP_QSTR_miso,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
         { MP_QSTR_mosi,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
         { MP_QSTR_clk,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
         { MP_QSTR_cs,MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int=-1}},
@@ -130,7 +130,7 @@ STATIC const mp_rom_map_elem_t ILI9341_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_ILI9341) },
         { MP_ROM_QSTR(MP_QSTR_display), (mp_obj_t)&ILI9341_type},
 };
-         
+
 
 STATIC MP_DEFINE_CONST_DICT (
     mp_module_ILI9341_globals,
@@ -294,7 +294,18 @@ STATIC mp_obj_t mp_init_ILI9341(mp_obj_t self_in)
 
 	///Enable backlight
 	//printf("Enable backlight.\n");
-	if (self->backlight != -1) gpio_set_level(self->backlight, 1);       
+	if (self->backlight != -1) gpio_set_level(self->backlight, 1);
+
+#ifdef M5STACK_ILI9341
+	// this same command also sets rotation (portrait/landscape) and inverts colors.
+	// https://gist.github.com/motters/38a26a66020f674b6389063932048e4c#file-ili9844_defines-h-L24
+	ili9441_send_cmd(self, 0x36);
+#define MADCTL_ML      0x10
+#define TFT_RGB_BGR    0x08
+	uint8_t data[] = {(MADCTL_ML | TFT_RGB_BGR)};
+	ili9341_send_data(self, &data, 1);
+#endif
+
     return mp_const_none;
 }
 
