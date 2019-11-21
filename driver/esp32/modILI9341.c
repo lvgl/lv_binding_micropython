@@ -299,11 +299,16 @@ STATIC mp_obj_t mp_init_ILI9341(mp_obj_t self_in)
 #ifdef M5STACK_ILI9341
 	// this same command also sets rotation (portrait/landscape) and inverts colors.
 	// https://gist.github.com/motters/38a26a66020f674b6389063932048e4c#file-ili9844_defines-h-L24
+	//
+	// See also: http://www.newhavendisplay.com/app_notes/ILI9341.pdf
 	ili9441_send_cmd(self, 0x36);
 #define MADCTL_ML      0x10
 #define TFT_RGB_BGR    0x08
 	uint8_t data[] = {(MADCTL_ML | TFT_RGB_BGR)};
 	ili9341_send_data(self, &data, 1);
+#define DINVON         0x21
+	// Turn on display inversion.
+	ili9441_send_cmd(self, DINVON);
 #endif
 
     return mp_const_none;
