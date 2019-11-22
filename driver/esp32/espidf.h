@@ -103,6 +103,15 @@ void spi_post_cb_isr(spi_transaction_t *trans);
 
 #define EXPORT_CONST_INT(int_value) enum {ENUM_##int_value = int_value}
 
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
+// SPI HOST enum was changed to macros on v4
+enum {
+    ENUM_SPI_HOST = SPI_HOST,
+    ENUM_HSPI_HOST = HSPI_HOST,
+    ENUM_VSPI_HOST = VSPI_HOST,
+};
+#endif
+
 enum {
     ENUM_portMAX_DELAY = portMAX_DELAY
 };

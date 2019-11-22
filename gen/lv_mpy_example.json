@@ -225,6 +225,16 @@
             ], 
             "type": "function"
         }, 
+        "bidi_letter_is_neutral": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "letter"
+                }
+            ], 
+            "type": "function"
+        }, 
         "color_rgb_to_hsv": {
             "return_value": "color_hsv_t", 
             "args": [
@@ -301,16 +311,16 @@
             ], 
             "type": "function"
         }, 
-        "inv_area": {
+        "indev_set_button_points": {
             "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "disp_t", 
-                    "name": "disp"
+                    "type": "indev_t", 
+                    "name": "indev"
                 }, 
                 {
-                    "type": "area_t", 
-                    "name": "area_p"
+                    "type": "point_t", 
+                    "name": "points"
                 }
             ], 
             "type": "function"
@@ -588,16 +598,32 @@
             ], 
             "type": "function"
         }, 
-        "indev_set_button_points": {
+        "draw_aa_hor_seg": {
             "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "indev_t", 
-                    "name": "indev"
+                    "type": "int", 
+                    "name": "x"
                 }, 
                 {
-                    "type": "point_t", 
-                    "name": "points"
+                    "type": "int", 
+                    "name": "y"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "length"
+                }, 
+                {
+                    "type": "area_t", 
+                    "name": "mask"
+                }, 
+                {
+                    "type": "color32_t", 
+                    "name": "color"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "opa"
                 }
             ], 
             "type": "function"
@@ -679,6 +705,24 @@
             ], 
             "type": "function"
         }, 
+        "fs_free_space": {
+            "return_value": "int", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "letter"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "total_p"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "free_p"
+                }
+            ], 
+            "type": "function"
+        }, 
         "fs_open": {
             "return_value": "int", 
             "args": [
@@ -732,20 +776,12 @@
             ], 
             "type": "function"
         }, 
-        "fs_free_space": {
+        "bidi_detect_base_dir": {
             "return_value": "int", 
             "args": [
                 {
-                    "type": "int", 
-                    "name": "letter"
-                }, 
-                {
-                    "type": "pointer", 
-                    "name": "total_p"
-                }, 
-                {
-                    "type": "pointer", 
-                    "name": "free_p"
+                    "type": "str", 
+                    "name": "txt"
                 }
             ], 
             "type": "function"
@@ -1205,9 +1241,14 @@
             ], 
             "type": "function"
         }, 
-        "theme_get_material": {
-            "return_value": "theme_t", 
-            "args": [], 
+        "indev_read_task": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "task_t", 
+                    "name": "task"
+                }
+            ], 
             "type": "function"
         }, 
         "indev_get_obj_act": {
@@ -1277,7 +1318,37 @@
             ], 
             "type": "function"
         }, 
-        "theme_get_mono": {
+        "bidi_get_visual_pos": {
+            "return_value": "int", 
+            "args": [
+                {
+                    "type": "str", 
+                    "name": "str_in"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "bidi_txt"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "len"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "base_dir"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "logical_pos"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "is_rtl"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "theme_get_alien": {
             "return_value": "theme_t", 
             "args": [], 
             "type": "function"
@@ -1322,6 +1393,11 @@
                     "name": "node_p"
                 }
             ], 
+            "type": "function"
+        }, 
+        "group_create": {
+            "return_value": "group_t", 
+            "args": [], 
             "type": "function"
         }, 
         "ll_move_before": {
@@ -1597,6 +1673,24 @@
             ], 
             "type": "function"
         }, 
+        "bidi_process": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "str", 
+                    "name": "str_in"
+                }, 
+                {
+                    "type": "str", 
+                    "name": "str_out"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "base_dir"
+                }
+            ], 
+            "type": "function"
+        }, 
         "debug_check_style": {
             "return_value": "bool", 
             "args": [
@@ -1711,16 +1805,16 @@
             ], 
             "type": "function"
         }, 
-        "theme_default_init": {
-            "return_value": "theme_t", 
+        "inv_area": {
+            "return_type": "NoneType", 
             "args": [
                 {
-                    "type": "int", 
-                    "name": "hue"
+                    "type": "disp_t", 
+                    "name": "disp"
                 }, 
                 {
-                    "type": "font_t", 
-                    "name": "font"
+                    "type": "area_t", 
+                    "name": "area_p"
                 }
             ], 
             "type": "function"
@@ -1772,6 +1866,11 @@
                     "name": "a"
                 }
             ], 
+            "type": "function"
+        }, 
+        "theme_get_mono": {
+            "return_value": "theme_t", 
+            "args": [], 
             "type": "function"
         }, 
         "area_copy": {
@@ -2073,6 +2172,10 @@
                 {
                     "type": "draw_label_hint_t", 
                     "name": "hint"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "bidi_dir"
                 }
             ], 
             "type": "function"
@@ -2271,14 +2374,79 @@
             ], 
             "type": "function"
         }, 
-        "theme_get_alien": {
-            "return_value": "theme_t", 
-            "args": [], 
+        "bidi_process_paragraph": {
+            "return_type": "NoneType", 
+            "args": [
+                {
+                    "type": "str", 
+                    "name": "str_in"
+                }, 
+                {
+                    "type": "str", 
+                    "name": "str_out"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "len"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "base_dir"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "pos_conv_out"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "pos_conv_len"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "bidi_letter_is_rtl": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "letter"
+                }
+            ], 
             "type": "function"
         }, 
         "theme_get_current": {
             "return_value": "theme_t", 
             "args": [], 
+            "type": "function"
+        }, 
+        "bidi_get_logical_pos": {
+            "return_value": "int", 
+            "args": [
+                {
+                    "type": "str", 
+                    "name": "str_in"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "bidi_txt"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "len"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "base_dir"
+                }, 
+                {
+                    "type": "int", 
+                    "name": "visual_pos"
+                }, 
+                {
+                    "type": "pointer", 
+                    "name": "is_rtl"
+                }
+            ], 
             "type": "function"
         }, 
         "disp_remove": {
@@ -2367,6 +2535,16 @@
             ], 
             "type": "function"
         }, 
+        "bidi_get_next_paragraph": {
+            "return_value": "int", 
+            "args": [
+                {
+                    "type": "str", 
+                    "name": "txt"
+                }
+            ], 
+            "type": "function"
+        }, 
         "fs_size": {
             "return_value": "int", 
             "args": [
@@ -2391,9 +2569,14 @@
             ], 
             "type": "function"
         }, 
-        "group_create": {
-            "return_value": "group_t", 
-            "args": [], 
+        "bidi_get_letter_dir": {
+            "return_value": "int", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "letter"
+                }
+            ], 
             "type": "function"
         }, 
         "indev_reset_long_press": {
@@ -2570,6 +2753,20 @@
             ], 
             "type": "function"
         }, 
+        "theme_default_init": {
+            "return_value": "theme_t", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "hue"
+                }, 
+                {
+                    "type": "font_t", 
+                    "name": "font"
+                }
+            ], 
+            "type": "function"
+        }, 
         "txt_ins": {
             "return_type": "NoneType", 
             "args": [
@@ -2644,6 +2841,16 @@
                 {
                     "type": "point_t", 
                     "name": "p_p"
+                }
+            ], 
+            "type": "function"
+        }, 
+        "bidi_letter_is_weak": {
+            "return_value": "bool", 
+            "args": [
+                {
+                    "type": "int", 
+                    "name": "letter"
                 }
             ], 
             "type": "function"
@@ -2901,36 +3108,6 @@
             ], 
             "type": "function"
         }, 
-        "draw_aa_hor_seg": {
-            "return_type": "NoneType", 
-            "args": [
-                {
-                    "type": "int", 
-                    "name": "x"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "y"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "length"
-                }, 
-                {
-                    "type": "area_t", 
-                    "name": "mask"
-                }, 
-                {
-                    "type": "color32_t", 
-                    "name": "color"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "opa"
-                }
-            ], 
-            "type": "function"
-        }, 
         "fs_get_ext": {
             "return_value": "str", 
             "args": [
@@ -3112,14 +3289,9 @@
             ], 
             "type": "function"
         }, 
-        "indev_read_task": {
-            "return_type": "NoneType", 
-            "args": [
-                {
-                    "type": "task_t", 
-                    "name": "task"
-                }
-            ], 
+        "theme_get_material": {
+            "return_value": "theme_t", 
+            "args": [], 
             "type": "function"
         }, 
         "indev_get_key": {
@@ -3671,6 +3843,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_fit_right": {
                     "return_value": "int", 
                     "args": [
@@ -4128,6 +4314,16 @@
                     "type": "function"
                 }, 
                 "count_children_recursive": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
                     "return_value": "int", 
                     "args": [
                         {
@@ -4870,6 +5066,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -5108,6 +5318,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -5862,7 +6082,7 @@
                             "name": "tileview"
                         }, 
                         {
-                            "type": "point_t", 
+                            "type": "mp_arr_to_lv_point_t_____", 
                             "name": "valid_pos"
                         }, 
                         {
@@ -6055,6 +6275,20 @@
                         {
                             "type": "object", 
                             "name": "cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
                         }
                     ], 
                     "type": "function"
@@ -6291,6 +6525,16 @@
                         {
                             "type": "object", 
                             "name": "cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -7223,6 +7467,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -7435,6 +7693,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -8338,6 +8606,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_scale": {
                     "return_type": "NoneType", 
                     "args": [
@@ -8622,6 +8904,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -9601,6 +9893,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -9865,6 +10171,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -10958,6 +11274,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -11017,7 +11347,7 @@
                             "name": "calendar"
                         }, 
                         {
-                            "type": "calendar_date_t", 
+                            "type": "mp_arr_to_lv_calendar_date_t_____", 
                             "name": "highlighted"
                         }, 
                         {
@@ -11240,6 +11570,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -11615,7 +11955,7 @@
                     "type": "function"
                 }, 
                 "get_month_names": {
-                    "return_value": "const mp_arr_to_char_ptrptr", 
+                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
@@ -11652,7 +11992,7 @@
                             "name": "calendar"
                         }, 
                         {
-                            "type": "mp_arr_to_char_ptrptr", 
+                            "type": "pointer", 
                             "name": "day_names"
                         }
                     ], 
@@ -11742,7 +12082,7 @@
                             "name": "calendar"
                         }, 
                         {
-                            "type": "mp_arr_to_char_ptrptr", 
+                            "type": "pointer", 
                             "name": "month_names"
                         }
                     ], 
@@ -11759,7 +12099,7 @@
                     "type": "function"
                 }, 
                 "get_day_names": {
-                    "return_value": "const mp_arr_to_char_ptrptr", 
+                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
@@ -12196,6 +12536,20 @@
                         {
                             "type": "object", 
                             "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
                         }
                     ], 
                     "type": "function"
@@ -12725,6 +13079,16 @@
                     "type": "function"
                 }, 
                 "count_children_recursive": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
                     "return_value": "int", 
                     "args": [
                         {
@@ -13584,6 +13948,20 @@
                         }
                     }
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -13712,7 +14090,7 @@
                     "type": "function"
                 }, 
                 "get_map_array": {
-                    "return_value": "const mp_arr_to_char_ptrptr", 
+                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
@@ -13836,6 +14214,16 @@
                         {
                             "type": "int", 
                             "name": "width"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -14920,6 +15308,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -15174,6 +15576,16 @@
                         {
                             "type": "object", 
                             "name": "canvas"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -16431,6 +16843,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -16842,6 +17268,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -18162,6 +18598,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -18480,6 +18930,16 @@
                     ], 
                     "type": "function"
                 }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_text_sel_end": {
                     "return_type": "NoneType", 
                     "args": [
@@ -18569,6 +19029,9 @@
                 "ALIGN": {
                     "type": "enum_type", 
                     "members": {
+                        "AUTO": {
+                            "type": "enum_member"
+                        }, 
                         "RIGHT": {
                             "type": "enum_member"
                         }, 
@@ -19586,6 +20049,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -19842,6 +20319,16 @@
                         {
                             "type": "bool", 
                             "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -20758,6 +21245,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -21020,6 +21521,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -22093,6 +22604,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -22377,6 +22902,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -23407,6 +23942,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_scale": {
                     "return_type": "NoneType", 
                     "args": [
@@ -23673,16 +24222,22 @@
                     ], 
                     "type": "function"
                 }, 
-                "set_parent": {
-                    "return_type": "NoneType", 
+                "get_base_dir": {
+                    "return_value": "int", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
-                        }, 
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_angle_offset": {
+                    "return_value": "int", 
+                    "args": [
                         {
                             "type": "object", 
-                            "name": "parent"
+                            "name": "lmeter"
                         }
                     ], 
                     "type": "function"
@@ -23903,12 +24458,16 @@
                     ], 
                     "type": "function"
                 }, 
-                "get_top": {
-                    "return_value": "bool", 
+                "set_parent": {
+                    "return_type": "NoneType", 
                     "args": [
                         {
                             "type": "object", 
                             "name": "obj"
+                        }, 
+                        {
+                            "type": "object", 
+                            "name": "parent"
                         }
                     ], 
                     "type": "function"
@@ -24005,6 +24564,20 @@
                         {
                             "type": "int", 
                             "name": "prot"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "set_angle_offset": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "lmeter"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "angle"
                         }
                     ], 
                     "type": "function"
@@ -24107,6 +24680,16 @@
                         {
                             "type": "object", 
                             "name": "lmeter"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_top": {
+                    "return_value": "bool", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -24533,6 +25116,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -24661,6 +25258,16 @@
                             }, 
                             "type": "callback", 
                             "name": "design_cb"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -26179,6 +26786,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -26364,6 +26985,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -27381,6 +28012,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -27607,6 +28252,16 @@
                         {
                             "type": "bool", 
                             "name": "en"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -28512,6 +29167,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "step_next": {
                     "return_type": "NoneType", 
                     "args": [
@@ -28766,6 +29435,16 @@
                         {
                             "type": "int", 
                             "name": "opa_scale"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -29723,6 +30402,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_margin": {
                     "return_type": "NoneType", 
                     "args": [
@@ -29998,6 +30691,16 @@
                         {
                             "type": "int", 
                             "name": "y"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -31244,6 +31947,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -31548,6 +32265,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -32475,6 +33202,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -32687,6 +33428,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -33554,6 +34305,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -33739,6 +34504,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -34687,6 +35462,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -34925,6 +35714,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -35948,6 +36747,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -36076,7 +36889,7 @@
                     "type": "function"
                 }, 
                 "get_map_array": {
-                    "return_value": "const mp_arr_to_char_ptrptr", 
+                    "return_value": "pointer", 
                     "args": [
                         {
                             "type": "object", 
@@ -36160,6 +36973,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -37168,6 +37991,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -37438,6 +38275,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -38362,6 +39209,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -38592,6 +39453,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -39799,6 +40670,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_screen": {
                     "return_value": "object", 
                     "args": [
@@ -39845,6 +40730,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -40825,6 +41720,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "get_btn_label": {
                     "return_value": "object", 
                     "args": [
@@ -41135,6 +42044,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -42232,6 +43151,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -42472,6 +43405,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -43577,6 +44520,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_top": {
                     "return_type": "NoneType", 
                     "args": [
@@ -43791,7 +44748,7 @@
                             "name": "mbox"
                         }, 
                         {
-                            "type": "mp_arr_to_char_ptrptr", 
+                            "type": "pointer", 
                             "name": "btn_mapaction"
                         }
                     ], 
@@ -43853,6 +44810,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -44812,6 +45779,20 @@
                     ], 
                     "type": "function"
                 }, 
+                "set_base_dir": {
+                    "return_type": "NoneType", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
+                        }, 
+                        {
+                            "type": "int", 
+                            "name": "dir"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
                 "set_scrl_fit2": {
                     "return_type": "NoneType", 
                     "args": [
@@ -45170,6 +46151,16 @@
                         {
                             "type": "str", 
                             "name": "name"
+                        }
+                    ], 
+                    "type": "function"
+                }, 
+                "get_base_dir": {
+                    "return_value": "int", 
+                    "args": [
+                        {
+                            "type": "object", 
+                            "name": "obj"
                         }
                     ], 
                     "type": "function"
@@ -46550,6 +47541,28 @@
                 }
             }
         }, 
+        "BIDI_DIR": {
+            "members": {
+                "LTR": {
+                    "type": "enum_member"
+                }, 
+                "NEUTRAL": {
+                    "type": "enum_member"
+                }, 
+                "RTL": {
+                    "type": "enum_member"
+                }, 
+                "AUTO": {
+                    "type": "enum_member"
+                }, 
+                "WEAK": {
+                    "type": "enum_member"
+                }, 
+                "INHERIT": {
+                    "type": "enum_member"
+                }
+            }
+        }, 
         "SB_MODE": {
             "members": {
                 "OFF": {
@@ -46898,6 +47911,9 @@
                     "type": "enum_member"
                 }, 
                 "GET_EDITABLE": {
+                    "type": "enum_member"
+                }, 
+                "BASE_DIR_CHG": {
                     "type": "enum_member"
                 }, 
                 "DEFOCUS": {
