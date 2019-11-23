@@ -3,6 +3,10 @@ import lodepng as png
 import struct
 import micropython
 
+class lodepng_error(RuntimeError):
+    def __init__(self, err):
+        super().__init__(png.error_text(err))
+
 # Parse PNG file header
 # Taken from https://github.com/shibukawa/imagesize_py/blob/ffef30c1a4715c5acf90e8945ceb77f4a2ed2d45/imagesize.py#L63-L85
 def get_png_info(decoder, src, header):
@@ -52,7 +56,7 @@ def open_png(decoder, dsc):
     png_height = png.C_Pointer()
     error = png.decode32(png_decoded, png_width, png_height, png_data, png_size);
     if error:
-        return None # LV_IMG_DECODER_OPEN_FAIL
+        raise lodepng_error(error)
     img_size = png_width.int_val * png_height.int_val * lv.color_t.SIZE
     img_data = png_decoded.ptr_val
 
