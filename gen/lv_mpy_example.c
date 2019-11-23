@@ -284,6 +284,7 @@ STATIC void *copy_buffer(const void *buffer, size_t size)
 
 STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
 {
+    if (lv_struct == NULL) return mp_const_none;
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
     *self = (mp_lv_struct_t){
         .base = {type},
@@ -411,7 +412,6 @@ STATIC const mp_obj_type_t mp_blob_type = {
 
 STATIC inline mp_obj_t ptr_to_mp(void *data)
 {
-    if (data == NULL) return mp_const_none;
     return lv_to_mp_struct(&mp_blob_type, data);
 }
 
