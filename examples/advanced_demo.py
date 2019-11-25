@@ -226,6 +226,7 @@ class AdvancedDemoApplication():
 
         # Register raw resistive touch driver
 
+        '''
         import rtch
         self.touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33)
         self.touch.init()
@@ -234,7 +235,12 @@ class AdvancedDemoApplication():
         indev_drv.type = lv.INDEV_TYPE.POINTER;
         indev_drv.read_cb = self.touch.read;
         lv.indev_drv_register(indev_drv);
+        '''
 
+        # Register xpt2046 touch driver
+
+        from xpt2046 import xpt2046
+        self.touch = xpt2046()
     
     def init_gui(self):
         
@@ -258,9 +264,7 @@ class AdvancedDemoApplication():
 app = AdvancedDemoApplication()
 app.init_gui()
 
-import utime
-
-if __name__ == '__main__':
-    while True:
-        pass
+# if __name__ == '__main__':
+#    while True:
+#        pass
 

@@ -72,6 +72,18 @@ static inline void get_ccount(int *ccount)
 
 void task_delay_ms(int ms);
 
+// The binding only publishes structs that are used in some function. We need spi_transaction_ext_t
+// TOOD: Find some way to mark structs for binding export instead of new function.
+static inline void set_spi_transaction_ext(
+        spi_transaction_ext_t *ext_trans,
+        spi_transaction_t *trans,
+        uint8_t command_bits,
+        uint8_t address_bits){
+    ext_trans->base = *trans;
+    ext_trans->command_bits = command_bits;
+    ext_trans->address_bits = address_bits;
+}
+
 // Wrapper for safe ISR callbacks from micropython
 // Need to call both spi_transaction_set_cb and set spi_pre/post_cb_isr!
 
@@ -89,28 +101,50 @@ void spi_post_cb_isr(spi_transaction_t *trans);
 
 // Useful constants
 
-enum{
-    ESP_MAX_DELAY = portMAX_DELAY,
-    ESP_HALF_DUPLEX = SPI_DEVICE_HALFDUPLEX
+#define EXPORT_CONST_INT(int_value) enum {ENUM_##int_value = int_value}
+
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
+// SPI HOST enum was changed to macros on v4
+enum {
+    ENUM_SPI_HOST = SPI_HOST,
+    ENUM_HSPI_HOST = HSPI_HOST,
+    ENUM_VSPI_HOST = VSPI_HOST,
+};
+#endif
+
+enum {
+    ENUM_portMAX_DELAY = portMAX_DELAY
 };
 
-
-enum{
-    TRANS_MODE_DIO = SPI_TRANS_MODE_DIO,
-    TRANS_MODE_QIO = SPI_TRANS_MODE_QIO,
-    TRANS_USE_RXDATA = SPI_TRANS_USE_RXDATA,
-    TRANS_USE_TXDATA = SPI_TRANS_USE_TXDATA,
-    TRANS_MODE_DIOQIO_ADDR = SPI_TRANS_MODE_DIOQIO_ADDR,
-    TRANS_VARIABLE_CMD = SPI_TRANS_VARIABLE_CMD,
-    TRANS_VARIABLE_ADDR = SPI_TRANS_VARIABLE_ADDR,
+enum {
+    ENUM_I2S_PIN_NO_CHANGE = I2S_PIN_NO_CHANGE
 };
 
-enum{
-    CAP_DMA = MALLOC_CAP_DMA,
-    CAP_INTERNAL = MALLOC_CAP_INTERNAL,
-    CAP_SPIRAM = MALLOC_CAP_SPIRAM
+enum {
+    ENUM_SPI_DEVICE_TXBIT_LSBFIRST = SPI_DEVICE_TXBIT_LSBFIRST,
+    ENUM_SPI_DEVICE_RXBIT_LSBFIRST = SPI_DEVICE_RXBIT_LSBFIRST,
+    ENUM_SPI_DEVICE_BIT_LSBFIRST = SPI_DEVICE_BIT_LSBFIRST,
+    ENUM_SPI_DEVICE_3WIRE = SPI_DEVICE_3WIRE,
+    ENUM_SPI_DEVICE_POSITIVE_CS = SPI_DEVICE_POSITIVE_CS,
+    ENUM_SPI_DEVICE_HALFDUPLEX = SPI_DEVICE_HALFDUPLEX,
+    ENUM_SPI_DEVICE_CLK_AS_CS = SPI_DEVICE_CLK_AS_CS,
 };
 
+enum {
+    ENUM_SPI_TRANS_MODE_DIO = SPI_TRANS_MODE_DIO,
+    ENUM_SPI_TRANS_MODE_QIO = SPI_TRANS_MODE_QIO,
+    ENUM_SPI_TRANS_MODE_DIOQIO_ADDR = SPI_TRANS_MODE_DIOQIO_ADDR,
+    ENUM_SPI_TRANS_USE_RXDATA = SPI_TRANS_USE_RXDATA,
+    ENUM_SPI_TRANS_USE_TXDATA = SPI_TRANS_USE_TXDATA,
+    ENUM_SPI_TRANS_VARIABLE_CMD = SPI_TRANS_VARIABLE_CMD,
+    ENUM_SPI_TRANS_VARIABLE_ADDR = SPI_TRANS_VARIABLE_ADDR,
+};
+
+enum {
+    ENUM_MALLOC_CAP_DMA = MALLOC_CAP_DMA,
+    ENUM_MALLOC_CAP_INTERNAL = MALLOC_CAP_INTERNAL,
+    ENUM_MALLOC_CAP_SPIRAM = MALLOC_CAP_SPIRAM,
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // ili9341 flush and ISR in C
