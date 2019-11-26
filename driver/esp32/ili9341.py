@@ -41,7 +41,7 @@ class ili9341:
     # "power" and "backlight" are reversed logic! 0 means ON.
 
     def __init__(self,
-        miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=1,
+        miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
         colormode=COLOR_MODE_BGR, rot=MADCTL_MX, invert=False
     ):
