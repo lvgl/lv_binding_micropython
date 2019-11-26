@@ -23,10 +23,15 @@ import gc
 micropython.alloc_emergency_exception_buf(256)
 # gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
 
-class ili9341:
+COLOR_MODE_RGB = 0x00
+COLOR_MODE_BGR = 0x08
 
-    width = const(240)
-    height = const(320)
+MADCTL_MY = 0x80
+MADCTL_MX = 0x40
+MADCTL_ML = 0x10
+MADCTL_MH = 0x04
+
+class ili9341:
 
     ######################################################
 
@@ -35,7 +40,11 @@ class ili9341:
 
     # "power" and "backlight" are reversed logic! 0 means ON.
 
-    def __init__(self, miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True):
+    def __init__(self,
+        miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=1,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
+        colormode=COLOR_MODE_BGR, rot=MADCTL_MX, invert=False
+    ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -46,6 +55,9 @@ class ili9341:
 
         # Initializations
 
+        self.width = width
+        self.height = height
+
         self.miso = miso
         self.mosi = mosi
         self.clk = clk
@@ -54,12 +66,43 @@ class ili9341:
         self.rst = rst
         self.power = power
         self.backlight = backlight
+        self.backlight_on = backlight_on
         self.spihost = spihost
         self.mhz = mhz
         self.factor = factor
         self.hybrid = hybrid
 
         self.buf_size = (self.width * self.height * lv.color_t.SIZE) // factor
+
+        self.init_cmds = [
+            {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
+            {'cmd': 0xED, 'data': bytes([0x64, 0x03, 0X12, 0X81])},
+            {'cmd': 0xE8, 'data': bytes([0x85, 0x01, 0x79])},
+            {'cmd': 0xCB, 'data': bytes([0x39, 0x2C, 0x00, 0x34, 0x02])},
+            {'cmd': 0xF7, 'data': bytes([0x20])},
+            {'cmd': 0xEA, 'data': bytes([0x00, 0x00])},
+            {'cmd': 0xC0, 'data': bytes([0x26])},		# Power control
+            {'cmd': 0xC1, 'data': bytes([0x11])},		# Power control
+            {'cmd': 0xC5, 'data': bytes([0x35, 0x3E])},	        # VCOM control
+            {'cmd': 0xC7, 'data': bytes([0xBE])},		# VCOM control
+            {'cmd': 0x36, 'data': bytes([rot | colormode])},		# Memory Access Control
+            {'cmd': 0x3A, 'data': bytes([0x55])},		# Pixel Format Set
+            {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
+            {'cmd': 0xF2, 'data': bytes([0x08])},
+            {'cmd': 0x26, 'data': bytes([0x01])},
+            {'cmd': 0xE0, 'data': bytes([0x1F, 0x1A, 0x18, 0x0A, 0x0F, 0x06, 0x45, 0X87, 0x32, 0x0A, 0x07, 0x02, 0x07, 0x05, 0x00])},
+            {'cmd': 0XE1, 'data': bytes([0x00, 0x25, 0x27, 0x05, 0x10, 0x09, 0x3A, 0x78, 0x4D, 0x05, 0x18, 0x0D, 0x38, 0x3A, 0x1F])},
+            {'cmd': 0x2A, 'data': bytes([0x00, 0x00, 0x00, 0xEF])},
+            {'cmd': 0x2B, 'data': bytes([0x00, 0x00, 0x01, 0x3f])},
+            {'cmd': 0x2C, 'data': bytes([0])},
+            {'cmd': 0xB7, 'data': bytes([0x07])},
+            {'cmd': 0xB6, 'data': bytes([0x0A, 0x82, 0x27, 0x00])},
+            {'cmd': 0x11, 'data': bytes([0]), 'delay':100},
+            {'cmd': 0x29, 'data': bytes([0]), 'delay':100}
+        ]
+
+        if invert:
+            self.init_cmds.append({'cmd': 0x21})
 
         self.init()
 
@@ -89,36 +132,6 @@ class ili9341:
 
 
     ######################################################
-
-    init_cmds = [
-            {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
-            {'cmd': 0xED, 'data': bytes([0x64, 0x03, 0X12, 0X81])},
-            {'cmd': 0xE8, 'data': bytes([0x85, 0x01, 0x79])},
-            {'cmd': 0xCB, 'data': bytes([0x39, 0x2C, 0x00, 0x34, 0x02])},
-            {'cmd': 0xF7, 'data': bytes([0x20])},
-            {'cmd': 0xEA, 'data': bytes([0x00, 0x00])},
-            {'cmd': 0xC0, 'data': bytes([0x26])},		# Power control
-            {'cmd': 0xC1, 'data': bytes([0x11])},		# Power control
-            {'cmd': 0xC5, 'data': bytes([0x35, 0x3E])},	        # VCOM control
-            {'cmd': 0xC7, 'data': bytes([0xBE])},		# VCOM control
-            {'cmd': 0x36, 'data': bytes([0x48])},		# Memory Access Control
-            {'cmd': 0x3A, 'data': bytes([0x55])},		# Pixel Format Set
-            {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
-            {'cmd': 0xF2, 'data': bytes([0x08])},
-            {'cmd': 0x26, 'data': bytes([0x01])},
-            {'cmd': 0xE0, 'data': bytes([0x1F, 0x1A, 0x18, 0x0A, 0x0F, 0x06, 0x45, 0X87, 0x32, 0x0A, 0x07, 0x02, 0x07, 0x05, 0x00])},
-            {'cmd': 0XE1, 'data': bytes([0x00, 0x25, 0x27, 0x05, 0x10, 0x09, 0x3A, 0x78, 0x4D, 0x05, 0x18, 0x0D, 0x38, 0x3A, 0x1F])},
-            {'cmd': 0x2A, 'data': bytes([0x00, 0x00, 0x00, 0xEF])},
-            {'cmd': 0x2B, 'data': bytes([0x00, 0x00, 0x01, 0x3f])},
-            {'cmd': 0x2C, 'data': bytes([0])},
-            {'cmd': 0xB7, 'data': bytes([0x07])},
-            {'cmd': 0xB6, 'data': bytes([0x0A, 0x82, 0x27, 0x00])},
-            {'cmd': 0x11, 'data': bytes([0]), 'delay':100},
-            {'cmd': 0x29, 'data': bytes([0]), 'delay':100}]
-
-
-    ######################################################
-
 
     def disp_spi_init(self):
 	buscfg = esp.spi_bus_config_t({
@@ -288,7 +301,7 @@ class ili9341:
 
         if self.backlight != -1:
             print("Enable backlight")
-            esp.gpio_set_level(self.backlight, 0)
+            esp.gpio_set_level(self.backlight, self.backlight_on)
     
     ######################################################
 
