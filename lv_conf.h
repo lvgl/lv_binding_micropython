@@ -302,9 +302,13 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
 
 /* Robot fonts with bpp = 4
  * https://fonts.google.com/specimen/Roboto  */
+#ifndef LV_FONT_ROBOTO_12
 #define LV_FONT_ROBOTO_12    0
+#endif  // LV_FONT_ROBOTO_12
 #define LV_FONT_ROBOTO_16    1
+#ifndef LV_FONT_ROBOTO_22
 #define LV_FONT_ROBOTO_22    0
+#endif  // LV_FONT_ROBOTO_22
 #define LV_FONT_ROBOTO_28    1
 
 /* Demonstrate special features */
