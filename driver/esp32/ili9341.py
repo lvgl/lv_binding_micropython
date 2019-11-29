@@ -102,7 +102,7 @@ class ili9341:
         ]
 
         if invert:
-            self.init_cmds.append({'cmd': 0x21})
+            self.init_cmds.append({'cmd': 0x21, 'data': bytes([])})
 
         self.init()
 
