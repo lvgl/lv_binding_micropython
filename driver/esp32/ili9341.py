@@ -19,6 +19,7 @@ import lvgl as lv
 import lvesp32
 import micropython
 import gc
+from utime import sleep_ms
 
 micropython.alloc_emergency_exception_buf(256)
 # gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
@@ -278,14 +279,14 @@ class ili9341:
 
         if self.power != -1:
             esp.gpio_set_level(self.power, 0)
-            esp.task_delay_ms(100)
+            sleep_ms(100)
 
 	# Reset the display
 
 	esp.gpio_set_level(self.rst, 0)
-        esp.task_delay_ms(100)
+        sleep_ms(100)
 	esp.gpio_set_level(self.rst, 1)
-        esp.task_delay_ms(100)
+        sleep_ms(100)
 
 	# Send all the commands
 
@@ -293,7 +294,7 @@ class ili9341:
             self.send_cmd(cmd['cmd'])
             self.send_data(cmd['data'])
             if 'delay' in cmd:
-                esp.task_delay_ms(cmd['delay'])
+                sleep_ms(cmd['delay'])
 
 	print("ILI9341 initialization completed")
 
