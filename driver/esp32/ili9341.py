@@ -102,7 +102,7 @@ class ili9341:
         ]
 
         if invert:
-            self.init_cmds.append({'cmd': 0x21, 'data': bytes([])})
+            self.init_cmds.append({'cmd': 0x21})
 
         self.init()
 
@@ -291,7 +291,8 @@ class ili9341:
 
         for cmd in self.init_cmds:
             self.send_cmd(cmd['cmd'])
-            self.send_data(cmd['data'])
+            if 'data' in cmd:
+                self.send_data(cmd['data'])
             if 'delay' in cmd:
                 esp.task_delay_ms(cmd['delay'])
 
