@@ -292,7 +292,8 @@ class ili9341:
 
         for cmd in self.init_cmds:
             self.send_cmd(cmd['cmd'])
-            self.send_data(cmd['data'])
+            if 'data' in cmd:
+                self.send_data(cmd['data'])
             if 'delay' in cmd:
                 sleep_ms(cmd['delay'])
 
