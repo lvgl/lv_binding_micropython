@@ -62,7 +62,7 @@ def get_png_info(decoder, src, header):
 # Convert color formats
 
 @micropython.viper
-def convert_rgba8888_to_bgr565(img_view):
+def convert_rgba8888_to_bgra5658(img_view):
     p = ptr32(img_view)
     p_out = ptr8(img_view)
     img_size = int(len(img_view)) // 4
@@ -81,7 +81,7 @@ def convert_rgba8888_to_bgr565(img_view):
         p_out[i_out + 2] = a
 
 @micropython.viper
-def convert_rgba8888_to_swapped_bgr565(img_view):
+def convert_rgba8888_to_swapped_bgra5658(img_view):
     p = ptr32(img_view)
     p_out = ptr8(img_view)
     img_size = int(len(img_view)) // 4
@@ -136,9 +136,9 @@ def open_png(decoder, dsc):
         convert_rgba8888_to_bgra8888(img_view)
     elif COLOR_SIZE == 2:
         if COLOR_IS_SWAPPED:
-            convert_rgba8888_to_swapped_bgr565(img_view)
+            convert_rgba8888_to_swapped_bgra5658(img_view)
         else:
-            convert_rgba8888_to_bgr565(img_view)
+            convert_rgba8888_to_bgra5658(img_view)
     else:
         raise lodepng_error("Error: Color mode not supported yet!")
 
