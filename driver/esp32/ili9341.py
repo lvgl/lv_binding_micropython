@@ -24,13 +24,15 @@ from utime import sleep_ms
 micropython.alloc_emergency_exception_buf(256)
 # gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
 
-COLOR_MODE_RGB = 0x00
-COLOR_MODE_BGR = 0x08
+COLOR_MODE_RGB = const(0x00)
+COLOR_MODE_BGR = const(0x08)
 
-MADCTL_MY = 0x80
-MADCTL_MX = 0x40
-MADCTL_ML = 0x10
-MADCTL_MH = 0x04
+MADCTL_MY = const(0x80)
+MADCTL_MX = const(0x40)
+MADCTL_ML = const(0x10)
+MADCTL_MH = const(0x04)
+
+TRANS_BUFFER_LEN = const(16)
 
 class ili9341:
 
@@ -44,7 +46,7 @@ class ili9341:
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=MADCTL_MX, invert=False
+        colormode=COLOR_MODE_BGR, rot=MADCTL_MX, invert=False, double_buffer=True
     ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
@@ -82,12 +84,12 @@ class ili9341:
             {'cmd': 0xCB, 'data': bytes([0x39, 0x2C, 0x00, 0x34, 0x02])},
             {'cmd': 0xF7, 'data': bytes([0x20])},
             {'cmd': 0xEA, 'data': bytes([0x00, 0x00])},
-            {'cmd': 0xC0, 'data': bytes([0x26])},		# Power control
-            {'cmd': 0xC1, 'data': bytes([0x11])},		# Power control
+            {'cmd': 0xC0, 'data': bytes([0x26])},               # Power control
+            {'cmd': 0xC1, 'data': bytes([0x11])},               # Power control
             {'cmd': 0xC5, 'data': bytes([0x35, 0x3E])},	        # VCOM control
-            {'cmd': 0xC7, 'data': bytes([0xBE])},		# VCOM control
-            {'cmd': 0x36, 'data': bytes([rot | colormode])},		# Memory Access Control
-            {'cmd': 0x3A, 'data': bytes([0x55])},		# Pixel Format Set
+            {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
+            {'cmd': 0x36, 'data': bytes([rot | colormode])},    # Memory Access Control
+            {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
             {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
             {'cmd': 0xF2, 'data': bytes([0x08])},
             {'cmd': 0x26, 'data': bytes([0x01])},
@@ -110,7 +112,7 @@ class ili9341:
         # Register display driver 
 
         self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
-        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
+        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA) if double_buffer else None
         
         if self.buf1 and self.buf2:
             print("Double buffer")
@@ -135,6 +137,13 @@ class ili9341:
     ######################################################
 
     def disp_spi_init(self):
+
+        # Register finalizer callback to deinit SPI.
+        # This would get called on soft reset.
+
+        self.finalizer = lvesp32.cb_finalizer(self.deinit)
+        lvesp32.init()
+
 	buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
 	    "mosi_io_num": self.mosi,
@@ -180,6 +189,10 @@ class ili9341:
                 ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
                 if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
+        self.trans_buffer = esp.heap_caps_malloc(TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
+        self.cmd_trans_data = self.trans_buffer.__dereference__(1)
+        self.word_trans_data = self.trans_buffer.__dereference__(4)
+
 	# Attach the LCD to the SPI bus
 
         ptr_to_spi = esp.C_Pointer()
@@ -212,6 +225,54 @@ class ili9341:
         
         self.spi_callbacks = esp.spi_transaction_set_cb(None, flush_isr)
 
+    #
+    # Deinitialize SPI device and bus, and free memory
+    # This function is called from finilizer during gc sweep - therefore must not allocate memory!
+    #
+
+    trans_result_ptr = esp.C_Pointer()
+
+    def deinit(self):
+
+        print('Deinitializing ILI9341..')
+
+        # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
+
+        lvesp32.deinit()
+
+        if self.spi:
+
+            # Pop all pending transaction results
+
+            ret = 0
+            while ret == 0:
+                ret = esp.spi_device_get_trans_result(self.spi, self.trans_result_ptr , 1)
+
+            # Remove device
+
+            esp.spi_bus_remove_device(self.spi)
+            self.spi = None
+
+            # Free SPI bus
+
+            esp.spi_bus_free(self.spihost)
+            self.spihost = None
+
+        # Free RAM
+
+        if self.buf1:
+            esp.heap_caps_free(self.buf1)
+            self.buf1 = None
+
+        if self.buf2:
+            esp.heap_caps_free(self.buf2)
+            self.buf2 = None
+
+        if self.trans_buffer:
+            esp.heap_caps_free(self.trans_buffer)
+            self.trans_buffer = None
+
+
     ######################################################
 
     trans = esp.spi_transaction_t() # .cast(
@@ -233,11 +294,6 @@ class ili9341:
     ######################################################
     ######################################################
 
-    trans_buffer_len = const(16)
-    trans_buffer = esp.heap_caps_malloc(trans_buffer_len, esp.MALLOC_CAP.DMA)
-    cmd_trans_data = trans_buffer.__dereference__(1)
-    word_trans_data = trans_buffer.__dereference__(4)
-
     def send_cmd(self, cmd):
         esp.gpio_set_level(self.dc, 0)	    # Command mode
         self.cmd_trans_data[0] = cmd
@@ -245,7 +301,7 @@ class ili9341:
 
     def send_data(self, data):
 	esp.gpio_set_level(self.dc, 1)	    # Data mode
-        if len(data) > self.trans_buffer_len: raise RuntimeError('Data too long, please use DMA!')
+        if len(data) > TRANS_BUFFER_LEN: raise RuntimeError('Data too long, please use DMA!')
         trans_data = self.trans_buffer.__dereference__(len(data))
         trans_data[:] = data[:]
 	self.spi_send(trans_data)

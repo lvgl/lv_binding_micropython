@@ -1,5 +1,6 @@
 from machine import Pin
 import espidf as esp
+import lvesp32
 import lvgl as lv
 
 # TODO: Viper/native emmitters don't behave well when module is frozen.
@@ -92,6 +93,11 @@ class xpt2046:
                 ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
                 if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
+        # Register finalizer callback to deinit SPI.
+        # This would get called on soft reset.
+
+        self.finalizer = lvesp32.cb_finalizer(self.deinit)
+
 	# Attach the xpt2046 to the SPI bus
 
         ptr_to_spi = esp.C_Pointer()
@@ -107,6 +113,28 @@ class xpt2046:
             }) for i in range(0, self.max_cmds)]
 
     trans_result_ptr = esp.C_Pointer()
+
+    #
+    # Deinitalize SPI device and bus
+    #
+
+    def deinit(self):
+
+        print('Deinitializing XPT2046...')
+
+        if self.spi:
+
+            # Pop all pending transaction results
+            ret = 0
+            while ret == 0:
+                ret = esp.spi_device_get_trans_result(self.spi, self.trans_result_ptr , 1)
+
+            # Remove device
+            esp.spi_bus_remove_device(self.spi)
+
+            # Free SPI bus
+            esp.spi_bus_free(self.spihost)
+
 
     # @micropython.viper
     def xpt_cmds(self, cmds):
