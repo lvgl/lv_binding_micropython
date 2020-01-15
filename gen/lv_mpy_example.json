@@ -766,14 +766,9 @@
             ], 
             "type": "function"
         }, 
-        "disp_get_refr_task": {
-            "return_value": "task_t", 
-            "args": [
-                {
-                    "type": "disp_t", 
-                    "name": "disp"
-                }
-            ], 
+        "mem_deinit": {
+            "return_type": "NoneType", 
+            "args": [], 
             "type": "function"
         }, 
         "bidi_detect_base_dir": {
@@ -1032,24 +1027,6 @@
                 {
                     "type": "color32_t", 
                     "name": "color"
-                }
-            ], 
-            "type": "function"
-        }, 
-        "snprintf": {
-            "return_value": "int", 
-            "args": [
-                {
-                    "type": "str", 
-                    "name": "buffer"
-                }, 
-                {
-                    "type": "int", 
-                    "name": "count"
-                }, 
-                {
-                    "type": "str", 
-                    "name": "format"
                 }
             ], 
             "type": "function"
@@ -1314,6 +1291,11 @@
             ], 
             "type": "function"
         }, 
+        "draw_free_buf": {
+            "return_type": "NoneType", 
+            "args": [], 
+            "type": "function"
+        }, 
         "disp_buf_init": {
             "return_type": "NoneType", 
             "args": [
@@ -1516,9 +1498,14 @@
             ], 
             "type": "function"
         }, 
-        "draw_free_buf": {
-            "return_type": "NoneType", 
-            "args": [], 
+        "disp_get_refr_task": {
+            "return_value": "task_t", 
+            "args": [
+                {
+                    "type": "disp_t", 
+                    "name": "disp"
+                }
+            ], 
             "type": "function"
         }, 
         "group_get_click_focus": {
@@ -2607,8 +2594,8 @@
             ], 
             "type": "function"
         }, 
-        "event_get_data": {
-            "return_value": "pointer", 
+        "deinit": {
+            "return_type": "NoneType", 
             "args": [], 
             "type": "function"
         }, 
@@ -3663,6 +3650,11 @@
                     "name": "y"
                 }
             ], 
+            "type": "function"
+        }, 
+        "event_get_data": {
+            "return_value": "pointer", 
+            "args": [], 
             "type": "function"
         }, 
         "mem_defrag": {

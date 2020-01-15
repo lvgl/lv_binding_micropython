@@ -503,6 +503,14 @@ STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
 
 // Casting
 
+typedef struct mp_lv_struct_t
+{
+    mp_obj_base_t base;
+    void *data;
+} mp_lv_struct_t;
+
+STATIC const mp_lv_struct_t mp_lv_null_obj;
+
 STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
@@ -523,12 +531,16 @@ STATIC mp_obj_t make_new_lv_struct(
 STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
 {
     mp_obj_t *res = NULL;
-    if (MP_OBJ_IS_OBJ(mp_obj)){
+    if (mp_obj == mp_const_none && mp_type->make_new == &make_new_lv_struct) {
+        res = MP_OBJ_FROM_PTR(&mp_lv_null_obj);
+    } else if (MP_OBJ_IS_OBJ(mp_obj)) {
         res = get_native_obj(mp_obj);
         if (res){
             const mp_obj_type_t *res_type = ((mp_obj_base_t*)res)->type;
             if (res_type != mp_type){
-                if (res_type == &mp_type_dict && mp_type->make_new == &make_new_lv_struct) res = dict_to_struct(res, mp_type);
+                if (res_type == &mp_type_dict &&
+                    mp_type->make_new == &make_new_lv_struct)
+                        res = dict_to_struct(res, mp_type);
                 else res = NULL;
             }
         }
@@ -571,6 +583,7 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
 STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
 {
+    if (lv_obj == NULL) return mp_const_none;
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
     if (!self) 
     {
@@ -646,12 +659,6 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
 }
 
 // struct handling
-
-typedef struct mp_lv_struct_t
-{
-    mp_obj_base_t base;
-    void *data;
-} mp_lv_struct_t;
 
 STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
@@ -831,6 +838,8 @@ STATIC const mp_obj_type_t mp_blob_type = {
     .locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
     .buffer_p = { .get_buffer = mp_blob_get_buffer }
 };
+
+STATIC const mp_lv_struct_t mp_lv_null_obj = { {&mp_blob_type}, NULL };
 
 STATIC inline mp_obj_t ptr_to_mp(void *data)
 {
