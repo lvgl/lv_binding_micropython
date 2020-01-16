@@ -42,9 +42,11 @@ STATIC void mp_lv_main_loop(void)
 }
 #endif
 
-STATIC mp_obj_t mp_init_SDL()
+STATIC mp_obj_t mp_init_SDL(mp_obj_t w_obj, mp_obj_t h_obj)
 {
-    monitor_init();
+    int w = mp_obj_get_int(w_obj);
+    int h = mp_obj_get_int(h_obj);
+    monitor_init(w, h);
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
     /* Required for HTML input elements to work */
@@ -63,7 +65,7 @@ STATIC mp_obj_t mp_deinit_SDL()
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_init_SDL_obj, mp_init_SDL);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_init_SDL_obj, mp_init_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_SDL_obj, mp_deinit_SDL);
 
 DEFINE_PTR_OBJ(monitor_flush);
