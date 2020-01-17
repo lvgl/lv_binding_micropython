@@ -41,7 +41,9 @@
 static SDL_Window * window;
 static SDL_Renderer * renderer;
 static SDL_Texture * texture;
-static uint32_t tft_fb[MONITOR_HOR_RES * MONITOR_VER_RES];
+static uint32_t* tft_fb;
+static int monitor_w;
+static int monitor_h;
 static volatile bool sdl_inited = false;
 static volatile bool sdl_refr_qry = false;
 static volatile bool sdl_quit_qry = false;
@@ -110,10 +112,14 @@ static int quit_filter(void * userdata, SDL_Event * event)
 /**
  * Initialize the monitor
  */
-void monitor_init(void)
+void monitor_init(int w, int h)
 {
     sdl_refr_qry = false;
     sdl_quit_qry = false;
+
+    monitor_w = w;
+    monitor_h = h;
+    tft_fb = (uint32_t*)malloc(MONITOR_HOR_RES * MONITOR_VER_RES * sizeof(uint32_t));
 
     /*Initialize the SDL*/
     SDL_Init(SDL_INIT_VIDEO);
@@ -149,6 +155,7 @@ void monitor_deinit(void)
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    free(tft_fb);
 }
 
 /**

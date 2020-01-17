@@ -34,7 +34,7 @@ extern "C" {
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
-void monitor_init(void);
+void monitor_init(int w, int h);
 void monitor_deinit(void);
 bool monitor_active(void);
 void monitor_sdl_refr_core(void);
