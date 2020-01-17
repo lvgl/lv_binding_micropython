@@ -2,7 +2,8 @@
 # Bindings for LittelvGL
 
 See also [Micropython + LittlevGL](https://blog.littlevgl.com/2019-02-20/micropython-bindings) blog post.  
-For advanced features, see [Pure Micropython Display Driver](https://blog.littlevgl.com/2019-08-05/micropython-pure-display-driver) blog post.
+For advanced features, see [Pure Micropython Display Driver](https://blog.littlevgl.com/2019-08-05/micropython-pure-display-driver) blog post.  
+For questions and discussions - please use the forum: https://forum.littlevgl.com/c/micropython
 
 ## Micropython
 
