@@ -21,7 +21,11 @@ It's worth noting that the Mircopython Bindings module (`lv_mpy.c`) is dependant
 
 When lvgl is built as a Micropython library, it is configured to allocate memory using Micropython memory allocation functions and take advantage of Micropython *Garbage Collection* ("gc").  
 This means that structs allocated for lvgl use don't need to be deallocated explicitly, gc takes care of that.  
-For this to work correctly, lvgl needs to be configured to use gc and to use Micropython's memory allocation functions, and also register all lvgl "root" global variables to Micropython's gc.
+For this to work correctly, lvgl is configured to use gc and to use Micropython's memory allocation functions, and also register all lvgl "root" global variables to Micropython's gc.  
+
+From the user's perspective, structs can be created and will be collected by gc when they are no longer referenced.  
+However, lvgl screen objects (`lv.obj` with no parent) are automatically assigned to default display, therefor not collected by gc even when no longer explicitly referenced.  
+When you want to free a screen and all its decendants so gc could collect their memory, make sure you call `screen.delete()` when you no longer need it.
 
 ### Concurrency
 
