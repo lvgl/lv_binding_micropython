@@ -67,6 +67,7 @@ static inline void get_ccount(int *ccount)
 #include "esp_log.h"
 #include "driver/adc.h"
 #include "driver/i2s.h"
+#include "driver/pcnt.h"
 
 // We don't want the whole FreeRTOS, only selected functions
 
