@@ -64,8 +64,9 @@ bool monitor_active(void)
  */
 void monitor_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
-    /*Return if the area is out the screen*/
-    if(area->x2 < 0 || area->y2 < 0 || area->x1 > MONITOR_HOR_RES - 1 || area->y1 > MONITOR_VER_RES - 1) {
+    /*Return if the area is out the screen or the monitor is not active*/
+    if(area->x2 < 0 || area->y2 < 0 || area->x1 > MONITOR_HOR_RES - 1 || area->y1 > MONITOR_VER_RES - 1
+       || !monitor_active()) {
         lv_disp_flush_ready(disp_drv);
         return;
     }
