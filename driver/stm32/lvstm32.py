@@ -19,11 +19,9 @@ class lvstm32():
         lv.task_handler()
 
     def timer_cb(self, t):
-	try:
-      		lv.tick_inc(self.delay)
-        	# Passing self.task_handler would cause allocation.
-        	micropython.schedule(self.task_handler_ref, 0)
-	except:
-    		pass
+        lv.tick_inc(self.delay)
+        # Passing self.task_handler would cause allocation.
+        micropython.schedule(self.task_handler_ref, 0)
+
       
 
