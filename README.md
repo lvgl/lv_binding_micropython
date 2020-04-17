@@ -200,7 +200,7 @@ optional arguments:
 Example: 
 
 ```
-python gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h
+python gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_binding_micropython -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_binding_micropython/pycparser/utils/fake_libc_include ../../lv_binding_micropython/lvgl/lvgl.h
 ```
 
 ### Binding other C libraries
