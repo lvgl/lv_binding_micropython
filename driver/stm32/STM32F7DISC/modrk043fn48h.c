@@ -3,6 +3,7 @@
 #include "softtimer.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "../../../lvgl/lvgl.h"
 #include "../../../lv_conf.h"
 #include "../../include/common.h"
@@ -34,28 +35,21 @@ static bool config_ltdc(void);
 static bool config_dma2d(void);
 
 STATIC mp_obj_t mp_rk043fn48h_bytearray(mp_obj_t n_obj) {
-    static uint8_t __attribute__((section (".fastBuffer"))) ba[64000] __attribute__ ((aligned (4)));
-    static int idx = 0;
     size_t n = (size_t)mp_obj_get_int(n_obj);
-
-    if (idx + n < sizeof(ba)) {
-        // allocation in DTCM @ 0x20000000
-        mp_obj_t o = mp_obj_new_bytearray_by_ref((size_t)n, &ba[idx]);
-        idx += n;
-        return o;
-    } else {
-        // allocation in extRAM with 1KB alignment
-        uint32_t p = (uint32_t)m_malloc(n + 1024);
-        p = p + 1024 - p % 1024;
-        return mp_obj_new_bytearray_by_ref(n, (void *)p);
+    void *p = malloc(n);         // try allocation on SRAM
+    if (p == NULL) {
+        // allocation on extRAM with 1KB alignment
+        p = m_malloc(n + 1024);
+        p = (void*)((uint32_t)p + 1024 - (uint32_t)p % 1024);
     }
+    return mp_obj_new_bytearray_by_ref(n, (void *)p);
 }
 
 STATIC mp_obj_t mp_rk043fn48h_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_w, ARG_h };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_HOR_RES_MAX} },
-        { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_VER_RES_MAX} },
+        { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 480} },
+        { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 320} },
     };
 
     // parse args
