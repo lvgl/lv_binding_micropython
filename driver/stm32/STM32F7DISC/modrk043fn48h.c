@@ -49,7 +49,7 @@ STATIC mp_obj_t mp_rk043fn48h_init(size_t n_args, const mp_obj_t *pos_args, mp_m
     enum { ARG_w, ARG_h };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 480} },
-        { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 320} },
+        { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 272} },
     };
 
     // parse args
