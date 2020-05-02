@@ -42,9 +42,18 @@ STATIC void mp_lv_main_loop(void)
 }
 #endif
 
-STATIC mp_obj_t mp_init_SDL()
+STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    monitor_init();
+    enum { ARG_w, ARG_h };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_HOR_RES_MAX} },
+        { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_VER_RES_MAX} },
+    };
+
+    // parse args
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+    monitor_init(args[ARG_w].u_int, args[ARG_h].u_int);
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
     /* Required for HTML input elements to work */
@@ -63,7 +72,7 @@ STATIC mp_obj_t mp_deinit_SDL()
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_init_SDL_obj, mp_init_SDL);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_init_SDL_obj, 0, mp_init_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_SDL_obj, mp_deinit_SDL);
 
 DEFINE_PTR_OBJ(monitor_flush);

@@ -153,15 +153,11 @@ class xpt2046:
         return tuple(result)
     
     # @micropython.viper
-    def get_raw_coords(self):
-        return self.xpt_cmds([self.CMD_X_READ, self.CMD_Y_READ])
-
-    # @micropython.viper
     def get_med_coords(self, count : int):
         mid = count//2
         values = []
         for i in range(0, count):
-            values.append(self.get_raw_coords())
+            values.append(self.xpt_cmds([self.CMD_X_READ, self.CMD_Y_READ]))
         # values = self.xpt_cmds([self.CMD_X_READ]*count + [self.CMD_Y_READ]*count)
         # x_values = sorted(values[:count])
         # y_values = sorted(values[count:])

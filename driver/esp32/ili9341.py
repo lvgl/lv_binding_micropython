@@ -24,37 +24,39 @@ from utime import sleep_ms
 micropython.alloc_emergency_exception_buf(256)
 # gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
 
-COLOR_MODE_RGB = const(0x00)
-COLOR_MODE_BGR = const(0x08)
-
-MADCTL_MY = const(0x80)
-MADCTL_MX = const(0x40)
-MADCTL_ML = const(0x10)
-MADCTL_MH = const(0x04)
-
-TRANS_BUFFER_LEN = const(16)
-
 class ili9341:
 
-    ######################################################
+    # Constants
 
-    disp_buf = lv.disp_buf_t()
-    disp_drv = lv.disp_drv_t()
+    COLOR_MODE_RGB = const(0x00)
+    COLOR_MODE_BGR = const(0x08)
 
-    # "power" and "backlight" are reversed logic! 0 means ON.
+    MADCTL_MH = const(0x04)
+    MADCTL_ML = const(0x10)
+    MADCTL_MV = const(0x20)
+    MADCTL_MX = const(0x40)
+    MADCTL_MY = const(0x80)
+
+    PORTRAIT = MADCTL_MX
+    LANDSCAPE = MADCTL_MV
+
+    TRANS_BUFFER_LEN = const(16)
+
+    # Default values of "power" and "backlight" are reversed logic! 0 means ON.
+    # You can change this by setting backlight_on and power_on arguments.
 
     def __init__(self,
-        miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0,
+        miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=MADCTL_MX, invert=False, double_buffer=True
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True
     ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
         if lv.color_t.SIZE != 2:
             raise RuntimeError('ili9341 micropython driver requires defining LV_COLOR_DEPTH=16')
-        if not hasattr(lv.color_t().ch, 'green_l'):
-            raise RuntimeError('ili9341 micropython driver requires defining LV_COLOR_16_SWAP=1')
+        if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
+            raise RuntimeError('ili9341 BGR color mode requires defining LV_COLOR_16_SWAP=1')
 
         # Initializations
 
@@ -70,6 +72,7 @@ class ili9341:
         self.power = power
         self.backlight = backlight
         self.backlight_on = backlight_on
+        self.power_on = power_on
         self.spihost = spihost
         self.mhz = mhz
         self.factor = factor
@@ -120,6 +123,9 @@ class ili9341:
             print("Single buffer")
         else:
             raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
+
+        self.disp_buf = lv.disp_buf_t()
+        self.disp_drv = lv.disp_drv_t()
 
         lv.disp_buf_init(self.disp_buf, self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
         lv.disp_drv_init(self.disp_drv)
@@ -334,7 +340,7 @@ class ili9341:
         # Power the display
 
         if self.power != -1:
-            esp.gpio_set_level(self.power, 0)
+            esp.gpio_set_level(self.power, self.power_on)
             sleep_ms(100)
 
 	# Reset the display
