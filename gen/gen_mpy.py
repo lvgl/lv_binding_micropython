@@ -239,6 +239,16 @@ def get_methods(obj_name):
     global funcs
     return [func for func in funcs if is_method_of(func.name,obj_name) and (not func.name == ctor_name_from_obj_name(obj_name))]
 
+# struct methods start with struct name (without _t), and their first argument is a pointer to the struct
+def get_struct_methods(struct_name):
+    global funcs
+    base_struct_name = struct_name[:-2] if struct_name.endswith('_t') else struct_name
+    return [func for func in funcs if func.name.startswith(base_struct_name) \
+            and func.type.args \
+            and len(func.type.args.params) >= 1 \
+            and func.type.args.params[0].type.type \
+            and get_type(func.type.args.params[0].type.type, remove_quals = True) == struct_name]
+
   
 # All object should inherit directly from base_obj, and not according to lv_ext, as disccussed on https://github.com/littlevgl/lv_binding_micropython/issues/19
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
@@ -1166,11 +1176,17 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {{
             {read_cases};
-            case MP_QSTR___dereference__: {{
-                dest[0] = (void*)&mp_lv_dereference_obj; 
-                dest[1] = self_in;
+            default:
+            {{
+                // fallback to locals_dict lookup
+                const mp_obj_type_t *type = mp_obj_get_type(self);
+                assert(type->locals_dict->base.type == &mp_type_dict);
+                mp_map_t *locals_map = &type->locals_dict->map;
+                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
+                if (elem != NULL) {{
+                    mp_convert_member_lookup(self, type, elem->value, dest);
+                }}
             }}
-            break;
         }}
     }} else {{
         if (dest[1])
@@ -1198,7 +1214,7 @@ STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast_instance), MP_ROM_PTR(&mp_lv_cast_instance_obj) }},
-//    {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
+    {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_locals_dict_table);
@@ -1233,7 +1249,8 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     lv_mp_type['%s *' % struct_name] = simplify_identifier(struct_name)
     lv_mp_type['const %s *' % struct_name] = simplify_identifier(struct_name)
     generated_structs[struct_name] = True
-    # print('/* --> struct "%s" generated! */' % (struct_name))
+    print('/* --> struct "%s" generated! */' % (struct_name))
+    print('/* Struct contains: %s */' % [f.name for f in get_struct_methods(struct_name)])
     return struct_name
 
 
@@ -1602,9 +1619,9 @@ def gen_mp_func(func, obj_name):
             try_generate_type(func.type.type)
             if return_type not in lv_to_mp or not lv_to_mp[return_type]:
                 raise MissingConversionException("Missing convertion from %s" % return_type)
-        build_result = "%s res = " % return_type
+        build_result = "%s _res = " % return_type
         cast = '(void*)' if isinstance(func.type.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
-        build_return_value = "{type}({cast}res)".format(type = lv_to_mp[return_type], cast = cast)
+        build_return_value = "{type}({cast}_res)".format(type = lv_to_mp[return_type], cast = cast)
         func_metadata[func.name]['return_value'] = lv_mp_type[return_type]
     print("""
 /*
