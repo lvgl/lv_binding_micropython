@@ -240,6 +240,12 @@ def get_methods(obj_name):
     global funcs
     return [func for func in funcs if is_method_of(func.name,obj_name) and (not func.name == ctor_name_from_obj_name(obj_name))]
 
+def noncommon_part(member_name, stem_name):
+    common_part = commonprefix([member_name, stem_name])
+    n = len(common_part) - 1
+    while n > 0 and member_name[n] != '_': n-=1
+    return member_name[n+1:]
+
 # "struct function" starts with struct name (without _t), and their first argument is a pointer to the struct
 # Need also to take into account struct functions of aliases of current struct.
 def get_struct_functions(struct_name):
@@ -247,13 +253,14 @@ def get_struct_functions(struct_name):
     base_struct_name = struct_name[:-2] if struct_name.endswith('_t') else struct_name
     # eprint("get_struct_functions %s: %s" % (struct_name, [get_type(func.type.args.params[0].type.type, remove_quals = True) for func in funcs if func.name.startswith(base_struct_name)]))
     # eprint("get_struct_functions %s: %s" % (struct_name, struct_aliases[struct_name] if struct_name in struct_aliases else ""))
-    return [func for func in funcs if func.name.startswith(base_struct_name) \
+    
+    return [func for func in funcs if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name) \
             and func.type.args \
             and len(func.type.args.params) >= 1 \
             and func.type.args.params[0].type.type \
             and get_type(func.type.args.params[0].type.type, remove_quals = True) == struct_name] + \
             (get_struct_functions(struct_aliases[struct_name]) if struct_name in struct_aliases else [])
-  
+
 # All object should inherit directly from base_obj, and not according to lv_ext, as disccussed on https://github.com/littlevgl/lv_binding_micropython/issues/19
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
 parent_obj_names[base_obj_name] = None
@@ -1844,7 +1851,7 @@ STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_local
     '''.format(
         struct_name = struct_name,
         functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
-            format(name = method_name_from_func_name(f.name), func = f.name) for f in struct_funcs]),
+            format(name = noncommon_part(f.name, struct_name), func = f.name) for f in struct_funcs]),
     ))
 
 #
