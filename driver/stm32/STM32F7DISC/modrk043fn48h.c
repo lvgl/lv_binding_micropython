@@ -3,7 +3,6 @@
 #include "softtimer.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include "../../../lvgl/lvgl.h"
 #include "../../../lv_conf.h"
 #include "../../include/common.h"
@@ -36,12 +35,9 @@ static bool config_dma2d(void);
 
 STATIC mp_obj_t mp_rk043fn48h_bytearray(mp_obj_t n_obj) {
     size_t n = (size_t)mp_obj_get_int(n_obj);
-    void *p = malloc(n);         // try allocation on SRAM
-    if (p == NULL) {
-        // allocation on extRAM with 1KB alignment
-        p = m_malloc(n + 1024);
-        p = (void*)((uint32_t)p + 1024 - (uint32_t)p % 1024);
-    }
+    // allocation on extRAM with 1KB alignment
+    void *p = m_malloc(n + 1024);
+    p = (void*)((uint32_t)p + 1024 - (uint32_t)p % 1024);
     return mp_obj_new_bytearray_by_ref(n, (void *)p);
 }
 
