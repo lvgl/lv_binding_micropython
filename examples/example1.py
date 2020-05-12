@@ -16,7 +16,7 @@ class driver:
 
         disp_buf1 = lv.disp_buf_t()
         buf1_1 = bytearray(480 * 10)
-        lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // 4)
+        lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
         disp_drv.buffer = disp_buf1
@@ -47,7 +47,7 @@ class driver:
 
         disp_buf1 = lv.disp_buf_t()
         buf1_1 = bytearray(480 * 10)
-        lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // 4)
+        lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
         lv.disp_drv_init(disp_drv)
         disp_drv.buffer = disp_buf1

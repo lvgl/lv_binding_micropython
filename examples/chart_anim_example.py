@@ -9,7 +9,7 @@ class driver:
     def init_disp_drv(self, flush, hor_res, ver_res, buf_size=0):
         disp_buf1 = lv.disp_buf_t()
         if not buf_size:
-            buf_size = (hor_res * ver_res) // 4
+            buf_size = (hor_res * ver_res) // lv.color_t.SIZE
         buf1_1 = bytearray(buf_size)
         lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
