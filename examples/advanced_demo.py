@@ -270,7 +270,7 @@ class AdvancedDemoApplication:
         vres = 272
 
         # Register display driver
-        tick = lvstm32.lvstm32(freq=30)
+        tick = lvstm32.lvstm32()
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_buf_t()
         buf1_1 = lcd.bytearray(hres * vres * lv.color_t.SIZE)

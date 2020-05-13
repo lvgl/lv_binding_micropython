@@ -7,7 +7,7 @@ import lvstm32
 hres = 480
 vres = 272
 lv.init()
-tick = lvstm32.lvstm32(freq=30)
+tick = lvstm32.lvstm32()
 lcd.init(w=hres, h=vres)
 disp_buf1 = lv.disp_buf_t()
 # buf1_1 = lcd.bytearray(hres*vres*lv.color_t.SIZE)
