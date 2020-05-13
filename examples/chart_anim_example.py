@@ -68,7 +68,7 @@ class driver:
 
         hres = 480
         vres = 272
-        tick = lvstm32.lvstm32(freq=30)
+        tick = lvstm32.lvstm32()
         lcd.init(w=hres, h=vres)
         self.init_disp_drv(lcd.flush, hres, vres)
         self.init_indev_drv(lcd.ts_read)
