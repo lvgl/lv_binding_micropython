@@ -42,9 +42,6 @@
 /*Images pixels with this color will not be drawn (with chroma keying)*/
 #define LV_COLOR_TRANSP    LV_COLOR_LIME         /*LV_COLOR_LIME: pure green*/
 
-/* Enable chroma keying for indexed images. */
-#define LV_INDEXED_CHROMA    1
-
 /* Enable anti-aliasing (lines, and radiuses will be smoothed) */
 #define LV_ANTIALIAS        1
 
@@ -169,6 +166,9 @@ typedef void * lv_anim_user_data_t;
 /* 1: Use the `opa_scale` style property to set the opacity of an object and its children at once*/
 #define LV_USE_OPA_SCALE        1
 
+/* 1: Use image zoom and rotation*/
+#define LV_USE_IMG_TRANSFORM    1
+
 /* 1: Enable object groups (for keyboard/encoder navigation) */
 #define LV_USE_GROUP            1
 #if LV_USE_GROUP
@@ -191,6 +191,9 @@ typedef void * lv_fs_drv_user_data_t;
 
 /*1: Show CPU usage and FPS count in the right bottom corner*/
 #define LV_USE_PERF_MONITOR     0
+
+/*1: Use the functions and types from the older API if possible */
+#define LV_USE_API_EXTENSION_V6  0
 
 /*========================
  * Image decoder and cache

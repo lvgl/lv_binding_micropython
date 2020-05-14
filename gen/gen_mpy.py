@@ -125,6 +125,16 @@ def get_name(type):
     else:
         return gen.visit(type)
 
+def remove_arg_names(ast):
+    if isinstance(ast, c_ast.TypeDecl):
+        ast.declname = None
+        remove_arg_names(ast.type)
+    elif isinstance(ast, c_ast.Decl): remove_arg_names(ast.type)
+    elif isinstance(ast, c_ast.FuncDecl): remove_arg_names(ast.args)
+    elif isinstance(ast, c_ast.ParamList):
+        for param in ast.params: remove_arg_names(param)
+
+
 #
 # module specific text patterns
 # IGNORECASE and "lower" are used to match both function and enum names
@@ -467,8 +477,16 @@ print ("""
 if len(obj_names) > 0:
     print("""
 #define LV_OBJ_T {obj_type}
+
+STATIC const mp_obj_type_t mp_{base_obj}_type;
+
+STATIC inline const mp_obj_type_t *get_BaseObj_type()
+{{
+    return &mp_{base_obj}_type;
+}}
     """.format(
-            obj_type = base_obj_type
+            obj_type = base_obj_type,
+            base_obj = base_obj_name
         ))
 
 #
@@ -1688,7 +1706,7 @@ def gen_obj_methods(obj_name):
     # add parent methods
     parent_members = []
     if obj_name in parent_obj_names and parent_obj_names[obj_name] != None:
-        parent_members += gen_obj_methods(parent_obj_names[obj_name])
+        # parent_members += gen_obj_methods(parent_obj_names[obj_name])
         obj_metadata[obj_name]['members'].update(obj_metadata[parent_obj_names[obj_name]]['members'])
     # add enum members
     enum_members = ["{{ MP_ROM_QSTR(MP_QSTR_{enum_member}), MP_ROM_PTR({enum_member_value}) }}".
@@ -1767,7 +1785,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
             ctor = ctor.format(obj = obj_name) if has_ctor(obj_name) else '',
             make_new = '.make_new = %s_make_new,' % obj_name if is_obj else '',
             buffer_p = '.buffer_p = { .get_buffer = mp_obj_get_buffer },' if is_obj else '',
-            parent = 'NULL' # parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
+            parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
             ))
 
 #
@@ -1795,15 +1813,6 @@ for obj_name in obj_names:
         # eprint("--> gen obj %s" % obj_name)
         gen_obj(obj_name)
         generated_obj_names[obj_name] = True
-
-print ("""
-STATIC const mp_obj_type_t mp_{base_obj}_type;
-
-STATIC inline const mp_obj_type_t *get_BaseObj_type()
-{{
-    return &mp_{base_obj}_type;
-}}
-""".format(base_obj=base_obj_name));
 
 #
 # Generate structs which contain function members
