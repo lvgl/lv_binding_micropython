@@ -307,6 +307,17 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC void call_struct_methods(mp_lv_struct_t *self, qstr attr, mp_obj_t *dest)
+{
+    const mp_obj_type_t *type = mp_obj_get_type(self);
+    assert(type->locals_dict->base.type == &mp_type_dict);
+    mp_map_t *locals_map = &type->locals_dict->map;
+    mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
+    if (elem != NULL) {{
+        mp_convert_member_lookup(self, type, elem->value, dest);
+    }}
+}
+
 // Convert dict to struct
 
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
@@ -758,17 +769,7 @@ STATIC void mp_C_Pointer_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_ushort_val: dest[0] = mp_arr_from_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(data->ushort_val); break; // converting from unsigned short [(sizeof(void *)) / (sizeof(unsigned short))];
             case MP_QSTR_char_val: dest[0] = mp_arr_from_char_____sizeof__void_ptr______div____sizeof__char______(data->char_val); break; // converting from char [(sizeof(void *)) / (sizeof(char))];
             case MP_QSTR_uchar_val: dest[0] = mp_arr_from_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(data->uchar_val); break; // converting from unsigned char [(sizeof(void *)) / (sizeof(unsigned char))];
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -5360,17 +5361,7 @@ STATIC void mp_lv_color32_ch_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_green: dest[0] = mp_obj_new_int_from_uint(data->green); break; // converting from uint8_t;
             case MP_QSTR_red: dest[0] = mp_obj_new_int_from_uint(data->red); break; // converting from uint8_t;
             case MP_QSTR_alpha: dest[0] = mp_obj_new_int_from_uint(data->alpha); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -5448,17 +5439,7 @@ STATIC void mp_lv_color32_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_ch: dest[0] = mp_read_byref_lv_color32_ch_t(data->ch); break; // converting from lv_color32_ch_t;
             case MP_QSTR_full: dest[0] = mp_obj_new_int_from_uint(data->full); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -6801,17 +6782,7 @@ STATIC void mp_lv_font_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_subpx: dest[0] = mp_obj_new_int_from_uint(data->subpx); break; // converting from uint8_t;
             case MP_QSTR_dsc: dest[0] = ptr_to_mp((void*)data->dsc); break; // converting from void *;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_font_user_data_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -7937,17 +7908,7 @@ STATIC void mp_lv_anim_path_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_cb: dest[0] = ptr_to_mp(data->cb); break; // converting from callback lv_anim_path_cb_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -8316,17 +8277,7 @@ STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_time_orig: dest[0] = mp_obj_new_int_from_uint(data->time_orig); break; // converting from uint32_t;
             case MP_QSTR_playback_now: dest[0] = mp_obj_new_int_from_uint(data->playback_now); break; // converting from uint8_t;
             case MP_QSTR_has_run: dest[0] = mp_obj_new_int_from_uint(data->has_run); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -8468,17 +8419,7 @@ STATIC void mp_lv_area_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_y1: dest[0] = mp_obj_new_int(data->y1); break; // converting from lv_coord_t;
             case MP_QSTR_x2: dest[0] = mp_obj_new_int(data->x2); break; // converting from lv_coord_t;
             case MP_QSTR_y2: dest[0] = mp_obj_new_int(data->y2); break; // converting from lv_coord_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -8902,17 +8843,7 @@ STATIC void mp_lv_style_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_map: dest[0] = ptr_to_mp((void*)data->map); break; // converting from uint8_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9536,17 +9467,7 @@ STATIC void mp_lv_disp_buf_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_flushing_last: dest[0] = mp_obj_new_int(data->flushing_last); break; // converting from int;
             case MP_QSTR_last_area: dest[0] = mp_obj_new_int_from_uint(data->last_area); break; // converting from uint32_t;
             case MP_QSTR_last_part: dest[0] = mp_obj_new_int_from_uint(data->last_part); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9649,17 +9570,7 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_gpu_fill_cb: dest[0] = ptr_to_mp((void*)data->gpu_fill_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, lv_area_t *fill_area, lv_color_t color);
             case MP_QSTR_color_chroma_key: dest[0] = mp_read_byref_lv_color32_t(data->color_chroma_key); break; // converting from lv_color_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_disp_drv_user_data_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9753,17 +9664,7 @@ STATIC void mp_lv_task_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
             case MP_QSTR_repeat_count: dest[0] = mp_obj_new_int(data->repeat_count); break; // converting from int32_t;
             case MP_QSTR_prio: dest[0] = mp_obj_new_int_from_uint(data->prio); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9844,17 +9745,7 @@ STATIC void mp_lv_ll_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_n_size: dest[0] = mp_obj_new_int_from_uint(data->n_size); break; // converting from uint32_t;
             case MP_QSTR_head: dest[0] = ptr_to_mp((void*)data->head); break; // converting from lv_ll_node_t *;
             case MP_QSTR_tail: dest[0] = ptr_to_mp((void*)data->tail); break; // converting from lv_ll_node_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9999,17 +9890,7 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_inv_area_joined: dest[0] = mp_arr_from_uint8_t___32__(data->inv_area_joined); break; // converting from uint8_t [32];
             case MP_QSTR_inv_p: dest[0] = mp_obj_new_int_from_uint(data->inv_p); break; // converting from uint32_t;
             case MP_QSTR_last_activity_time: dest[0] = mp_obj_new_int_from_uint(data->last_activity_time); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -10489,17 +10370,7 @@ STATIC void mp_lv_style_list_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_has_trans: dest[0] = mp_obj_new_int_from_uint(data->has_trans); break; // converting from uint8_t;
             case MP_QSTR_skip_trans: dest[0] = mp_obj_new_int_from_uint(data->skip_trans); break; // converting from uint8_t;
             case MP_QSTR_ignore_trans: dest[0] = mp_obj_new_int_from_uint(data->ignore_trans); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -10887,17 +10758,7 @@ STATIC void mp_lv_point_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_x: dest[0] = mp_obj_new_int(data->x); break; // converting from lv_coord_t;
             case MP_QSTR_y: dest[0] = mp_obj_new_int(data->y); break; // converting from lv_coord_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11052,17 +10913,7 @@ STATIC void mp_lv_obj_type_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_type: dest[0] = mp_arr_from_char_ptr__8__(data->type); break; // converting from char *[8];
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11292,17 +11143,7 @@ STATIC void mp_lv_draw_rect_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *de
             case MP_QSTR_value_line_space: dest[0] = mp_obj_new_int(data->value_line_space); break; // converting from lv_style_int_t;
             case MP_QSTR_value_align: dest[0] = mp_obj_new_int_from_uint(data->value_align); break; // converting from lv_align_t;
             case MP_QSTR_value_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->value_blend_mode); break; // converting from lv_blend_mode_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11448,17 +11289,7 @@ STATIC void mp_lv_draw_label_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *d
             case MP_QSTR_flag: dest[0] = mp_obj_new_int_from_uint(data->flag); break; // converting from lv_txt_flag_t;
             case MP_QSTR_decor: dest[0] = mp_obj_new_int_from_uint(data->decor); break; // converting from lv_text_decor_t;
             case MP_QSTR_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->blend_mode); break; // converting from lv_blend_mode_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11570,17 +11401,7 @@ STATIC void mp_lv_draw_img_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             case MP_QSTR_recolor: dest[0] = mp_read_byref_lv_color32_t(data->recolor); break; // converting from lv_color_t;
             case MP_QSTR_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->blend_mode); break; // converting from lv_blend_mode_t;
             case MP_QSTR_antialias: dest[0] = mp_obj_new_int_from_uint(data->antialias); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11687,17 +11508,7 @@ STATIC void mp_lv_draw_line_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *de
             case MP_QSTR_round_start: dest[0] = mp_obj_new_int_from_uint(data->round_start); break; // converting from uint8_t;
             case MP_QSTR_round_end: dest[0] = mp_obj_new_int_from_uint(data->round_end); break; // converting from uint8_t;
             case MP_QSTR_raw_end: dest[0] = mp_obj_new_int_from_uint(data->raw_end); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13280,17 +13091,7 @@ STATIC void mp_lv_img_header_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_reserved: dest[0] = mp_obj_new_int_from_uint(data->reserved); break; // converting from uint32_t;
             case MP_QSTR_w: dest[0] = mp_obj_new_int_from_uint(data->w); break; // converting from uint32_t;
             case MP_QSTR_h: dest[0] = mp_obj_new_int_from_uint(data->h); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13370,17 +13171,7 @@ STATIC void mp_lv_img_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_header: dest[0] = mp_read_byref_lv_img_header_t(data->header); break; // converting from lv_img_header_t;
             case MP_QSTR_data_size: dest[0] = mp_obj_new_int_from_uint(data->data_size); break; // converting from uint32_t;
             case MP_QSTR_data: dest[0] = ptr_to_mp((void*)data->data); break; // converting from uint8_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13626,17 +13417,7 @@ STATIC void mp_lv_img_decoder_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
             case MP_QSTR_read_line_cb: dest[0] = ptr_to_mp(data->read_line_cb); break; // converting from callback lv_img_decoder_read_line_f_t;
             case MP_QSTR_close_cb: dest[0] = ptr_to_mp(data->close_cb); break; // converting from callback lv_img_decoder_close_f_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_img_decoder_user_data_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13722,17 +13503,7 @@ STATIC void mp_lv_img_decoder_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
             case MP_QSTR_time_to_open: dest[0] = mp_obj_new_int_from_uint(data->time_to_open); break; // converting from uint32_t;
             case MP_QSTR_error_msg: dest[0] = convert_to_str((void*)data->error_msg); break; // converting from char *;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -15841,17 +15612,7 @@ STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             case MP_QSTR_points: dest[0] = ptr_to_mp((void*)data->points); break; // converting from lv_coord_t *;
             case MP_QSTR_color: dest[0] = mp_read_byref_lv_color32_t(data->color); break; // converting from lv_color_t;
             case MP_QSTR_start_point: dest[0] = mp_obj_new_int_from_uint(data->start_point); break; // converting from uint16_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -16946,17 +16707,7 @@ STATIC void mp_lv_color_hsv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_h: dest[0] = mp_obj_new_int_from_uint(data->h); break; // converting from uint16_t;
             case MP_QSTR_s: dest[0] = mp_obj_new_int_from_uint(data->s); break; // converting from uint8_t;
             case MP_QSTR_v: dest[0] = mp_obj_new_int_from_uint(data->v); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -21517,17 +21268,7 @@ STATIC void mp_lv_objmask_mask_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
         switch(attr)
         {
             case MP_QSTR_param: dest[0] = ptr_to_mp((void*)data->param); break; // converting from void *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -22997,17 +22738,7 @@ STATIC void mp_lv_calendar_date_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *de
             case MP_QSTR_year: dest[0] = mp_obj_new_int_from_uint(data->year); break; // converting from uint16_t;
             case MP_QSTR_month: dest[0] = mp_obj_new_int(data->month); break; // converting from int8_t;
             case MP_QSTR_day: dest[0] = mp_obj_new_int(data->day); break; // converting from int8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23621,17 +23352,7 @@ STATIC void mp_lv_mem_monitor_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
             case MP_QSTR_used_cnt: dest[0] = mp_obj_new_int_from_uint(data->used_cnt); break; // converting from uint32_t;
             case MP_QSTR_used_pct: dest[0] = mp_obj_new_int_from_uint(data->used_pct); break; // converting from uint8_t;
             case MP_QSTR_frag_pct: dest[0] = mp_obj_new_int_from_uint(data->frag_pct); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23724,17 +23445,7 @@ STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_gesture_limit: dest[0] = mp_obj_new_int_from_uint(data->gesture_limit); break; // converting from uint8_t;
             case MP_QSTR_long_press_time: dest[0] = mp_obj_new_int_from_uint(data->long_press_time); break; // converting from uint16_t;
             case MP_QSTR_long_press_rep_time: dest[0] = mp_obj_new_int_from_uint(data->long_press_rep_time); break; // converting from uint16_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23834,17 +23545,7 @@ STATIC void mp_lv_indev_proc_types_pointer_t_attr(mp_obj_t self_in, qstr attr, m
             case MP_QSTR_drag_in_prog: dest[0] = mp_obj_new_int_from_uint(data->drag_in_prog); break; // converting from uint8_t;
             case MP_QSTR_drag_dir: dest[0] = mp_obj_new_int_from_uint(data->drag_dir); break; // converting from lv_drag_dir_t;
             case MP_QSTR_gesture_sent: dest[0] = mp_obj_new_int_from_uint(data->gesture_sent); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23933,17 +23634,7 @@ STATIC void mp_lv_indev_proc_types_keypad_t_attr(mp_obj_t self_in, qstr attr, mp
         {
             case MP_QSTR_last_state: dest[0] = mp_obj_new_int_from_uint(data->last_state); break; // converting from lv_indev_state_t;
             case MP_QSTR_last_key: dest[0] = mp_obj_new_int_from_uint(data->last_key); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24019,17 +23710,7 @@ STATIC void mp_lv_indev_proc_types_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t 
         {
             case MP_QSTR_pointer: dest[0] = mp_read_byref_lv_indev_proc_types_pointer_t(data->pointer); break; // converting from lv_indev_proc_types_pointer_t;
             case MP_QSTR_keypad: dest[0] = mp_read_byref_lv_indev_proc_types_keypad_t(data->keypad); break; // converting from lv_indev_proc_types_keypad_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24111,17 +23792,7 @@ STATIC void mp_lv_indev_proc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_reset_query: dest[0] = mp_obj_new_int_from_uint(data->reset_query); break; // converting from uint8_t;
             case MP_QSTR_disabled: dest[0] = mp_obj_new_int_from_uint(data->disabled); break; // converting from uint8_t;
             case MP_QSTR_wait_until_release: dest[0] = mp_obj_new_int_from_uint(data->wait_until_release); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24211,17 +23882,7 @@ STATIC void mp_lv_group_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_click_focus: dest[0] = mp_obj_new_int_from_uint(data->click_focus); break; // converting from uint8_t;
             case MP_QSTR_refocus_policy: dest[0] = mp_obj_new_int_from_uint(data->refocus_policy); break; // converting from uint8_t;
             case MP_QSTR_wrap: dest[0] = mp_obj_new_int_from_uint(data->wrap); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24307,17 +23968,7 @@ STATIC void mp_lv_indev_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_cursor: dest[0] = lv_to_mp((void*)data->cursor); break; // converting from lv_obj_t *;
             case MP_QSTR_group: dest[0] = mp_read_ptr_lv_group_t((void*)data->group); break; // converting from lv_group_t *;
             case MP_QSTR_btn_points: dest[0] = mp_read_ptr_lv_point_t((void*)data->btn_points); break; // converting from lv_point_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24403,17 +24054,7 @@ STATIC void mp_lv_draw_mask_common_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_ob
         {
             case MP_QSTR_cb: dest[0] = ptr_to_mp(data->cb); break; // converting from callback lv_draw_mask_xcb_t;
             case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_draw_mask_type_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24491,17 +24132,7 @@ STATIC void mp_lv_draw_mask_line_param_cfg_t_attr(mp_obj_t self_in, qstr attr, m
             case MP_QSTR_p1: dest[0] = mp_read_byref_lv_point_t(data->p1); break; // converting from lv_point_t;
             case MP_QSTR_p2: dest[0] = mp_read_byref_lv_point_t(data->p2); break; // converting from lv_point_t;
             case MP_QSTR_side: dest[0] = mp_obj_new_int_from_uint(data->side); break; // converting from lv_draw_mask_line_side_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24585,17 +24216,7 @@ STATIC void mp_lv_draw_mask_line_param_t_attr(mp_obj_t self_in, qstr attr, mp_ob
             case MP_QSTR_spx: dest[0] = mp_obj_new_int(data->spx); break; // converting from int32_t;
             case MP_QSTR_flat: dest[0] = mp_obj_new_int_from_uint(data->flat); break; // converting from uint8_t;
             case MP_QSTR_inv: dest[0] = mp_obj_new_int_from_uint(data->inv); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24680,17 +24301,7 @@ STATIC void mp_lv_draw_mask_angle_param_cfg_t_attr(mp_obj_t self_in, qstr attr, 
             case MP_QSTR_vertex_p: dest[0] = mp_read_byref_lv_point_t(data->vertex_p); break; // converting from lv_point_t;
             case MP_QSTR_start_angle: dest[0] = mp_obj_new_int(data->start_angle); break; // converting from lv_coord_t;
             case MP_QSTR_end_angle: dest[0] = mp_obj_new_int(data->end_angle); break; // converting from lv_coord_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24770,17 +24381,7 @@ STATIC void mp_lv_draw_mask_angle_param_t_attr(mp_obj_t self_in, qstr attr, mp_o
             case MP_QSTR_start_line: dest[0] = mp_read_byref_lv_draw_mask_line_param_t(data->start_line); break; // converting from lv_draw_mask_line_param_t;
             case MP_QSTR_end_line: dest[0] = mp_read_byref_lv_draw_mask_line_param_t(data->end_line); break; // converting from lv_draw_mask_line_param_t;
             case MP_QSTR_delta_deg: dest[0] = mp_obj_new_int_from_uint(data->delta_deg); break; // converting from uint16_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24861,17 +24462,7 @@ STATIC void mp_lv_draw_mask_radius_param_cfg_t_attr(mp_obj_t self_in, qstr attr,
             case MP_QSTR_rect: dest[0] = mp_read_byref_lv_area_t(data->rect); break; // converting from lv_area_t;
             case MP_QSTR_radius: dest[0] = mp_obj_new_int(data->radius); break; // converting from lv_coord_t;
             case MP_QSTR_outer: dest[0] = mp_obj_new_int_from_uint(data->outer); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24948,17 +24539,7 @@ STATIC void mp_lv_sqrt_res_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_i: dest[0] = mp_obj_new_int_from_uint(data->i); break; // converting from uint16_t;
             case MP_QSTR_f: dest[0] = mp_obj_new_int_from_uint(data->f); break; // converting from uint16_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25036,17 +24617,7 @@ STATIC void mp_lv_draw_mask_radius_param_t_attr(mp_obj_t self_in, qstr attr, mp_
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_radius_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_radius_param_cfg_t;
             case MP_QSTR_y_prev: dest[0] = mp_obj_new_int(data->y_prev); break; // converting from int32_t;
             case MP_QSTR_y_prev_x: dest[0] = mp_read_byref_lv_sqrt_res_t(data->y_prev_x); break; // converting from lv_sqrt_res_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25128,17 +24699,7 @@ STATIC void mp_lv_draw_mask_fade_param_cfg_t_attr(mp_obj_t self_in, qstr attr, m
             case MP_QSTR_y_bottom: dest[0] = mp_obj_new_int(data->y_bottom); break; // converting from lv_coord_t;
             case MP_QSTR_opa_top: dest[0] = mp_obj_new_int_from_uint(data->opa_top); break; // converting from lv_opa_t;
             case MP_QSTR_opa_bottom: dest[0] = mp_obj_new_int_from_uint(data->opa_bottom); break; // converting from lv_opa_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25217,17 +24778,7 @@ STATIC void mp_lv_draw_mask_fade_param_t_attr(mp_obj_t self_in, qstr attr, mp_ob
         {
             case MP_QSTR_dsc: dest[0] = mp_read_byref_lv_draw_mask_common_dsc_t(data->dsc); break; // converting from lv_draw_mask_common_dsc_t;
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_fade_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_fade_param_cfg_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25304,17 +24855,7 @@ STATIC void mp_lv_draw_mask_map_param_cfg_t_attr(mp_obj_t self_in, qstr attr, mp
         {
             case MP_QSTR_coords: dest[0] = mp_read_byref_lv_area_t(data->coords); break; // converting from lv_area_t;
             case MP_QSTR_map: dest[0] = ptr_to_mp((void*)data->map); break; // converting from lv_opa_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25390,17 +24931,7 @@ STATIC void mp_lv_draw_mask_map_param_t_attr(mp_obj_t self_in, qstr attr, mp_obj
         {
             case MP_QSTR_dsc: dest[0] = mp_read_byref_lv_draw_mask_common_dsc_t(data->dsc); break; // converting from lv_draw_mask_common_dsc_t;
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_map_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_map_param_cfg_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25508,17 +25039,7 @@ STATIC void mp_lv_fs_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_dir_read_cb: dest[0] = ptr_to_mp((void*)data->dir_read_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p, char *fn);
             case MP_QSTR_dir_close_cb: dest[0] = ptr_to_mp((void*)data->dir_close_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p);
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_fs_drv_user_data_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25611,17 +25132,7 @@ STATIC void mp_lv_fs_file_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_file_d: dest[0] = ptr_to_mp((void*)data->file_d); break; // converting from void *;
             case MP_QSTR_drv: dest[0] = mp_read_ptr_lv_fs_drv_t((void*)data->drv); break; // converting from lv_fs_drv_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25697,17 +25208,7 @@ STATIC void mp_lv_fs_dir_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_dir_d: dest[0] = ptr_to_mp((void*)data->dir_d); break; // converting from void *;
             case MP_QSTR_drv: dest[0] = mp_read_ptr_lv_fs_drv_t((void*)data->drv); break; // converting from lv_fs_drv_t *;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25796,17 +25297,7 @@ STATIC void mp_lv_theme_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_font_subtitle: dest[0] = mp_read_ptr_lv_font_t((void*)data->font_subtitle); break; // converting from lv_font_t *;
             case MP_QSTR_font_title: dest[0] = mp_read_ptr_lv_font_t((void*)data->font_title); break; // converting from lv_font_t *;
             case MP_QSTR_flags: dest[0] = mp_obj_new_int_from_uint(data->flags); break; // converting from uint32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -26180,17 +25671,7 @@ STATIC void mp_lv_font_glyph_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *d
             case MP_QSTR_ofs_x: dest[0] = mp_obj_new_int(data->ofs_x); break; // converting from int16_t;
             case MP_QSTR_ofs_y: dest[0] = mp_obj_new_int(data->ofs_y); break; // converting from int16_t;
             case MP_QSTR_bpp: dest[0] = mp_obj_new_int_from_uint(data->bpp); break; // converting from uint8_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -31881,17 +31362,7 @@ STATIC void mp_lv_draw_label_hint_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
             case MP_QSTR_line_start: dest[0] = mp_obj_new_int(data->line_start); break; // converting from int32_t;
             case MP_QSTR_y: dest[0] = mp_obj_new_int(data->y); break; // converting from int32_t;
             case MP_QSTR_coord_y: dest[0] = mp_obj_new_int(data->coord_y); break; // converting from int32_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -32892,17 +32363,7 @@ STATIC void mp_lv_indev_data_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_btn_id: dest[0] = mp_obj_new_int_from_uint(data->btn_id); break; // converting from uint32_t;
             case MP_QSTR_enc_diff: dest[0] = mp_obj_new_int(data->enc_diff); break; // converting from int16_t;
             case MP_QSTR_state: dest[0] = mp_obj_new_int_from_uint(data->state); break; // converting from lv_indev_state_t;
-            default:
-            {
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }
-            }
+            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])

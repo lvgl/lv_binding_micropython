@@ -761,6 +761,17 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC void call_mp_lv_struct_methods(mp_lv_struct_t *self, qstr attr, mp_obj_t *dest)
+{
+    const mp_obj_type_t *type = mp_obj_get_type(self);
+    assert(type->locals_dict->base.type == &mp_type_dict);
+    mp_map_t *locals_map = &type->locals_dict->map;
+    mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
+    if (elem != NULL) {{
+        mp_convert_member_lookup(self, type, elem->value, dest);
+    }}
+}
+
 // Convert dict to struct
 
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
@@ -1205,17 +1216,7 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {{
             {read_cases};
-            default:
-            {{
-                // fallback to locals_dict lookup
-                const mp_obj_type_t *type = mp_obj_get_type(self);
-                assert(type->locals_dict->base.type == &mp_type_dict);
-                mp_map_t *locals_map = &type->locals_dict->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {{
-                    mp_convert_member_lookup(self, type, elem->value, dest);
-                }}
-            }}
+            default: call_mp_lv_struct_methods(self, attr, dest); // fallback to locals_dict lookup
         }}
     }} else {{
         if (dest[1])
