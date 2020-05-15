@@ -3,7 +3,6 @@
 #include "softtimer.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include "../../../lvgl/lvgl.h"
 #include "../../../lv_conf.h"
 #include "../../include/common.h"
