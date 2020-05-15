@@ -3,6 +3,7 @@
 #include "softtimer.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "../../../lvgl/lvgl.h"
 #include "../../../lv_conf.h"
 #include "../../include/common.h"
@@ -25,7 +26,7 @@ LTDC_HandleTypeDef *hltdc = NULL;           // handle to LTDC, referenced in stm
 DMA2D_HandleTypeDef *hdma2d = NULL;         // handle to DMA2D, referenced in stm32_it.c
 i2c_t *i2c_ts = NULL;                       // I2C handle for touchscreen
 struct _disp_drv_t *dma2d_disp_drv = NULL;  // handle to display driver
-lv_color_t *fb = NULL;                      // framebuffer pointer
+lv_color_t *fb[2] = {NULL, NULL};           // framebuffer pointers
 uint32_t w = 0;                             // display width
 uint32_t h = 0;                             // display height
 volatile bool dma2d_pend = false;           // flag of DMA2D pending operation
@@ -33,12 +34,19 @@ volatile bool dma2d_pend = false;           // flag of DMA2D pending operation
 static bool config_ltdc(void);
 static bool config_dma2d(void);
 
-STATIC mp_obj_t mp_rk043fn48h_bytearray(mp_obj_t n_obj) {
-    size_t n = (size_t)mp_obj_get_int(n_obj);
-    // allocation on extRAM with 1KB alignment
-    void *p = m_malloc(n + 1024);
-    p = (void*)((uint32_t)p + 1024 - (uint32_t)p % 1024);
-    return mp_obj_new_bytearray_by_ref(n, (void *)p);
+STATIC mp_obj_t mp_rk043fn48h_framebuffer(mp_obj_t n_obj) {
+	int n = mp_obj_get_int(n_obj) -1;
+
+	if (n<0 || n>1){
+		return mp_const_none;
+	}
+
+	if(fb[n]==NULL){
+		// allocation on extRAM with 1KB alignment to speed up LTDC burst access on AHB
+		fb[n] = MP_STATE_PORT(rk043fn48h_fb[n]) = m_malloc(sizeof(lv_color_t) * w * h  + 1024);
+		fb[n] = (lv_color_t*)((uint32_t)fb[n] + 1024 - (uint32_t)fb[n] % 1024);
+	}
+	return mp_obj_new_bytearray_by_ref(sizeof(lv_color_t) * w * h , (void *)fb[n]);
 }
 
 STATIC mp_obj_t mp_rk043fn48h_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
@@ -55,10 +63,9 @@ STATIC mp_obj_t mp_rk043fn48h_init(size_t n_args, const mp_obj_t *pos_args, mp_m
     w = args[ARG_w].u_int;
     h = args[ARG_h].u_int;
 
-    uint32_t p = (uint32_t)m_malloc(sizeof(lv_color_t) * w * h + 1024);
-    fb = (lv_color_t *)(p + 1024 - p % 1024);     //speeds up LTDC burst access on AHB
+    mp_rk043fn48h_framebuffer(mp_obj_new_int(1));
 
-    if (fb == NULL) {
+    if (fb[0] == NULL) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed allocating frame buffer"));
     }
 
@@ -91,8 +98,16 @@ STATIC mp_obj_t mp_rk043fn48h_deinit() {
         HAL_GPIO_WritePin(LCD_DISP_GPIO_PORT, LCD_DISP_PIN, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(LCD_BL_CTRL_GPIO_PORT, LCD_BL_CTRL_PIN, GPIO_PIN_RESET);
         hltdc = NULL;
-        m_free(fb);
-        fb = NULL;
+    }
+
+    if(fb[0]!=NULL){
+    	m_free(MP_STATE_PORT(rk043fn48h_fb[0]));
+    	fb[0]=NULL;
+    }
+
+    if(fb[1]!=NULL){
+    	m_free(MP_STATE_PORT(rk043fn48h_fb[1]));
+    	fb[1]=NULL;
     }
 
     BSP_TS_DeInit();
@@ -115,7 +130,7 @@ STATIC void mp_rk043fn48h_flush(struct _disp_drv_t *disp_drv, const lv_area_t *a
         HAL_DMA2D_Init(hdma2d);
         HAL_DMA2D_Start_IT(hdma2d,
             (uint32_t)color_p,
-            (uint32_t)(fb + area->x1 + area->y1 * w),
+            (uint32_t)(fb[0] + area->x1 + area->y1 * w),
             lv_area_get_width(area),
             lv_area_get_height(area));
     }
@@ -188,7 +203,7 @@ STATIC bool mp_rk043fn48h_ts_read(struct _lv_indev_drv_t *indev_drv, lv_indev_da
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_rk043fn48h_init_obj, 0, mp_rk043fn48h_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_rk043fn48h_deinit_obj, mp_rk043fn48h_deinit);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_rk043fn48h_bytearray_obj, mp_rk043fn48h_bytearray);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_rk043fn48h_framebuffer_obj, mp_rk043fn48h_framebuffer);
 DEFINE_PTR_OBJ(mp_rk043fn48h_flush);
 DEFINE_PTR_OBJ(mp_rk043fn48h_gpu_blend);
 DEFINE_PTR_OBJ(mp_rk043fn48h_gpu_fill);
@@ -202,7 +217,7 @@ STATIC const mp_rom_map_elem_t rk043fn48h_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_gpu_blend), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_gpu_blend))},
     { MP_ROM_QSTR(MP_QSTR_gpu_fill), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_gpu_fill))},
     { MP_ROM_QSTR(MP_QSTR_ts_read), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_ts_read))},
-    { MP_ROM_QSTR(MP_QSTR_bytearray), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_bytearray))},
+    { MP_ROM_QSTR(MP_QSTR_framebuffer), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_framebuffer))},
 };
 
 STATIC MP_DEFINE_CONST_DICT(
@@ -260,7 +275,7 @@ static bool config_ltdc(void) {
     #error "modrk043fn48h: LV_COLOR_DEPTH not supported"
     #endif
 
-    pLayerCfg.FBStartAdress = (uint32_t)fb;
+    pLayerCfg.FBStartAdress = (uint32_t)fb[0];
     pLayerCfg.Alpha = 255;
     pLayerCfg.Alpha0 = 0;
     pLayerCfg.Backcolor.Blue = 0;
