@@ -96,11 +96,18 @@ typedef struct mp_lv_struct_t
 
 STATIC const mp_lv_struct_t mp_lv_null_obj;
 
+#ifdef LV_OBJ_T
+STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+#else
+STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags){ return 0; }
+#endif
+
 STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
-    if (native_type->parent == NULL) return mp_obj;
+    if (native_type->parent == NULL || 
+        (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer)) return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
     return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
@@ -221,7 +228,7 @@ STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(cast_obj_obj, cast_obj);
 STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(cast_obj_class_method, MP_ROM_PTR(&cast_obj_obj));
 
-STATIC mp_int_t mp_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
+STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
     (void)flags;
     mp_lv_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
@@ -307,15 +314,25 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC void call_struct_methods(mp_lv_struct_t *self, qstr attr, mp_obj_t *dest)
+STATIC void call_parent_methods(mp_obj_t obj, qstr attr, mp_obj_t *dest)
 {
-    const mp_obj_type_t *type = mp_obj_get_type(self);
-    assert(type->locals_dict->base.type == &mp_type_dict);
-    mp_map_t *locals_map = &type->locals_dict->map;
-    mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-    if (elem != NULL) {{
-        mp_convert_member_lookup(self, type, elem->value, dest);
-    }}
+    const mp_obj_type_t *type = mp_obj_get_type(obj);
+    while (type->locals_dict != NULL) {
+        // generic method lookup
+        // this is a lookup in the object (ie not class or type)
+        assert(type->locals_dict->base.type == &mp_type_dict); // MicroPython restriction, for now
+        mp_map_t *locals_map = &type->locals_dict->map;
+        mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
+        if (elem != NULL) {
+            mp_convert_member_lookup(obj, type, elem->value, dest);
+            break;
+        }
+        if (type->parent == NULL) {
+            break;
+        }
+        // search parents
+        type = type->parent;
+    }
 }
 
 // Convert dict to struct
@@ -769,7 +786,7 @@ STATIC void mp_C_Pointer_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_ushort_val: dest[0] = mp_arr_from_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(data->ushort_val); break; // converting from unsigned short [(sizeof(void *)) / (sizeof(unsigned short))];
             case MP_QSTR_char_val: dest[0] = mp_arr_from_char_____sizeof__void_ptr______div____sizeof__char______(data->char_val); break; // converting from char [(sizeof(void *)) / (sizeof(char))];
             case MP_QSTR_uchar_val: dest[0] = mp_arr_from_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(data->uchar_val); break; // converting from unsigned char [(sizeof(void *)) / (sizeof(unsigned char))];
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -848,6 +865,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_LOG_LEVEL_type = {
     .name = MP_QSTR_ENUM_LV_LOG_LEVEL,
     .print = ENUM_LV_LOG_LEVEL_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_LOG_LEVEL_locals_dict,
     
     .parent = NULL,
@@ -880,6 +898,7 @@ STATIC const mp_obj_type_t mp_LV_RES_type = {
     .name = MP_QSTR_LV_RES,
     .print = LV_RES_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_RES_locals_dict,
     
     .parent = NULL,
@@ -916,6 +935,7 @@ STATIC const mp_obj_type_t mp_LV_TASK_PRIO_type = {
     .name = MP_QSTR_LV_TASK_PRIO,
     .print = LV_TASK_PRIO_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TASK_PRIO_locals_dict,
     
     .parent = NULL,
@@ -959,6 +979,7 @@ STATIC const mp_obj_type_t mp_LV_OPA_type = {
     .name = MP_QSTR_LV_OPA,
     .print = LV_OPA_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_OPA_locals_dict,
     
     .parent = NULL,
@@ -991,6 +1012,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_COORD_type = {
     .name = MP_QSTR_ENUM_LV_COORD,
     .print = ENUM_LV_COORD_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_COORD_locals_dict,
     
     .parent = NULL,
@@ -1042,6 +1064,7 @@ STATIC const mp_obj_type_t mp_LV_ALIGN_type = {
     .name = MP_QSTR_LV_ALIGN,
     .print = LV_ALIGN_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_ALIGN_locals_dict,
     
     .parent = NULL,
@@ -1077,6 +1100,7 @@ STATIC const mp_obj_type_t mp_LV_INDEV_TYPE_type = {
     .name = MP_QSTR_LV_INDEV_TYPE,
     .print = LV_INDEV_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_INDEV_TYPE_locals_dict,
     
     .parent = NULL,
@@ -1109,6 +1133,7 @@ STATIC const mp_obj_type_t mp_LV_INDEV_STATE_type = {
     .name = MP_QSTR_LV_INDEV_STATE,
     .print = LV_INDEV_STATE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_INDEV_STATE_locals_dict,
     
     .parent = NULL,
@@ -1143,6 +1168,7 @@ STATIC const mp_obj_type_t mp_LV_DRAG_DIR_type = {
     .name = MP_QSTR_LV_DRAG_DIR,
     .print = LV_DRAG_DIR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DRAG_DIR_locals_dict,
     
     .parent = NULL,
@@ -1177,6 +1203,7 @@ STATIC const mp_obj_type_t mp_LV_GESTURE_DIR_type = {
     .name = MP_QSTR_LV_GESTURE_DIR,
     .print = LV_GESTURE_DIR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_GESTURE_DIR_locals_dict,
     
     .parent = NULL,
@@ -1211,6 +1238,7 @@ STATIC const mp_obj_type_t mp_LV_FONT_SUBPX_type = {
     .name = MP_QSTR_LV_FONT_SUBPX,
     .print = LV_FONT_SUBPX_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_FONT_SUBPX_locals_dict,
     
     .parent = NULL,
@@ -1243,6 +1271,7 @@ STATIC const mp_obj_type_t mp_LV_ANIM_type = {
     .name = MP_QSTR_LV_ANIM,
     .print = LV_ANIM_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_ANIM_locals_dict,
     
     .parent = NULL,
@@ -1277,6 +1306,7 @@ STATIC const mp_obj_type_t mp_LV_DRAW_MASK_RES_type = {
     .name = MP_QSTR_LV_DRAW_MASK_RES,
     .print = LV_DRAW_MASK_RES_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DRAW_MASK_RES_locals_dict,
     
     .parent = NULL,
@@ -1312,6 +1342,7 @@ STATIC const mp_obj_type_t mp_LV_DRAW_MASK_TYPE_type = {
     .name = MP_QSTR_LV_DRAW_MASK_TYPE,
     .print = LV_DRAW_MASK_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DRAW_MASK_TYPE_locals_dict,
     
     .parent = NULL,
@@ -1346,6 +1377,7 @@ STATIC const mp_obj_type_t mp_LV_DRAW_MASK_LINE_SIDE_type = {
     .name = MP_QSTR_LV_DRAW_MASK_LINE_SIDE,
     .print = LV_DRAW_MASK_LINE_SIDE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DRAW_MASK_LINE_SIDE_locals_dict,
     
     .parent = NULL,
@@ -1379,6 +1411,7 @@ STATIC const mp_obj_type_t mp_LV_BLEND_MODE_type = {
     .name = MP_QSTR_LV_BLEND_MODE,
     .print = LV_BLEND_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BLEND_MODE_locals_dict,
     
     .parent = NULL,
@@ -1410,6 +1443,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_RADIUS_type = {
     .name = MP_QSTR_ENUM_LV_RADIUS,
     .print = ENUM_LV_RADIUS_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_RADIUS_locals_dict,
     
     .parent = NULL,
@@ -1447,6 +1481,7 @@ STATIC const mp_obj_type_t mp_LV_BORDER_SIDE_type = {
     .name = MP_QSTR_LV_BORDER_SIDE,
     .print = LV_BORDER_SIDE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BORDER_SIDE_locals_dict,
     
     .parent = NULL,
@@ -1480,6 +1515,7 @@ STATIC const mp_obj_type_t mp_LV_GRAD_DIR_type = {
     .name = MP_QSTR_LV_GRAD_DIR,
     .print = LV_GRAD_DIR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_GRAD_DIR_locals_dict,
     
     .parent = NULL,
@@ -1513,6 +1549,7 @@ STATIC const mp_obj_type_t mp_LV_TEXT_DECOR_type = {
     .name = MP_QSTR_LV_TEXT_DECOR,
     .print = LV_TEXT_DECOR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TEXT_DECOR_locals_dict,
     
     .parent = NULL,
@@ -1635,6 +1672,7 @@ STATIC const mp_obj_type_t mp_LV_STYLE_type = {
     .name = MP_QSTR_LV_STYLE,
     .print = LV_STYLE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_STYLE_locals_dict,
     
     .parent = NULL,
@@ -1671,6 +1709,7 @@ STATIC const mp_obj_type_t mp_LV_BIDI_DIR_type = {
     .name = MP_QSTR_LV_BIDI_DIR,
     .print = LV_BIDI_DIR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BIDI_DIR_locals_dict,
     
     .parent = NULL,
@@ -1707,6 +1746,7 @@ STATIC const mp_obj_type_t mp_LV_TXT_FLAG_type = {
     .name = MP_QSTR_LV_TXT_FLAG,
     .print = LV_TXT_FLAG_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TXT_FLAG_locals_dict,
     
     .parent = NULL,
@@ -1740,6 +1780,7 @@ STATIC const mp_obj_type_t mp_LV_TXT_CMD_STATE_type = {
     .name = MP_QSTR_LV_TXT_CMD_STATE,
     .print = LV_TXT_CMD_STATE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TXT_CMD_STATE_locals_dict,
     
     .parent = NULL,
@@ -1802,6 +1843,7 @@ STATIC const mp_obj_type_t mp_LV_IMG_CF_type = {
     .name = MP_QSTR_LV_IMG_CF,
     .print = LV_IMG_CF_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_IMG_CF_locals_dict,
     
     .parent = NULL,
@@ -1845,6 +1887,7 @@ STATIC const mp_obj_type_t mp_LV_FS_RES_type = {
     .name = MP_QSTR_LV_FS_RES,
     .print = LV_FS_RES_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_FS_RES_locals_dict,
     
     .parent = NULL,
@@ -1877,6 +1920,7 @@ STATIC const mp_obj_type_t mp_LV_FS_MODE_type = {
     .name = MP_QSTR_LV_FS_MODE,
     .print = LV_FS_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_FS_MODE_locals_dict,
     
     .parent = NULL,
@@ -1911,6 +1955,7 @@ STATIC const mp_obj_type_t mp_LV_IMG_SRC_type = {
     .name = MP_QSTR_LV_IMG_SRC,
     .print = LV_IMG_SRC_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_IMG_SRC_locals_dict,
     
     .parent = NULL,
@@ -1944,6 +1989,7 @@ STATIC const mp_obj_type_t mp_LV_DESIGN_type = {
     .name = MP_QSTR_LV_DESIGN,
     .print = LV_DESIGN_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DESIGN_locals_dict,
     
     .parent = NULL,
@@ -1978,6 +2024,7 @@ STATIC const mp_obj_type_t mp_LV_DESIGN_RES_type = {
     .name = MP_QSTR_LV_DESIGN_RES,
     .print = LV_DESIGN_RES_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DESIGN_RES_locals_dict,
     
     .parent = NULL,
@@ -2030,6 +2077,7 @@ STATIC const mp_obj_type_t mp_LV_EVENT_type = {
     .name = MP_QSTR_LV_EVENT,
     .print = LV_EVENT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_EVENT_locals_dict,
     
     .parent = NULL,
@@ -2086,6 +2134,7 @@ STATIC const mp_obj_type_t mp_LV_SIGNAL_type = {
     .name = MP_QSTR_LV_SIGNAL,
     .print = LV_SIGNAL_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SIGNAL_locals_dict,
     
     .parent = NULL,
@@ -2123,6 +2172,7 @@ STATIC const mp_obj_type_t mp_LV_PROTECT_type = {
     .name = MP_QSTR_LV_PROTECT,
     .print = LV_PROTECT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_PROTECT_locals_dict,
     
     .parent = NULL,
@@ -2160,6 +2210,7 @@ STATIC const mp_obj_type_t mp_LV_STATE_type = {
     .name = MP_QSTR_LV_STATE,
     .print = LV_STATE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_STATE_locals_dict,
     
     .parent = NULL,
@@ -2192,6 +2243,7 @@ STATIC const mp_obj_type_t mp_LV_OBJ_PART_type = {
     .name = MP_QSTR_LV_OBJ_PART,
     .print = LV_OBJ_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_OBJ_PART_locals_dict,
     
     .parent = NULL,
@@ -2234,6 +2286,7 @@ STATIC const mp_obj_type_t mp_LV_KEY_type = {
     .name = MP_QSTR_LV_KEY,
     .print = LV_KEY_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_KEY_locals_dict,
     
     .parent = NULL,
@@ -2266,6 +2319,7 @@ STATIC const mp_obj_type_t mp_LV_GROUP_REFOCUS_POLICY_type = {
     .name = MP_QSTR_LV_GROUP_REFOCUS_POLICY,
     .print = LV_GROUP_REFOCUS_POLICY_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_GROUP_REFOCUS_POLICY_locals_dict,
     
     .parent = NULL,
@@ -2300,6 +2354,7 @@ STATIC const mp_obj_type_t mp_LV_FONT_FMT_TXT_CMAP_type = {
     .name = MP_QSTR_LV_FONT_FMT_TXT_CMAP,
     .print = LV_FONT_FMT_TXT_CMAP_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_FONT_FMT_TXT_CMAP_locals_dict,
     
     .parent = NULL,
@@ -2342,6 +2397,7 @@ STATIC const mp_obj_type_t mp_LV_LAYOUT_type = {
     .name = MP_QSTR_LV_LAYOUT,
     .print = LV_LAYOUT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LAYOUT_locals_dict,
     
     .parent = NULL,
@@ -2376,6 +2432,7 @@ STATIC const mp_obj_type_t mp_LV_FIT_type = {
     .name = MP_QSTR_LV_FIT,
     .print = LV_FIT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_FIT_locals_dict,
     
     .parent = NULL,
@@ -2407,6 +2464,7 @@ STATIC const mp_obj_type_t mp_LV_CONT_PART_type = {
     .name = MP_QSTR_LV_CONT_PART,
     .print = LV_CONT_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CONT_PART_locals_dict,
     
     .parent = NULL,
@@ -2443,6 +2501,7 @@ STATIC const mp_obj_type_t mp_LV_BTN_STATE_type = {
     .name = MP_QSTR_LV_BTN_STATE,
     .print = LV_BTN_STATE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BTN_STATE_locals_dict,
     
     .parent = NULL,
@@ -2474,6 +2533,7 @@ STATIC const mp_obj_type_t mp_LV_BTN_PART_type = {
     .name = MP_QSTR_LV_BTN_PART,
     .print = LV_BTN_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BTN_PART_locals_dict,
     
     .parent = NULL,
@@ -2505,6 +2565,7 @@ STATIC const mp_obj_type_t mp_LV_IMGBTN_PART_type = {
     .name = MP_QSTR_LV_IMGBTN_PART,
     .print = LV_IMGBTN_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_IMGBTN_PART_locals_dict,
     
     .parent = NULL,
@@ -2536,6 +2597,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_LABEL_DOT_type = {
     .name = MP_QSTR_ENUM_LV_LABEL_DOT,
     .print = ENUM_LV_LABEL_DOT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_LABEL_DOT_locals_dict,
     
     .parent = NULL,
@@ -2567,6 +2629,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_LABEL_POS_type = {
     .name = MP_QSTR_ENUM_LV_LABEL_POS,
     .print = ENUM_LV_LABEL_POS_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_LABEL_POS_locals_dict,
     
     .parent = NULL,
@@ -2598,6 +2661,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_LABEL_TEXT_SEL_type = {
     .name = MP_QSTR_ENUM_LV_LABEL_TEXT_SEL,
     .print = ENUM_LV_LABEL_TEXT_SEL_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_LABEL_TEXT_SEL_locals_dict,
     
     .parent = NULL,
@@ -2634,6 +2698,7 @@ STATIC const mp_obj_type_t mp_LV_LABEL_LONG_type = {
     .name = MP_QSTR_LV_LABEL_LONG,
     .print = LV_LABEL_LONG_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LABEL_LONG_locals_dict,
     
     .parent = NULL,
@@ -2668,6 +2733,7 @@ STATIC const mp_obj_type_t mp_LV_LABEL_ALIGN_type = {
     .name = MP_QSTR_LV_LABEL_ALIGN,
     .print = LV_LABEL_ALIGN_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LABEL_ALIGN_locals_dict,
     
     .parent = NULL,
@@ -2699,6 +2765,7 @@ STATIC const mp_obj_type_t mp_LV_LABEL_PART_type = {
     .name = MP_QSTR_LV_LABEL_PART,
     .print = LV_LABEL_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LABEL_PART_locals_dict,
     
     .parent = NULL,
@@ -2730,6 +2797,7 @@ STATIC const mp_obj_type_t mp_LV_IMG_PART_type = {
     .name = MP_QSTR_LV_IMG_PART,
     .print = LV_IMG_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_IMG_PART_locals_dict,
     
     .parent = NULL,
@@ -2761,6 +2829,7 @@ STATIC const mp_obj_type_t mp_LV_LINE_PART_type = {
     .name = MP_QSTR_LV_LINE_PART,
     .print = LV_LINE_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LINE_PART_locals_dict,
     
     .parent = NULL,
@@ -2797,6 +2866,7 @@ STATIC const mp_obj_type_t mp_LV_SCROLLBAR_MODE_type = {
     .name = MP_QSTR_LV_SCROLLBAR_MODE,
     .print = LV_SCROLLBAR_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SCROLLBAR_MODE_locals_dict,
     
     .parent = NULL,
@@ -2831,6 +2901,7 @@ STATIC const mp_obj_type_t mp_LV_PAGE_EDGE_type = {
     .name = MP_QSTR_LV_PAGE_EDGE,
     .print = LV_PAGE_EDGE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_PAGE_EDGE_locals_dict,
     
     .parent = NULL,
@@ -2865,6 +2936,7 @@ STATIC const mp_obj_type_t mp_LV_PAGE_PART_type = {
     .name = MP_QSTR_LV_PAGE_PART,
     .print = LV_PAGE_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_PAGE_PART_locals_dict,
     
     .parent = NULL,
@@ -2899,6 +2971,7 @@ STATIC const mp_obj_type_t mp_LV_LIST_PART_type = {
     .name = MP_QSTR_LV_LIST_PART,
     .print = LV_LIST_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LIST_PART_locals_dict,
     
     .parent = NULL,
@@ -2930,6 +3003,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_CHART_POINT_type = {
     .name = MP_QSTR_ENUM_LV_CHART_POINT,
     .print = ENUM_LV_CHART_POINT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_CHART_POINT_locals_dict,
     
     .parent = NULL,
@@ -2961,6 +3035,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_CHART_TICK_LENGTH_type = {
     .name = MP_QSTR_ENUM_LV_CHART_TICK_LENGTH,
     .print = ENUM_LV_CHART_TICK_LENGTH_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_CHART_TICK_LENGTH_locals_dict,
     
     .parent = NULL,
@@ -2994,6 +3069,7 @@ STATIC const mp_obj_type_t mp_LV_CHART_TYPE_type = {
     .name = MP_QSTR_LV_CHART_TYPE,
     .print = LV_CHART_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CHART_TYPE_locals_dict,
     
     .parent = NULL,
@@ -3026,6 +3102,7 @@ STATIC const mp_obj_type_t mp_LV_CHART_UPDATE_MODE_type = {
     .name = MP_QSTR_LV_CHART_UPDATE_MODE,
     .print = LV_CHART_UPDATE_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CHART_UPDATE_MODE_locals_dict,
     
     .parent = NULL,
@@ -3059,6 +3136,7 @@ STATIC const mp_obj_type_t mp_LV_CHART_AXIS_type = {
     .name = MP_QSTR_LV_CHART_AXIS,
     .print = LV_CHART_AXIS_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CHART_AXIS_locals_dict,
     
     .parent = NULL,
@@ -3092,6 +3170,7 @@ STATIC const mp_obj_type_t mp_LV_CHART_PART_type = {
     .name = MP_QSTR_LV_CHART_PART,
     .print = LV_CHART_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CHART_PART_locals_dict,
     
     .parent = NULL,
@@ -3127,6 +3206,7 @@ STATIC const mp_obj_type_t mp_LV_TABLE_PART_type = {
     .name = MP_QSTR_LV_TABLE_PART,
     .print = LV_TABLE_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TABLE_PART_locals_dict,
     
     .parent = NULL,
@@ -3159,6 +3239,7 @@ STATIC const mp_obj_type_t mp_LV_CHECKBOX_PART_type = {
     .name = MP_QSTR_LV_CHECKBOX_PART,
     .print = LV_CHECKBOX_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CHECKBOX_PART_locals_dict,
     
     .parent = NULL,
@@ -3191,6 +3272,7 @@ STATIC const mp_obj_type_t mp_LV_CPICKER_TYPE_type = {
     .name = MP_QSTR_LV_CPICKER_TYPE,
     .print = LV_CPICKER_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CPICKER_TYPE_locals_dict,
     
     .parent = NULL,
@@ -3224,6 +3306,7 @@ STATIC const mp_obj_type_t mp_LV_CPICKER_COLOR_MODE_type = {
     .name = MP_QSTR_LV_CPICKER_COLOR_MODE,
     .print = LV_CPICKER_COLOR_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CPICKER_COLOR_MODE_locals_dict,
     
     .parent = NULL,
@@ -3256,6 +3339,7 @@ STATIC const mp_obj_type_t mp_LV_CPICKER_PART_type = {
     .name = MP_QSTR_LV_CPICKER_PART,
     .print = LV_CPICKER_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CPICKER_PART_locals_dict,
     
     .parent = NULL,
@@ -3289,6 +3373,7 @@ STATIC const mp_obj_type_t mp_LV_BAR_TYPE_type = {
     .name = MP_QSTR_LV_BAR_TYPE,
     .print = LV_BAR_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BAR_TYPE_locals_dict,
     
     .parent = NULL,
@@ -3321,6 +3406,7 @@ STATIC const mp_obj_type_t mp_LV_BAR_PART_type = {
     .name = MP_QSTR_LV_BAR_PART,
     .print = LV_BAR_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BAR_PART_locals_dict,
     
     .parent = NULL,
@@ -3354,6 +3440,7 @@ STATIC const mp_obj_type_t mp_LV_SLIDER_TYPE_type = {
     .name = MP_QSTR_LV_SLIDER_TYPE,
     .print = LV_SLIDER_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SLIDER_TYPE_locals_dict,
     
     .parent = NULL,
@@ -3387,6 +3474,7 @@ STATIC const mp_obj_type_t mp_LV_SLIDER_PART_type = {
     .name = MP_QSTR_LV_SLIDER_PART,
     .print = LV_SLIDER_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SLIDER_PART_locals_dict,
     
     .parent = NULL,
@@ -3418,6 +3506,7 @@ STATIC const mp_obj_type_t mp_LV_LED_PART_type = {
     .name = MP_QSTR_LV_LED_PART,
     .print = LV_LED_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LED_PART_locals_dict,
     
     .parent = NULL,
@@ -3449,6 +3538,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_BTNMATRIX_BTN_type = {
     .name = MP_QSTR_ENUM_LV_BTNMATRIX_BTN,
     .print = ENUM_LV_BTNMATRIX_BTN_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_BTNMATRIX_BTN_locals_dict,
     
     .parent = NULL,
@@ -3485,6 +3575,7 @@ STATIC const mp_obj_type_t mp_LV_BTNMATRIX_CTRL_type = {
     .name = MP_QSTR_LV_BTNMATRIX_CTRL,
     .print = LV_BTNMATRIX_CTRL_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BTNMATRIX_CTRL_locals_dict,
     
     .parent = NULL,
@@ -3517,6 +3608,7 @@ STATIC const mp_obj_type_t mp_LV_BTNMATRIX_PART_type = {
     .name = MP_QSTR_LV_BTNMATRIX_PART,
     .print = LV_BTNMATRIX_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_BTNMATRIX_PART_locals_dict,
     
     .parent = NULL,
@@ -3551,6 +3643,7 @@ STATIC const mp_obj_type_t mp_LV_KEYBOARD_MODE_type = {
     .name = MP_QSTR_LV_KEYBOARD_MODE,
     .print = LV_KEYBOARD_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_KEYBOARD_MODE_locals_dict,
     
     .parent = NULL,
@@ -3583,6 +3676,7 @@ STATIC const mp_obj_type_t mp_LV_KEYBOARD_PART_type = {
     .name = MP_QSTR_LV_KEYBOARD_PART,
     .print = LV_KEYBOARD_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_KEYBOARD_PART_locals_dict,
     
     .parent = NULL,
@@ -3617,6 +3711,7 @@ STATIC const mp_obj_type_t mp_LV_DROPDOWN_DIR_type = {
     .name = MP_QSTR_LV_DROPDOWN_DIR,
     .print = LV_DROPDOWN_DIR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DROPDOWN_DIR_locals_dict,
     
     .parent = NULL,
@@ -3651,6 +3746,7 @@ STATIC const mp_obj_type_t mp_LV_DROPDOWN_PART_type = {
     .name = MP_QSTR_LV_DROPDOWN_PART,
     .print = LV_DROPDOWN_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DROPDOWN_PART_locals_dict,
     
     .parent = NULL,
@@ -3683,6 +3779,7 @@ STATIC const mp_obj_type_t mp_LV_ROLLER_MODE_type = {
     .name = MP_QSTR_LV_ROLLER_MODE,
     .print = LV_ROLLER_MODE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_ROLLER_MODE_locals_dict,
     
     .parent = NULL,
@@ -3715,6 +3812,7 @@ STATIC const mp_obj_type_t mp_LV_ROLLER_PART_type = {
     .name = MP_QSTR_LV_ROLLER_PART,
     .print = LV_ROLLER_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_ROLLER_PART_locals_dict,
     
     .parent = NULL,
@@ -3746,6 +3844,7 @@ STATIC const mp_obj_type_t mp_ENUM_LV_TEXTAREA_CURSOR_type = {
     .name = MP_QSTR_ENUM_LV_TEXTAREA_CURSOR,
     .print = ENUM_LV_TEXTAREA_CURSOR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&ENUM_LV_TEXTAREA_CURSOR_locals_dict,
     
     .parent = NULL,
@@ -3781,6 +3880,7 @@ STATIC const mp_obj_type_t mp_LV_TEXTAREA_PART_type = {
     .name = MP_QSTR_LV_TEXTAREA_PART,
     .print = LV_TEXTAREA_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TEXTAREA_PART_locals_dict,
     
     .parent = NULL,
@@ -3812,6 +3912,7 @@ STATIC const mp_obj_type_t mp_LV_CANVAS_PART_type = {
     .name = MP_QSTR_LV_CANVAS_PART,
     .print = LV_CANVAS_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CANVAS_PART_locals_dict,
     
     .parent = NULL,
@@ -3846,6 +3947,7 @@ STATIC const mp_obj_type_t mp_LV_WIN_PART_type = {
     .name = MP_QSTR_LV_WIN_PART,
     .print = LV_WIN_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_WIN_PART_locals_dict,
     
     .parent = NULL,
@@ -3881,6 +3983,7 @@ STATIC const mp_obj_type_t mp_LV_TABVIEW_TAB_POS_type = {
     .name = MP_QSTR_LV_TABVIEW_TAB_POS,
     .print = LV_TABVIEW_TAB_POS_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TABVIEW_TAB_POS_locals_dict,
     
     .parent = NULL,
@@ -3916,6 +4019,7 @@ STATIC const mp_obj_type_t mp_LV_TABVIEW_PART_type = {
     .name = MP_QSTR_LV_TABVIEW_PART,
     .print = LV_TABVIEW_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TABVIEW_PART_locals_dict,
     
     .parent = NULL,
@@ -3949,6 +4053,7 @@ STATIC const mp_obj_type_t mp_LV_TILEVIEW_PART_type = {
     .name = MP_QSTR_LV_TILEVIEW_PART,
     .print = LV_TILEVIEW_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_TILEVIEW_PART_locals_dict,
     
     .parent = NULL,
@@ -3982,6 +4087,7 @@ STATIC const mp_obj_type_t mp_LV_MSGBOX_PART_type = {
     .name = MP_QSTR_LV_MSGBOX_PART,
     .print = LV_MSGBOX_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_MSGBOX_PART_locals_dict,
     
     .parent = NULL,
@@ -4013,6 +4119,7 @@ STATIC const mp_obj_type_t mp_LV_OBJMASK_PART_type = {
     .name = MP_QSTR_LV_OBJMASK_PART,
     .print = LV_OBJMASK_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_OBJMASK_PART_locals_dict,
     
     .parent = NULL,
@@ -4044,6 +4151,7 @@ STATIC const mp_obj_type_t mp_LV_LINEMETER_PART_type = {
     .name = MP_QSTR_LV_LINEMETER_PART,
     .print = LV_LINEMETER_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_LINEMETER_PART_locals_dict,
     
     .parent = NULL,
@@ -4077,6 +4185,7 @@ STATIC const mp_obj_type_t mp_LV_GAUGE_PART_type = {
     .name = MP_QSTR_LV_GAUGE_PART,
     .print = LV_GAUGE_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_GAUGE_PART_locals_dict,
     
     .parent = NULL,
@@ -4110,6 +4219,7 @@ STATIC const mp_obj_type_t mp_LV_SWITCH_PART_type = {
     .name = MP_QSTR_LV_SWITCH_PART,
     .print = LV_SWITCH_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SWITCH_PART_locals_dict,
     
     .parent = NULL,
@@ -4142,6 +4252,7 @@ STATIC const mp_obj_type_t mp_LV_ARC_PART_type = {
     .name = MP_QSTR_LV_ARC_PART,
     .print = LV_ARC_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_ARC_PART_locals_dict,
     
     .parent = NULL,
@@ -4175,6 +4286,7 @@ STATIC const mp_obj_type_t mp_LV_SPINNER_TYPE_type = {
     .name = MP_QSTR_LV_SPINNER_TYPE,
     .print = LV_SPINNER_TYPE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SPINNER_TYPE_locals_dict,
     
     .parent = NULL,
@@ -4207,6 +4319,7 @@ STATIC const mp_obj_type_t mp_LV_SPINNER_DIR_type = {
     .name = MP_QSTR_LV_SPINNER_DIR,
     .print = LV_SPINNER_DIR_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SPINNER_DIR_locals_dict,
     
     .parent = NULL,
@@ -4239,6 +4352,7 @@ STATIC const mp_obj_type_t mp_LV_SPINNER_PART_type = {
     .name = MP_QSTR_LV_SPINNER_PART,
     .print = LV_SPINNER_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SPINNER_PART_locals_dict,
     
     .parent = NULL,
@@ -4273,6 +4387,7 @@ STATIC const mp_obj_type_t mp_LV_CALENDAR_PART_type = {
     .name = MP_QSTR_LV_CALENDAR_PART,
     .print = LV_CALENDAR_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_CALENDAR_PART_locals_dict,
     
     .parent = NULL,
@@ -4305,6 +4420,7 @@ STATIC const mp_obj_type_t mp_LV_SPINBOX_PART_type = {
     .name = MP_QSTR_LV_SPINBOX_PART,
     .print = LV_SPINBOX_PART_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SPINBOX_PART_locals_dict,
     
     .parent = NULL,
@@ -4339,6 +4455,7 @@ STATIC const mp_obj_type_t mp_LV_DISP_SIZE_type = {
     .name = MP_QSTR_LV_DISP_SIZE,
     .print = LV_DISP_SIZE_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_DISP_SIZE_locals_dict,
     
     .parent = NULL,
@@ -4410,6 +4527,7 @@ STATIC const mp_obj_type_t mp_LV_THEME_type = {
     .name = MP_QSTR_LV_THEME,
     .print = LV_THEME_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_THEME_locals_dict,
     
     .parent = NULL,
@@ -4443,6 +4561,7 @@ STATIC const mp_obj_type_t mp_LV_THEME_MATERIAL_FLAG_type = {
     .name = MP_QSTR_LV_THEME_MATERIAL_FLAG,
     .print = LV_THEME_MATERIAL_FLAG_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_THEME_MATERIAL_FLAG_locals_dict,
     
     .parent = NULL,
@@ -4475,6 +4594,7 @@ STATIC const mp_obj_type_t mp_LV_FONT_FMT_TXT_type = {
     .name = MP_QSTR_LV_FONT_FMT_TXT,
     .print = LV_FONT_FMT_TXT_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_FONT_FMT_TXT_locals_dict,
     
     .parent = NULL,
@@ -4563,6 +4683,7 @@ STATIC const mp_obj_type_t mp_LV_SYMBOL_type = {
     .name = MP_QSTR_LV_SYMBOL,
     .print = LV_SYMBOL_print,
     
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&LV_SYMBOL_locals_dict,
     
     .parent = NULL,
@@ -5361,7 +5482,7 @@ STATIC void mp_lv_color32_ch_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_green: dest[0] = mp_obj_new_int_from_uint(data->green); break; // converting from uint8_t;
             case MP_QSTR_red: dest[0] = mp_obj_new_int_from_uint(data->red); break; // converting from uint8_t;
             case MP_QSTR_alpha: dest[0] = mp_obj_new_int_from_uint(data->alpha); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -5439,7 +5560,7 @@ STATIC void mp_lv_color32_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_ch: dest[0] = mp_read_byref_lv_color32_ch_t(data->ch); break; // converting from lv_color32_ch_t;
             case MP_QSTR_full: dest[0] = mp_obj_new_int_from_uint(data->full); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -6782,7 +6903,7 @@ STATIC void mp_lv_font_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_subpx: dest[0] = mp_obj_new_int_from_uint(data->subpx); break; // converting from uint8_t;
             case MP_QSTR_dsc: dest[0] = ptr_to_mp((void*)data->dsc); break; // converting from void *;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_font_user_data_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -7908,7 +8029,7 @@ STATIC void mp_lv_anim_path_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_cb: dest[0] = ptr_to_mp(data->cb); break; // converting from callback lv_anim_path_cb_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -8277,7 +8398,7 @@ STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_time_orig: dest[0] = mp_obj_new_int_from_uint(data->time_orig); break; // converting from uint32_t;
             case MP_QSTR_playback_now: dest[0] = mp_obj_new_int_from_uint(data->playback_now); break; // converting from uint8_t;
             case MP_QSTR_has_run: dest[0] = mp_obj_new_int_from_uint(data->has_run); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -8419,7 +8540,7 @@ STATIC void mp_lv_area_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_y1: dest[0] = mp_obj_new_int(data->y1); break; // converting from lv_coord_t;
             case MP_QSTR_x2: dest[0] = mp_obj_new_int(data->x2); break; // converting from lv_coord_t;
             case MP_QSTR_y2: dest[0] = mp_obj_new_int(data->y2); break; // converting from lv_coord_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -8843,7 +8964,7 @@ STATIC void mp_lv_style_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_map: dest[0] = ptr_to_mp((void*)data->map); break; // converting from uint8_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9467,7 +9588,7 @@ STATIC void mp_lv_disp_buf_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_flushing_last: dest[0] = mp_obj_new_int(data->flushing_last); break; // converting from int;
             case MP_QSTR_last_area: dest[0] = mp_obj_new_int_from_uint(data->last_area); break; // converting from uint32_t;
             case MP_QSTR_last_part: dest[0] = mp_obj_new_int_from_uint(data->last_part); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9570,7 +9691,7 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_gpu_fill_cb: dest[0] = ptr_to_mp((void*)data->gpu_fill_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, lv_area_t *fill_area, lv_color_t color);
             case MP_QSTR_color_chroma_key: dest[0] = mp_read_byref_lv_color32_t(data->color_chroma_key); break; // converting from lv_color_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_disp_drv_user_data_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9664,7 +9785,7 @@ STATIC void mp_lv_task_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
             case MP_QSTR_repeat_count: dest[0] = mp_obj_new_int(data->repeat_count); break; // converting from int32_t;
             case MP_QSTR_prio: dest[0] = mp_obj_new_int_from_uint(data->prio); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9745,7 +9866,7 @@ STATIC void mp_lv_ll_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_n_size: dest[0] = mp_obj_new_int_from_uint(data->n_size); break; // converting from uint32_t;
             case MP_QSTR_head: dest[0] = ptr_to_mp((void*)data->head); break; // converting from lv_ll_node_t *;
             case MP_QSTR_tail: dest[0] = ptr_to_mp((void*)data->tail); break; // converting from lv_ll_node_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -9890,7 +10011,7 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_inv_area_joined: dest[0] = mp_arr_from_uint8_t___32__(data->inv_area_joined); break; // converting from uint8_t [32];
             case MP_QSTR_inv_p: dest[0] = mp_obj_new_int_from_uint(data->inv_p); break; // converting from uint32_t;
             case MP_QSTR_last_activity_time: dest[0] = mp_obj_new_int_from_uint(data->last_activity_time); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -10370,7 +10491,7 @@ STATIC void mp_lv_style_list_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_has_trans: dest[0] = mp_obj_new_int_from_uint(data->has_trans); break; // converting from uint8_t;
             case MP_QSTR_skip_trans: dest[0] = mp_obj_new_int_from_uint(data->skip_trans); break; // converting from uint8_t;
             case MP_QSTR_ignore_trans: dest[0] = mp_obj_new_int_from_uint(data->ignore_trans); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -10758,7 +10879,7 @@ STATIC void mp_lv_point_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_x: dest[0] = mp_obj_new_int(data->x); break; // converting from lv_coord_t;
             case MP_QSTR_y: dest[0] = mp_obj_new_int(data->y); break; // converting from lv_coord_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -10913,7 +11034,7 @@ STATIC void mp_lv_obj_type_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_type: dest[0] = mp_arr_from_char_ptr__8__(data->type); break; // converting from char *[8];
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11143,7 +11264,7 @@ STATIC void mp_lv_draw_rect_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *de
             case MP_QSTR_value_line_space: dest[0] = mp_obj_new_int(data->value_line_space); break; // converting from lv_style_int_t;
             case MP_QSTR_value_align: dest[0] = mp_obj_new_int_from_uint(data->value_align); break; // converting from lv_align_t;
             case MP_QSTR_value_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->value_blend_mode); break; // converting from lv_blend_mode_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11289,7 +11410,7 @@ STATIC void mp_lv_draw_label_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *d
             case MP_QSTR_flag: dest[0] = mp_obj_new_int_from_uint(data->flag); break; // converting from lv_txt_flag_t;
             case MP_QSTR_decor: dest[0] = mp_obj_new_int_from_uint(data->decor); break; // converting from lv_text_decor_t;
             case MP_QSTR_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->blend_mode); break; // converting from lv_blend_mode_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11401,7 +11522,7 @@ STATIC void mp_lv_draw_img_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             case MP_QSTR_recolor: dest[0] = mp_read_byref_lv_color32_t(data->recolor); break; // converting from lv_color_t;
             case MP_QSTR_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->blend_mode); break; // converting from lv_blend_mode_t;
             case MP_QSTR_antialias: dest[0] = mp_obj_new_int_from_uint(data->antialias); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11508,7 +11629,7 @@ STATIC void mp_lv_draw_line_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *de
             case MP_QSTR_round_start: dest[0] = mp_obj_new_int_from_uint(data->round_start); break; // converting from uint8_t;
             case MP_QSTR_round_end: dest[0] = mp_obj_new_int_from_uint(data->round_end); break; // converting from uint8_t;
             case MP_QSTR_raw_end: dest[0] = mp_obj_new_int_from_uint(data->raw_end); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -11961,8 +12082,9 @@ STATIC const mp_obj_type_t mp_obj_type = {
     .name = MP_QSTR_obj,
     .print = obj_print,
     .make_new = obj_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&obj_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = NULL,
 };
     
@@ -12162,8 +12284,9 @@ STATIC const mp_obj_type_t mp_cont_type = {
     .name = MP_QSTR_cont,
     .print = cont_print,
     .make_new = cont_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&cont_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -12451,8 +12574,9 @@ STATIC const mp_obj_type_t mp_btn_type = {
     .name = MP_QSTR_btn,
     .print = btn_print,
     .make_new = btn_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&btn_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -12615,8 +12739,9 @@ STATIC const mp_obj_type_t mp_imgbtn_type = {
     .name = MP_QSTR_imgbtn,
     .print = imgbtn_print,
     .make_new = imgbtn_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&imgbtn_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -13049,8 +13174,9 @@ STATIC const mp_obj_type_t mp_label_type = {
     .name = MP_QSTR_label,
     .print = label_print,
     .make_new = label_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&label_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -13091,7 +13217,7 @@ STATIC void mp_lv_img_header_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_reserved: dest[0] = mp_obj_new_int_from_uint(data->reserved); break; // converting from uint32_t;
             case MP_QSTR_w: dest[0] = mp_obj_new_int_from_uint(data->w); break; // converting from uint32_t;
             case MP_QSTR_h: dest[0] = mp_obj_new_int_from_uint(data->h); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13171,7 +13297,7 @@ STATIC void mp_lv_img_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_header: dest[0] = mp_read_byref_lv_img_header_t(data->header); break; // converting from lv_img_header_t;
             case MP_QSTR_data_size: dest[0] = mp_obj_new_int_from_uint(data->data_size); break; // converting from uint32_t;
             case MP_QSTR_data: dest[0] = ptr_to_mp((void*)data->data); break; // converting from uint8_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13417,7 +13543,7 @@ STATIC void mp_lv_img_decoder_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
             case MP_QSTR_read_line_cb: dest[0] = ptr_to_mp(data->read_line_cb); break; // converting from callback lv_img_decoder_read_line_f_t;
             case MP_QSTR_close_cb: dest[0] = ptr_to_mp(data->close_cb); break; // converting from callback lv_img_decoder_close_f_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_img_decoder_user_data_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -13503,7 +13629,7 @@ STATIC void mp_lv_img_decoder_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
             case MP_QSTR_time_to_open: dest[0] = mp_obj_new_int_from_uint(data->time_to_open); break; // converting from uint32_t;
             case MP_QSTR_error_msg: dest[0] = convert_to_str((void*)data->error_msg); break; // converting from char *;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -14308,8 +14434,9 @@ STATIC const mp_obj_type_t mp_img_type = {
     .name = MP_QSTR_img,
     .print = img_print,
     .make_new = img_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&img_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -14467,8 +14594,9 @@ STATIC const mp_obj_type_t mp_line_type = {
     .name = MP_QSTR_line,
     .print = line_print,
     .make_new = line_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&line_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -15094,8 +15222,9 @@ STATIC const mp_obj_type_t mp_page_type = {
     .name = MP_QSTR_page,
     .print = page_print,
     .make_new = page_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&page_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -15572,8 +15701,9 @@ STATIC const mp_obj_type_t mp_list_type = {
     .name = MP_QSTR_list,
     .print = list_print,
     .make_new = list_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&list_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -15612,7 +15742,7 @@ STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             case MP_QSTR_points: dest[0] = ptr_to_mp((void*)data->points); break; // converting from lv_coord_t *;
             case MP_QSTR_color: dest[0] = mp_read_byref_lv_color32_t(data->color); break; // converting from lv_color_t;
             case MP_QSTR_start_point: dest[0] = mp_obj_new_int_from_uint(data->start_point); break; // converting from uint16_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -16076,8 +16206,9 @@ STATIC const mp_obj_type_t mp_chart_type = {
     .name = MP_QSTR_chart,
     .print = chart_print,
     .make_new = chart_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&chart_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -16437,8 +16568,9 @@ STATIC const mp_obj_type_t mp_table_type = {
     .name = MP_QSTR_table,
     .print = table_print,
     .make_new = table_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&table_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -16599,8 +16731,9 @@ STATIC const mp_obj_type_t mp_checkbox_type = {
     .name = MP_QSTR_checkbox,
     .print = checkbox_print,
     .make_new = checkbox_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&checkbox_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -16707,7 +16840,7 @@ STATIC void mp_lv_color_hsv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_h: dest[0] = mp_obj_new_int_from_uint(data->h); break; // converting from uint16_t;
             case MP_QSTR_s: dest[0] = mp_obj_new_int_from_uint(data->s); break; // converting from uint8_t;
             case MP_QSTR_v: dest[0] = mp_obj_new_int_from_uint(data->v); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -17017,8 +17150,9 @@ STATIC const mp_obj_type_t mp_cpicker_type = {
     .name = MP_QSTR_cpicker,
     .print = cpicker_print,
     .make_new = cpicker_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&cpicker_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -17253,8 +17387,9 @@ STATIC const mp_obj_type_t mp_bar_type = {
     .name = MP_QSTR_bar,
     .print = bar_print,
     .make_new = bar_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&bar_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -17506,8 +17641,9 @@ STATIC const mp_obj_type_t mp_slider_type = {
     .name = MP_QSTR_slider,
     .print = slider_print,
     .make_new = slider_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&slider_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -17632,8 +17768,9 @@ STATIC const mp_obj_type_t mp_led_type = {
     .name = MP_QSTR_led,
     .print = led_print,
     .make_new = led_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&led_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -18055,8 +18192,9 @@ STATIC const mp_obj_type_t mp_btnmatrix_type = {
     .name = MP_QSTR_btnmatrix,
     .print = btnmatrix_print,
     .make_new = btnmatrix_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&btnmatrix_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -18274,8 +18412,9 @@ STATIC const mp_obj_type_t mp_keyboard_type = {
     .name = MP_QSTR_keyboard,
     .print = keyboard_print,
     .make_new = keyboard_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&keyboard_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -18684,8 +18823,9 @@ STATIC const mp_obj_type_t mp_dropdown_type = {
     .name = MP_QSTR_dropdown,
     .print = dropdown_print,
     .make_new = dropdown_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&dropdown_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -18956,8 +19096,9 @@ STATIC const mp_obj_type_t mp_roller_type = {
     .name = MP_QSTR_roller,
     .print = roller_print,
     .make_new = roller_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&roller_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -19746,8 +19887,9 @@ STATIC const mp_obj_type_t mp_textarea_type = {
     .name = MP_QSTR_textarea,
     .print = textarea_print,
     .make_new = textarea_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&textarea_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -20115,8 +20257,9 @@ STATIC const mp_obj_type_t mp_canvas_type = {
     .name = MP_QSTR_canvas,
     .print = canvas_print,
     .make_new = canvas_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&canvas_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -20578,8 +20721,9 @@ STATIC const mp_obj_type_t mp_win_type = {
     .name = MP_QSTR_win,
     .print = win_print,
     .make_new = win_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&win_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -20795,8 +20939,9 @@ STATIC const mp_obj_type_t mp_tabview_type = {
     .name = MP_QSTR_tabview,
     .print = tabview_print,
     .make_new = tabview_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&tabview_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -20981,8 +21126,9 @@ STATIC const mp_obj_type_t mp_tileview_type = {
     .name = MP_QSTR_tileview,
     .print = tileview_print,
     .make_new = tileview_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&tileview_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -21230,8 +21376,9 @@ STATIC const mp_obj_type_t mp_msgbox_type = {
     .name = MP_QSTR_msgbox,
     .print = msgbox_print,
     .make_new = msgbox_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&msgbox_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -21268,7 +21415,7 @@ STATIC void mp_lv_objmask_mask_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
         switch(attr)
         {
             case MP_QSTR_param: dest[0] = ptr_to_mp((void*)data->param); break; // converting from void *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -21399,8 +21546,9 @@ STATIC const mp_obj_type_t mp_objmask_type = {
     .name = MP_QSTR_objmask,
     .print = objmask_print,
     .make_new = objmask_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&objmask_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -21669,8 +21817,9 @@ STATIC const mp_obj_type_t mp_linemeter_type = {
     .name = MP_QSTR_linemeter,
     .print = linemeter_print,
     .make_new = linemeter_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&linemeter_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -22116,8 +22265,9 @@ STATIC const mp_obj_type_t mp_gauge_type = {
     .name = MP_QSTR_gauge,
     .print = gauge_print,
     .make_new = gauge_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&gauge_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -22262,8 +22412,9 @@ STATIC const mp_obj_type_t mp_switch_type = {
     .name = MP_QSTR_switch,
     .print = switch_print,
     .make_new = switch_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&switch_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -22498,8 +22649,9 @@ STATIC const mp_obj_type_t mp_arc_type = {
     .name = MP_QSTR_arc,
     .print = arc_print,
     .make_new = arc_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&arc_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -22698,8 +22850,9 @@ STATIC const mp_obj_type_t mp_spinner_type = {
     .name = MP_QSTR_spinner,
     .print = spinner_print,
     .make_new = spinner_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&spinner_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -22738,7 +22891,7 @@ STATIC void mp_lv_calendar_date_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *de
             case MP_QSTR_year: dest[0] = mp_obj_new_int_from_uint(data->year); break; // converting from uint16_t;
             case MP_QSTR_month: dest[0] = mp_obj_new_int(data->month); break; // converting from int8_t;
             case MP_QSTR_day: dest[0] = mp_obj_new_int(data->day); break; // converting from int8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23056,8 +23209,9 @@ STATIC const mp_obj_type_t mp_calendar_type = {
     .name = MP_QSTR_calendar,
     .print = calendar_print,
     .make_new = calendar_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&calendar_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -23308,8 +23462,9 @@ STATIC const mp_obj_type_t mp_spinbox_type = {
     .name = MP_QSTR_spinbox,
     .print = spinbox_print,
     .make_new = spinbox_make_new,
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&spinbox_locals_dict,
-    .buffer_p = { .get_buffer = mp_obj_get_buffer },
+    .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
     .parent = &mp_obj_type,
 };
     
@@ -23352,7 +23507,7 @@ STATIC void mp_lv_mem_monitor_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
             case MP_QSTR_used_cnt: dest[0] = mp_obj_new_int_from_uint(data->used_cnt); break; // converting from uint32_t;
             case MP_QSTR_used_pct: dest[0] = mp_obj_new_int_from_uint(data->used_pct); break; // converting from uint8_t;
             case MP_QSTR_frag_pct: dest[0] = mp_obj_new_int_from_uint(data->frag_pct); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23445,7 +23600,7 @@ STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_gesture_limit: dest[0] = mp_obj_new_int_from_uint(data->gesture_limit); break; // converting from uint8_t;
             case MP_QSTR_long_press_time: dest[0] = mp_obj_new_int_from_uint(data->long_press_time); break; // converting from uint16_t;
             case MP_QSTR_long_press_rep_time: dest[0] = mp_obj_new_int_from_uint(data->long_press_rep_time); break; // converting from uint16_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23545,7 +23700,7 @@ STATIC void mp_lv_indev_proc_types_pointer_t_attr(mp_obj_t self_in, qstr attr, m
             case MP_QSTR_drag_in_prog: dest[0] = mp_obj_new_int_from_uint(data->drag_in_prog); break; // converting from uint8_t;
             case MP_QSTR_drag_dir: dest[0] = mp_obj_new_int_from_uint(data->drag_dir); break; // converting from lv_drag_dir_t;
             case MP_QSTR_gesture_sent: dest[0] = mp_obj_new_int_from_uint(data->gesture_sent); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23634,7 +23789,7 @@ STATIC void mp_lv_indev_proc_types_keypad_t_attr(mp_obj_t self_in, qstr attr, mp
         {
             case MP_QSTR_last_state: dest[0] = mp_obj_new_int_from_uint(data->last_state); break; // converting from lv_indev_state_t;
             case MP_QSTR_last_key: dest[0] = mp_obj_new_int_from_uint(data->last_key); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23710,7 +23865,7 @@ STATIC void mp_lv_indev_proc_types_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t 
         {
             case MP_QSTR_pointer: dest[0] = mp_read_byref_lv_indev_proc_types_pointer_t(data->pointer); break; // converting from lv_indev_proc_types_pointer_t;
             case MP_QSTR_keypad: dest[0] = mp_read_byref_lv_indev_proc_types_keypad_t(data->keypad); break; // converting from lv_indev_proc_types_keypad_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23792,7 +23947,7 @@ STATIC void mp_lv_indev_proc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_reset_query: dest[0] = mp_obj_new_int_from_uint(data->reset_query); break; // converting from uint8_t;
             case MP_QSTR_disabled: dest[0] = mp_obj_new_int_from_uint(data->disabled); break; // converting from uint8_t;
             case MP_QSTR_wait_until_release: dest[0] = mp_obj_new_int_from_uint(data->wait_until_release); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23882,7 +24037,7 @@ STATIC void mp_lv_group_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_click_focus: dest[0] = mp_obj_new_int_from_uint(data->click_focus); break; // converting from uint8_t;
             case MP_QSTR_refocus_policy: dest[0] = mp_obj_new_int_from_uint(data->refocus_policy); break; // converting from uint8_t;
             case MP_QSTR_wrap: dest[0] = mp_obj_new_int_from_uint(data->wrap); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -23968,7 +24123,7 @@ STATIC void mp_lv_indev_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_cursor: dest[0] = lv_to_mp((void*)data->cursor); break; // converting from lv_obj_t *;
             case MP_QSTR_group: dest[0] = mp_read_ptr_lv_group_t((void*)data->group); break; // converting from lv_group_t *;
             case MP_QSTR_btn_points: dest[0] = mp_read_ptr_lv_point_t((void*)data->btn_points); break; // converting from lv_point_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24054,7 +24209,7 @@ STATIC void mp_lv_draw_mask_common_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_ob
         {
             case MP_QSTR_cb: dest[0] = ptr_to_mp(data->cb); break; // converting from callback lv_draw_mask_xcb_t;
             case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_draw_mask_type_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24132,7 +24287,7 @@ STATIC void mp_lv_draw_mask_line_param_cfg_t_attr(mp_obj_t self_in, qstr attr, m
             case MP_QSTR_p1: dest[0] = mp_read_byref_lv_point_t(data->p1); break; // converting from lv_point_t;
             case MP_QSTR_p2: dest[0] = mp_read_byref_lv_point_t(data->p2); break; // converting from lv_point_t;
             case MP_QSTR_side: dest[0] = mp_obj_new_int_from_uint(data->side); break; // converting from lv_draw_mask_line_side_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24216,7 +24371,7 @@ STATIC void mp_lv_draw_mask_line_param_t_attr(mp_obj_t self_in, qstr attr, mp_ob
             case MP_QSTR_spx: dest[0] = mp_obj_new_int(data->spx); break; // converting from int32_t;
             case MP_QSTR_flat: dest[0] = mp_obj_new_int_from_uint(data->flat); break; // converting from uint8_t;
             case MP_QSTR_inv: dest[0] = mp_obj_new_int_from_uint(data->inv); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24301,7 +24456,7 @@ STATIC void mp_lv_draw_mask_angle_param_cfg_t_attr(mp_obj_t self_in, qstr attr, 
             case MP_QSTR_vertex_p: dest[0] = mp_read_byref_lv_point_t(data->vertex_p); break; // converting from lv_point_t;
             case MP_QSTR_start_angle: dest[0] = mp_obj_new_int(data->start_angle); break; // converting from lv_coord_t;
             case MP_QSTR_end_angle: dest[0] = mp_obj_new_int(data->end_angle); break; // converting from lv_coord_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24381,7 +24536,7 @@ STATIC void mp_lv_draw_mask_angle_param_t_attr(mp_obj_t self_in, qstr attr, mp_o
             case MP_QSTR_start_line: dest[0] = mp_read_byref_lv_draw_mask_line_param_t(data->start_line); break; // converting from lv_draw_mask_line_param_t;
             case MP_QSTR_end_line: dest[0] = mp_read_byref_lv_draw_mask_line_param_t(data->end_line); break; // converting from lv_draw_mask_line_param_t;
             case MP_QSTR_delta_deg: dest[0] = mp_obj_new_int_from_uint(data->delta_deg); break; // converting from uint16_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24462,7 +24617,7 @@ STATIC void mp_lv_draw_mask_radius_param_cfg_t_attr(mp_obj_t self_in, qstr attr,
             case MP_QSTR_rect: dest[0] = mp_read_byref_lv_area_t(data->rect); break; // converting from lv_area_t;
             case MP_QSTR_radius: dest[0] = mp_obj_new_int(data->radius); break; // converting from lv_coord_t;
             case MP_QSTR_outer: dest[0] = mp_obj_new_int_from_uint(data->outer); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24539,7 +24694,7 @@ STATIC void mp_lv_sqrt_res_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_i: dest[0] = mp_obj_new_int_from_uint(data->i); break; // converting from uint16_t;
             case MP_QSTR_f: dest[0] = mp_obj_new_int_from_uint(data->f); break; // converting from uint16_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24617,7 +24772,7 @@ STATIC void mp_lv_draw_mask_radius_param_t_attr(mp_obj_t self_in, qstr attr, mp_
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_radius_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_radius_param_cfg_t;
             case MP_QSTR_y_prev: dest[0] = mp_obj_new_int(data->y_prev); break; // converting from int32_t;
             case MP_QSTR_y_prev_x: dest[0] = mp_read_byref_lv_sqrt_res_t(data->y_prev_x); break; // converting from lv_sqrt_res_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24699,7 +24854,7 @@ STATIC void mp_lv_draw_mask_fade_param_cfg_t_attr(mp_obj_t self_in, qstr attr, m
             case MP_QSTR_y_bottom: dest[0] = mp_obj_new_int(data->y_bottom); break; // converting from lv_coord_t;
             case MP_QSTR_opa_top: dest[0] = mp_obj_new_int_from_uint(data->opa_top); break; // converting from lv_opa_t;
             case MP_QSTR_opa_bottom: dest[0] = mp_obj_new_int_from_uint(data->opa_bottom); break; // converting from lv_opa_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24778,7 +24933,7 @@ STATIC void mp_lv_draw_mask_fade_param_t_attr(mp_obj_t self_in, qstr attr, mp_ob
         {
             case MP_QSTR_dsc: dest[0] = mp_read_byref_lv_draw_mask_common_dsc_t(data->dsc); break; // converting from lv_draw_mask_common_dsc_t;
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_fade_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_fade_param_cfg_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24855,7 +25010,7 @@ STATIC void mp_lv_draw_mask_map_param_cfg_t_attr(mp_obj_t self_in, qstr attr, mp
         {
             case MP_QSTR_coords: dest[0] = mp_read_byref_lv_area_t(data->coords); break; // converting from lv_area_t;
             case MP_QSTR_map: dest[0] = ptr_to_mp((void*)data->map); break; // converting from lv_opa_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -24931,7 +25086,7 @@ STATIC void mp_lv_draw_mask_map_param_t_attr(mp_obj_t self_in, qstr attr, mp_obj
         {
             case MP_QSTR_dsc: dest[0] = mp_read_byref_lv_draw_mask_common_dsc_t(data->dsc); break; // converting from lv_draw_mask_common_dsc_t;
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_map_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_map_param_cfg_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25039,7 +25194,7 @@ STATIC void mp_lv_fs_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_dir_read_cb: dest[0] = ptr_to_mp((void*)data->dir_read_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p, char *fn);
             case MP_QSTR_dir_close_cb: dest[0] = ptr_to_mp((void*)data->dir_close_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p);
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_fs_drv_user_data_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25132,7 +25287,7 @@ STATIC void mp_lv_fs_file_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_file_d: dest[0] = ptr_to_mp((void*)data->file_d); break; // converting from void *;
             case MP_QSTR_drv: dest[0] = mp_read_ptr_lv_fs_drv_t((void*)data->drv); break; // converting from lv_fs_drv_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25208,7 +25363,7 @@ STATIC void mp_lv_fs_dir_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_dir_d: dest[0] = ptr_to_mp((void*)data->dir_d); break; // converting from void *;
             case MP_QSTR_drv: dest[0] = mp_read_ptr_lv_fs_drv_t((void*)data->drv); break; // converting from lv_fs_drv_t *;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25297,7 +25452,7 @@ STATIC void mp_lv_theme_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_font_subtitle: dest[0] = mp_read_ptr_lv_font_t((void*)data->font_subtitle); break; // converting from lv_font_t *;
             case MP_QSTR_font_title: dest[0] = mp_read_ptr_lv_font_t((void*)data->font_title); break; // converting from lv_font_t *;
             case MP_QSTR_flags: dest[0] = mp_obj_new_int_from_uint(data->flags); break; // converting from uint32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -25671,7 +25826,7 @@ STATIC void mp_lv_font_glyph_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *d
             case MP_QSTR_ofs_x: dest[0] = mp_obj_new_int(data->ofs_x); break; // converting from int16_t;
             case MP_QSTR_ofs_y: dest[0] = mp_obj_new_int(data->ofs_y); break; // converting from int16_t;
             case MP_QSTR_bpp: dest[0] = mp_obj_new_int_from_uint(data->bpp); break; // converting from uint8_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -31362,7 +31517,7 @@ STATIC void mp_lv_draw_label_hint_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
             case MP_QSTR_line_start: dest[0] = mp_obj_new_int(data->line_start); break; // converting from int32_t;
             case MP_QSTR_y: dest[0] = mp_obj_new_int(data->y); break; // converting from int32_t;
             case MP_QSTR_coord_y: dest[0] = mp_obj_new_int(data->coord_y); break; // converting from int32_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])
@@ -32363,7 +32518,7 @@ STATIC void mp_lv_indev_data_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_btn_id: dest[0] = mp_obj_new_int_from_uint(data->btn_id); break; // converting from uint32_t;
             case MP_QSTR_enc_diff: dest[0] = mp_obj_new_int(data->enc_diff); break; // converting from int16_t;
             case MP_QSTR_state: dest[0] = mp_obj_new_int_from_uint(data->state); break; // converting from lv_indev_state_t;
-            default: call_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
         if (dest[1])

@@ -550,11 +550,18 @@ typedef struct mp_lv_struct_t
 
 STATIC const mp_lv_struct_t mp_lv_null_obj;
 
+#ifdef LV_OBJ_T
+STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+#else
+STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags){ return 0; }
+#endif
+
 STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
-    if (native_type->parent == NULL) return mp_obj;
+    if (native_type->parent == NULL || 
+        (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer)) return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
     return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
@@ -675,7 +682,7 @@ STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(cast_obj_obj, cast_obj);
 STATIC MP_DEFINE_CONST_CLASSMETHOD_OBJ(cast_obj_class_method, MP_ROM_PTR(&cast_obj_obj));
 
-STATIC mp_int_t mp_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
+STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
     (void)flags;
     mp_lv_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
@@ -761,15 +768,25 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC void call_mp_lv_struct_methods(mp_lv_struct_t *self, qstr attr, mp_obj_t *dest)
+STATIC void call_parent_methods(mp_obj_t obj, qstr attr, mp_obj_t *dest)
 {
-    const mp_obj_type_t *type = mp_obj_get_type(self);
-    assert(type->locals_dict->base.type == &mp_type_dict);
-    mp_map_t *locals_map = &type->locals_dict->map;
-    mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-    if (elem != NULL) {{
-        mp_convert_member_lookup(self, type, elem->value, dest);
-    }}
+    const mp_obj_type_t *type = mp_obj_get_type(obj);
+    while (type->locals_dict != NULL) {
+        // generic method lookup
+        // this is a lookup in the object (ie not class or type)
+        assert(type->locals_dict->base.type == &mp_type_dict); // MicroPython restriction, for now
+        mp_map_t *locals_map = &type->locals_dict->map;
+        mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
+        if (elem != NULL) {
+            mp_convert_member_lookup(obj, type, elem->value, dest);
+            break;
+        }
+        if (type->parent == NULL) {
+            break;
+        }
+        // search parents
+        type = type->parent;
+    }
 }
 
 // Convert dict to struct
@@ -1216,7 +1233,7 @@ STATIC void mp_{struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {{
             {read_cases};
-            default: call_mp_lv_struct_methods(self, attr, dest); // fallback to locals_dict lookup
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }}
     }} else {{
         if (dest[1])
@@ -1774,6 +1791,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
     .name = MP_QSTR_{obj},
     .print = {obj}_print,
     {make_new}
+    .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
     {buffer_p}
     .parent = {parent},
@@ -1785,7 +1803,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
             locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
             ctor = ctor.format(obj = obj_name) if has_ctor(obj_name) else '',
             make_new = '.make_new = %s_make_new,' % obj_name if is_obj else '',
-            buffer_p = '.buffer_p = { .get_buffer = mp_obj_get_buffer },' if is_obj else '',
+            buffer_p = '.buffer_p = { .get_buffer = mp_lv_obj_get_buffer },' if is_obj else '',
             parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
             ))
 
