@@ -64,7 +64,7 @@ STATIC void* tick_thread(void * data)
     (void)data;
 
     while(fbdev_active()) {
-        usleep(1);   /*Sleep for 1 millisecond*/
+        usleep(1000);   /*Sleep for 1 millisecond*/
         lv_tick_inc(1); /*Tell LittelvGL that 1 milliseconds were elapsed*/
         mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
     }
