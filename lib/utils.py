@@ -1,5 +1,14 @@
 
 import lvgl as lv
+import ustruct
+import uctypes
+
+# Calculate pointer size on current machine, and corresponding fmt
+
+ptr_size = uctypes.sizeof({'p': (uctypes.PTR, uctypes.VOID)})
+fmt_options = {2:'H', 4:'L', 8:'Q'}
+buf_fmt = fmt_options[ptr_size] if ptr_size in fmt_options else None
+
 
 def aligned_buf(buf, alignment):
 
@@ -21,9 +30,12 @@ def aligned_buf(buf, alignment):
 
     p = lv.C_Pointer()
     p.ptr_val = buf
-    mod = p.uint_val % alignment
+    if not buf_fmt: return None
+    addr = ustruct.unpack(buf_fmt, p.ptr_val)[0]
+    mod = addr % alignment
     offset = alignment - mod if mod != 0 else 0
     if len(buf) <= offset: return None
-    p.uint_val += offset
+    addr += offset
+    p = lv.C_Pointer.cast(ustruct.pack(buf_fmt, addr))
     return p.ptr_val.__dereference__(len(buf) - offset)
 
