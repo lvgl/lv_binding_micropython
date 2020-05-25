@@ -6,19 +6,25 @@ lv.init()
 
 # Create a style based on style_plain but with a symbol font
 
-'''
-symbolstyle = lv.style_t(lv.style_plain)
-symbolstyle.text.font = lv.font_roboto_28
+class ColorStyle(lv.style_t):
+    def __init__(self, color):
+        super().__init__()
+        self.set_bg_opa(lv.STATE.DEFAULT, lv.OPA.COVER);
+        self.set_bg_color(lv.STATE.DEFAULT, lv.color_hex3(color))
+        self.set_bg_grad_color(lv.STATE.DEFAULT, lv.color_hex3(0xFFF));
+        self.set_bg_grad_dir(lv.STATE.DEFAULT, lv.GRAD_DIR.VER);
+        self.set_bg_main_stop(lv.STATE.DEFAULT, 0);
+        self.set_bg_grad_stop(lv.STATE.DEFAULT, 128);
 
-
-# The following two lines do the same thing.
-# They show how to initialize struct either directly or through a dict
-
-symbolstyle.text.color = lv.color_hex(0xffffff)
-symbolstyle.text.color = lv.color_make(0xff, 0xff, 0xff)
-if hasattr(symbolstyle.text.color.ch, 'alpha'):
-    symbolstyle.text.color.ch.alpha = 0xff # Only has alpha when color is 32 bit
-'''
+class ShadowStyle(lv.style_t):
+    def __init__(self):
+        super().__init__()
+        self.set_shadow_opa(lv.STATE.DEFAULT, lv.OPA.COVER);
+        self.set_shadow_width(lv.STATE.DEFAULT, 3);
+        self.set_shadow_color(lv.STATE.DEFAULT, lv.color_hex3(0xAAA));
+        self.set_shadow_ofs_x(lv.STATE.DEFAULT, 5);
+        self.set_shadow_ofs_y(lv.STATE.DEFAULT, 3);
+        self.set_shadow_spread(lv.STATE.DEFAULT, 0);
 
 def get_member_name(obj, value):
     for member in dir(obj):
@@ -30,7 +36,6 @@ class SymbolButton(lv.btn):
         super().__init__(parent)
         self.symbol = lv.label(self)
         self.symbol.set_text(symbol)
-        # self.symbol.set_style(lv.label.STYLE.MAIN, symbolstyle)
         
         self.label = lv.label(self)
         self.label.set_text(text)
@@ -51,8 +56,6 @@ class Page_Buttons:
         self.label = lv.label(page)
         self.label.align(page, lv.ALIGN.IN_BOTTOM_LEFT, 30, -30)
 
-        # Currently only single callback per object is supported
-
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
             btn.set_event_cb(lambda obj=None, event=-1, name=name: self.label.set_text('%s %s' % (name, get_member_name(lv.EVENT, event))))
 
@@ -71,20 +74,24 @@ class Page_Simple:
         self.on_slider_changed(None)
         
         # style selector
-        # self.styles = [('Plain', lv.style_plain), ('Plain color', lv.style_plain_color), ('Pretty', lv.style_pretty), ('Pretty color', lv.style_pretty_color)]
-        self.styles = []
+        self.styles = [('Gray', ColorStyle(0xCCC)),
+                       ('Red', ColorStyle(0xF88)), 
+                       ('Green',ColorStyle(0x8F8)),
+                       ('Blue', ColorStyle(0x88F))] 
     
         self.style_selector = lv.dropdown(page)
-        self.style_selector.align(self.slider, lv.ALIGN.IN_BOTTOM_LEFT, 0, 40)
+        self.style_selector.add_style(self.style_selector.PART.MAIN, ShadowStyle())
+        self.style_selector.align(self.slider, lv.ALIGN.OUT_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
         self.style_selector.set_event_cb(self.on_style_selector_changed)
 
         # counter button
         self.counter_btn = lv.btn(page)
         self.counter_btn.set_size(80,80)
-        self.counter_btn.align(self.style_selector, lv.ALIGN.OUT_RIGHT_TOP, 40, 0)
+        self.counter_btn.align(self.page, lv.ALIGN.CENTER, 0, 0)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text('Count')
+        self.counter_btn.add_style(self.counter_btn.PART.MAIN, ShadowStyle())
         self.counter_btn.set_event_cb(self.on_counter_btn)
         self.counter = 0
 
@@ -94,7 +101,8 @@ class Page_Simple:
 
     def on_style_selector_changed(self, obj=None, event=-1):
         selected = self.style_selector.get_selected()
-        self.app.screen_main.tabview.set_style(lv.tabview.STYLE.BG, self.styles[selected][1])   
+        tabview = self.app.screen_main.tabview
+        tabview.add_style(tabview.PART.BG, self.styles[selected][1])
 
     def on_counter_btn(self, obj, event):
         if event == lv.EVENT.CLICKED:
@@ -157,7 +165,8 @@ class Page_Chart():
         self.chart.align(page, lv.ALIGN.CENTER, 0, 0)
         self.series1 = self.chart.add_series(lv.color_hex(0xFF0000))
         self.chart.set_type(self.chart.TYPE.LINE)
-        # self.chart.set_series_width(3)
+        self.chart.set_style_local_line_width(self.chart.PART.SERIES, lv.STATE.DEFAULT, 3)
+        self.chart.add_style(self.chart.PART.SERIES, ColorStyle(0x055))
         self.chart.set_range(0,100)
         self.chart.init_points(self.series1, 10)
         self.chart.set_points(self.series1, [10,20,30,20,10,40,50,90,95,90])
@@ -166,7 +175,7 @@ class Page_Chart():
         self.chart.set_y_tick_texts('1\n2\n3\n4\n5', 2, lv.chart.AXIS.DRAW_LAST_TICK)
         self.chart.set_y_tick_length(10, 5)
         self.chart.set_div_line_count(3, 3)
-        # self.chart.set_margin(30)
+        self.chart.set_height(self.page.get_height() - 30)
 
         # Create a slider that controls the chart animation speed
 
@@ -175,7 +184,7 @@ class Page_Chart():
 
         self.slider = lv.slider(page)
         self.slider.align(self.chart, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
-        self.slider.set_width(30)
+        self.slider.set_width(10)
         self.slider.set_height(self.chart.get_height())
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
