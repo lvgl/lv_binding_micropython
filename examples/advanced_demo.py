@@ -102,7 +102,9 @@ class Page_Simple:
     def on_style_selector_changed(self, obj=None, event=-1):
         selected = self.style_selector.get_selected()
         tabview = self.app.screen_main.tabview
-        tabview.add_style(tabview.PART.BG, self.styles[selected][1])
+        if hasattr(self, 'selected_style'): tabview.remove_style(tabview.PART.BG, self.selected_style)
+        self.selected_style = self.styles[selected][1]
+        tabview.add_style(tabview.PART.BG, self.selected_style)
 
     def on_counter_btn(self, obj, event):
         if event == lv.EVENT.CLICKED:
