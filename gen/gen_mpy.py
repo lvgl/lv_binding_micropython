@@ -19,6 +19,9 @@ import json
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     
+# from pudb.remote import set_trace
+# set_trace(term_size=(180, 50))
+
 from sys import argv
 from argparse import ArgumentParser
 import subprocess, re
@@ -230,7 +233,7 @@ for obj_ctor in obj_ctors:
     funcs.remove(obj_ctor)
 obj_names = [create_obj_pattern.match(ctor.name).group(1) for ctor in obj_ctors]
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
-# print('... %s' % str(typedefs))
+# eprint('... %s' % str(typedefs))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
 structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname)) 
 structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) for decl in ast.ext if hasattr(decl, 'type') and is_struct(decl.type))
@@ -1131,7 +1134,7 @@ def try_generate_struct(struct_name, struct):
     if not struct.decls:
         if struct_name == struct.name:
             return None
-        return try_generate_type(struct_name, structs[struct.name])
+        return try_generate_type(structs[struct.name])
     flatten_struct_decls = flatten_struct(struct.decls)
     # Go over fields and try to generate type convertors for each
     # print('!! %s' % struct)
@@ -1313,6 +1316,8 @@ def try_generate_array_type(type_ast):
     array_convertor_suffix = arr_name.\
         replace(' ','_').\
         replace('*','ptr').\
+        replace('+','plus').\
+        replace('-','minus').\
         replace('[','__').\
         replace(']','__').\
         replace('(','__').\
@@ -1414,12 +1419,17 @@ def try_generate_type(type_ast):
             return mp_to_lv[type]
     for new_type_ast in [x for x in typedefs if get_arg_name(x) == type]:
         new_type = get_type(new_type_ast, remove_quals=True)
-        if type == new_type:
+        if isinstance(new_type_ast, c_ast.TypeDecl) and isinstance(new_type_ast.type, c_ast.Struct) and not new_type_ast.type.decls:
+            explicit_struct_name = new_type_ast.type.name if hasattr(new_type_ast.type, 'name') else new_type_ast.type.names[0]
+        else:
+            explicit_struct_name = new_type
+        if type == explicit_struct_name:
             continue
-        # eprint('/* --> typedef: %s --> %s */' % (type, new_type))
-        if new_type in structs:
-            if (try_generate_struct(new_type, structs[new_type])):
-                struct_aliases[new_type] = type
+        # eprint('/* --> typedef: %s --> %s (%s) */' % (type, new_type, new_type_ast))
+        if explicit_struct_name in structs:
+            if (try_generate_struct(new_type, structs[explicit_struct_name])):
+                if explicit_struct_name == new_type:
+                    struct_aliases[new_type] = type
         if try_generate_type(new_type_ast):
            # eprint('/* --> try_generate_type TYPEDEF!! %s: %s */' % (type, mp_to_lv[new_type]))
            mp_to_lv[type] = mp_to_lv[new_type]
@@ -1999,7 +2009,8 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
         enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }},\n    '.
             format(name = get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
         structs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
-            format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in structs.keys() if struct_name in generated_structs]),
+            format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in structs.keys() \
+                    if struct_name in generated_structs and generated_structs[struct_name]]),
         struct_aliases = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{alias_name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
             format(struct_name = struct_name, alias_name = simplify_identifier(struct_aliases[struct_name])) for struct_name in struct_aliases.keys()]),
         blobs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{global_name}) }},\n    '.
