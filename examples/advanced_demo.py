@@ -16,6 +16,14 @@ class ColorStyle(lv.style_t):
         self.set_bg_main_stop(lv.STATE.DEFAULT, 0);
         self.set_bg_grad_stop(lv.STATE.DEFAULT, 128);
 
+class ChartPaddingStyle(lv.style_t):
+    def __init__(self):
+        super().__init__()
+        self.set_pad_left(lv.STATE.DEFAULT, 40);
+        self.set_pad_right(lv.STATE.DEFAULT, 20);
+        self.set_pad_bottom(lv.STATE.DEFAULT, 50);
+        self.set_pad_top(lv.STATE.DEFAULT, 20);
+
 class ShadowStyle(lv.style_t):
     def __init__(self):
         super().__init__()
@@ -164,11 +172,11 @@ class Page_Chart():
         self.page = page
         self.chart = AnimatedChart(page, 100, 1000)
         self.chart.set_width(page.get_width() - 100)
-        self.chart.align(page, lv.ALIGN.CENTER, 0, 0)
         self.series1 = self.chart.add_series(lv.color_hex(0xFF0000))
         self.chart.set_type(self.chart.TYPE.LINE)
         self.chart.set_style_local_line_width(self.chart.PART.SERIES, lv.STATE.DEFAULT, 3)
         self.chart.add_style(self.chart.PART.SERIES, ColorStyle(0x055))
+        self.chart.add_style(self.chart.PART.BG, ChartPaddingStyle())
         self.chart.set_range(0,100)
         self.chart.init_points(self.series1, 10)
         self.chart.set_points(self.series1, [10,20,30,20,10,40,50,90,95,90])
@@ -177,7 +185,8 @@ class Page_Chart():
         self.chart.set_y_tick_texts('1\n2\n3\n4\n5', 2, lv.chart.AXIS.DRAW_LAST_TICK)
         self.chart.set_y_tick_length(10, 5)
         self.chart.set_div_line_count(3, 3)
-        self.chart.set_height(self.page.get_height() - 30)
+        self.chart.set_height(self.page.get_height() - 60)
+        self.chart.align(page, lv.ALIGN.CENTER, 0, 0)
 
         # Create a slider that controls the chart animation speed
 
