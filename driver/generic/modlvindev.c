@@ -128,7 +128,7 @@ STATIC bool indev_read(lv_indev_data_t *data)
     indev_obj_t *self = MP_OBJ_TO_PTR(g_indev);
     if (!self || (!self->callback)) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_RuntimeError, "indev instance needs to be created before callback is called!"));
+                &mp_type_RuntimeError, MP_ERROR_TEXT("indev instance needs to be created before callback is called!")));
 
     mp_obj_t mp_ptr = NEW_PTR_OBJ(lv_indev_data_t, data);
     mp_obj_t mp_return_value = mp_call_function_n_kw(self->callback, 1, 0, &mp_ptr);
