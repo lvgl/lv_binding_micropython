@@ -185,7 +185,7 @@ STATIC mp_obj_t mp_xpt2046_init(mp_obj_t self_in)
     //Attach the touch controller to the SPI bus
     ret=spi_bus_add_device(self->spihost, &devcfg, &self->spi);
     if (ret != ESP_OK) nlr_raise(
-        mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed adding SPI device"));
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed adding SPI device")));
 
     return mp_const_none;
 }
@@ -211,7 +211,7 @@ static bool xpt2046_read(lv_indev_data_t * data)
     xpt2046_obj_t *self = MP_OBJ_TO_PTR(g_xpt2046 );
     if (!self || (!self->spi)) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_RuntimeError, "xpt2046 instance needs to be created before callback is called!"));
+                &mp_type_RuntimeError, MP_ERROR_TEXT("xpt2046 instance needs to be created before callback is called!")));
     static int16_t last_x = 0;
     static int16_t last_y = 0;
     bool valid = true;

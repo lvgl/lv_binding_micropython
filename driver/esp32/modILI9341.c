@@ -184,12 +184,12 @@ STATIC void disp_spi_init(ILI9341_t *self)
 	//Initialize the SPI bus
 	ret=spi_bus_initialize(self->spihost, &buscfg, 1);
     if (ret != ESP_OK) nlr_raise(
-        mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed initializing SPI bus"));
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed initializing SPI bus")));
 
 	//Attach the LCD to the SPI bus
 	ret=spi_bus_add_device(self->spihost, &devcfg, &self->spi);
     if (ret != ESP_OK) nlr_raise(
-        mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed adding SPI device"));
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed adding SPI device")));
 }
 
 STATIC void disp_spi_send(ILI9341_t *self, const uint8_t * data, uint16_t length)
