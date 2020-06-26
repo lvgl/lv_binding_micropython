@@ -4,7 +4,9 @@ import lvgl as lv
 
 lv.init()
 
-# Create a style based on style_plain but with a symbol font
+##############################################################################
+# Styles
+##############################################################################
 
 class ColorStyle(lv.style_t):
     def __init__(self, color):
@@ -33,6 +35,50 @@ class ShadowStyle(lv.style_t):
         self.set_shadow_ofs_x(lv.STATE.DEFAULT, 5);
         self.set_shadow_ofs_y(lv.STATE.DEFAULT, 3);
         self.set_shadow_spread(lv.STATE.DEFAULT, 0);
+
+class ButtonStyle(lv.style_t):
+    def __init__(self):
+        super().__init__()
+        self.set_radius(lv.STATE.DEFAULT, lv.dpx(8))
+        self.set_shadow_opa(lv.STATE.DEFAULT, lv.OPA.COVER);
+        self.set_shadow_width(lv.STATE.DEFAULT, lv.dpx(10));
+        self.set_shadow_color(lv.STATE.DEFAULT, lv.color_hex3(0xAAA));
+        self.set_shadow_ofs_x(lv.STATE.DEFAULT, lv.dpx(10));
+        self.set_shadow_ofs_y(lv.STATE.DEFAULT, lv.dpx(10));
+        self.set_shadow_spread(lv.STATE.DEFAULT, 0);
+
+        self.set_shadow_ofs_x(lv.STATE.PRESSED, lv.dpx(0));
+        self.set_shadow_ofs_y(lv.STATE.PRESSED, lv.dpx(0));
+
+
+##############################################################################
+# Themes
+##############################################################################
+
+class AdvancedDemoTheme(lv.theme_t):
+
+    def __init__(self):
+        base_theme = lv.theme_get_act()
+
+        super().__init__({
+            "color_primary":    base_theme.color_primary,
+            "color_secondary":  base_theme.color_secondary,
+            "flags":            base_theme.flags,
+            "font_small":       base_theme.font_small,
+            "font_normal":      base_theme.font_normal,
+            "font_subtitle":    base_theme.font_subtitle,
+            "font_title":       base_theme.font_title,
+            "apply_cb":         self.apply})
+
+        self.set_base(base_theme)
+        self.button = ButtonStyle()
+        self.set_act()
+
+    def apply(self, theme, obj, name):
+        if name == lv.THEME.BTN:
+            obj.add_style(obj.PART.MAIN, self.button)
+
+##############################################################################
 
 def get_member_name(obj, value):
     for member in dir(obj):
@@ -99,7 +145,6 @@ class Page_Simple:
         self.counter_btn.align(self.page, lv.ALIGN.CENTER, 0, 0)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text('Count')
-        self.counter_btn.add_style(self.counter_btn.PART.MAIN, ShadowStyle())
         self.counter_btn.set_event_cb(self.on_counter_btn)
         self.counter = 0
 
@@ -206,6 +251,7 @@ class Screen_Main(lv.obj):
     def __init__(self, app, *args, **kwds):
         self.app = app
         super().__init__(*args, **kwds)
+        self.theme = AdvancedDemoTheme()
         
         self.tabview = lv.tabview(self)
         self.page_simple = Page_Simple(self.app, self.tabview.add_tab('Simple'))
