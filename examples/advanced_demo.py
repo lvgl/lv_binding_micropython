@@ -36,6 +36,7 @@ class ShadowStyle(lv.style_t):
         self.set_shadow_ofs_y(lv.STATE.DEFAULT, 3);
         self.set_shadow_spread(lv.STATE.DEFAULT, 0);
 
+# A square button with a shadow when not pressed
 class ButtonStyle(lv.style_t):
     def __init__(self):
         super().__init__()
@@ -58,25 +59,25 @@ class ButtonStyle(lv.style_t):
 class AdvancedDemoTheme(lv.theme_t):
 
     def __init__(self):
+        super().__init__()
+        self.button_style = ButtonStyle()
+
+        # This theme is based on active theme (material)
         base_theme = lv.theme_get_act()
+        self.copy(base_theme)
 
-        super().__init__({
-            "color_primary":    base_theme.color_primary,
-            "color_secondary":  base_theme.color_secondary,
-            "flags":            base_theme.flags,
-            "font_small":       base_theme.font_small,
-            "font_normal":      base_theme.font_normal,
-            "font_subtitle":    base_theme.font_subtitle,
-            "font_title":       base_theme.font_title,
-            "apply_cb":         self.apply})
-
+        # This theme will be applied only after base theme is applied
         self.set_base(base_theme)
-        self.button = ButtonStyle()
-        self.set_act()
 
+        # Set the "apply" callback of this theme to our custom callback
+        self.set_apply_cb(self.apply)
+
+        # Activate this theme
+        self.set_act()
+    
     def apply(self, theme, obj, name):
         if name == lv.THEME.BTN:
-            obj.add_style(obj.PART.MAIN, self.button)
+            obj.add_style(obj.PART.MAIN, self.button_style)
 
 ##############################################################################
 

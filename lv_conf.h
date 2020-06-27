@@ -222,6 +222,10 @@ typedef void * lv_img_decoder_user_data_t;
 /*=====================
  *  Compiler settings
  *====================*/
+
+/* For big endian systems set to 1 */
+#define LV_BIG_ENDIAN_SYSTEM    0
+
 /* Define a custom attribute to `lv_tick_inc` function */
 #define LV_ATTRIBUTE_TICK_INC
 
@@ -535,6 +539,9 @@ typedef void * lv_obj_user_data_t;
 
 /*Calendar (dependencies: -)*/
 #define LV_USE_CALENDAR 1
+#if LV_USE_CALENDAR
+#  define LV_CALENDAR_WEEK_STARTS_MONDAY    0
+#endif
 
 /*Canvas (dependencies: lv_img)*/
 #define LV_USE_CANVAS   1
