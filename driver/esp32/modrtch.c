@@ -314,7 +314,7 @@ STATIC mp_obj_t mp_rtch_init(mp_obj_t self_in)
         ESP_LOGE(TAG, "Failed createing RTCH task!");
         vTaskDelete(self->rtch_task_handle);
         nlr_raise(
-                mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed creating RTCH task"));
+                mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed creating RTCH task")));
     }
 
     ESP_LOGD(TAG, "RTCH Initialized");

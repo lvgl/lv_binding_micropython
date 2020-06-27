@@ -596,7 +596,7 @@ STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
     }
     if (res == NULL) nlr_raise(
         mp_obj_new_exception_msg_varg(
-            &mp_type_SyntaxError, "Can't convert %s to %s!", mp_obj_get_type_str(mp_obj), qstr_str(mp_type->name)));
+            &mp_type_SyntaxError, MP_ERROR_TEXT("Can't convert %s to %s!"), mp_obj_get_type_str(mp_obj), qstr_str(mp_type->name)));
     return res;
 }
 
@@ -714,7 +714,7 @@ STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Struct argument is not an object!"));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Struct argument is not an object!")));
     mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
     return mp_lv_struct;
 }
@@ -734,7 +734,7 @@ STATIC mp_obj_t make_new_lv_struct(
     if ((!MP_OBJ_IS_TYPE(type, &mp_type_type)) || type->make_new != &make_new_lv_struct)
         nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Argument is not a struct type!"));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Argument is not a struct type!")));
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
@@ -808,7 +808,7 @@ STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
             type->attr(mp_struct, mp_obj_str_get_qstr(key), dest);
             if (dest[0]) nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot set field %s on struct %s!", qstr_str(mp_obj_str_get_qstr(key)), qstr_str(type->name)));
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot set field %s on struct %s!"), qstr_str(mp_obj_str_get_qstr(key)), qstr_str(type->name)));
         }
     }
     return mp_struct;
@@ -833,7 +833,7 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
             return MP_OBJ_TO_PTR(self_in);
         else nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot convert '%s' to pointer!", mp_obj_get_type_str(self_in)));
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot convert '%s' to pointer!"), mp_obj_get_type_str(self_in)));
     }
 
     if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
@@ -846,7 +846,7 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
         if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
             nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot convert %s to pointer! (buffer does not represent a pointer)", mp_obj_get_type_str(self_in)));
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot convert %s to pointer! (buffer does not represent a pointer)"), mp_obj_get_type_str(self_in)));
         }
         memcpy(&result, buffer_info.buf, sizeof(result));
         return result;
@@ -887,7 +887,7 @@ STATIC mp_obj_t mp_blob_cast(size_t argc, const mp_obj_t *argv)
     if (!MP_OBJ_IS_TYPE(type, &mp_type_type))
         nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Cast argument must be a type!"));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Cast argument must be a type!")));
     return cast(MP_OBJ_FROM_PTR(ptr), type);
 }
 
