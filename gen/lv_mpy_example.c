@@ -4620,7 +4620,8 @@ STATIC const mp_obj_type_t mp_LV_THEME_MATERIAL_FLAG_type = {
 
 STATIC const mp_rom_map_elem_t LV_FONT_FMT_TXT_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_PLAIN), MP_ROM_PTR(MP_ROM_INT(LV_FONT_FMT_TXT_PLAIN)) },
-    { MP_ROM_QSTR(MP_QSTR_COMPRESSED), MP_ROM_PTR(MP_ROM_INT(LV_FONT_FMT_TXT_COMPRESSED)) }
+    { MP_ROM_QSTR(MP_QSTR_COMPRESSED), MP_ROM_PTR(MP_ROM_INT(LV_FONT_FMT_TXT_COMPRESSED)) },
+    { MP_ROM_QSTR(MP_QSTR_COMPRESSED_NO_PREFILTER), MP_ROM_PTR(MP_ROM_INT(LV_FONT_FMT_TXT_COMPRESSED_NO_PREFILTER)) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(LV_FONT_FMT_TXT_locals_dict, LV_FONT_FMT_TXT_locals_dict_table);
@@ -17092,6 +17093,23 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_checkbox_set_disabled_obj, 1, mp_lv_
 
 /*
  * lvgl extension definition for:
+ * inline static void lv_checkbox_set_state(lv_obj_t *cb, lv_btn_state_t state)
+ */
+ 
+STATIC mp_obj_t mp_lv_checkbox_set_state(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    lv_obj_t *cb = mp_to_lv(mp_args[0]);
+    lv_btn_state_t state = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_checkbox_set_state(cb, state);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_checkbox_set_state_obj, 2, mp_lv_checkbox_set_state, lv_checkbox_set_state);
+
+ 
+
+/*
+ * lvgl extension definition for:
  * inline static bool lv_checkbox_is_checked(const lv_obj_t *cb)
  */
  
@@ -17119,6 +17137,22 @@ STATIC mp_obj_t mp_lv_checkbox_is_inactive(size_t mp_n_args, const mp_obj_t *mp_
 }
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_checkbox_is_inactive_obj, 1, mp_lv_checkbox_is_inactive, lv_checkbox_is_inactive);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_btn_state_t lv_checkbox_get_state(const lv_obj_t *cb)
+ */
+ 
+STATIC mp_obj_t mp_lv_checkbox_get_state(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    const lv_obj_t *cb = mp_to_lv(mp_args[0]);
+    lv_btn_state_t _res = lv_checkbox_get_state(cb);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_checkbox_get_state_obj, 1, mp_lv_checkbox_get_state, lv_checkbox_get_state);
 
  
 
@@ -17180,8 +17214,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_checkbox_get_text_obj, 1, mp_lv_chec
 STATIC const mp_rom_map_elem_t checkbox_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_checked), MP_ROM_PTR(&mp_lv_checkbox_set_checked_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_disabled), MP_ROM_PTR(&mp_lv_checkbox_set_disabled_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_state), MP_ROM_PTR(&mp_lv_checkbox_set_state_obj) },
     { MP_ROM_QSTR(MP_QSTR_is_checked), MP_ROM_PTR(&mp_lv_checkbox_is_checked_obj) },
     { MP_ROM_QSTR(MP_QSTR_is_inactive), MP_ROM_PTR(&mp_lv_checkbox_is_inactive_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_state), MP_ROM_PTR(&mp_lv_checkbox_get_state_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_text), MP_ROM_PTR(&mp_lv_checkbox_set_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_text_static), MP_ROM_PTR(&mp_lv_checkbox_set_text_static_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_text), MP_ROM_PTR(&mp_lv_checkbox_get_text_obj) },
@@ -26071,7 +26107,7 @@ STATIC const mp_rom_map_elem_t mp_C_Pointer_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_C_Pointer_locals_dict, mp_C_Pointer_locals_dict_table);
-    
+        
 /* Struct lv_color32_t contains: [u'lv_color_to1', u'lv_color_to8', u'lv_color_to16', u'lv_color_to32', u'lv_color_mix', u'lv_color_premult', u'lv_color_mix_with_alpha', u'lv_color_brightness', u'lv_color_fill', u'lv_color_lighten', u'lv_color_darken', u'lv_color_to_hsv'] */
 
 /*
@@ -26300,7 +26336,7 @@ STATIC const mp_rom_map_elem_t mp_lv_color32_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_color32_t_locals_dict, mp_lv_color32_t_locals_dict_table);
-    
+        
 /* Struct lv_color32_ch_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_color32_ch_t_locals_dict_table[] = {
@@ -26312,7 +26348,7 @@ STATIC const mp_rom_map_elem_t mp_lv_color32_ch_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_color32_ch_t_locals_dict, mp_lv_color32_ch_t_locals_dict_table);
-    
+        
 /* Struct lv_font_t contains: [u'lv_font_get_line_height', u'lv_font_get_glyph_bitmap', u'lv_font_get_glyph_dsc', u'lv_font_get_glyph_width', u'lv_font_get_bitmap_fmt_txt', u'lv_font_get_glyph_dsc_fmt_txt'] */
 
 /*
@@ -26520,7 +26556,7 @@ STATIC const mp_rom_map_elem_t mp_lv_font_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_font_t_locals_dict, mp_lv_font_t_locals_dict_table);
-    
+        
 /* Struct lv_anim_path_t contains: [u'lv_anim_path_init', u'lv_anim_path_set_cb', u'lv_anim_path_set_user_data', u'lv_anim_path_linear', u'lv_anim_path_ease_in', u'lv_anim_path_ease_out', u'lv_anim_path_ease_in_out', u'lv_anim_path_overshoot', u'lv_anim_path_bounce', u'lv_anim_path_step'] */
 
 /*
@@ -26727,7 +26763,7 @@ STATIC const mp_rom_map_elem_t mp_lv_anim_path_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_anim_path_t_locals_dict, mp_lv_anim_path_t_locals_dict_table);
-    
+        
 /* Struct lv_anim_t contains: [u'lv_anim_set_var', u'lv_anim_set_exec_cb', u'lv_anim_set_time', u'lv_anim_set_delay', u'lv_anim_set_values', u'lv_anim_set_custom_exec_cb', u'lv_anim_set_path', u'lv_anim_set_start_cb', u'lv_anim_set_ready_cb', u'lv_anim_set_playback_time', u'lv_anim_set_playback_delay', u'lv_anim_set_repeat_count', u'lv_anim_set_repeat_delay', u'lv_anim_get_delay', u'lv_anim_custom_del', u'lv_anim_init', u'lv_anim_start'] */
 
 /*
@@ -27096,7 +27132,7 @@ STATIC const mp_rom_map_elem_t mp_lv_anim_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_anim_t_locals_dict, mp_lv_anim_t_locals_dict_table);
-    
+        
 /* Struct lv_area_t contains: [u'lv_area_copy', u'lv_area_get_width', u'lv_area_get_height', u'lv_area_set', u'lv_area_set_width', u'lv_area_set_height', u'lv_area_get_size'] */
 
 /*
@@ -27234,7 +27270,7 @@ STATIC const mp_rom_map_elem_t mp_lv_area_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_area_t_locals_dict, mp_lv_area_t_locals_dict_table);
-    
+        
 /* Struct lv_style_t contains: [u'lv_style_set_radius', u'lv_style_set_clip_corner', u'lv_style_set_size', u'lv_style_set_transform_width', u'lv_style_set_transform_height', u'lv_style_set_transform_angle', u'lv_style_set_transform_zoom', u'lv_style_set_opa_scale', u'lv_style_set_pad_top', u'lv_style_set_pad_bottom', u'lv_style_set_pad_left', u'lv_style_set_pad_right', u'lv_style_set_pad_inner', u'lv_style_set_margin_top', u'lv_style_set_margin_bottom', u'lv_style_set_margin_left', u'lv_style_set_margin_right', u'lv_style_set_bg_blend_mode', u'lv_style_set_bg_main_stop', u'lv_style_set_bg_grad_stop', u'lv_style_set_bg_grad_dir', u'lv_style_set_bg_color', u'lv_style_set_bg_grad_color', u'lv_style_set_bg_opa', u'lv_style_set_border_width', u'lv_style_set_border_side', u'lv_style_set_border_blend_mode', u'lv_style_set_border_post', u'lv_style_set_border_color', u'lv_style_set_border_opa', u'lv_style_set_outline_width', u'lv_style_set_outline_pad', u'lv_style_set_outline_blend_mode', u'lv_style_set_outline_color', u'lv_style_set_outline_opa', u'lv_style_set_shadow_width', u'lv_style_set_shadow_ofs_x', u'lv_style_set_shadow_ofs_y', u'lv_style_set_shadow_spread', u'lv_style_set_shadow_blend_mode', u'lv_style_set_shadow_color', u'lv_style_set_shadow_opa', u'lv_style_set_pattern_repeat', u'lv_style_set_pattern_blend_mode', u'lv_style_set_pattern_recolor', u'lv_style_set_pattern_opa', u'lv_style_set_pattern_recolor_opa', u'lv_style_set_pattern_image', u'lv_style_set_value_letter_space', u'lv_style_set_value_line_space', u'lv_style_set_value_blend_mode', u'lv_style_set_value_ofs_x', u'lv_style_set_value_ofs_y', u'lv_style_set_value_align', u'lv_style_set_value_color', u'lv_style_set_value_opa', u'lv_style_set_value_font', u'lv_style_set_value_str', u'lv_style_set_text_letter_space', u'lv_style_set_text_line_space', u'lv_style_set_text_decor', u'lv_style_set_text_blend_mode', u'lv_style_set_text_color', u'lv_style_set_text_sel_color', u'lv_style_set_text_opa', u'lv_style_set_text_font', u'lv_style_set_line_width', u'lv_style_set_line_blend_mode', u'lv_style_set_line_dash_width', u'lv_style_set_line_dash_gap', u'lv_style_set_line_rounded', u'lv_style_set_line_color', u'lv_style_set_line_opa', u'lv_style_set_image_blend_mode', u'lv_style_set_image_recolor', u'lv_style_set_image_opa', u'lv_style_set_image_recolor_opa', u'lv_style_set_transition_time', u'lv_style_set_transition_delay', u'lv_style_set_transition_prop_1', u'lv_style_set_transition_prop_2', u'lv_style_set_transition_prop_3', u'lv_style_set_transition_prop_4', u'lv_style_set_transition_prop_5', u'lv_style_set_transition_prop_6', u'lv_style_set_transition_path', u'lv_style_set_scale_width', u'lv_style_set_scale_border_width', u'lv_style_set_scale_end_border_width', u'lv_style_set_scale_end_line_width', u'lv_style_set_scale_grad_color', u'lv_style_set_scale_end_color', u'lv_style_set_pad_all', u'lv_style_set_pad_hor', u'lv_style_set_pad_ver', u'lv_style_set_margin_all', u'lv_style_set_margin_hor', u'lv_style_set_margin_ver', u'lv_style_init', u'lv_style_copy', u'lv_style_reset', u'lv_style_copy', u'lv_style_remove_prop'] */
 
 /*
@@ -29179,7 +29215,7 @@ STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_style_t_locals_dict, mp_lv_style_t_locals_dict_table);
-    
+        
 /* Struct lv_disp_t contains: [u'lv_disp_drv_update', u'lv_disp_remove', u'lv_disp_set_default', u'lv_disp_get_hor_res', u'lv_disp_get_ver_res', u'lv_disp_get_antialiasing', u'lv_disp_get_dpi', u'lv_disp_get_size_category', u'lv_disp_get_next', u'lv_disp_get_buf', u'lv_disp_get_inv_buf_size', u'lv_disp_is_double_buf', u'lv_disp_is_true_double_buf', u'lv_disp_get_scr_act', u'lv_disp_get_scr_prev', u'lv_disp_get_layer_top', u'lv_disp_get_layer_sys', u'lv_disp_assign_screen', u'lv_disp_set_bg_color', u'lv_disp_set_bg_image', u'lv_disp_set_bg_opa', u'lv_disp_get_inactive_time', u'lv_disp_trig_activity'] */
 
 /*
@@ -29587,7 +29623,7 @@ STATIC const mp_rom_map_elem_t mp_lv_disp_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_disp_t_locals_dict, mp_lv_disp_t_locals_dict_table);
-    
+        
 /* Struct lv_disp_drv_t contains: [u'lv_disp_drv_init', u'lv_disp_drv_register', u'lv_disp_flush_ready', u'lv_disp_flush_is_last'] */
 
 /*
@@ -29667,7 +29703,7 @@ STATIC const mp_rom_map_elem_t mp_lv_disp_drv_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_disp_drv_t_locals_dict, mp_lv_disp_drv_t_locals_dict_table);
-    
+        
 /* Struct lv_disp_buf_t contains: [u'lv_disp_buf_init'] */
 
 /*
@@ -29699,7 +29735,7 @@ STATIC const mp_rom_map_elem_t mp_lv_disp_buf_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_disp_buf_t_locals_dict, mp_lv_disp_buf_t_locals_dict_table);
-    
+        
 /* Struct lv_task_t contains: [u'lv_task_del', u'lv_task_set_cb', u'lv_task_set_prio', u'lv_task_set_period', u'lv_task_ready', u'lv_task_set_repeat_count', u'lv_task_reset'] */
 
 /*
@@ -29849,7 +29885,7 @@ STATIC const mp_rom_map_elem_t mp_lv_task_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_task_t_locals_dict, mp_lv_task_t_locals_dict_table);
-    
+        
 /* Struct lv_ll_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_ll_t_locals_dict_table[] = {
@@ -29861,7 +29897,7 @@ STATIC const mp_rom_map_elem_t mp_lv_ll_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_ll_t_locals_dict, mp_lv_ll_t_locals_dict_table);
-    
+        
 /* Struct lv_style_list_t contains: [u'lv_style_list_get_style', u'lv_style_list_init', u'lv_style_list_copy', u'lv_style_list_get_local_style'] */
 
 /*
@@ -29943,7 +29979,7 @@ STATIC const mp_rom_map_elem_t mp_lv_style_list_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_style_list_t_locals_dict, mp_lv_style_list_t_locals_dict_table);
-    
+        
 /* Struct lv_point_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_point_t_locals_dict_table[] = {
@@ -29955,7 +29991,7 @@ STATIC const mp_rom_map_elem_t mp_lv_point_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_point_t_locals_dict, mp_lv_point_t_locals_dict_table);
-    
+        
 /* Struct lv_obj_type_t contains: [u'lv_obj_handle_get_type_signal'] */
 
 STATIC const mp_rom_map_elem_t mp_lv_obj_type_t_locals_dict_table[] = {
@@ -29968,7 +30004,7 @@ STATIC const mp_rom_map_elem_t mp_lv_obj_type_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_obj_type_t_locals_dict, mp_lv_obj_type_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_rect_dsc_t contains: [u'lv_draw_rect_dsc_init'] */
 
 /*
@@ -29997,7 +30033,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_rect_dsc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_rect_dsc_t_locals_dict, mp_lv_draw_rect_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_label_dsc_t contains: [u'lv_draw_label_dsc_init'] */
 
 /*
@@ -30026,7 +30062,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_label_dsc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_label_dsc_t_locals_dict, mp_lv_draw_label_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_img_dsc_t contains: [u'lv_draw_img_dsc_init'] */
 
 /*
@@ -30055,7 +30091,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_img_dsc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_img_dsc_t_locals_dict, mp_lv_draw_img_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_line_dsc_t contains: [u'lv_draw_line_dsc_init'] */
 
 /*
@@ -30084,7 +30120,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_line_dsc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_line_dsc_t_locals_dict, mp_lv_draw_line_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_img_dsc_t contains: [u'lv_img_buf_get_px_color', u'lv_img_buf_get_px_alpha', u'lv_img_buf_set_px_color', u'lv_img_buf_set_px_alpha', u'lv_img_buf_set_palette', u'lv_img_buf_free'] */
 
 STATIC const mp_rom_map_elem_t mp_lv_img_dsc_t_locals_dict_table[] = {
@@ -30102,7 +30138,7 @@ STATIC const mp_rom_map_elem_t mp_lv_img_dsc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_img_dsc_t_locals_dict, mp_lv_img_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_img_header_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_img_header_t_locals_dict_table[] = {
@@ -30114,7 +30150,7 @@ STATIC const mp_rom_map_elem_t mp_lv_img_header_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_img_header_t_locals_dict, mp_lv_img_header_t_locals_dict_table);
-    
+        
 /* Struct lv_img_decoder_dsc_t contains: [u'lv_img_decoder_open', u'lv_img_decoder_read_line', u'lv_img_decoder_close'] */
 
 STATIC const mp_rom_map_elem_t mp_lv_img_decoder_dsc_t_locals_dict_table[] = {
@@ -30129,7 +30165,7 @@ STATIC const mp_rom_map_elem_t mp_lv_img_decoder_dsc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_img_decoder_dsc_t_locals_dict, mp_lv_img_decoder_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_img_decoder_t contains: [u'lv_img_decoder_delete', u'lv_img_decoder_set_info_cb', u'lv_img_decoder_set_open_cb', u'lv_img_decoder_set_read_line_cb', u'lv_img_decoder_set_close_cb', u'lv_img_decoder_built_in_info', u'lv_img_decoder_built_in_open', u'lv_img_decoder_built_in_read_line', u'lv_img_decoder_built_in_close'] */
 
 STATIC const mp_rom_map_elem_t mp_lv_img_decoder_t_locals_dict_table[] = {
@@ -30150,7 +30186,7 @@ STATIC const mp_rom_map_elem_t mp_lv_img_decoder_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_img_decoder_t_locals_dict, mp_lv_img_decoder_t_locals_dict_table);
-    
+        
 /* Struct lv_chart_series_t contains: [u'lv_chart_get_x_start_point'] */
 
 STATIC const mp_rom_map_elem_t mp_lv_chart_series_t_locals_dict_table[] = {
@@ -30163,7 +30199,7 @@ STATIC const mp_rom_map_elem_t mp_lv_chart_series_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_chart_series_t_locals_dict, mp_lv_chart_series_t_locals_dict_table);
-    
+        
 /* Struct lv_color_hsv_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_color_hsv_t_locals_dict_table[] = {
@@ -30175,7 +30211,7 @@ STATIC const mp_rom_map_elem_t mp_lv_color_hsv_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_color_hsv_t_locals_dict, mp_lv_color_hsv_t_locals_dict_table);
-    
+        
 /* Struct lv_objmask_mask_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_objmask_mask_t_locals_dict_table[] = {
@@ -30187,7 +30223,7 @@ STATIC const mp_rom_map_elem_t mp_lv_objmask_mask_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_objmask_mask_t_locals_dict, mp_lv_objmask_mask_t_locals_dict_table);
-    
+        
 /* Struct lv_calendar_date_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_calendar_date_t_locals_dict_table[] = {
@@ -30199,7 +30235,7 @@ STATIC const mp_rom_map_elem_t mp_lv_calendar_date_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_calendar_date_t_locals_dict, mp_lv_calendar_date_t_locals_dict_table);
-    
+        
 /* Struct lv_mem_monitor_t contains: [u'lv_mem_monitor'] */
 
 /*
@@ -30228,7 +30264,7 @@ STATIC const mp_rom_map_elem_t mp_lv_mem_monitor_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_mem_monitor_t_locals_dict, mp_lv_mem_monitor_t_locals_dict_table);
-    
+        
 /* Struct lv_indev_drv_t contains: [u'lv_indev_drv_init', u'lv_indev_drv_register'] */
 
 /*
@@ -30274,7 +30310,7 @@ STATIC const mp_rom_map_elem_t mp_lv_indev_drv_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_drv_t_locals_dict, mp_lv_indev_drv_t_locals_dict_table);
-    
+        
 /* Struct lv_indev_t contains: [u'lv_indev_drv_update', u'lv_indev_get_next', u'lv_indev_get_type', u'lv_indev_reset', u'lv_indev_reset_long_press', u'lv_indev_enable', u'lv_indev_set_cursor', u'lv_indev_set_group', u'lv_indev_set_button_points', u'lv_indev_get_point', u'lv_indev_get_gesture_dir', u'lv_indev_get_key', u'lv_indev_is_dragging', u'lv_indev_get_vect', u'lv_indev_finish_drag', u'lv_indev_wait_release'] */
 
 /*
@@ -30566,7 +30602,7 @@ STATIC const mp_rom_map_elem_t mp_lv_indev_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_t_locals_dict, mp_lv_indev_t_locals_dict_table);
-    
+        
 /* Struct lv_indev_proc_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_proc_t_locals_dict_table[] = {
@@ -30578,7 +30614,7 @@ STATIC const mp_rom_map_elem_t mp_lv_indev_proc_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_proc_t_locals_dict, mp_lv_indev_proc_t_locals_dict_table);
-    
+        
 /* Struct lv_indev_proc_types_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_proc_types_t_locals_dict_table[] = {
@@ -30590,7 +30626,7 @@ STATIC const mp_rom_map_elem_t mp_lv_indev_proc_types_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_proc_types_t_locals_dict, mp_lv_indev_proc_types_t_locals_dict_table);
-    
+        
 /* Struct lv_indev_proc_types_pointer_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_proc_types_pointer_t_locals_dict_table[] = {
@@ -30602,7 +30638,7 @@ STATIC const mp_rom_map_elem_t mp_lv_indev_proc_types_pointer_t_locals_dict_tabl
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_proc_types_pointer_t_locals_dict, mp_lv_indev_proc_types_pointer_t_locals_dict_table);
-    
+        
 /* Struct lv_indev_proc_types_keypad_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_proc_types_keypad_t_locals_dict_table[] = {
@@ -30614,7 +30650,7 @@ STATIC const mp_rom_map_elem_t mp_lv_indev_proc_types_keypad_t_locals_dict_table
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_proc_types_keypad_t_locals_dict, mp_lv_indev_proc_types_keypad_t_locals_dict_table);
-    
+        
 /* Struct lv_group_t contains: [u'lv_group_del', u'lv_group_add_obj', u'lv_group_remove_all_objs', u'lv_group_focus_next', u'lv_group_focus_prev', u'lv_group_focus_freeze', u'lv_group_send_data', u'lv_group_set_focus_cb', u'lv_group_set_refocus_policy', u'lv_group_set_editing', u'lv_group_set_click_focus', u'lv_group_set_wrap', u'lv_group_get_focused', u'lv_group_get_user_data', u'lv_group_get_focus_cb', u'lv_group_get_editing', u'lv_group_get_click_focus', u'lv_group_get_wrap'] */
 
 /*
@@ -30955,7 +30991,7 @@ STATIC const mp_rom_map_elem_t mp_lv_group_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_group_t_locals_dict, mp_lv_group_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_line_param_t contains: [u'lv_draw_mask_line_points_init', u'lv_draw_mask_line_angle_init'] */
 
 /*
@@ -31010,7 +31046,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_line_param_t_locals_dict_table[] 
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_line_param_t_locals_dict, mp_lv_draw_mask_line_param_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_common_dsc_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_common_dsc_t_locals_dict_table[] = {
@@ -31022,7 +31058,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_common_dsc_t_locals_dict_table[] 
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_common_dsc_t_locals_dict, mp_lv_draw_mask_common_dsc_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_line_param_cfg_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_line_param_cfg_t_locals_dict_table[] = {
@@ -31034,7 +31070,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_line_param_cfg_t_locals_dict_tabl
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_line_param_cfg_t_locals_dict, mp_lv_draw_mask_line_param_cfg_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_angle_param_t contains: [u'lv_draw_mask_angle_init'] */
 
 /*
@@ -31067,7 +31103,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_angle_param_t_locals_dict_table[]
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_angle_param_t_locals_dict, mp_lv_draw_mask_angle_param_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_angle_param_cfg_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_angle_param_cfg_t_locals_dict_table[] = {
@@ -31079,7 +31115,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_angle_param_cfg_t_locals_dict_tab
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_angle_param_cfg_t_locals_dict, mp_lv_draw_mask_angle_param_cfg_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_radius_param_t contains: [u'lv_draw_mask_radius_init'] */
 
 /*
@@ -31111,7 +31147,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_radius_param_t_locals_dict_table[
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_radius_param_t_locals_dict, mp_lv_draw_mask_radius_param_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_radius_param_cfg_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_radius_param_cfg_t_locals_dict_table[] = {
@@ -31123,7 +31159,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_radius_param_cfg_t_locals_dict_ta
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_radius_param_cfg_t_locals_dict, mp_lv_draw_mask_radius_param_cfg_t_locals_dict_table);
-    
+        
 /* Struct lv_sqrt_res_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_sqrt_res_t_locals_dict_table[] = {
@@ -31135,7 +31171,7 @@ STATIC const mp_rom_map_elem_t mp_lv_sqrt_res_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_sqrt_res_t_locals_dict, mp_lv_sqrt_res_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_fade_param_t contains: [u'lv_draw_mask_fade_init'] */
 
 /*
@@ -31169,7 +31205,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_fade_param_t_locals_dict_table[] 
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_fade_param_t_locals_dict, mp_lv_draw_mask_fade_param_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_fade_param_cfg_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_fade_param_cfg_t_locals_dict_table[] = {
@@ -31181,7 +31217,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_fade_param_cfg_t_locals_dict_tabl
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_fade_param_cfg_t_locals_dict, mp_lv_draw_mask_fade_param_cfg_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_map_param_t contains: [u'lv_draw_mask_map_init'] */
 
 /*
@@ -31212,7 +31248,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_map_param_t_locals_dict_table[] =
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_map_param_t_locals_dict, mp_lv_draw_mask_map_param_t_locals_dict_table);
-    
+        
 /* Struct lv_draw_mask_map_param_cfg_t contains: [] */
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_map_param_cfg_t_locals_dict_table[] = {
@@ -31224,7 +31260,7 @@ STATIC const mp_rom_map_elem_t mp_lv_draw_mask_map_param_cfg_t_locals_dict_table
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_map_param_cfg_t_locals_dict, mp_lv_draw_mask_map_param_cfg_t_locals_dict_table);
-    
+        
 /* Struct lv_fs_drv_t contains: [u'lv_fs_drv_init', u'lv_fs_drv_register'] */
 
 /*
@@ -31270,7 +31306,7 @@ STATIC const mp_rom_map_elem_t mp_lv_fs_drv_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_fs_drv_t_locals_dict, mp_lv_fs_drv_t_locals_dict_table);
-    
+        
 /* Struct lv_fs_file_t contains: [u'lv_fs_open', u'lv_fs_close', u'lv_fs_read', u'lv_fs_write', u'lv_fs_seek', u'lv_fs_tell', u'lv_fs_trunc', u'lv_fs_size'] */
 
 /*
@@ -31429,7 +31465,7 @@ STATIC const mp_rom_map_elem_t mp_lv_fs_file_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_fs_file_t_locals_dict, mp_lv_fs_file_t_locals_dict_table);
-    
+        
 /* Struct lv_fs_dir_t contains: [u'lv_fs_dir_open', u'lv_fs_dir_read', u'lv_fs_dir_close'] */
 
 /*
@@ -31494,7 +31530,7 @@ STATIC const mp_rom_map_elem_t mp_lv_fs_dir_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_fs_dir_t_locals_dict, mp_lv_fs_dir_t_locals_dict_table);
-    
+        
 /* Struct lv_theme_t contains: [u'lv_theme_set_act', u'lv_theme_copy', u'lv_theme_set_base', u'lv_theme_set_apply_cb'] */
 
 /*
@@ -31532,14 +31568,14 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_copy_obj, 2, mp_lv_theme_copy,
 
 /*
  * lvgl extension definition for:
- * void lv_theme_set_base(lv_theme_t *new, lv_theme_t *base)
+ * void lv_theme_set_base(lv_theme_t *new_theme, lv_theme_t *base)
  */
  
 STATIC mp_obj_t mp_lv_theme_set_base(size_t mp_n_args, const mp_obj_t *mp_args)
 {
-    lv_theme_t *new = mp_write_ptr_lv_theme_t(mp_args[0]);
+    lv_theme_t *new_theme = mp_write_ptr_lv_theme_t(mp_args[0]);
     lv_theme_t *base = mp_write_ptr_lv_theme_t(mp_args[1]);
-    lv_theme_set_base(new, base);
+    lv_theme_set_base(new_theme, base);
     return mp_const_none;
 }
 
@@ -31594,7 +31630,7 @@ STATIC const mp_rom_map_elem_t mp_lv_theme_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_theme_t_locals_dict, mp_lv_theme_t_locals_dict_table);
-    
+        
 
 /* 
  *
@@ -31620,6 +31656,19 @@ STATIC mp_obj_t mp_lv_color_mix_premult(size_t mp_n_args, const mp_obj_t *mp_arg
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_mix_premult_obj, 3, mp_lv_color_mix_premult, lv_color_mix_premult);
 
  
+/* List of structs: [u'lv_font_glyph_dsc_t'] */
+/* Struct lv_font_glyph_dsc_t contains: [] */
+
+STATIC const mp_rom_map_elem_t mp_lv_font_glyph_dsc_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_font_glyph_dsc_t))) },
+    { MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) },
+    { MP_ROM_QSTR(MP_QSTR_cast_instance), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
+    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_font_glyph_dsc_t_locals_dict, mp_lv_font_glyph_dsc_t_locals_dict_table);
+        
 
 /*
  * lvgl extension definition for:
@@ -32509,6 +32558,19 @@ STATIC mp_obj_t mp_lv_draw_label(size_t mp_n_args, const mp_obj_t *mp_args)
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_label_obj, 5, mp_lv_draw_label, lv_draw_label);
 
  
+/* List of structs: [u'lv_draw_label_hint_t'] */
+/* Struct lv_draw_label_hint_t contains: [] */
+
+STATIC const mp_rom_map_elem_t mp_lv_draw_label_hint_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_label_hint_t))) },
+    { MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) },
+    { MP_ROM_QSTR(MP_QSTR_cast_instance), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
+    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_label_hint_t_locals_dict, mp_lv_draw_label_hint_t_locals_dict_table);
+        
 
 /*
  * lvgl extension definition for:

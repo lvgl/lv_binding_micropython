@@ -21,10 +21,10 @@ class ColorStyle(lv.style_t):
 class ChartPaddingStyle(lv.style_t):
     def __init__(self):
         super().__init__()
-        self.set_pad_left(lv.STATE.DEFAULT, 40);
-        self.set_pad_right(lv.STATE.DEFAULT, 20);
-        self.set_pad_bottom(lv.STATE.DEFAULT, 50);
-        self.set_pad_top(lv.STATE.DEFAULT, 20);
+        self.set_pad_left(lv.STATE.DEFAULT, 10);
+        self.set_pad_right(lv.STATE.DEFAULT, 10);
+        self.set_pad_bottom(lv.STATE.DEFAULT, 10);
+        self.set_pad_top(lv.STATE.DEFAULT, 10);
 
 class ShadowStyle(lv.style_t):
     def __init__(self):
@@ -123,6 +123,7 @@ class Page_Simple:
 
         # slider
         self.slider = lv.slider(page)
+        self.slider.set_width(160)
         self.slider.align(page, lv.ALIGN.IN_TOP_LEFT, 20, 20)
         self.slider_label = lv.label(page)
         self.slider_label.align(self.slider, lv.ALIGN.OUT_RIGHT_MID, 15, 0)
@@ -144,7 +145,7 @@ class Page_Simple:
         # counter button
         self.counter_btn = lv.btn(page)
         self.counter_btn.set_size(80,80)
-        self.counter_btn.align(self.page, lv.ALIGN.CENTER, 0, 0)
+        self.counter_btn.align(self.page, lv.ALIGN.IN_BOTTOM_MID, 0, -20)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")
         self.counter_btn.set_event_cb(self.on_counter_btn)
@@ -223,7 +224,7 @@ class Page_Chart:
         self.app = app
         self.page = page
         self.chart = AnimatedChart(page, 100, 1000)
-        self.chart.set_width(page.get_width() - 100)
+        self.chart.set_width(page.get_width() - 80)
         self.series1 = self.chart.add_series(lv.color_hex(0xFF0000))
         self.chart.set_type(self.chart.TYPE.LINE)
         self.chart.set_style_local_line_width(self.chart.PART.SERIES, lv.STATE.DEFAULT, 3)

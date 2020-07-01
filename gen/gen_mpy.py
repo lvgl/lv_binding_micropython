@@ -1111,6 +1111,7 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
 #
 
 generated_structs = collections.OrderedDict()
+generated_struct_functions = collections.OrderedDict()
 struct_aliases = collections.OrderedDict()
 callbacks_used_on_structs = []
 
@@ -1128,6 +1129,7 @@ def try_generate_struct(struct_name, struct):
     global mp_to_lv
     if struct_name in generated_structs: return None
     generated_structs[struct_name] = False # Starting generating a struct
+    # eprint("/* Starting generating %s */" % struct_name)
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
     # eprint('/* --> try_generate_struct %s: %s */' % (struct_name, gen.visit(struct)))
@@ -1292,7 +1294,7 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     lv_mp_type[struct_name] = simplify_identifier(struct_name)
     lv_mp_type['%s *' % struct_name] = simplify_identifier(struct_name)
     lv_mp_type['const %s *' % struct_name] = simplify_identifier(struct_name)
-    # print('/* --> struct "%s" generated! */' % (struct_name))
+    # eprint('/* --> struct "%s" generated! */' % (struct_name))
     generated_structs[struct_name] = True # Completed generating a struct
     return struct_name
 
@@ -1863,20 +1865,23 @@ def try_generate_structs_from_first_argument():
 # Generate struct-functions
 #
 
+# eprint("/* Generating struct-functions */")
 try_generate_structs_from_first_argument()
-print('/* List of structs: %s */' % repr(generated_structs.keys()))
-for struct_name in list(generated_structs.keys()):
-    if not generated_structs[struct_name]: continue
-    struct_funcs = get_struct_functions(struct_name)
-    print('/* Struct %s contains: %s */' % (struct_name, [f.name for f in struct_funcs]))
-    for struct_func in struct_funcs[:]: # clone list because we are changing it in the loop.
-        try:
-            if struct_func.name not in generated_funcs:
-                gen_mp_func(struct_func, None)
-        except MissingConversionException as exp:
-            gen_func_error(module_func, exp)
-            struct_funcs.remove(struct_func)
-    print('''
+
+def generate_struct_functions(struct_list):
+    print('/* List of structs: %s */' % repr(struct_list))
+    for struct_name in struct_list:
+        if not generated_structs[struct_name]: continue
+        struct_funcs = get_struct_functions(struct_name)
+        print('/* Struct %s contains: %s */' % (struct_name, [f.name for f in struct_funcs]))
+        for struct_func in struct_funcs[:]: # clone list because we are changing it in the loop.
+            try:
+                if struct_func.name not in generated_funcs:
+                    gen_mp_func(struct_func, None)
+            except MissingConversionException as exp:
+                gen_func_error(module_func, exp)
+                struct_funcs.remove(struct_func)
+        print('''
 STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
@@ -1886,11 +1891,15 @@ STATIC const mp_rom_map_elem_t mp_{struct_name}_locals_dict_table[] = {{
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_locals_dict_table);
-    '''.format(
-        struct_name = struct_name,
-        functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
-            format(name = noncommon_part(f.name, struct_name), func = f.name) for f in struct_funcs]),
-    ))
+        '''.format(
+            struct_name = struct_name,
+            functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
+                format(name = noncommon_part(f.name, struct_name), func = f.name) for f in struct_funcs]),
+        ))
+
+        generated_struct_functions[struct_name] = True
+
+generate_struct_functions(list(generated_structs.keys()))
 
 #
 # Generate all module functions (not including method functions which were already generated)
@@ -1904,15 +1913,22 @@ print("""
  */
 """)
 
+# eprint("/* Generating global module functions /*")
 module_funcs = [func for func in funcs if not func.name in generated_funcs]
 for module_func in module_funcs[:]: # clone list because we are changing it in the loop.
+    if module_func.name in generated_funcs:
+        continue # generated_funcs could change inside the loop so need to recheck.
     try:
         gen_mp_func(module_func, None)
+        # A new function can create new struct with new function structs
+        new_structs = [s for s in generated_structs if s not in generated_struct_functions]
+        if new_structs:
+            generate_struct_functions(new_structs)
     except MissingConversionException as exp:
         gen_func_error(module_func, exp)
         module_funcs.remove(module_func)
     
-functions_not_generated = [func.name for func in funcs if not func.name in generated_funcs]
+functions_not_generated = [func.name for func in funcs if func.name not in generated_funcs]
 if len(functions_not_generated) > 0:
     print("""
 /*
@@ -1926,6 +1942,8 @@ if len(functions_not_generated) > 0:
 #
 # Generate globals
 #
+
+# eprint("/* Generating globals */")
 
 def gen_global(global_name, global_type_ast):
     global_type = get_type(global_type_ast, remove_quals=True)
@@ -1970,6 +1988,7 @@ for global_name in blobs:
 #         lv_to_mp[func_name] = lv_to_mp['void *']
 #         mp_to_lv[func_name] = mp_to_lv['void *']
 
+# eprint("/* Generating callback functions */")
 for (func_name, func, struct_name) in callbacks_used_on_structs:
     try:
         # print('/* --> gen_callback_func %s */' % func_name)
@@ -1984,6 +2003,7 @@ for (func_name, func, struct_name) in callbacks_used_on_structs:
 # Emit Mpy Module definition
 #
 
+# eprint("/* Generating module definition */")
 print("""
 
 /*

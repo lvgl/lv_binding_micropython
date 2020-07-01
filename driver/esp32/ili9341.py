@@ -127,8 +127,8 @@ class ili9341:
         self.disp_buf = lv.disp_buf_t()
         self.disp_drv = lv.disp_drv_t()
 
-        lv.disp_buf_init(self.disp_buf, self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
-        lv.disp_drv_init(self.disp_drv)
+        self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
+        self.disp_drv.init()
 
         self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi}
         self.disp_drv.buffer = self.disp_buf
@@ -137,7 +137,7 @@ class ili9341:
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
         
-        lv.disp_drv_register(self.disp_drv)
+        self.disp_drv.register()
 
 
     ######################################################

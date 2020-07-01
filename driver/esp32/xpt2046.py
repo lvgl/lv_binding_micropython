@@ -20,8 +20,9 @@ class xpt2046:
 
         # Initializations
 
-        self.screen_width = lv.disp_get_hor_res(lv.disp_t.cast(None))
-        self.screen_height = lv.disp_get_ver_res(lv.disp_t.cast(None))
+        disp = lv.disp_t.cast(None)
+        self.screen_width = disp.get_hor_res()
+        self.screen_height = disp.get_ver_res()
         self.miso = miso
         self.mosi = mosi
         self.clk = clk
@@ -42,10 +43,10 @@ class xpt2046:
         self.spi_init()
 
         indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv)
+        indev_drv.init()
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = self.read
-        lv.indev_drv_register(indev_drv)
+        indev_drv.register()
         
     def calibrate(self, x0, y0, x1, y1):
         self.cal_x0 = x0
