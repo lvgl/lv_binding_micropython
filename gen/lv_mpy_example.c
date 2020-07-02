@@ -125,7 +125,7 @@ STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
     }
     if (res == NULL) nlr_raise(
         mp_obj_new_exception_msg_varg(
-            &mp_type_SyntaxError, "Can't convert %s to %s!", mp_obj_get_type_str(mp_obj), qstr_str(mp_type->name)));
+            &mp_type_SyntaxError, MP_ERROR_TEXT("Can't convert %s to %s!"), mp_obj_get_type_str(mp_obj), qstr_str(mp_type->name)));
     return res;
 }
 
@@ -243,7 +243,7 @@ STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Struct argument is not an object!"));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Struct argument is not an object!")));
     mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
     return mp_lv_struct;
 }
@@ -263,7 +263,7 @@ STATIC mp_obj_t make_new_lv_struct(
     if ((!MP_OBJ_IS_TYPE(type, &mp_type_type)) || type->make_new != &make_new_lv_struct)
         nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Argument is not a struct type!"));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Argument is not a struct type!")));
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
@@ -316,7 +316,7 @@ STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
             type->attr(mp_struct, mp_obj_str_get_qstr(key), dest);
             if (dest[0]) nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot set field %s on struct %s!", qstr_str(mp_obj_str_get_qstr(key)), qstr_str(type->name)));
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot set field %s on struct %s!"), qstr_str(mp_obj_str_get_qstr(key)), qstr_str(type->name)));
         }
     }
     return mp_struct;
@@ -341,7 +341,7 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
             return MP_OBJ_TO_PTR(self_in);
         else nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot convert '%s' to pointer!", mp_obj_get_type_str(self_in)));
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot convert '%s' to pointer!"), mp_obj_get_type_str(self_in)));
     }
 
     if (MP_OBJ_IS_STR_OR_BYTES(self_in) || 
@@ -354,7 +354,7 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
         if (buffer_info.len != sizeof(result) || buffer_info.typecode != BYTEARRAY_TYPECODE){
             nlr_raise(
                 mp_obj_new_exception_msg_varg(
-                    &mp_type_SyntaxError, "Cannot convert %s to pointer! (buffer does not represent a pointer)", mp_obj_get_type_str(self_in)));
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot convert %s to pointer! (buffer does not represent a pointer)"), mp_obj_get_type_str(self_in)));
         }
         memcpy(&result, buffer_info.buf, sizeof(result));
         return result;
@@ -395,7 +395,7 @@ STATIC mp_obj_t mp_blob_cast(size_t argc, const mp_obj_t *argv)
     if (!MP_OBJ_IS_TYPE(type, &mp_type_type))
         nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, "Cast argument must be a type!"));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Cast argument must be a type!")));
     return cast(MP_OBJ_FROM_PTR(ptr), type);
 }
 
@@ -18208,13 +18208,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_img_obj, 5, mp_lv_canvas
 
 /*
  * lvgl extension definition for:
- * void lv_canvas_draw_line(lv_obj_t *canvas, const lv_point_t *points, uint32_t point_cnt, const lv_style_t *style)
+ * void lv_canvas_draw_line(lv_obj_t *canvas, const lv_point_t points[], uint32_t point_cnt, const lv_style_t *style)
  */
  
 STATIC mp_obj_t mp_lv_canvas_draw_line(size_t mp_n_args, const mp_obj_t *mp_args)
 {
     lv_obj_t *canvas = mp_to_lv(mp_args[0]);
-    const lv_point_t *points = mp_write_ptr_lv_point_t(mp_args[1]);
+    const lv_point_t *points = mp_arr_to_lv_point_t_____(mp_args[1]);
     uint32_t point_cnt = (uint32_t)mp_obj_get_int(mp_args[2]);
     const lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[3]);
     lv_canvas_draw_line(canvas, points, point_cnt, style);
@@ -18227,13 +18227,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_draw_line_obj, 4, mp_lv_canva
 
 /*
  * lvgl extension definition for:
- * void lv_canvas_draw_polygon(lv_obj_t *canvas, const lv_point_t *points, uint32_t point_cnt, const lv_style_t *style)
+ * void lv_canvas_draw_polygon(lv_obj_t *canvas, const lv_point_t points[], uint32_t point_cnt, const lv_style_t *style)
  */
  
 STATIC mp_obj_t mp_lv_canvas_draw_polygon(size_t mp_n_args, const mp_obj_t *mp_args)
 {
     lv_obj_t *canvas = mp_to_lv(mp_args[0]);
-    const lv_point_t *points = mp_write_ptr_lv_point_t(mp_args[1]);
+    const lv_point_t *points = mp_arr_to_lv_point_t_____(mp_args[1]);
     uint32_t point_cnt = (uint32_t)mp_obj_get_int(mp_args[2]);
     const lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[3]);
     lv_canvas_draw_polygon(canvas, points, point_cnt, style);
@@ -18963,13 +18963,30 @@ STATIC const mp_obj_type_t mp_win_type = {
 
 /*
  * lvgl extension definition for:
- * void lv_tabview_clean(lv_obj_t *tabview)
+ * inline static void lv_tabview_set_sb_mode(lv_obj_t *tabview, lv_sb_mode_t mode)
+ */
+ 
+STATIC mp_obj_t mp_lv_tabview_set_sb_mode(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    lv_obj_t *tabview = mp_to_lv(mp_args[0]);
+    lv_sb_mode_t mode = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_tabview_set_sb_mode(tabview, mode);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_set_sb_mode_obj, 2, mp_lv_tabview_set_sb_mode, lv_tabview_set_sb_mode);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * void lv_tabview_clean(lv_obj_t *tab)
  */
  
 STATIC mp_obj_t mp_lv_tabview_clean(size_t mp_n_args, const mp_obj_t *mp_args)
 {
-    lv_obj_t *tabview = mp_to_lv(mp_args[0]);
-    lv_tabview_clean(tabview);
+    lv_obj_t *tab = mp_to_lv(mp_args[0]);
+    lv_tabview_clean(tab);
     return mp_const_none;
 }
 
@@ -19234,6 +19251,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_tabview_get_btns_hidden_obj, 1, mp_l
     
 
 STATIC const mp_rom_map_elem_t tabview_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_set_sb_mode), MP_ROM_PTR(&mp_lv_tabview_set_sb_mode_obj) },
     { MP_ROM_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_tabview_clean_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_tab), MP_ROM_PTR(&mp_lv_tabview_add_tab_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_tab_act), MP_ROM_PTR(&mp_lv_tabview_set_tab_act_obj) },
@@ -22143,14 +22161,14 @@ STATIC const mp_obj_type_t mp_calendar_type = {
 
 /*
  * lvgl extension definition for:
- * inline static void lv_spinbox_set_style(lv_obj_t *spinbox, lv_spinbox_style_t type, lv_style_t *style)
+ * inline static void lv_spinbox_set_style(lv_obj_t *spinbox, lv_spinbox_style_t type, const lv_style_t *style)
  */
  
 STATIC mp_obj_t mp_lv_spinbox_set_style(size_t mp_n_args, const mp_obj_t *mp_args)
 {
     lv_obj_t *spinbox = mp_to_lv(mp_args[0]);
     lv_spinbox_style_t type = (uint8_t)mp_obj_get_int(mp_args[1]);
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[2]);
+    const lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[2]);
     lv_spinbox_set_style(spinbox, type, style);
     return mp_const_none;
 }
@@ -24077,6 +24095,23 @@ STATIC mp_obj_t mp_lv_sqrt(size_t mp_n_args, const mp_obj_t *mp_args)
 }
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_sqrt_obj, 1, mp_lv_sqrt, lv_sqrt);
+
+ 
+
+/*
+ * lvgl extension definition for:
+ * int64_t lv_pow(int64_t base, int8_t exp)
+ */
+ 
+STATIC mp_obj_t mp_lv_pow(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    int64_t base = (int)mp_obj_get_int(mp_args[0]);
+    int8_t exp = (int8_t)mp_obj_get_int(mp_args[1]);
+    int64_t res = lv_pow(base, exp);
+    return mp_obj_new_int(res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_pow_obj, 2, mp_lv_pow, lv_pow);
 
  
 
@@ -32015,12 +32050,12 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_line_obj, 5, mp_lv_draw_line, l
 
 /*
  * lvgl extension definition for:
- * void lv_draw_triangle(const lv_point_t *points, const lv_area_t *mask, const lv_style_t *style, lv_opa_t opa_scale)
+ * void lv_draw_triangle(const lv_point_t points[], const lv_area_t *mask, const lv_style_t *style, lv_opa_t opa_scale)
  */
  
 STATIC mp_obj_t mp_lv_draw_triangle(size_t mp_n_args, const mp_obj_t *mp_args)
 {
-    const lv_point_t *points = mp_write_ptr_lv_point_t(mp_args[0]);
+    const lv_point_t *points = mp_arr_to_lv_point_t_____(mp_args[0]);
     const lv_area_t *mask = mp_write_ptr_lv_area_t(mp_args[1]);
     const lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[2]);
     lv_opa_t opa_scale = (uint8_t)mp_obj_get_int(mp_args[3]);
@@ -32034,12 +32069,12 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_triangle_obj, 4, mp_lv_draw_tri
 
 /*
  * lvgl extension definition for:
- * void lv_draw_polygon(const lv_point_t *points, uint32_t point_cnt, const lv_area_t *mask, const lv_style_t *style, lv_opa_t opa_scale)
+ * void lv_draw_polygon(const lv_point_t points[], uint32_t point_cnt, const lv_area_t *mask, const lv_style_t *style, lv_opa_t opa_scale)
  */
  
 STATIC mp_obj_t mp_lv_draw_polygon(size_t mp_n_args, const mp_obj_t *mp_args)
 {
-    const lv_point_t *points = mp_write_ptr_lv_point_t(mp_args[0]);
+    const lv_point_t *points = mp_arr_to_lv_point_t_____(mp_args[0]);
     uint32_t point_cnt = (uint32_t)mp_obj_get_int(mp_args[1]);
     const lv_area_t *mask = mp_write_ptr_lv_area_t(mp_args[2]);
     const lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[3]);
@@ -32823,6 +32858,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bezier3), MP_ROM_PTR(&mp_lv_bezier3_obj) },
     { MP_ROM_QSTR(MP_QSTR_atan2), MP_ROM_PTR(&mp_lv_atan2_obj) },
     { MP_ROM_QSTR(MP_QSTR_sqrt), MP_ROM_PTR(&mp_lv_sqrt_obj) },
+    { MP_ROM_QSTR(MP_QSTR_pow), MP_ROM_PTR(&mp_lv_pow_obj) },
     { MP_ROM_QSTR(MP_QSTR_async_call), MP_ROM_PTR(&mp_lv_async_call_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_hsv_to_rgb), MP_ROM_PTR(&mp_lv_color_hsv_to_rgb_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_rgb_to_hsv), MP_ROM_PTR(&mp_lv_color_rgb_to_hsv_obj) },
