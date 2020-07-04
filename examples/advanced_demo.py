@@ -15,8 +15,8 @@ class ColorStyle(lv.style_t):
         self.set_bg_color(lv.STATE.DEFAULT, lv.color_hex3(color))
         self.set_bg_grad_color(lv.STATE.DEFAULT, lv.color_hex3(0xFFF));
         self.set_bg_grad_dir(lv.STATE.DEFAULT, lv.GRAD_DIR.VER);
-        self.set_bg_main_stop(lv.STATE.DEFAULT, 0);
-        self.set_bg_grad_stop(lv.STATE.DEFAULT, 128);
+        # self.set_bg_main_stop(lv.STATE.DEFAULT, 0);
+        # self.set_bg_grad_stop(lv.STATE.DEFAULT, 128);
 
 class ChartPaddingStyle(lv.style_t):
     def __init__(self):
@@ -132,9 +132,9 @@ class Page_Simple:
 
         # style selector
         self.styles = [('Gray', ColorStyle(0xCCC)),
-                       ('Red', ColorStyle(0xF88)), 
-                       ('Green',ColorStyle(0x8F8)),
-                       ('Blue', ColorStyle(0x88F))] 
+                       ('Red', ColorStyle(0xF00)), 
+                       ('Green',ColorStyle(0x0F0)),
+                       ('Blue', ColorStyle(0x00F))] 
     
         self.style_selector = lv.dropdown(page)
         self.style_selector.add_style(self.style_selector.PART.MAIN, ShadowStyle())

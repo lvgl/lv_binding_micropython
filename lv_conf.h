@@ -14,14 +14,6 @@
 
 #include <stdint.h>
 
-#ifndef mp_instance_cast_to_native_base
-#define mp_instance_cast_to_native_base mp_obj_cast_to_native_base
-#endif
-
-#ifndef MP_ERROR_TEXT
-#define MP_ERROR_TEXT(txt) txt
-#endif
-
 /*====================
    Graphical settings
  *====================*/

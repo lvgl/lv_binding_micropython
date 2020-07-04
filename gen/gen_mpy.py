@@ -515,6 +515,7 @@ STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
 
 STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
     { &mp_type_type },
+    .flags = MP_TYPE_FLAG_BINDS_SELF | MP_TYPE_FLAG_BUILTIN_FUN,
     .name = MP_QSTR_function,
     .call = lv_fun_builtin_var_call,
     .unary_op = mp_generic_unary_op,
@@ -566,7 +567,7 @@ STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
     if (native_type->parent == NULL || 
         (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer)) return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
-    return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
+    return mp_obj_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
 
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type);
@@ -1351,7 +1352,7 @@ STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
 STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
 {{
     mp_obj_t obj_arr[{dim}];
-    for (int i=0; i<{dim}; i++){{
+    for (size_t i=0; i<{dim}; i++){{
         obj_arr[i] = {lv_to_mp_convertor}(arr[i]);
     }}
     return mp_obj_new_list({dim}, obj_arr); // TODO: return custom iterable object!
@@ -1877,7 +1878,7 @@ def generate_struct_functions(struct_list):
         for struct_func in struct_funcs[:]: # clone list because we are changing it in the loop.
             try:
                 if struct_func.name not in generated_funcs:
-                    gen_mp_func(struct_func, None)
+                    gen_mp_func(struct_func, struct_name)
             except MissingConversionException as exp:
                 gen_func_error(module_func, exp)
                 struct_funcs.remove(struct_func)
