@@ -1,4 +1,7 @@
 #include "../include/common.h"
+#include <errno.h>
+#include <signal.h>
+#include <pthread.h>
 #include "SDL_monitor.h"
 #include "SDL_mouse.h"
 #ifdef __EMSCRIPTEN__
@@ -8,9 +11,11 @@
 /* Defines the LittlevGL tick rate in milliseconds. */
 /* Increasing this value might help with CPU usage at the cost of lower
  * responsiveness. */
-#define LV_TICK_RATE 50
+#define LV_TICK_RATE 20
 
 //////////////////////////////////////////////////////////////////////////////
+
+STATIC pthread_t mp_thread;
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
@@ -27,9 +32,10 @@ STATIC int tick_thread(void * data)
     (void)data;
 
     while(monitor_active()) {
-        SDL_Delay(1);   /*Sleep for 1 millisecond*/
-        lv_tick_inc(1); /*Tell LittelvGL that 1 milliseconds were elapsed*/
+        SDL_Delay(LV_TICK_RATE);   /*Sleep for LV_TICK_RATE millisecond*/
+        lv_tick_inc(LV_TICK_RATE); /*Tell LittelvGL that LV_TICK_RATE milliseconds were elapsed*/
         mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+        pthread_kill(mp_thread, SIGUSR1); // interrupt REPL blocking input. See handle_sigusr1
     }
 
     return 0;
@@ -41,6 +47,14 @@ STATIC void mp_lv_main_loop(void)
         lv_tick_inc(LV_TICK_RATE);
 }
 #endif
+
+static void handle_sigusr1(int signo)
+{
+    // Let the signal pass. blocking function would return E_INTR.
+    // This would cause a call to "mp_handle_pending" even when 
+    // waiting for user input.
+    // See https://github.com/micropython/micropython/pull/5723
+}
 
 STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
@@ -63,6 +77,17 @@ STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
 #else
     SDL_CreateThread(tick_thread, "tick", NULL);
 #endif
+
+    mp_thread = pthread_self();
+    struct sigaction sa;
+    sa.sa_handler = handle_sigusr1;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
     return mp_const_none;
 }
 

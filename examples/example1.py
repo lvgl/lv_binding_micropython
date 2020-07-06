@@ -15,24 +15,24 @@ class driver:
         # Register SDL display driver.
 
         disp_buf1 = lv.disp_buf_t()
-        buf1_1 = bytearray(480 * 10)
-        lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
+        buf1_1 = bytearray(480*10)
+        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
-        lv.disp_drv_init(disp_drv)
+        disp_drv.init()
         disp_drv.buffer = disp_buf1
         disp_drv.flush_cb = SDL.monitor_flush
         disp_drv.hor_res = 480
         disp_drv.ver_res = 320
-        lv.disp_drv_register(disp_drv)
+        disp_drv.register()
 
         # Regsiter SDL mouse driver
 
         indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv)
+        indev_drv.init()
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = SDL.mouse_read
-        lv.indev_drv_register(indev_drv)
-
+        indev_drv.register()
+        
     def init_gui_esp32(self):
 
         import lvesp32
@@ -46,15 +46,15 @@ class driver:
         # Register display driver
 
         disp_buf1 = lv.disp_buf_t()
-        buf1_1 = bytearray(480 * 10)
-        lv.disp_buf_init(disp_buf1, buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
+        buf1_1 = bytearray(480*10)
+        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
-        lv.disp_drv_init(disp_drv)
+        disp_drv.init()
         disp_drv.buffer = disp_buf1
         disp_drv.flush_cb = disp.flush
         disp_drv.hor_res = 240
         disp_drv.ver_res = 320
-        lv.disp_drv_register(disp_drv)
+        disp_drv.register()
 
         # Register raw resistive touch driver
 
@@ -63,10 +63,10 @@ class driver:
         touch = rtch.touch(xp=32, yp=33, xm=25, ym=26, touch_rail=27, touch_sense=33)
         touch.init()
         indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv)
+        indev_drv.init()
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = touch.read
-        lv.indev_drv_register(indev_drv)
+        indev_drv.register()
 
     def init_gui_stm32(self):
         import rk043fn48h as lcd
@@ -81,23 +81,23 @@ class driver:
         disp_buf1 = lv.disp_buf_t()
         buf1_1 = lcd.framebuffer(1)
         buf1_2 = lcd.framebuffer(2)
-        lv.disp_buf_init(disp_buf1, buf1_1, buf1_2, len(buf1_1) // lv.color_t.SIZE)
+        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
-        lv.disp_drv_init(disp_drv)
+        disp_drv.init()
         disp_drv.buffer = disp_buf1
         disp_drv.flush_cb = lcd.flush
         disp_drv.gpu_blend_cb = lcd.gpu_blend
         disp_drv.gpu_fill_cb = lcd.gpu_fill
         disp_drv.hor_res = hres
         disp_drv.ver_res = vres
-        lv.disp_drv_register(disp_drv)
+        disp_drv.register()
 
         # Register touch sensor
         indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv)
+        indev_drv.init()
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = lcd.ts_read
-        lv.indev_drv_register(indev_drv)
+        indev_drv.register()
 
     def init_gui(self):
 

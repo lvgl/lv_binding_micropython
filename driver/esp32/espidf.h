@@ -23,6 +23,20 @@
 #define _SOC_SPI_STRUCT_H_
 #define _SOC_RTC_CNTL_STRUCT_H_
 #define __XTENSA_API_H__
+#define _SOC_GPIO_STRUCT_H_
+#define _SOC_RTC_IO_STRUCT_H_
+#define _SOC_PCNT_STRUCT_H_
+#define _SYS_FCNTL_H_
+#define __SYS_ARCH_H__
+#define LIST_H
+#define INC_TASK_H
+#define LWIP_HDR_NETIF_H
+#define ESP_EVENT_H_
+#define __SNTP_H__
+
+typedef int	BaseType_t;
+typedef unsigned int	UBaseType_t;
+typedef void* system_event_t;
 
 // Exclude SOC just because it contains large structs that don't interest the user
 #define _SOC_SPI_PERIPH_H_
@@ -68,6 +82,7 @@ static inline void get_ccount(int *ccount)
 #include "driver/adc.h"
 #include "driver/i2s.h"
 #include "driver/pcnt.h"
+#include "mdns.h"
 
 // We don't want the whole FreeRTOS, only selected functions
 
