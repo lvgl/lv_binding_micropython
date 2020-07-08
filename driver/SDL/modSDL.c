@@ -1,4 +1,5 @@
 #include "../include/common.h"
+#define _POSIX_C_SOURCE
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
