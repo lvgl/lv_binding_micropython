@@ -145,7 +145,7 @@ class AnimatedChart(lv.chart):
             self, 
             self.val, 
             self.size, 
-            lambda a, val: self.set_range(0, val), 
+            lambda a, val: self.set_y_range(self.AXIS.PRIMARY_Y,0, val),
             lv.anim_path_t.ease_in, 
             ready_cb=lambda a:self.anim_phase2(),
             time=(self.max * self.factor) // 100,
@@ -156,7 +156,7 @@ class AnimatedChart(lv.chart):
             self, 
             self.val+self.size, 
             -self.size, 
-            lambda a, val: self.set_range(0, val), 
+            lambda a, val: self.set_y_range(self.AXIS.PRIMARY_Y,0, val),
             lv.anim_path_t.ease_out, 
             ready_cb=lambda a:self.anim_phase1(),
             time=(self.min * self.factor) // 100,
@@ -170,7 +170,7 @@ chart.set_width(scr.get_width() - 100)
 chart.align(scr, lv.ALIGN.CENTER, 0, 0)
 series1 = chart.add_series(lv.color_hex(0xFF0000))
 chart.set_type(chart.TYPE.LINE)
-chart.set_range(0, 100)
+chart.set_y_range(chart.AXIS.PRIMARY_Y, 0,100)
 chart.init_points(series1, 10)
 chart.set_points(series1, [10, 20, 30, 20, 10, 40, 50, 90, 95, 90])
 chart.set_x_tick_texts("a\nb\nc\nd\ne", 2, lv.chart.AXIS.DRAW_LAST_TICK)

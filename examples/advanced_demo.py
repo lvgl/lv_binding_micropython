@@ -201,7 +201,7 @@ class AnimatedChart(lv.chart):
             self,
             self.val,
             self.size,
-            lambda a, val: self.set_range(0, val),
+            lambda a, val: self.set_y_range(self.AXIS.PRIMARY_Y,0, val),
             lv.anim_path_t.ease_in,
             ready_cb=lambda a:self.anim_phase2(),
             time=(self.max * self.factor) // 100,
@@ -212,7 +212,7 @@ class AnimatedChart(lv.chart):
             self,
             self.val + self.size,
             -self.size,
-            lambda a, val: self.set_range(0, val),
+            lambda a, val: self.set_y_range(self.AXIS.PRIMARY_Y, 0, val),
             lv.anim_path_t.ease_out,
             ready_cb=lambda a:self.anim_phase1(),
             time=(self.min * self.factor) // 100,
@@ -230,7 +230,7 @@ class Page_Chart:
         self.chart.set_style_local_line_width(self.chart.PART.SERIES, lv.STATE.DEFAULT, 3)
         self.chart.add_style(self.chart.PART.SERIES, ColorStyle(0x055))
         self.chart.add_style(self.chart.PART.BG, ChartPaddingStyle())
-        self.chart.set_range(0,100)
+        self.chart.set_y_range(self.chart.AXIS.PRIMARY_Y, 0,100)
         self.chart.init_points(self.series1, 10)
         self.chart.set_points(self.series1, [10, 20, 30, 20, 10, 40, 50, 90, 95, 90])
         self.chart.set_x_tick_texts("a\nb\nc\nd\ne", 2, lv.chart.AXIS.DRAW_LAST_TICK)

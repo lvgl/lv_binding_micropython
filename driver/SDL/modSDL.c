@@ -1,5 +1,7 @@
 #include "../include/common.h"
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE
+#endif
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
