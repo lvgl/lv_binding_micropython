@@ -58,6 +58,7 @@ STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
 
 STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
     { &mp_type_type },
+    .flags = MP_TYPE_FLAG_BINDS_SELF | MP_TYPE_FLAG_BUILTIN_FUN,
     .name = MP_QSTR_function,
     .call = lv_fun_builtin_var_call,
     .unary_op = mp_generic_unary_op,
@@ -109,7 +110,7 @@ STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
     if (native_type->parent == NULL || 
         (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer)) return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
-    return mp_instance_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
+    return mp_obj_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
 
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type);
@@ -650,7 +651,7 @@ STATIC short *mp_arr_to_short_____sizeof__void_ptr______div____sizeof__short____
 STATIC mp_obj_t mp_arr_from_short_____sizeof__void_ptr______div____sizeof__short______(short *arr)
 {
     mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(short))];
-    for (int i=0; i<(sizeof(void *)) / (sizeof(short)); i++){
+    for (size_t i=0; i<(sizeof(void *)) / (sizeof(short)); i++){
         obj_arr[i] = mp_obj_new_int(arr[i]);
     }
     return mp_obj_new_list((sizeof(void *)) / (sizeof(short)), obj_arr); // TODO: return custom iterable object!
@@ -680,7 +681,7 @@ STATIC unsigned short *mp_arr_to_unsigned_short_____sizeof__void_ptr______div___
 STATIC mp_obj_t mp_arr_from_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(unsigned short *arr)
 {
     mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(unsigned short))];
-    for (int i=0; i<(sizeof(void *)) / (sizeof(unsigned short)); i++){
+    for (size_t i=0; i<(sizeof(void *)) / (sizeof(unsigned short)); i++){
         obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
     }
     return mp_obj_new_list((sizeof(void *)) / (sizeof(unsigned short)), obj_arr); // TODO: return custom iterable object!
@@ -710,7 +711,7 @@ STATIC char *mp_arr_to_char_____sizeof__void_ptr______div____sizeof__char______(
 STATIC mp_obj_t mp_arr_from_char_____sizeof__void_ptr______div____sizeof__char______(char *arr)
 {
     mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(char))];
-    for (int i=0; i<(sizeof(void *)) / (sizeof(char)); i++){
+    for (size_t i=0; i<(sizeof(void *)) / (sizeof(char)); i++){
         obj_arr[i] = mp_obj_new_int(arr[i]);
     }
     return mp_obj_new_list((sizeof(void *)) / (sizeof(char)), obj_arr); // TODO: return custom iterable object!
@@ -740,7 +741,7 @@ STATIC unsigned char *mp_arr_to_unsigned_char_____sizeof__void_ptr______div____s
 STATIC mp_obj_t mp_arr_from_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(unsigned char *arr)
 {
     mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(unsigned char))];
-    for (int i=0; i<(sizeof(void *)) / (sizeof(unsigned char)); i++){
+    for (size_t i=0; i<(sizeof(void *)) / (sizeof(unsigned char)); i++){
         obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
     }
     return mp_obj_new_list((sizeof(void *)) / (sizeof(unsigned char)), obj_arr); // TODO: return custom iterable object!
@@ -10204,7 +10205,7 @@ STATIC lv_area_t *mp_arr_to_lv_area_t___32__(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_lv_area_t___32__(lv_area_t *arr)
 {
     mp_obj_t obj_arr[32];
-    for (int i=0; i<32; i++){
+    for (size_t i=0; i<32; i++){
         obj_arr[i] = mp_read_lv_area_t(arr[i]);
     }
     return mp_obj_new_list(32, obj_arr); // TODO: return custom iterable object!
@@ -10234,7 +10235,7 @@ STATIC uint8_t *mp_arr_to_uint8_t___32__(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_uint8_t___32__(uint8_t *arr)
 {
     mp_obj_t obj_arr[32];
-    for (int i=0; i<32; i++){
+    for (size_t i=0; i<32; i++){
         obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
     }
     return mp_obj_new_list(32, obj_arr); // TODO: return custom iterable object!
@@ -11292,7 +11293,7 @@ STATIC const char * *mp_arr_to_char_ptr__8__(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_char_ptr__8__(const char * *arr)
 {
     mp_obj_t obj_arr[8];
-    for (int i=0; i<8; i++){
+    for (size_t i=0; i<8; i++){
         obj_arr[i] = convert_to_str(arr[i]);
     }
     return mp_obj_new_list(8, obj_arr); // TODO: return custom iterable object!
@@ -14791,7 +14792,7 @@ STATIC const lv_point_t *mp_arr_to_lv_point_t_____(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_lv_point_t_____(const lv_point_t *arr)
 {
     mp_obj_t obj_arr[1];
-    for (int i=0; i<1; i++){
+    for (size_t i=0; i<1; i++){
         obj_arr[i] = mp_read_lv_point_t(arr[i]);
     }
     return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
@@ -16036,24 +16037,6 @@ STATIC const mp_obj_type_t mp_list_type = {
     
 
 /*
- * lvgl extension definition for:
- * inline static void lv_chart_set_range(lv_obj_t *chart, lv_coord_t ymin, lv_coord_t ymax)
- */
- 
-STATIC mp_obj_t mp_lv_chart_set_range(size_t mp_n_args, const mp_obj_t *mp_args)
-{
-    lv_obj_t *chart = mp_to_lv(mp_args[0]);
-    lv_coord_t ymin = (int16_t)mp_obj_get_int(mp_args[1]);
-    lv_coord_t ymax = (int16_t)mp_obj_get_int(mp_args[2]);
-    lv_chart_set_range(chart, ymin, ymax);
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_set_range_obj, 3, mp_lv_chart_set_range, lv_chart_set_range);
-
- 
-
-/*
  * Struct lv_chart_series_t
  */
 
@@ -16281,7 +16264,7 @@ STATIC lv_coord_t *mp_arr_to_lv_coord_t_____(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_lv_coord_t_____(lv_coord_t *arr)
 {
     mp_obj_t obj_arr[1];
-    for (int i=0; i<1; i++){
+    for (size_t i=0; i<1; i++){
         obj_arr[i] = mp_obj_new_int(arr[i]);
     }
     return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
@@ -16631,7 +16614,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_refresh_obj, 1, mp_lv_chart_re
     
 
 STATIC const mp_rom_map_elem_t chart_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_chart_set_range_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_series), MP_ROM_PTR(&mp_lv_chart_add_series_obj) },
     { MP_ROM_QSTR(MP_QSTR_clear_serie), MP_ROM_PTR(&mp_lv_chart_clear_serie_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_div_line_count), MP_ROM_PTR(&mp_lv_chart_set_div_line_count_obj) },
@@ -18316,7 +18298,7 @@ STATIC const char * *mp_arr_to_char_ptr____(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_char_ptr____(const char * *arr)
 {
     mp_obj_t obj_arr[1];
-    for (int i=0; i<1; i++){
+    for (size_t i=0; i<1; i++){
         obj_arr[i] = convert_to_str(arr[i]);
     }
     return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
@@ -18363,7 +18345,7 @@ STATIC const lv_btnmatrix_ctrl_t *mp_arr_to_lv_btnmatrix_ctrl_t_____(mp_obj_t mp
 STATIC mp_obj_t mp_arr_from_lv_btnmatrix_ctrl_t_____(const lv_btnmatrix_ctrl_t *arr)
 {
     mp_obj_t obj_arr[1];
-    for (int i=0; i<1; i++){
+    for (size_t i=0; i<1; i++){
         obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
     }
     return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
@@ -20869,23 +20851,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_scroll_ver_obj, 2, mp_lv_win_scr
 
 /*
  * lvgl extension definition for:
- * inline static lv_obj_t *lv_win_add_btn(lv_obj_t *win, const void *img_src)
- */
- 
-STATIC mp_obj_t mp_lv_win_add_btn(size_t mp_n_args, const mp_obj_t *mp_args)
-{
-    lv_obj_t *win = mp_to_lv(mp_args[0]);
-    const void *img_src = mp_to_ptr(mp_args[1]);
-    lv_obj_t * _res = lv_win_add_btn(win, img_src);
-    return lv_to_mp((void*)_res);
-}
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_win_add_btn_obj, 2, mp_lv_win_add_btn, lv_win_add_btn);
-
- 
-
-/*
- * lvgl extension definition for:
  * void lv_win_clean(lv_obj_t *win)
  */
  
@@ -21259,7 +21224,6 @@ STATIC const mp_rom_map_elem_t win_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_drag), MP_ROM_PTR(&mp_lv_win_get_drag_obj) },
     { MP_ROM_QSTR(MP_QSTR_scroll_hor), MP_ROM_PTR(&mp_lv_win_scroll_hor_obj) },
     { MP_ROM_QSTR(MP_QSTR_scroll_ver), MP_ROM_PTR(&mp_lv_win_scroll_ver_obj) },
-    { MP_ROM_QSTR(MP_QSTR_add_btn), MP_ROM_PTR(&mp_lv_win_add_btn_obj) },
     { MP_ROM_QSTR(MP_QSTR_clean), MP_ROM_PTR(&mp_lv_win_clean_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_btn_right), MP_ROM_PTR(&mp_lv_win_add_btn_right_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_btn_left), MP_ROM_PTR(&mp_lv_win_add_btn_left_obj) },
@@ -22584,7 +22548,7 @@ STATIC const lv_color_t *mp_arr_to_lv_color_t_____(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_lv_color_t_____(const lv_color_t *arr)
 {
     mp_obj_t obj_arr[1];
-    for (int i=0; i<1; i++){
+    for (size_t i=0; i<1; i++){
         obj_arr[i] = mp_read_lv_color32_t(arr[i]);
     }
     return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
@@ -23578,7 +23542,7 @@ STATIC lv_calendar_date_t *mp_arr_to_lv_calendar_date_t_____(mp_obj_t mp_arr)
 STATIC mp_obj_t mp_arr_from_lv_calendar_date_t_____(lv_calendar_date_t *arr)
 {
     mp_obj_t obj_arr[1];
-    for (int i=0; i<1; i++){
+    for (size_t i=0; i<1; i++){
         obj_arr[i] = mp_read_lv_calendar_date_t(arr[i]);
     }
     return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
@@ -33365,12 +33329,12 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_arc_obj, 7, mp_lv_draw_arc, lv_
     
 
 /*
- * lvgl lv_font_montserrat_16 global definitions
+ * lvgl lv_font_montserrat_14 global definitions
  */
 
-STATIC const mp_lv_struct_t mp_lv_font_montserrat_16 = {
+STATIC const mp_lv_struct_t mp_lv_font_montserrat_14 = {
     { &mp_lv_font_t_type },
-    (lv_font_t*)&lv_font_montserrat_16
+    (lv_font_t*)&lv_font_montserrat_14
 };
     
 
@@ -34168,7 +34132,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     
     { MP_ROM_QSTR(MP_QSTR_color_t), MP_ROM_PTR(&mp_lv_color32_t_type) },
     
-    { MP_ROM_QSTR(MP_QSTR_font_montserrat_16), MP_ROM_PTR(&mp_lv_font_montserrat_16) },
+    { MP_ROM_QSTR(MP_QSTR_font_montserrat_14), MP_ROM_PTR(&mp_lv_font_montserrat_14) },
     { MP_ROM_QSTR(MP_QSTR_anim_path_def), MP_ROM_PTR(&mp_lv_anim_path_def) },
     
     
