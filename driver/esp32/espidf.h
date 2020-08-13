@@ -169,7 +169,9 @@ enum {
 // like this: "self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi}"
 
 
-void ili9341_post_cb_isr(spi_transaction_t *trans);
+void ili9xxx_post_cb_isr(spi_transaction_t *trans);
+
 void ili9341_flush(void *disp_drv, const void *area, void *color_p);
+void ili9488_flush(void *disp_drv, const void *area, void *color_p);
 
 
