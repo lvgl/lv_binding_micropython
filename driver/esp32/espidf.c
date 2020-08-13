@@ -208,7 +208,7 @@ typedef struct {
 	uint8_t blue;
 	uint8_t green;
 	uint8_t red;
-} lv_color24_t;
+} color24_t;
 
 void ili9488_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
@@ -253,7 +253,7 @@ void ili9488_flush(void *_disp_drv, const void *_area, void *_color_p)
 	/*Convert ARGB to RGB is required (cut off A-byte)*/
 	size_t i;
 	lv_color32_t* tmp32 = (lv_color32_t*) color_p;
-	lv_color24_t* tmp24 = (lv_color24_t*) color_p;
+	color24_t* tmp24 = (color24_t*) color_p;
 
 	for(i=0; i < size; i++) {
 		tmp24[i].red = tmp32[i].ch.red;
