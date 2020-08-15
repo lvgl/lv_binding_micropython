@@ -65,22 +65,22 @@ STATIC mp_obj_t mp_rk043fn48h_init(size_t n_args, const mp_obj_t *pos_args, mp_m
     mp_rk043fn48h_framebuffer(mp_obj_new_int(1));
 
     if (fb[0] == NULL) {
-        /*nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed allocating frame buffer"));*/
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed allocating frame buffer"));
     }
 
     if (!config_ltdc()) {
-        /*nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "LTDC init error"));*/
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("LTDC init error"));
     }
 
     if (!config_dma2d()) {
-        /*nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "DMA2D init error"));*/
+         mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("DMA2D init error"));
     }
 
     i2c_ts = I2C3;
     i2c_init(i2c_ts, MICROPY_HW_I2C3_SCL, MICROPY_HW_I2C3_SDA, 400000, 100);
 
     if (BSP_TS_Init(w, h) != TS_OK) {
-        /*nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Touchscreen init error"));*/
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Touchscreen init error"));
     }
 
     return mp_const_none;
@@ -156,7 +156,7 @@ STATIC void mp_rk043fn48h_gpu_blend(lv_disp_drv_t *drv, lv_color_t *dest, const 
     HAL_DMA2D_ConfigLayer(hdma2d, 1);
     HAL_DMA2D_BlendingStart(hdma2d, (uint32_t)src, (uint32_t)dest, (uint32_t)dest, length, 1);
     if (HAL_DMA2D_PollForTransfer(hdma2d, 10) != HAL_OK) {
-        /*nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "blend timeout"));*/
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("blend timeout"));
     }
 
 }
@@ -177,7 +177,7 @@ STATIC void mp_rk043fn48h_gpu_fill(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf
         lv_area_get_width(fill_area),
         lv_area_get_height(fill_area));
     if (HAL_DMA2D_PollForTransfer(hdma2d, 10) != HAL_OK) {
-        /*nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "fill timeout"));*/
+        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("fill timeout"));
     }
 }
 
