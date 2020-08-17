@@ -2030,8 +2030,8 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
         enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }},\n    '.
             format(name = get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
         structs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
-            format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in structs.keys() \
-                    if struct_name in generated_structs and generated_structs[struct_name]]),
+            format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in generated_structs \
+                    if generated_structs[struct_name]]),
         struct_aliases = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{alias_name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
             format(struct_name = struct_name, alias_name = simplify_identifier(struct_aliases[struct_name])) for struct_name in struct_aliases.keys()]),
         blobs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{global_name}) }},\n    '.
@@ -2061,7 +2061,7 @@ if args.metadata:
     metadata['objects'] = {obj_name: obj_metadata[obj_name] for obj_name in obj_names}
     metadata['functions'] = {simplify_identifier(f.name): func_metadata[f.name] for f in module_funcs}
     metadata['enums'] = {get_enum_name(enum_name): obj_metadata[enum_name] for enum_name in enums.keys() if enum_name not in enum_referenced}
-    metadata['structs'] = [simplify_identifier(struct_name) for struct_name in structs.keys() if struct_name in generated_structs]
+    metadata['structs'] = [simplify_identifier(struct_name) for struct_name in generated_structs if struct_name in generated_structs]
     metadata['structs'] += [simplify_identifier(struct_aliases[struct_name]) for struct_name in struct_aliases.keys()]
     metadata['blobs'] = [simplify_identifier(global_name) for global_name in generated_globals]
     metadata['int_constants'] = [get_enum_name(int_constant) for int_constant in int_constants]
