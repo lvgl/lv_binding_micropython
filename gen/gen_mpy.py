@@ -14,7 +14,14 @@ import sys
 import struct
 import copy
 from itertools import chain
+from functools import lru_cache
 import json
+
+def memoize(func):
+    @lru_cache(maxsize=1000000)
+    def memoized(*args, **kwargs):
+        return func(*args, **kwargs)
+    return memoized
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -70,6 +77,7 @@ else:
 # AST parsing helper functions
 #
 
+@memoize
 def convert_array_to_ptr(ast):
     if hasattr(ast, 'type') and isinstance(ast.type, c_ast.ArrayDecl):
         ast.type = c_ast.PtrDecl(ast.type.quals if hasattr(ast.type, 'quals') else [], ast.type.type)
@@ -79,6 +87,7 @@ def convert_array_to_ptr(ast):
         child = ast.children()[i]
         convert_array_to_ptr(child)
 
+@memoize
 def remove_quals(ast):
     if hasattr(ast,'quals'):
         ast.quals = []
@@ -91,6 +100,7 @@ def remove_quals(ast):
         if not isinstance(child, c_ast.FuncDecl): # Don't remove quals which change function prorotype
             remove_quals(child)
 
+@memoize
 def remove_explicit_struct(ast):
     if isinstance(ast, c_ast.TypeDecl) and isinstance(ast.type, c_ast.Struct):
         explicit_struct_name = ast.type.name
@@ -103,6 +113,7 @@ def remove_explicit_struct(ast):
         child = ast.children()[i]
         remove_explicit_struct(child)
 
+@memoize
 def get_type(arg, **kwargs):
     if isinstance(arg, str): 
         return arg
@@ -112,6 +123,7 @@ def get_type(arg, **kwargs):
     if remove_quals_arg: remove_quals(arg_ast)
     return gen.visit(arg_ast)
 
+@memoize
 def get_name(type):
     if isinstance(type, c_ast.Decl):
         return type.name
@@ -128,6 +140,7 @@ def get_name(type):
     else:
         return gen.visit(type)
 
+@memoize
 def remove_arg_names(ast):
     if isinstance(ast, c_ast.TypeDecl):
         ast.declname = None
@@ -157,6 +170,7 @@ lv_global_callback_pattern = re.compile('.*g_cb_t')
 lv_func_returns_array = re.compile('.*_array$')
 lv_enum_name_pattern = re.compile('^(ENUM_){{0,1}}({prefix}_){{0,1}}(.*)'.format(prefix=module_prefix.upper()))
 
+@memoize
 def simplify_identifier(id):
     match_result = lv_func_pattern.match(id)
     return match_result.group(1) if match_result else id
@@ -251,28 +265,56 @@ def get_ctor(obj_name):
 
 def get_methods(obj_name):
     global funcs
-    return [func for func in funcs if is_method_of(func.name,obj_name) and (not func.name == ctor_name_from_obj_name(obj_name))]
+    return [func for func in funcs \
+            if is_method_of(func.name,obj_name) and \
+            (not func.name == ctor_name_from_obj_name(obj_name))]
 
+@memoize
 def noncommon_part(member_name, stem_name):
     common_part = commonprefix([member_name, stem_name])
     n = len(common_part) - 1
     while n > 0 and member_name[n] != '_': n-=1
     return member_name[n+1:]
 
+@memoize
+def get_first_arg_type(func):
+    if not func.type.args:
+        return None
+    if not len(func.type.args.params) >= 1:
+        return None
+    if not func.type.args.params[0].type.type:
+        return None
+    return get_type(func.type.args.params[0].type.type, remove_quals = True)
+
 # "struct function" starts with struct name (without _t), and their first argument is a pointer to the struct
 # Need also to take into account struct functions of aliases of current struct.
+@memoize
 def get_struct_functions(struct_name):
     global funcs
+    if not struct_name:
+        return []
     base_struct_name = struct_name[:-2] if struct_name.endswith('_t') else struct_name
     # eprint("get_struct_functions %s: %s" % (struct_name, [get_type(func.type.args.params[0].type.type, remove_quals = True) for func in funcs if func.name.startswith(base_struct_name)]))
     # eprint("get_struct_functions %s: %s" % (struct_name, struct_aliases[struct_name] if struct_name in struct_aliases else ""))
     
-    return [func for func in funcs if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name) \
-            and func.type.args \
-            and len(func.type.args.params) >= 1 \
-            and func.type.args.params[0].type.type \
-            and get_type(func.type.args.params[0].type.type, remove_quals = True) == struct_name] + \
+    return [func for func in funcs \
+            if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name) \
+            and get_first_arg_type(func) == struct_name] + \
             (get_struct_functions(struct_aliases[struct_name]) if struct_name in struct_aliases else [])
+
+@memoize
+def is_struct_function(func):
+    return func in get_struct_functions(get_first_arg_type(func))
+
+# is_static_member returns true if function does not receive the obj as the first argument
+# and the object is not a struct function
+
+@memoize
+def is_static_member(func, obj_type=base_obj_type):
+    if is_struct_function(func):
+        return False
+    first_arg_type = get_first_arg_type(func)
+    return (first_arg_type == None) or (first_arg_type != obj_type)
 
 # All object should inherit directly from base_obj, and not according to lv_ext, as disccussed on https://github.com/littlevgl/lv_binding_micropython/issues/19
 parent_obj_names = {child_name: base_obj_name for child_name in obj_names if child_name != base_obj_name} 
@@ -522,8 +564,18 @@ STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
     .buffer_p = { .get_buffer = mp_func_get_buffer }
 };
 
+STATIC const mp_obj_type_t mp_lv_type_fun_builtin_static_var = {
+    { &mp_type_type },
+    .flags = MP_TYPE_FLAG_BUILTIN_FUN,
+    .name = MP_QSTR_function,
+    .call = lv_fun_builtin_var_call,
+    .unary_op = mp_generic_unary_op,
+    .buffer_p = { .get_buffer = mp_func_get_buffer }
+};
+
 STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
-    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var));
+    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var) ||
+           MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_static_var));
     mp_lv_obj_fun_builtin_var_t *self = MP_OBJ_TO_PTR(self_in);
     mp_arg_check_num(n_args, n_kw, self->n_args, self->n_args, false);
     return self->mp_fun(n_args, args);
@@ -531,7 +583,8 @@ STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t 
 
 STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
     (void)flags;
-    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var));
+    assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var) ||
+           MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_static_var));
     mp_lv_obj_fun_builtin_var_t *self = MP_OBJ_TO_PTR(self_in);
 
     bufinfo->buf = &self->lv_fun;
@@ -543,6 +596,10 @@ STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
 #define MP_DEFINE_CONST_LV_FUN_OBJ_VAR(obj_name, n_args, mp_fun, lv_fun) \\
     const mp_lv_obj_fun_builtin_var_t obj_name = \\
         {{&mp_lv_type_fun_builtin_var}, n_args, mp_fun, lv_fun}
+
+#define MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(obj_name, n_args, mp_fun, lv_fun) \\
+    const mp_lv_obj_fun_builtin_var_t obj_name = \\
+        {{&mp_lv_type_fun_builtin_static_var}, n_args, mp_fun, lv_fun}
 
 // Casting
 
@@ -1691,7 +1748,7 @@ STATIC mp_obj_t mp_{func}(size_t mp_n_args, const mp_obj_t *mp_args)
     return {build_return_value};
 }}
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_{func}_obj, {count}, mp_{func}, {func});
+STATIC {builtin_macro}(mp_{func}_obj, {count}, mp_{func}, {func});
 
  """.format(
         module_name = module_name,
@@ -1701,9 +1758,12 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_{func}_obj, {count}, mp_{func}, {func})
         build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerated_args if hasattr(arg, 'name') and arg.name]), 
         send_args=", ".join(arg.name for arg in args if hasattr(arg, 'name') and arg.name),
         build_result=build_result,
-        build_return_value=build_return_value))
+        build_return_value=build_return_value,
+        builtin_macro='MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR' if is_static_member(func, base_obj_type) else 'MP_DEFINE_CONST_LV_FUN_OBJ_VAR'))
 
     generated_funcs[func.name] = True # complated generating the function
+    # print('/* is_struct_function() = %s, is_static_member() = %s, get_first_arg_type()=%s, obj_name = %s */' % (
+    #    is_struct_function(func), is_static_member(func, base_obj_type), get_first_arg_type(func), base_obj_type))
 
 
 
