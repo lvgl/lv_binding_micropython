@@ -379,9 +379,9 @@ mp_to_lv = {
     'const uint8_t *'           : 'mp_to_ptr',
     'const void *'              : 'mp_to_ptr',
     'bool'                      : 'mp_obj_is_true',
-    'char *'                    : '(char*)mp_obj_str_get_str',
-    'const char *'              : 'mp_obj_str_get_str',
-    'const unsigned char *'     : 'mp_obj_str_get_str',
+    'char *'                    : '(char*)convert_from_str',
+    'const char *'              : 'convert_from_str',
+    'const unsigned char *'     : 'convert_from_str',
     'char **'                   : 'mp_to_ptr',
     'const char **'             : 'mp_to_ptr',
     '%s_obj_t *'% module_prefix : 'mp_to_lv',
@@ -763,6 +763,11 @@ STATIC inline mp_obj_t convert_to_bool(bool b)
 STATIC inline mp_obj_t convert_to_str(const char *str)
 {
     return str? mp_obj_new_str(str, strlen(str)): mp_const_none;
+}
+
+STATIC inline const char *convert_from_str(mp_obj_t str)
+{
+    return (str == NULL || str == mp_const_none)? NULL: mp_obj_str_get_str(str);
 }
 
 // struct handling
