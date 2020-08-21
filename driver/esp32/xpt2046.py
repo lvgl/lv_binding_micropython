@@ -16,7 +16,10 @@ class xpt2046:
 
     MAX_RAW_COORD = const((1<<12) - 1)
 
-    def __init__(self, miso=-1, mosi=-1, clk=-1, cs=25, spihost=esp.HSPI_HOST, mhz=5, max_cmds=16, cal_x0 = 3783, cal_y0 = 3948, cal_x1 = 242, cal_y1 = 423, transpose = True, samples = 3):
+    def __init__(self, miso=-1, mosi=-1, clk=-1, cs=25,
+                 spihost=esp.HSPI_HOST, half_duplex=True, mhz=5, max_cmds=16,
+                 cal_x0 = 3783, cal_y0 = 3948, cal_x1 = 242, cal_y1 = 423, 
+                 transpose = True, samples = 3):
 
         # Initializations
 
@@ -28,6 +31,7 @@ class xpt2046:
         self.clk = clk
         self.cs = cs
         self.spihost = spihost
+        self.half_duplex = half_duplex
         self.mhz = mhz
         self.max_cmds = max_cmds
         self.cal_x0 = cal_x0
@@ -64,13 +68,17 @@ class xpt2046:
 	    "max_transfer_sz": 4,
 	})
 
+        devcfg_flags = 0 # esp.SPI_DEVICE.NO_DUMMY
+        if self.half_duplex:
+            devcfg_flags |= esp.SPI_DEVICE.HALFDUPLEX
+
 	devcfg = esp.spi_device_interface_config_t({
             "command_bits": 9,                      # Actually 8, but need another cycle before xpt starts transmitting response, see Figure 12 on the datasheet.
             "clock_speed_hz": self.mhz*1000*1000,   
             "mode": 0,                              # SPI mode 0
             "spics_io_num": self.cs,                # CS pin
             "queue_size": self.max_cmds,
-            "flags": esp.SPI_DEVICE.HALFDUPLEX,
+            "flags": devcfg_flags,
             "duty_cycle_pos": 128,
 	})
 
@@ -110,6 +118,7 @@ class xpt2046:
 
         self.trans = [esp.spi_transaction_t({
             'rx_buffer': bytearray(2),
+            'length': 0 if self.half_duplex else 16,
             'rxlength': 16
             }) for i in range(0, self.max_cmds)]
 
