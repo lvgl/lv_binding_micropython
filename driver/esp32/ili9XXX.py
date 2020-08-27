@@ -38,12 +38,16 @@ MADCTL_MY = const(0x80)
 PORTRAIT = MADCTL_MX
 LANDSCAPE = MADCTL_MV
 
+DISPLAY_TYPE_ILI9341 = 1
+DISPLAY_TYPE_ILI9488 = 2
+
 class ili9XXX:
 
 
     TRANS_BUFFER_LEN = const(16)
 
-    disp_type = 'ili9XXX'
+    display_name = 'ili9XXX'
+    display_type = 0
 
     init_cmds = [ ]
 
@@ -53,7 +57,7 @@ class ili9XXX:
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, display_type=0
     ):
 
         # Initializations
@@ -101,9 +105,9 @@ class ili9XXX:
         self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
         self.disp_drv.init()
 
-        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi}
+        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': display_type}
         self.disp_drv.buffer = self.disp_buf
-        self.disp_drv.flush_cb = self.disp_drv_flush_cb
+        self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
@@ -211,7 +215,7 @@ class ili9XXX:
 
     def deinit(self):
 
-        print('Deinitializing {}..'.format(self.disp_type))
+        print('Deinitializing {}..'.format(self.display_name))
 
         # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
 
@@ -330,7 +334,7 @@ class ili9XXX:
             if 'delay' in cmd:
                 sleep_ms(cmd['delay'])
 
-        print("{} initialization completed".format(self.disp_type))
+        print("{} initialization completed".format(self.display_name))
 
         # Enable backlight
 
@@ -436,7 +440,8 @@ class ili9341(ili9XXX):
         if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
             raise RuntimeError('ili9341 BGR color mode requires defining LV_COLOR_16_SWAP=1')
 
-        self.disp_type = 'ILI9341'
+        self.display_name = 'ILI9341'
+        self.display_type = DISPLAY_TYPE_ILI9341
 
         self.init_cmds = [
             {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
@@ -465,8 +470,6 @@ class ili9341(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay':100}
         ]
 
-        self.disp_drv_flush_cb = esp.ili9341_flush if hybrid and hasattr(esp, 'ili9341_flush') else self.flush
-
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
             spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer)
 
@@ -475,7 +478,7 @@ class ili9488(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
+        spihost=esp.HSPI_HOST, mhz=80, factor=8, hybrid=True, width=320, height=480,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True
     ):
 
@@ -484,7 +487,8 @@ class ili9488(ili9XXX):
         if not hybrid:
             raise RuntimeError('ili9488 micropython driver do not support non-hybrid driver')
 
-        self.disp_type = 'ILI9488'
+        self.display_name = 'ILI9488'
+        self.display_type = DISPLAY_TYPE_ILI9488
 
         self.init_cmds = [
             {'cmd': 0x01, 'data': bytes([0]), 'delay': 200},
@@ -509,8 +513,6 @@ class ili9488(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
         ]
 
-        self.disp_drv_flush_cb = esp.ili9488_flush if hybrid and hasattr(esp, 'ili9488_flush') else self.flush
-
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer)
+            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, display_type=DISPLAY_TYPE_ILI9488)
 

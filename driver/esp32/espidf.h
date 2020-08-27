@@ -163,15 +163,13 @@ enum {
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// ili9341 flush and ISR in C
+// ili9xxx flush and ISR in C
 //
 // disp_drv->user_data should be a dict that contains dc and spi, setup by micropython.
-// like this: "self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi}"
+// like this: "self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': display_type}"
 
 
 void ili9xxx_post_cb_isr(spi_transaction_t *trans);
 
-void ili9341_flush(void *disp_drv, const void *area, void *color_p);
-void ili9488_flush(void *disp_drv, const void *area, void *color_p);
-
+void ili9xxx_flush(void *disp_drv, const void *area, void *color_p);
 

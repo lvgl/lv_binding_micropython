@@ -118,7 +118,7 @@ void spi_post_cb_isr(spi_transaction_t *trans)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ILI9341 flush and ISR implementation in C
+// ILI9xxx flush and ISR implementation in C
 
 #include "../../lvgl/lvgl.h"
 
@@ -133,20 +133,20 @@ static void spi_send_value(const uint8_t *value, uint8_t size, spi_device_handle
     spi_device_polling_transmit(spi, &spi_trans);
 }
 
-static inline void ili9341_send_cmd(uint8_t cmd, int dc, spi_device_handle_t spi)
+static inline void ili9xxx_send_cmd(uint8_t cmd, int dc, spi_device_handle_t spi)
 {
    dma_buf[0] = cmd;
    gpio_set_level(dc, 0);
    spi_send_value(dma_buf, 1, spi);
 }
 
-static inline void ili9341_send_data(const uint8_t *value, int dc, spi_device_handle_t spi)
+static inline void ili9xxx_send_data(const uint8_t *value, int dc, spi_device_handle_t spi)
 {
    gpio_set_level(dc, 1);
    spi_send_value(value, 4, spi);
 }
 
-static void ili9341_send_data_dma(void *disp_drv, void *data, size_t size, int dc, spi_device_handle_t spi)
+static void ili9xxx_send_data_dma(void *disp_drv, void *data, size_t size, int dc, spi_device_handle_t spi)
 {
     gpio_set_level(dc, 1);
     spi_trans.length = size*8;
@@ -161,48 +161,6 @@ void ili9xxx_post_cb_isr(spi_transaction_t *trans)
         lv_disp_flush_ready(trans->user);
 }
 
-void ili9341_flush(void *_disp_drv, const void *_area, void *_color_p)
-{
-    lv_disp_drv_t *disp_drv = _disp_drv;
-    const lv_area_t *area = _area;
-    lv_color_t *color_p = _color_p;
-
-    // We use disp_drv->user_data to pass data from MP to C
-    // The following lines extract dc and spi
-    
-    int dc = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_dc)));
-    mp_buffer_info_t buffer_info;
-    mp_get_buffer_raise(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
-    spi_device_handle_t *spi_ptr = buffer_info.buf;
-
-	// Column addresses
-
-    ili9341_send_cmd(0x2A, dc, *spi_ptr);
-
-    dma_buf[0] = (area->x1 >> 8) & 0xFF;
-    dma_buf[1] = area->x1 & 0xFF;
-    dma_buf[2] = (area->x2 >> 8) & 0xFF;
-    dma_buf[3] = area->x2 & 0xFF;
-    ili9341_send_data(dma_buf, dc, *spi_ptr);
-
-	// Page addresses
-
-	ili9341_send_cmd(0x2B, dc, *spi_ptr);
-
-    dma_buf[0] = (area->y1 >> 8) & 0xFF;
-    dma_buf[1] = area->y1 & 0xFF;
-    dma_buf[2] = (area->y2 >> 8) & 0xFF;
-    dma_buf[3] = area->y2 & 0xFF;
-    ili9341_send_data(dma_buf, dc, *spi_ptr);
-
-	// Memory write by DMA, disp_flush_ready when finished
-
-	ili9341_send_cmd(0x2C, dc, *spi_ptr);
-
-	size_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
-    ili9341_send_data_dma(disp_drv, color_p, size * 2, dc, *spi_ptr);
-}
-
 
 typedef struct {
 	uint8_t blue;
@@ -210,7 +168,10 @@ typedef struct {
 	uint8_t red;
 } color24_t;
 
-void ili9488_flush(void *_disp_drv, const void *_area, void *_color_p)
+#define DISPLAY_TYPE_ILI9341 1
+#define DISPLAY_TYPE_ILI9488 2
+
+void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
 	lv_disp_drv_t *disp_drv = _disp_drv;
 	const lv_area_t *area = _area;
@@ -220,46 +181,51 @@ void ili9488_flush(void *_disp_drv, const void *_area, void *_color_p)
 	// The following lines extract dc and spi
 
 	int dc = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_dc)));
+	int dt = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_dt)));
 	mp_buffer_info_t buffer_info;
 	mp_get_buffer_raise(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
 	spi_device_handle_t *spi_ptr = buffer_info.buf;
 
 	// Column addresses
 
-	ili9341_send_cmd(0x2A, dc, *spi_ptr);
+	ili9xxx_send_cmd(0x2A, dc, *spi_ptr);
 
 	dma_buf[0] = (area->x1 >> 8) & 0xFF;
 	dma_buf[1] = area->x1 & 0xFF;
 	dma_buf[2] = (area->x2 >> 8) & 0xFF;
 	dma_buf[3] = area->x2 & 0xFF;
-	ili9341_send_data(dma_buf, dc, *spi_ptr);
+	ili9xxx_send_data(dma_buf, dc, *spi_ptr);
 
 	// Page addresses
 
-	ili9341_send_cmd(0x2B, dc, *spi_ptr);
+	ili9xxx_send_cmd(0x2B, dc, *spi_ptr);
 
 	dma_buf[0] = (area->y1 >> 8) & 0xFF;
 	dma_buf[1] = area->y1 & 0xFF;
 	dma_buf[2] = (area->y2 >> 8) & 0xFF;
 	dma_buf[3] = area->y2 & 0xFF;
-	ili9341_send_data(dma_buf, dc, *spi_ptr);
+	ili9xxx_send_data(dma_buf, dc, *spi_ptr);
 
 	// Memory write by DMA, disp_flush_ready when finished
 
-	ili9341_send_cmd(0x2C, dc, *spi_ptr);
+	ili9xxx_send_cmd(0x2C, dc, *spi_ptr);
 
 	size_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
+	uint8_t color_size = 2;
 
-	/*Convert ARGB to RGB is required (cut off A-byte)*/
-	size_t i;
-	lv_color32_t* tmp32 = (lv_color32_t*) color_p;
-	color24_t* tmp24 = (color24_t*) color_p;
+	if ( dt == DISPLAY_TYPE_ILI9488 ) {
+		color_size = 3;
+		/*Convert ARGB to RGB is required (cut off A-byte)*/
+		size_t i;
+		lv_color32_t* tmp32 = (lv_color32_t*) color_p;
+		color24_t* tmp24 = (color24_t*) color_p;
 
-	for(i=0; i < size; i++) {
-		tmp24[i].red = tmp32[i].ch.red;
-		tmp24[i].green = tmp32[i].ch.green;
-		tmp24[i].blue = tmp32[i].ch.blue;
+		for(i=0; i < size; i++) {
+			tmp24[i].red = tmp32[i].ch.red;
+			tmp24[i].green = tmp32[i].ch.green;
+			tmp24[i].blue = tmp32[i].ch.blue;
+		}
 	}
 
-	ili9341_send_data_dma(disp_drv, color_p, size * 3, dc, *spi_ptr);
+	ili9xxx_send_data_dma(disp_drv, color_p, size * color_size, dc, *spi_ptr);
 }
