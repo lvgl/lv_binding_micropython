@@ -1,9 +1,23 @@
 ##############################################################################
-# Pure/Hybrid micropython lvgl display driver for ili9341 on ESP32
+# Pure/Hybrid micropython lvgl display driver for ili9341 and ili9488 on ESP32
 #
-# Build micropython with LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
-# (make parameter) to configure LVGL use the same color format as ili9341
-# and prevent the need to loop over all pixels to translate them.
+# For ili9341 display:
+#
+#   Build micropython with
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
+#   (make parameter) to configure LVGL use the same color format as ili9341
+#   and prevent the need to loop over all pixels to translate them.
+#
+# For ili9488 display:
+#
+#   Build micropython with
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=32"
+#   (make parameter) to configure LVGL use the ARGB color format, which can be
+#   easily converted to RGB format used by ili9488 display.
+#
+#   Default SPI freq is set to 40MHz. This means cca 9fps of full screen
+#   redraw. to increase FPS, you can use 80MHz SPI - easily add parameter
+#   mhz=80 in initialization of driver.
 #
 # Critical function for high FPS are flush and ISR.
 # when "hybrid=True", use C implementation for these functions instead of
@@ -12,6 +26,8 @@
 # When hybrid=False driver is pure micropython.
 # Pure Micropython could be viable when ESP32 supports Viper code emitter.
 #
+# ili9488 driver DO NOT support pure micropython now (because of required
+# color convert). Pure micropython is supported only for ili9341 display!
 ##############################################################################
 
 import espidf as esp
@@ -478,7 +494,7 @@ class ili9488(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=80, factor=8, hybrid=True, width=320, height=480,
+        spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True
     ):
 
