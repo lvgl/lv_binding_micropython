@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
+#include <signal.h>
 
 /*********************
  *      DEFINES
@@ -22,6 +23,8 @@
 #ifndef FBDEV_PATH
 #define FBDEV_PATH  "/dev/fb0"
 #endif
+
+#define LV_TICK_RATE 20
 
 /**********************
  *  FORWARD DECLARATIONS
@@ -41,6 +44,7 @@ static char * fbp = 0;
 static long int screensize = 0;
 static int fbfd = -1;
 static pthread_t tid;
+static pthread_t mp_thread;
 
 /**********************
  *  MODULE DEFINITION
@@ -64,19 +68,40 @@ STATIC void* tick_thread(void * data)
     (void)data;
 
     while(fbdev_active()) {
-        usleep(1000);   /*Sleep for 1 millisecond*/
-        lv_tick_inc(1); /*Tell LittelvGL that 1 milliseconds were elapsed*/
+        usleep(LV_TICK_RATE * 1000);   /*Sleep for 1 millisecond*/
+        lv_tick_inc(LV_TICK_RATE); /*Tell LittelvGL that LV_TICK_RATE milliseconds were elapsed*/
         mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+        pthread_kill(mp_thread, SIGUSR1); // interrupt REPL blocking input. See handle_sigusr1
     }
 
     return NULL;
 }
 
+static void handle_sigusr1(int signo)
+{
+    // Let the signal pass. blocking function would return E_INTR.
+    // This would cause a call to "mp_handle_pending" even when 
+    // waiting for user input.
+    // See https://github.com/micropython/micropython/pull/5723
+}
+
 STATIC mp_obj_t mp_init_fb()
 {
+
     bool init_succeeded = fbdev_init();
     if (!init_succeeded) return mp_const_false;
     int err = pthread_create(&tid, NULL, &tick_thread, NULL);
+
+    mp_thread = pthread_self();
+    struct sigaction sa;
+    sa.sa_handler = handle_sigusr1;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+    
     return err == 0? mp_const_true: mp_const_false;
 }
 
