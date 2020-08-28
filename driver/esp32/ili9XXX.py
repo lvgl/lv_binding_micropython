@@ -121,7 +121,7 @@ class ili9XXX:
         self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
         self.disp_drv.init()
 
-        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': display_type}
+        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': self.display_type}
         self.disp_drv.buffer = self.disp_buf
         self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
@@ -441,7 +441,6 @@ class ili9XXX:
 
 
 class ili9341(ili9XXX):
-
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
