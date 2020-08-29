@@ -1,6 +1,6 @@
 import lvgl as lv
 from imagetools import get_png_info, open_png
-from ili9341 import ili9341
+from ili9XXX import ili9341
 from xpt2046 import xpt2046
 
 # Initialize display and touch panel

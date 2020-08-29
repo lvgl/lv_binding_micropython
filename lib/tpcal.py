@@ -6,7 +6,7 @@ lv.log_register_print_cb(lambda level,path,line,msg: print('LOG: %s(%d): %s' % (
 # Initialize ILI9341 display
 
 import lvesp32
-from ili9341 import ili9341
+from ili9XXX import ili9341
 disp = ili9341()
 
 HRES = lv.disp_get_hor_res(lv.disp_t.cast(None))

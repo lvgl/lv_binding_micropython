@@ -31,11 +31,10 @@ class driver:
     def init_gui_esp32(self):
 
         import lvesp32
-        import ili9341 as ili
 
         # Initialize ILI9341 display
 
-        from ili9341 import ili9341
+        from ili9XXX import ili9341
         self.disp = ili9341()
 
         # Register raw resistive touch driver
