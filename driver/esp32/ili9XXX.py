@@ -54,8 +54,8 @@ MADCTL_MY = const(0x80)
 PORTRAIT = MADCTL_MX
 LANDSCAPE = MADCTL_MV
 
-DISPLAY_TYPE_ILI9341 = 1
-DISPLAY_TYPE_ILI9488 = 2
+DISPLAY_TYPE_ILI9341 = const(1)
+DISPLAY_TYPE_ILI9488 = const(2)
 
 class ili9XXX:
 
@@ -73,7 +73,7 @@ class ili9XXX:
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, display_type=0
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, display_type=0
     ):
 
         # Initializations
@@ -95,6 +95,7 @@ class ili9XXX:
         self.mhz = mhz
         self.factor = factor
         self.hybrid = hybrid
+        self.half_duplex = half_duplex
 
         self.buf_size = (self.width * self.height * lv.color_t.SIZE) // factor
 
@@ -150,12 +151,16 @@ class ili9XXX:
             "max_transfer_sz": self.buf_size,
         })
 
+        devcfg_flags = esp.SPI_DEVICE.NO_DUMMY
+        if self.half_duplex:
+            devcfg_flags |= esp.SPI_DEVICE.HALFDUPLEX
+
         devcfg = esp.spi_device_interface_config_t({
             "clock_speed_hz": self.mhz*1000*1000,   # Clock out at DISP_SPI_MHZ MHz
             "mode": 0,                              # SPI mode 0
             "spics_io_num": self.cs,                # CS pin
             "queue_size": 2,
-            "flags": esp.SPI_DEVICE.HALFDUPLEX,
+            "flags": devcfg_flags,
             "duty_cycle_pos": 128,
         })
 
