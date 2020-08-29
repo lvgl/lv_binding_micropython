@@ -450,7 +450,7 @@ class ili9341(ili9XXX):
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True
     ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
@@ -491,7 +491,7 @@ class ili9341(ili9XXX):
         ]
 
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer)
+            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex)
 
 
 class ili9488(ili9XXX):
@@ -499,7 +499,7 @@ class ili9488(ili9XXX):
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
-        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True
     ):
 
         if lv.color_t.SIZE != 4:
@@ -534,5 +534,5 @@ class ili9488(ili9XXX):
         ]
 
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, display_type=DISPLAY_TYPE_ILI9488)
+            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488)
 
