@@ -25,12 +25,16 @@ class crosshair_cursor:
         self.cursor_hor.set_points([{'x':0,'y':data.point.y},{'x':self.hor_res,'y':data.point.y}],2)
         self.cursor_ver.set_points([{'y':0,'x':data.point.x},{'y':self.ver_res,'x':data.point.x}],2)
 
+    def delete(self):
+        self.cursor_hor.delete()
+        self.cursor_ver.delete()
+
 # evdev driver for mouse
 class mouse_indev:
     def __init__(self, scr=None, cursor=None, device='/dev/input/mice'):
 
         # Open evdev and initialize members
-        self.evdev = open('/dev/input/mice', 'rb')
+        self.evdev = open(device, 'rb')
         self.poll = select.poll()
         self.poll.register(self.evdev.fileno())
         self.scr = scr if scr else lv.scr_act()
@@ -71,8 +75,8 @@ class mouse_indev:
         if self.cursor: self.cursor(data)
         return 0
 
-    def deinit():
+    def delete(self):
         self.evdev.close()
-
-
-
+        if self.cursor and hasattr(self.cursor, 'delete'):
+            self.cursor.delete()
+        self.indev.enable(False)
