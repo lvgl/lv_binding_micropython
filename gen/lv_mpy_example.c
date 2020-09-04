@@ -4597,7 +4597,6 @@ STATIC const mp_rom_map_elem_t LV_THEME_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_OBJMASK), MP_ROM_PTR(MP_ROM_INT(LV_THEME_OBJMASK)) },
     { MP_ROM_QSTR(MP_QSTR_PAGE), MP_ROM_PTR(MP_ROM_INT(LV_THEME_PAGE)) },
     { MP_ROM_QSTR(MP_QSTR_ROLLER), MP_ROM_PTR(MP_ROM_INT(LV_THEME_ROLLER)) },
-    { MP_ROM_QSTR(MP_QSTR_ROTARY), MP_ROM_PTR(MP_ROM_INT(LV_THEME_ROTARY)) },
     { MP_ROM_QSTR(MP_QSTR_SLIDER), MP_ROM_PTR(MP_ROM_INT(LV_THEME_SLIDER)) },
     { MP_ROM_QSTR(MP_QSTR_SPINBOX), MP_ROM_PTR(MP_ROM_INT(LV_THEME_SPINBOX)) },
     { MP_ROM_QSTR(MP_QSTR_SPINBOX_BTN), MP_ROM_PTR(MP_ROM_INT(LV_THEME_SPINBOX_BTN)) },
@@ -10011,6 +10010,8 @@ STATIC void lv_disp_drv_t_rounder_cb_callback(struct _disp_drv_t *disp_drv, lv_a
 STATIC void lv_disp_drv_t_set_px_cb_callback(struct _disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
 STATIC void lv_disp_drv_t_monitor_cb_callback(struct _disp_drv_t *disp_drv, uint32_t time, uint32_t px);
 STATIC void lv_disp_drv_t_wait_cb_callback(struct _disp_drv_t *disp_drv);
+STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _disp_drv_t *disp_drv);
+STATIC void lv_disp_drv_t_gpu_wait_cb_callback(struct _disp_drv_t *disp_drv);
 STATIC void lv_disp_drv_t_gpu_blend_cb_callback(struct _disp_drv_t *disp_drv, lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa);
 STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, const lv_area_t *fill_area, lv_color_t color);
 
@@ -10056,6 +10057,8 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_set_px_cb: dest[0] = ptr_to_mp((void*)data->set_px_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
             case MP_QSTR_monitor_cb: dest[0] = ptr_to_mp((void*)data->monitor_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
             case MP_QSTR_wait_cb: dest[0] = ptr_to_mp((void*)data->wait_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
+            case MP_QSTR_clean_dcache_cb: dest[0] = ptr_to_mp((void*)data->clean_dcache_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
+            case MP_QSTR_gpu_wait_cb: dest[0] = ptr_to_mp((void*)data->gpu_wait_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
             case MP_QSTR_gpu_blend_cb: dest[0] = ptr_to_mp((void*)data->gpu_blend_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest, lv_color_t *src, uint32_t length, lv_opa_t opa);
             case MP_QSTR_gpu_fill_cb: dest[0] = ptr_to_mp((void*)data->gpu_fill_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, lv_area_t *fill_area, lv_color_t color);
             case MP_QSTR_color_chroma_key: dest[0] = mp_read_byref_lv_color32_t(data->color_chroma_key); break; // converting from lv_color_t;
@@ -10079,6 +10082,8 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 case MP_QSTR_set_px_cb: data->set_px_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_set_px_cb_callback ,MP_QSTR_lv_disp_drv_t_set_px_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
                 case MP_QSTR_monitor_cb: data->monitor_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_monitor_cb_callback ,MP_QSTR_lv_disp_drv_t_monitor_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
                 case MP_QSTR_wait_cb: data->wait_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_wait_cb_callback ,MP_QSTR_lv_disp_drv_t_wait_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
+                case MP_QSTR_clean_dcache_cb: data->clean_dcache_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_clean_dcache_cb_callback ,MP_QSTR_lv_disp_drv_t_clean_dcache_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
+                case MP_QSTR_gpu_wait_cb: data->gpu_wait_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_gpu_wait_cb_callback ,MP_QSTR_lv_disp_drv_t_gpu_wait_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
                 case MP_QSTR_gpu_blend_cb: data->gpu_blend_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_gpu_blend_cb_callback ,MP_QSTR_lv_disp_drv_t_gpu_blend_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest, lv_color_t *src, uint32_t length, lv_opa_t opa);
                 case MP_QSTR_gpu_fill_cb: data->gpu_fill_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_gpu_fill_cb_callback ,MP_QSTR_lv_disp_drv_t_gpu_fill_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, lv_area_t *fill_area, lv_color_t color);
                 case MP_QSTR_color_chroma_key: data->color_chroma_key = mp_write_lv_color32_t(dest[1]); break; // converting to lv_color_t;
@@ -23325,6 +23330,23 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_set_chg_rate_obj, 2, mp_lv_arc_s
 
 /*
  * lvgl extension definition for:
+ * void lv_arc_set_adjustable(lv_obj_t *arc, bool adjustable)
+ */
+ 
+STATIC mp_obj_t mp_lv_arc_set_adjustable(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    lv_obj_t *arc = mp_to_lv(mp_args[0]);
+    bool adjustable = mp_obj_is_true(mp_args[1]);
+    lv_arc_set_adjustable(arc, adjustable);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_set_adjustable_obj, 2, mp_lv_arc_set_adjustable, lv_arc_set_adjustable);
+
+ 
+
+/*
+ * lvgl extension definition for:
  * uint16_t lv_arc_get_angle_start(lv_obj_t *arc)
  */
  
@@ -23468,6 +23490,22 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_is_dragged_obj, 1, mp_lv_arc_is_
  
 
 /*
+ * lvgl extension definition for:
+ * bool lv_arc_get_adjustable(lv_obj_t *arc)
+ */
+ 
+STATIC mp_obj_t mp_lv_arc_get_adjustable(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    lv_obj_t *arc = mp_to_lv(mp_args[0]);
+    bool _res = lv_arc_get_adjustable(arc);
+    return convert_to_bool(_res);
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_arc_get_adjustable_obj, 1, mp_lv_arc_get_adjustable, lv_arc_get_adjustable);
+
+ 
+
+/*
  * lvgl arc object definitions
  */
     
@@ -23484,6 +23522,7 @@ STATIC const mp_rom_map_elem_t arc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_value), MP_ROM_PTR(&mp_lv_arc_set_value_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_arc_set_range_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_chg_rate), MP_ROM_PTR(&mp_lv_arc_set_chg_rate_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_adjustable), MP_ROM_PTR(&mp_lv_arc_set_adjustable_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_angle_start), MP_ROM_PTR(&mp_lv_arc_get_angle_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_angle_end), MP_ROM_PTR(&mp_lv_arc_get_angle_end_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_bg_angle_start), MP_ROM_PTR(&mp_lv_arc_get_bg_angle_start_obj) },
@@ -23493,6 +23532,7 @@ STATIC const mp_rom_map_elem_t arc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_min_value), MP_ROM_PTR(&mp_lv_arc_get_min_value_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_max_value), MP_ROM_PTR(&mp_lv_arc_get_max_value_obj) },
     { MP_ROM_QSTR(MP_QSTR_is_dragged), MP_ROM_PTR(&mp_lv_arc_is_dragged_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_adjustable), MP_ROM_PTR(&mp_lv_arc_get_adjustable_obj) },
     { MP_ROM_QSTR(MP_QSTR_TYPE), MP_ROM_PTR(&mp_LV_ARC_TYPE_type) },
     { MP_ROM_QSTR(MP_QSTR_PART), MP_ROM_PTR(&mp_LV_ARC_PART_type) }
 };
@@ -29520,7 +29560,7 @@ STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_style_t_locals_dict, mp_lv_style_t_locals_dict_table);
         
-/* Struct lv_disp_t contains: ['lv_disp_drv_update', 'lv_disp_remove', 'lv_disp_set_default', 'lv_disp_get_hor_res', 'lv_disp_get_ver_res', 'lv_disp_get_antialiasing', 'lv_disp_get_dpi', 'lv_disp_get_size_category', 'lv_disp_get_next', 'lv_disp_get_buf', 'lv_disp_get_inv_buf_size', 'lv_disp_is_double_buf', 'lv_disp_is_true_double_buf', 'lv_disp_get_scr_act', 'lv_disp_get_scr_prev', 'lv_disp_get_layer_top', 'lv_disp_get_layer_sys', 'lv_disp_assign_screen', 'lv_disp_set_bg_color', 'lv_disp_set_bg_image', 'lv_disp_set_bg_opa', 'lv_disp_get_inactive_time', 'lv_disp_trig_activity'] */
+/* Struct lv_disp_t contains: ['lv_disp_drv_update', 'lv_disp_remove', 'lv_disp_set_default', 'lv_disp_get_hor_res', 'lv_disp_get_ver_res', 'lv_disp_get_antialiasing', 'lv_disp_get_dpi', 'lv_disp_get_size_category', 'lv_disp_get_next', 'lv_disp_get_buf', 'lv_disp_get_inv_buf_size', 'lv_disp_is_double_buf', 'lv_disp_is_true_double_buf', 'lv_disp_get_scr_act', 'lv_disp_get_scr_prev', 'lv_disp_get_layer_top', 'lv_disp_get_layer_sys', 'lv_disp_assign_screen', 'lv_disp_set_bg_color', 'lv_disp_set_bg_image', 'lv_disp_set_bg_opa', 'lv_disp_get_inactive_time', 'lv_disp_trig_activity', 'lv_disp_clean_dcache'] */
 
 /*
  * lvgl extension definition for:
@@ -29895,6 +29935,22 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_trig_activity_obj, 1, mp_lv_dis
 
  
 
+/*
+ * lvgl extension definition for:
+ * void lv_disp_clean_dcache(lv_disp_t *disp)
+ */
+ 
+STATIC mp_obj_t mp_lv_disp_clean_dcache(size_t mp_n_args, const mp_obj_t *mp_args)
+{
+    lv_disp_t *disp = mp_write_ptr_lv_disp_t(mp_args[0]);
+    lv_disp_clean_dcache(disp);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_clean_dcache_obj, 1, mp_lv_disp_clean_dcache, lv_disp_clean_dcache);
+
+ 
+
 STATIC const mp_rom_map_elem_t mp_lv_disp_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_disp_t))) },
     { MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) },
@@ -29923,6 +29979,7 @@ STATIC const mp_rom_map_elem_t mp_lv_disp_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_bg_opa), MP_ROM_PTR(&mp_lv_disp_set_bg_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_inactive_time), MP_ROM_PTR(&mp_lv_disp_get_inactive_time_obj) },
     { MP_ROM_QSTR(MP_QSTR_trig_activity), MP_ROM_PTR(&mp_lv_disp_trig_activity_obj) },
+    { MP_ROM_QSTR(MP_QSTR_clean_dcache), MP_ROM_PTR(&mp_lv_disp_clean_dcache_obj) },
     
 };
 
@@ -33869,6 +33926,36 @@ STATIC void lv_disp_drv_t_wait_cb_callback(lv_disp_drv_t * arg0)
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
     mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_wait_cb)) , 1, 0, mp_args);
+    return;
+}
+
+
+/*
+ * Callback function lv_disp_drv_t_clean_dcache_cb
+ * void clean_dcache_cb(struct _disp_drv_t *disp_drv)
+ */
+
+STATIC void lv_disp_drv_t_clean_dcache_cb_callback(lv_disp_drv_t * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_clean_dcache_cb)) , 1, 0, mp_args);
+    return;
+}
+
+
+/*
+ * Callback function lv_disp_drv_t_gpu_wait_cb
+ * void gpu_wait_cb(struct _disp_drv_t *disp_drv)
+ */
+
+STATIC void lv_disp_drv_t_gpu_wait_cb_callback(lv_disp_drv_t * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_gpu_wait_cb)) , 1, 0, mp_args);
     return;
 }
 
