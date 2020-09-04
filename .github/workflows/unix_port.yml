@@ -22,10 +22,8 @@ jobs:
     - name: Update submodules
       run: git submodule update --init --recursive 
     - name: Checkout lv_bindings
+      run: git fetch && git checkout $GITHUB_SHA
       working-directory: ./lib/lv_bindings
-      run: |
-        git fetch
-        git checkout $GITHUB_SHA        
     - name: Build mpy-cross
       run: make -j $(nproc) -C mpy-cross
     - name: Build the unix port
