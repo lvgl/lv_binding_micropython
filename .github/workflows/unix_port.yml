@@ -20,10 +20,12 @@ jobs:
     - name: Clone lv_micropython
       run: git clone https://github.com/lvgl/lv_micropython.git .
     - name: Update submodules
-      run: git submodule update --init --recursive 
+      run: git submodule update --init --recursive
     - name: Checkout lv_bindings
-      run: pwd && git fetch && git log --all -1 && git checkout $GITHUB_SHA
       working-directory: ./lib/lv_bindings
+      run: |
+        git fetch
+        git checkout $GITHUB_SHA
     - name: Build mpy-cross
       run: make -j $(nproc) -C mpy-cross
     - name: Build the unix port
