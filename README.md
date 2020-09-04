@@ -1,3 +1,4 @@
+![Build lv_micropython unix port](https://github.com/lvgl/lv_binding_micropython/workflows/Build%20lv_micropython%20unix%20port/badge.svg)
 
 # Bindings for LittelvGL
 
