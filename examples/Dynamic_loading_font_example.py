@@ -1,3 +1,8 @@
+#
+# Command line for running this example on the unix port from examples directory:
+# MICROPYPATH=./:../lib ../../../ports/unix/micropython -i Dynamic_loading_font_example.py
+#
+
 import lvgl as lv
 import fs_driver
 
@@ -5,6 +10,7 @@ lv.init()
 
 # display driver init...
 
+import display_driver # Default implementation. Replace by your driver
 
 # FS driver init.
 fs_drv = lv.fs_drv_t()
@@ -23,7 +29,8 @@ fs_driver.fs_register(fs_drv, 'S')
 scr = lv.scr_act()
 scr.clean()
 
-myfont_cn = lv.font_load("S:font-PHT-cn-20.bin")
+
+myfont_cn = lv.font_load("S:font/font-PHT-cn-20.bin")
 style1 = lv.style_t()
 style1.init()
 
@@ -34,7 +41,8 @@ label1.add_style(label1.PART.MAIN, style1)
 label1.set_text("上中下乎")  
 label1.align(None, lv.ALIGN.CENTER, 0, -25)
 
-myfont_en = lv.font_load("S:font-PHT-en-20.bin")
+
+myfont_en = lv.font_load("S:font/font-PHT-en-20.bin")
 style2 = lv.style_t()
 style2.init()
 
@@ -46,7 +54,7 @@ label2.set_text("Hello LVGL!")
 label2.align(None, lv.ALIGN.CENTER, 0, 25)
 
 
-myfont_jp = lv.font_load("S:font-PHT-jp-20.bin")
+myfont_jp = lv.font_load("S:font/font-PHT-jp-20.bin")
 style3 = lv.style_t()
 style3.init()
 
