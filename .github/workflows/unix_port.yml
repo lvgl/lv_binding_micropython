@@ -27,6 +27,7 @@ jobs:
         git fetch --force ${{ github.event.repository.git_url }} "+refs/heads/*:refs/remotes/origin/*"
         git fetch --force ${{ github.event.repository.git_url }} "+refs/pull/*/head:refs/remotes/origin/pr/*"
         git checkout ${{ github.sha }} || git checkout ${{ github.event.pull_request.head.sha }}
+        git submodule update --init --recursive
     - name: Build mpy-cross
       run: make -j $(nproc) -C mpy-cross
     - name: Build the unix port
