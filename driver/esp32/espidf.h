@@ -53,10 +53,26 @@ typedef uint32_t TickType_t;
 // Micropython specific types
 typedef void *mp_obj_t;
 
+static inline void SPH0645_WORKAROUND(int i2s_num);
 static inline void get_ccount(int *ccount);
 
 #else // PYCPARSER
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+// A workaround for SPH0645 I2S, see:
+// - https://hackaday.io/project/162059-street-sense/log/160705-new-i2s-microphone/discussion-124677
+// - https://www.esp32.com/viewtopic.php?t=4997#p45366
+// Since reg access is based on macros, this cannot currently be directly implemented in Micropython
+
+#include "soc/i2s_reg.h" // for SPH0645_WORKAROUND
+
+static inline void SPH0645_WORKAROUND(int i2s_num)
+{
+    REG_SET_BIT( I2S_TIMING_REG(i2s_num), BIT(9));
+    REG_SET_BIT( I2S_CONF_REG(i2s_num), I2S_RX_MSB_SHIFT);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 // Helper function to measure CPU cycles
 //
 static inline void get_ccount(int *ccount)
@@ -173,4 +189,5 @@ enum {
 void ili9xxx_post_cb_isr(spi_transaction_t *trans);
 
 void ili9xxx_flush(void *disp_drv, const void *area, void *color_p);
+
 
