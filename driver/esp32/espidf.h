@@ -80,6 +80,7 @@ static inline void get_ccount(int *ccount)
 	asm volatile("rsr.ccount %0" : "=a"(*ccount));
 }
 
+
 #endif //PYCPARSER
 
 // The following includes are the source of the esp-idf micropython module.
@@ -100,6 +101,16 @@ static inline void get_ccount(int *ccount)
 #include "driver/pcnt.h"
 #include "mdns.h"
 #include "esp_http_client.h"
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Helper function to register HTTP event handler
+// Needed to fulfill gen_mpy.py callback conventions
+//
+static inline void esp_http_client_register_event_handler(esp_http_client_config_t *config, http_event_handle_cb http_event_handler, void *user_data)
+{
+    config->event_handler = http_event_handler;
+    config->user_data = user_data;
+}
 
 // We don't want the whole FreeRTOS, only selected functions
 
