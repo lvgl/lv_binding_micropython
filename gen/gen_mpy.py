@@ -296,10 +296,12 @@ def get_struct_functions(struct_name):
     base_struct_name = struct_name[:-2] if struct_name.endswith('_t') else struct_name
     # eprint("get_struct_functions %s: %s" % (struct_name, [get_type(func.type.args.params[0].type.type, remove_quals = True) for func in funcs if func.name.startswith(base_struct_name)]))
     # eprint("get_struct_functions %s: %s" % (struct_name, struct_aliases[struct_name] if struct_name in struct_aliases else ""))
+
+    reverse_aliases = [alias for alias in struct_aliases if struct_aliases[alias] == struct_name]
     
-    return [func for func in funcs \
+    return ([func for func in funcs \
             if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name) \
-            and get_first_arg_type(func) == struct_name] + \
+            and get_first_arg_type(func) == struct_name] if (struct_name in structs or len(reverse_aliases) > 0) else []) + \
             (get_struct_functions(struct_aliases[struct_name]) if struct_name in struct_aliases else [])
 
 @memoize

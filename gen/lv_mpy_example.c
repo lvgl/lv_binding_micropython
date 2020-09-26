@@ -14481,7 +14481,7 @@ STATIC mp_obj_t mp_lv_img_cf_get_px_size(size_t mp_n_args, const mp_obj_t *mp_ar
     return mp_obj_new_int_from_uint(_res);
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_cf_get_px_size_obj, 1, mp_lv_img_cf_get_px_size, lv_img_cf_get_px_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_img_cf_get_px_size_obj, 1, mp_lv_img_cf_get_px_size, lv_img_cf_get_px_size);
 
  
 
@@ -14497,7 +14497,7 @@ STATIC mp_obj_t mp_lv_img_cf_is_chroma_keyed(size_t mp_n_args, const mp_obj_t *m
     return convert_to_bool(_res);
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_cf_is_chroma_keyed_obj, 1, mp_lv_img_cf_is_chroma_keyed, lv_img_cf_is_chroma_keyed);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_img_cf_is_chroma_keyed_obj, 1, mp_lv_img_cf_is_chroma_keyed, lv_img_cf_is_chroma_keyed);
 
  
 
@@ -14513,7 +14513,7 @@ STATIC mp_obj_t mp_lv_img_cf_has_alpha(size_t mp_n_args, const mp_obj_t *mp_args
     return convert_to_bool(_res);
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_cf_has_alpha_obj, 1, mp_lv_img_cf_has_alpha, lv_img_cf_has_alpha);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_img_cf_has_alpha_obj, 1, mp_lv_img_cf_has_alpha, lv_img_cf_has_alpha);
 
  
 
@@ -32209,7 +32209,7 @@ STATIC mp_obj_t mp_lv_log_register_print_cb(size_t mp_n_args, const mp_obj_t *mp
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_log_register_print_cb_obj, 1, mp_lv_log_register_print_cb, lv_log_register_print_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_log_register_print_cb_obj, 1, mp_lv_log_register_print_cb, lv_log_register_print_cb);
 
  
 
@@ -32356,7 +32356,7 @@ STATIC mp_obj_t mp_lv_task_create(size_t mp_n_args, const mp_obj_t *mp_args)
     return mp_read_ptr_lv_task_t((void*)_res);
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_create_obj, 4, mp_lv_task_create, lv_task_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_task_create_obj, 4, mp_lv_task_create, lv_task_create);
 
  
 
@@ -32420,7 +32420,7 @@ STATIC mp_obj_t mp_lv_async_call(size_t mp_n_args, const mp_obj_t *mp_args)
     return mp_obj_new_int_from_uint(_res);
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_async_call_obj, 2, mp_lv_async_call, lv_async_call);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_async_call_obj, 2, mp_lv_async_call, lv_async_call);
 
  
 
@@ -33239,7 +33239,7 @@ STATIC mp_obj_t mp_lv_event_send_func(size_t mp_n_args, const mp_obj_t *mp_args)
     return mp_obj_new_int_from_uint(_res);
 }
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_event_send_func_obj, 4, mp_lv_event_send_func, lv_event_send_func);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_event_send_func_obj, 4, mp_lv_event_send_func, lv_event_send_func);
 
  
 
@@ -33797,6 +33797,26 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_arc_obj, 7, mp_lv_draw_a
 STATIC const mp_lv_struct_t mp_lv_font_montserrat_14 = {
     { &mp_lv_font_t_type },
     (lv_font_t*)&lv_font_montserrat_14
+};
+    
+
+/*
+ * lvgl lv_font_montserrat_16 global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_font_montserrat_16 = {
+    { &mp_lv_font_t_type },
+    (lv_font_t*)&lv_font_montserrat_16
+};
+    
+
+/*
+ * lvgl lv_font_dejavu_16_persian_hebrew global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_font_dejavu_16_persian_hebrew = {
+    { &mp_lv_font_t_type },
+    (lv_font_t*)&lv_font_dejavu_16_persian_hebrew
 };
     
 
@@ -34637,6 +34657,8 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_color_t), MP_ROM_PTR(&mp_lv_color32_t_type) },
     
     { MP_ROM_QSTR(MP_QSTR_font_montserrat_14), MP_ROM_PTR(&mp_lv_font_montserrat_14) },
+    { MP_ROM_QSTR(MP_QSTR_font_montserrat_16), MP_ROM_PTR(&mp_lv_font_montserrat_16) },
+    { MP_ROM_QSTR(MP_QSTR_font_dejavu_16_persian_hebrew), MP_ROM_PTR(&mp_lv_font_dejavu_16_persian_hebrew) },
     { MP_ROM_QSTR(MP_QSTR_anim_path_def), MP_ROM_PTR(&mp_lv_anim_path_def) },
     
     
