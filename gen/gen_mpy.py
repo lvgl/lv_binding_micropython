@@ -545,6 +545,14 @@ print("""
  * Helper functions
  */
 
+#ifndef UNUSED
+#ifdef __GNUC__
+#define UNUSED __attribute__ ((unused))
+#else
+#define UNUSED
+#endif // __GNUC__
+#endif // UNUSED
+
 // Custom function mp object
 
 typedef struct _mp_lv_obj_fun_builtin_var_t {
@@ -557,7 +565,7 @@ typedef struct _mp_lv_obj_fun_builtin_var_t {
 STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
 STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
 
-STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
+UNUSED STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
     { &mp_type_type },
     .flags = MP_TYPE_FLAG_BINDS_SELF | MP_TYPE_FLAG_BUILTIN_FUN,
     .name = MP_QSTR_function,
@@ -566,7 +574,7 @@ STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
     .buffer_p = { .get_buffer = mp_func_get_buffer }
 };
 
-STATIC const mp_obj_type_t mp_lv_type_fun_builtin_static_var = {
+UNUSED STATIC const mp_obj_type_t mp_lv_type_fun_builtin_static_var = {
     { &mp_type_type },
     .flags = MP_TYPE_FLAG_BUILTIN_FUN,
     .name = MP_QSTR_function,
