@@ -20,9 +20,15 @@
 
 STATIC pthread_t mp_thread;
 
+STATIC mp_obj_t mp_refresh_SDL()
+{
+    if (monitor_active()) monitor_sdl_refr_core();
+    return mp_const_none;
+}
+
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
-    if (monitor_active()) monitor_sdl_refr_core();
+    mp_refresh_SDL();
     lv_task_handler();
     return mp_const_none;
 }
@@ -61,10 +67,11 @@ static void handle_sigusr1(int signo)
 
 STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_w, ARG_h };
+    enum { ARG_w, ARG_h, ARG_auto_refresh };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_HOR_RES_MAX} },
         { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_VER_RES_MAX} },
+        { MP_QSTR_auto_refresh, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
     };
 
     // parse args
@@ -78,17 +85,21 @@ STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
     SDL_EventState(SDL_KEYDOWN, SDL_DISABLE);
     SDL_EventState(SDL_KEYUP, SDL_DISABLE);
 #else
-    SDL_CreateThread(tick_thread, "tick", NULL);
+    if (args[ARG_auto_refresh].u_bool) {
+        SDL_CreateThread(tick_thread, "tick", NULL);
+    }
 #endif
 
-    mp_thread = pthread_self();
-    struct sigaction sa;
-    sa.sa_handler = handle_sigusr1;
-    sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
+    if (args[ARG_auto_refresh].u_bool) {
+        mp_thread = pthread_self();
+        struct sigaction sa;
+        sa.sa_handler = handle_sigusr1;
+        sa.sa_flags = 0;
+        sigemptyset(&sa.sa_mask);
+        if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+            perror("sigaction");
+            exit(1);
+        }
     }
 
     return mp_const_none;
@@ -102,6 +113,7 @@ STATIC mp_obj_t mp_deinit_SDL()
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_init_SDL_obj, 0, mp_init_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_SDL_obj, mp_deinit_SDL);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_refresh_SDL_obj, mp_refresh_SDL);
 
 DEFINE_PTR_OBJ(monitor_flush);
 DEFINE_PTR_OBJ(mouse_read);
@@ -110,6 +122,7 @@ STATIC const mp_rom_map_elem_t SDL_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_SDL) },
         { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_init_SDL_obj) },
         { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_deinit_SDL_obj) },
+        { MP_ROM_QSTR(MP_QSTR_refresh), MP_ROM_PTR(&mp_refresh_SDL_obj) },
         { MP_ROM_QSTR(MP_QSTR_monitor_flush), MP_ROM_PTR(&PTR_OBJ(monitor_flush))},
         { MP_ROM_QSTR(MP_QSTR_mouse_read), MP_ROM_PTR(&PTR_OBJ(mouse_read))},
 };
