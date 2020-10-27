@@ -170,6 +170,16 @@ lv_global_callback_pattern = re.compile('.*g_cb_t')
 lv_func_returns_array = re.compile('.*_array$')
 lv_enum_name_pattern = re.compile('^(ENUM_){{0,1}}({prefix}_){{0,1}}(.*)'.format(prefix=module_prefix.upper()))
 
+# Prevent identifies names which are Python reserved words (add underscore in such case)
+def sanitize(id, kwlist = 
+        ['False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 
+         'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 
+         'pass', 'raise', 'return', 'try', 'while', 'with', 'yield']):
+    if id in kwlist:
+        return "_%s" % id
+    else:
+        return id
+
 @memoize
 def simplify_identifier(id):
     match_result = lv_func_pattern.match(id)
@@ -1261,23 +1271,23 @@ def try_generate_struct(struct_name, struct):
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
             write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting to callback {type_name}'.
-                format(struct_name = struct_name, field = decl.name, lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
+                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
             read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from callback {type_name}'.
-                format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
         else:
             user_data = None
             # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
             if isinstance(decl.type, c_ast.ArrayDecl):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), gen.visit(decl.type.dim))
                 write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
-                    format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
+                    format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
                 read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
-                    format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                    format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
             else:
                 write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
-                    format(field = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+                    format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
                 read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
-                    format(field = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                    format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
     print('''
 /*
  * Struct {struct_name}
@@ -1352,7 +1362,7 @@ STATIC inline const mp_obj_type_t *get_mp_{struct_name}_type()
     return &mp_{struct_name}_type;
 }}
     '''.format(
-            struct_name = struct_name,
+            struct_name = sanitize(struct_name),
             write_cases = ';\n                '.join(write_cases),
             read_cases  = ';\n            '.join(read_cases),
             ));
@@ -1627,7 +1637,7 @@ STATIC {return_type} {func_name}_callback({func_args})
 }}
 """.format(
         func_prototype = gen.visit(func),
-        func_name = func_name,
+        func_name = sanitize(func_name),
         return_type = return_type,
         func_args = ', '.join(["%s arg%s" % (get_type(arg.type, remove_quals = False), i) for i,arg in enumerate(args)]),
         num_args=len(args),
@@ -1683,7 +1693,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
             return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], &{callback_name}_callback, MP_QSTR_{callback_name}, {full_user_data});'.format(
                 i = index,
                 arg_name = fixed_arg.name,
-                callback_name = callback_name,
+                callback_name = sanitize(callback_name),
                 full_user_data = full_user_data)
         except MissingConversionException as exp:
             gen_func_error(arg, exp)
@@ -1807,7 +1817,7 @@ def gen_obj_methods(obj_name):
     global enums
     helper_members = ["{ MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&cast_obj_class_method) }"] if len(obj_names) > 0 and obj_name == base_obj_name else []
     members = ["{{ MP_ROM_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".
-                    format(method=method.name, method_name=method_name_from_func_name(method.name)) for method in get_methods(obj_name)]
+                    format(method=method.name, method_name=sanitize(method_name_from_func_name(method.name))) for method in get_methods(obj_name)]
     obj_metadata[obj_name]['members'].update({method_name_from_func_name(method.name): func_metadata[method.name] for method in get_methods(obj_name)})
     # add parent methods
     parent_members = []
@@ -1816,12 +1826,12 @@ def gen_obj_methods(obj_name):
         obj_metadata[obj_name]['members'].update(obj_metadata[parent_obj_names[obj_name]]['members'])
     # add enum members
     enum_members = ["{{ MP_ROM_QSTR(MP_QSTR_{enum_member}), MP_ROM_PTR({enum_member_value}) }}".
-                    format(enum_member = get_enum_member_name(enum_member_name), enum_member_value = get_enum_value(obj_name, enum_member_name)) for enum_member_name in get_enum_members(obj_name)]
+                    format(enum_member = sanitize(get_enum_member_name(enum_member_name)), enum_member_value = get_enum_value(obj_name, enum_member_name)) for enum_member_name in get_enum_members(obj_name)]
     obj_metadata[obj_name]['members'].update({get_enum_member_name(enum_member_name): {'type':'enum_member'} for enum_member_name in get_enum_members(obj_name)})
     # add enums that match object name
     obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
     enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
-                    format(name=method_name_from_func_name(enum_name), enum=enum_name) for enum_name in obj_enums]
+                    format(name=sanitize(method_name_from_func_name(enum_name)), enum=enum_name) for enum_name in obj_enums]
     obj_metadata[obj_name]['members'].update({method_name_from_func_name(enum_name): {'type':'enum_type'} for enum_name in obj_enums})
     for enum_name in obj_enums:
         obj_metadata[obj_name]['members'][method_name_from_func_name(enum_name)].update(obj_metadata[enum_name])
@@ -1886,7 +1896,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
 }};
     """.format(
             module_name = module_name,
-            obj = obj_name, base_obj = base_obj_name,
+            obj = sanitize(obj_name), base_obj = base_obj_name,
             base_class = '&mp_%s_type' % base_obj_name if should_add_base_methods else 'NULL',
             locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
             ctor = ctor.format(obj = obj_name) if has_ctor(obj_name) else '',
@@ -1970,7 +1980,7 @@ STATIC MP_DEFINE_CONST_DICT(mp_{struct_name}_locals_dict, mp_{struct_name}_local
         '''.format(
             struct_name = struct_name,
             functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
-                format(name = noncommon_part(f.name, struct_name), func = f.name) for f in struct_funcs]),
+                format(name = sanitize(noncommon_part(f.name, struct_name)), func = f.name) for f in struct_funcs]),
         ))
 
         generated_struct_functions[struct_name] = True
@@ -2097,22 +2107,22 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
     {int_constants}
 }};
 """.format(
-        module_name = module_name,
+        module_name = sanitize(module_name),
         objects = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_{obj}_type) }},\n    '.
-            format(obj = o) for o in obj_names]),
+            format(obj = sanitize(o)) for o in obj_names]),
         functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
-            format(name = simplify_identifier(f.name), func = f.name) for f in module_funcs]),
+            format(name = sanitize(simplify_identifier(f.name)), func = f.name) for f in module_funcs]),
         enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }},\n    '.
-            format(name = get_enum_name(enum_name), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
+            format(name = sanitize(get_enum_name(enum_name)), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
         structs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
-            format(name = simplify_identifier(struct_name), struct_name = struct_name) for struct_name in generated_structs \
+            format(name = sanitize(simplify_identifier(struct_name)), struct_name = struct_name) for struct_name in generated_structs \
                     if generated_structs[struct_name]]),
         struct_aliases = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{alias_name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
-            format(struct_name = struct_name, alias_name = simplify_identifier(struct_aliases[struct_name])) for struct_name in struct_aliases.keys()]),
+            format(struct_name = struct_name, alias_name = sanitize(simplify_identifier(struct_aliases[struct_name]))) for struct_name in struct_aliases.keys()]),
         blobs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{global_name}) }},\n    '.
-            format(name = simplify_identifier(global_name), global_name = global_name) for global_name in generated_globals]),
+            format(name = sanitize(simplify_identifier(global_name)), global_name = global_name) for global_name in generated_globals]),
         int_constants = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(MP_ROM_INT({value})) }},\n    '.
-            format(name = get_enum_name(int_constant), value = int_constant) for int_constant in int_constants])))
+            format(name = sanitize(get_enum_name(int_constant)), value = int_constant) for int_constant in int_constants])))
         
 
 print("""
