@@ -1200,6 +1200,7 @@ callbacks_used_on_structs = []
 
 def flatten_struct(struct_decls):
     result = []
+    if not struct_decls: return result
     for decl in struct_decls:
         if is_struct(decl.type):
             result.extend(flatten_struct(decl.type.decls))
