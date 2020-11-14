@@ -98,7 +98,7 @@ static inline void cb_isr(mp_obj_t cb, mp_obj_t arg)
 }
 
 // Called in ISR context!
-void spi_pre_cb_isr(spi_transaction_t *trans)
+void ex_spi_pre_cb_isr(spi_transaction_t *trans)
 {
     mp_spi_device_callbacks_t *self = (mp_spi_device_callbacks_t*)trans->user;
     if (self) {
@@ -108,7 +108,7 @@ void spi_pre_cb_isr(spi_transaction_t *trans)
 }
 
 // Called in ISR context!
-void spi_post_cb_isr(spi_transaction_t *trans)
+void ex_spi_post_cb_isr(spi_transaction_t *trans)
 {
     mp_spi_device_callbacks_t *self = (mp_spi_device_callbacks_t*)trans->user;
     if (self) {

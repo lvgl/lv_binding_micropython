@@ -168,8 +168,8 @@ class ili9XXX:
             devcfg.pre_cb = None
             devcfg.post_cb = esp.ili9xxx_post_cb_isr
         else:
-            devcfg.pre_cb = esp.spi_pre_cb_isr
-            devcfg.post_cb = esp.spi_post_cb_isr
+            devcfg.pre_cb = esp.ex_spi_pre_cb_isr
+            devcfg.post_cb = esp.ex_spi_post_cb_isr
 
         esp.gpio_pad_select_gpio(self.cs)
 
@@ -214,7 +214,7 @@ class ili9XXX:
 
         # Called in ISR context!
         def flush_isr(spi_transaction_ptr):
-            lv.disp_flush_ready(self.disp_drv)
+            self.disp_drv.flush_ready()
             # esp.spi_device_release_bus(self.spi)
             esp.get_ccount(self.end_time_ptr)
 

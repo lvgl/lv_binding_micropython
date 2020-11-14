@@ -101,6 +101,7 @@ static inline void get_ccount(int *ccount)
 #include "driver/pcnt.h"
 #include "mdns.h"
 #include "esp_http_client.h"
+//#include "nghttp2/nghttp2.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Helper function to register HTTP event handler
@@ -140,8 +141,8 @@ void *spi_transaction_set_cb(mp_obj_t pre_cb, mp_obj_t post_cb);
 
 // These functions can be set into pre_cb/post_cb of spi_device_interface_config_t
 
-void spi_pre_cb_isr(spi_transaction_t *trans);
-void spi_post_cb_isr(spi_transaction_t *trans);
+void ex_spi_pre_cb_isr(spi_transaction_t *trans);
+void ex_spi_post_cb_isr(spi_transaction_t *trans);
 
 // Useful constants
 
