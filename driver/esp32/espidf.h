@@ -101,7 +101,7 @@ static inline void get_ccount(int *ccount)
 #include "driver/pcnt.h"
 #include "mdns.h"
 #include "esp_http_client.h"
-//#include "nghttp2/nghttp2.h"
+#include "sh2lib.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Helper function to register HTTP event handler

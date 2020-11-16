@@ -9852,7 +9852,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_finish_transitions_obj, 2, mp_lv
  * void lv_event_cb_t(struct _lv_obj_t *obj, lv_event_t event)
  */
 
-STATIC void lv_obj_t_event_cb_callback(lv_obj_t * arg0, lv_event_t arg1)
+STATIC void lv_obj_t_event_cb_callback(struct _lv_obj_t * arg0, lv_event_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = lv_to_mp((void*)arg0);
@@ -9885,7 +9885,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_event_cb_obj, 2, mp_lv_obj_s
  * lv_res_t lv_signal_cb_t(struct _lv_obj_t *obj, lv_signal_t sign, void *param)
  */
 
-STATIC lv_res_t lv_obj_t_signal_cb_callback(lv_obj_t * arg0, lv_signal_t arg1, void * arg2)
+STATIC lv_res_t lv_obj_t_signal_cb_callback(struct _lv_obj_t * arg0, lv_signal_t arg1, void * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = lv_to_mp((void*)arg0);
@@ -9919,7 +9919,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_signal_cb_obj, 2, mp_lv_obj_
  * lv_design_res_t lv_design_cb_t(struct _lv_obj_t *obj, const lv_area_t *clip_area, lv_design_mode_t mode)
  */
 
-STATIC lv_design_res_t lv_obj_t_design_cb_callback(lv_obj_t * arg0, const lv_area_t * arg1, lv_design_mode_t arg2)
+STATIC lv_design_res_t lv_obj_t_design_cb_callback(struct _lv_obj_t * arg0, const lv_area_t * arg1, lv_design_mode_t arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = lv_to_mp((void*)arg0);
@@ -14333,7 +14333,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_delete_obj, 1, mp_lv_img
  * lv_res_t lv_img_decoder_info_f_t(struct _lv_img_decoder *decoder, const void *src, lv_img_header_t *header)
  */
 
-STATIC lv_res_t lv_img_decoder_t_info_cb_callback(lv_img_decoder_t * arg0, const void * arg1, lv_img_header_t * arg2)
+STATIC lv_res_t lv_img_decoder_t_info_cb_callback(struct _lv_img_decoder * arg0, const void * arg1, lv_img_header_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -14367,7 +14367,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_info_cb_obj, 2, mp_l
  * lv_res_t lv_img_decoder_open_f_t(struct _lv_img_decoder *decoder, struct _lv_img_decoder_dsc *dsc)
  */
 
-STATIC lv_res_t lv_img_decoder_t_open_cb_callback(lv_img_decoder_t * arg0, lv_img_decoder_dsc_t * arg1)
+STATIC lv_res_t lv_img_decoder_t_open_cb_callback(struct _lv_img_decoder * arg0, struct _lv_img_decoder_dsc * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -14400,7 +14400,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_open_cb_obj, 2, mp_l
  * lv_res_t lv_img_decoder_read_line_f_t(struct _lv_img_decoder *decoder, struct _lv_img_decoder_dsc *dsc, lv_coord_t x, lv_coord_t y, lv_coord_t len, uint8_t *buf)
  */
 
-STATIC lv_res_t lv_img_decoder_t_read_line_cb_callback(lv_img_decoder_t * arg0, lv_img_decoder_dsc_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, uint8_t * arg5)
+STATIC lv_res_t lv_img_decoder_t_read_line_cb_callback(struct _lv_img_decoder * arg0, struct _lv_img_decoder_dsc * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, uint8_t * arg5)
 {
     mp_obj_t mp_args[6];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -14437,7 +14437,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_read_line_cb_obj, 2,
  * void lv_img_decoder_close_f_t(struct _lv_img_decoder *decoder, struct _lv_img_decoder_dsc *dsc)
  */
 
-STATIC void lv_img_decoder_t_close_cb_callback(lv_img_decoder_t * arg0, lv_img_decoder_dsc_t * arg1)
+STATIC void lv_img_decoder_t_close_cb_callback(struct _lv_img_decoder * arg0, struct _lv_img_decoder_dsc * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -27238,7 +27238,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_init_obj, 1, mp_lv_anim_pa
  * lv_anim_value_t lv_anim_path_cb_t(const struct _lv_anim_path_t *, const struct _lv_anim_t *)
  */
 
-STATIC lv_anim_value_t lv_anim_path_t_cb_callback(const lv_anim_path_t * arg0, const lv_anim_t * arg1)
+STATIC lv_anim_value_t lv_anim_path_t_cb_callback(const struct _lv_anim_path_t * arg0, const struct _lv_anim_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_anim_path_t((void*)arg0);
@@ -27522,7 +27522,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_values_obj, 3, mp_lv_anim_s
  * void lv_anim_custom_exec_cb_t(struct _lv_anim_t *, lv_anim_value_t)
  */
 
-STATIC void lv_anim_t_exec_cb_callback(lv_anim_t * arg0, lv_anim_value_t arg1)
+STATIC void lv_anim_t_exec_cb_callback(struct _lv_anim_t * arg0, lv_anim_value_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -27572,7 +27572,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_path_obj, 2, mp_lv_anim_set
  * void lv_anim_ready_cb_t(struct _lv_anim_t *)
  */
 
-STATIC void lv_anim_t_start_cb_callback(lv_anim_t * arg0)
+STATIC void lv_anim_t_start_cb_callback(struct _lv_anim_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -27604,7 +27604,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_start_cb_obj, 2, mp_lv_anim
  * void lv_anim_ready_cb_t(struct _lv_anim_t *)
  */
 
-STATIC void lv_anim_t_ready_cb_callback(lv_anim_t * arg0)
+STATIC void lv_anim_t_ready_cb_callback(struct _lv_anim_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -30453,7 +30453,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_task_del_obj, 1, mp_lv_task_del, lv_
  * void lv_task_cb_t(struct _lv_task_t *)
  */
 
-STATIC void lv_task_t_task_cb_callback(lv_task_t * arg0)
+STATIC void lv_task_t_task_cb_callback(struct _lv_task_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_task_t((void*)arg0);
@@ -31496,7 +31496,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_send_data_obj, 2, mp_lv_group_
  * void lv_group_focus_cb_t(struct _lv_group_t *)
  */
 
-STATIC void lv_group_t_focus_cb_callback(lv_group_t * arg0)
+STATIC void lv_group_t_focus_cb_callback(struct _lv_group_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_group_t((void*)arg0);
@@ -32311,7 +32311,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_set_base_obj, 2, mp_lv_theme_s
  * void lv_theme_apply_cb_t(struct _lv_theme_t *, lv_obj_t *, lv_theme_style_t)
  */
 
-STATIC void lv_theme_t_apply_cb_callback(lv_theme_t * arg0, lv_obj_t * arg1, lv_theme_style_t arg2)
+STATIC void lv_theme_t_apply_cb_callback(struct _lv_theme_t * arg0, lv_obj_t * arg1, lv_theme_style_t arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_theme_t((void*)arg0);
@@ -32676,7 +32676,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_task_create_basic_obj, 0, mp_
  * void lv_task_cb_t(struct _lv_task_t *)
  */
 
-STATIC void task_xcb_callback(lv_task_t * arg0)
+STATIC void task_xcb_callback(struct _lv_task_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_task_t((void*)arg0);
@@ -34180,7 +34180,7 @@ STATIC const mp_lv_struct_t mp_lv_anim_path_def = {
  * bool get_glyph_dsc(const struct _lv_font_struct *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next)
  */
 
-STATIC bool lv_font_t_get_glyph_dsc_callback(const lv_font_t * arg0, lv_font_glyph_dsc_t * arg1, uint32_t arg2, uint32_t arg3)
+STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_struct * arg0, lv_font_glyph_dsc_t * arg1, uint32_t arg2, uint32_t arg3)
 {
     mp_obj_t mp_args[4];
     mp_args[0] = mp_read_ptr_lv_font_t((void*)arg0);
@@ -34198,7 +34198,7 @@ STATIC bool lv_font_t_get_glyph_dsc_callback(const lv_font_t * arg0, lv_font_gly
  * const uint8_t *get_glyph_bitmap(const struct _lv_font_struct *, uint32_t)
  */
 
-STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const lv_font_t * arg0, uint32_t arg1)
+STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_struct * arg0, uint32_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_font_t((void*)arg0);
@@ -34214,7 +34214,7 @@ STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const lv_font_t * arg
  * void flush_cb(struct _disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
  */
 
-STATIC void lv_disp_drv_t_flush_cb_callback(lv_disp_drv_t * arg0, const lv_area_t * arg1, lv_color_t * arg2)
+STATIC void lv_disp_drv_t_flush_cb_callback(struct _disp_drv_t * arg0, const lv_area_t * arg1, lv_color_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34231,7 +34231,7 @@ STATIC void lv_disp_drv_t_flush_cb_callback(lv_disp_drv_t * arg0, const lv_area_
  * void rounder_cb(struct _disp_drv_t *disp_drv, lv_area_t *area)
  */
 
-STATIC void lv_disp_drv_t_rounder_cb_callback(lv_disp_drv_t * arg0, lv_area_t * arg1)
+STATIC void lv_disp_drv_t_rounder_cb_callback(struct _disp_drv_t * arg0, lv_area_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34247,7 +34247,7 @@ STATIC void lv_disp_drv_t_rounder_cb_callback(lv_disp_drv_t * arg0, lv_area_t * 
  * void set_px_cb(struct _disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)
  */
 
-STATIC void lv_disp_drv_t_set_px_cb_callback(lv_disp_drv_t * arg0, uint8_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, lv_color_t arg5, lv_opa_t arg6)
+STATIC void lv_disp_drv_t_set_px_cb_callback(struct _disp_drv_t * arg0, uint8_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, lv_color_t arg5, lv_opa_t arg6)
 {
     mp_obj_t mp_args[7];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34268,7 +34268,7 @@ STATIC void lv_disp_drv_t_set_px_cb_callback(lv_disp_drv_t * arg0, uint8_t * arg
  * void monitor_cb(struct _disp_drv_t *disp_drv, uint32_t time, uint32_t px)
  */
 
-STATIC void lv_disp_drv_t_monitor_cb_callback(lv_disp_drv_t * arg0, uint32_t arg1, uint32_t arg2)
+STATIC void lv_disp_drv_t_monitor_cb_callback(struct _disp_drv_t * arg0, uint32_t arg1, uint32_t arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34285,7 +34285,7 @@ STATIC void lv_disp_drv_t_monitor_cb_callback(lv_disp_drv_t * arg0, uint32_t arg
  * void wait_cb(struct _disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_wait_cb_callback(lv_disp_drv_t * arg0)
+STATIC void lv_disp_drv_t_wait_cb_callback(struct _disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34300,7 +34300,7 @@ STATIC void lv_disp_drv_t_wait_cb_callback(lv_disp_drv_t * arg0)
  * void clean_dcache_cb(struct _disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_clean_dcache_cb_callback(lv_disp_drv_t * arg0)
+STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34315,7 +34315,7 @@ STATIC void lv_disp_drv_t_clean_dcache_cb_callback(lv_disp_drv_t * arg0)
  * void gpu_wait_cb(struct _disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_gpu_wait_cb_callback(lv_disp_drv_t * arg0)
+STATIC void lv_disp_drv_t_gpu_wait_cb_callback(struct _disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34330,7 +34330,7 @@ STATIC void lv_disp_drv_t_gpu_wait_cb_callback(lv_disp_drv_t * arg0)
  * void gpu_blend_cb(struct _disp_drv_t *disp_drv, lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa)
  */
 
-STATIC void lv_disp_drv_t_gpu_blend_cb_callback(lv_disp_drv_t * arg0, lv_color_t * arg1, const lv_color_t * arg2, uint32_t arg3, lv_opa_t arg4)
+STATIC void lv_disp_drv_t_gpu_blend_cb_callback(struct _disp_drv_t * arg0, lv_color_t * arg1, const lv_color_t * arg2, uint32_t arg3, lv_opa_t arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34349,7 +34349,7 @@ STATIC void lv_disp_drv_t_gpu_blend_cb_callback(lv_disp_drv_t * arg0, lv_color_t
  * void gpu_fill_cb(struct _disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, const lv_area_t *fill_area, lv_color_t color)
  */
 
-STATIC void lv_disp_drv_t_gpu_fill_cb_callback(lv_disp_drv_t * arg0, lv_color_t * arg1, lv_coord_t arg2, const lv_area_t * arg3, lv_color_t arg4)
+STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _disp_drv_t * arg0, lv_color_t * arg1, lv_coord_t arg2, const lv_area_t * arg3, lv_color_t arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -34450,7 +34450,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_indev_data_t_type()
  * bool read_cb(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
  */
 
-STATIC bool lv_indev_drv_t_read_cb_callback(lv_indev_drv_t * arg0, lv_indev_data_t * arg1)
+STATIC bool lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t * arg0, lv_indev_data_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_indev_drv_t((void*)arg0);
@@ -34466,7 +34466,7 @@ STATIC bool lv_indev_drv_t_read_cb_callback(lv_indev_drv_t * arg0, lv_indev_data
  * void feedback_cb(struct _lv_indev_drv_t *, uint8_t)
  */
 
-STATIC void lv_indev_drv_t_feedback_cb_callback(lv_indev_drv_t * arg0, uint8_t arg1)
+STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t * arg0, uint8_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_indev_drv_t((void*)arg0);
@@ -34489,7 +34489,7 @@ STATIC void lv_indev_drv_t_feedback_cb_callback(lv_indev_drv_t * arg0, uint8_t a
  * bool ready_cb(struct _lv_fs_drv_t *drv)
  */
 
-STATIC bool lv_fs_drv_t_ready_cb_callback(lv_fs_drv_t * arg0)
+STATIC bool lv_fs_drv_t_ready_cb_callback(struct _lv_fs_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34504,7 +34504,7 @@ STATIC bool lv_fs_drv_t_ready_cb_callback(lv_fs_drv_t * arg0)
  * lv_fs_res_t open_cb(struct _lv_fs_drv_t *drv, void *file_p, const char *path, lv_fs_mode_t mode)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_open_cb_callback(lv_fs_drv_t * arg0, void * arg1, const char * arg2, lv_fs_mode_t arg3)
+STATIC lv_fs_res_t lv_fs_drv_t_open_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, const char * arg2, lv_fs_mode_t arg3)
 {
     mp_obj_t mp_args[4];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34522,7 +34522,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_open_cb_callback(lv_fs_drv_t * arg0, void * arg1,
  * lv_fs_res_t close_cb(struct _lv_fs_drv_t *drv, void *file_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(lv_fs_drv_t * arg0, void * arg1)
+STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34538,7 +34538,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(lv_fs_drv_t * arg0, void * arg1
  * lv_fs_res_t remove_cb(struct _lv_fs_drv_t *drv, const char *fn)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_remove_cb_callback(lv_fs_drv_t * arg0, const char * arg1)
+STATIC lv_fs_res_t lv_fs_drv_t_remove_cb_callback(struct _lv_fs_drv_t * arg0, const char * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34554,7 +34554,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_remove_cb_callback(lv_fs_drv_t * arg0, const char
  * lv_fs_res_t read_cb(struct _lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(lv_fs_drv_t * arg0, void * arg1, void * arg2, uint32_t arg3, uint32_t * arg4)
+STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, void * arg2, uint32_t arg3, uint32_t * arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34573,7 +34573,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(lv_fs_drv_t * arg0, void * arg1,
  * lv_fs_res_t write_cb(struct _lv_fs_drv_t *drv, void *file_p, const void *buf, uint32_t btw, uint32_t *bw)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(lv_fs_drv_t * arg0, void * arg1, const void * arg2, uint32_t arg3, uint32_t * arg4)
+STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, const void * arg2, uint32_t arg3, uint32_t * arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34592,7 +34592,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(lv_fs_drv_t * arg0, void * arg1
  * lv_fs_res_t seek_cb(struct _lv_fs_drv_t *drv, void *file_p, uint32_t pos)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(lv_fs_drv_t * arg0, void * arg1, uint32_t arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34609,7 +34609,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(lv_fs_drv_t * arg0, void * arg1,
  * lv_fs_res_t tell_cb(struct _lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(lv_fs_drv_t * arg0, void * arg1, uint32_t * arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34626,7 +34626,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(lv_fs_drv_t * arg0, void * arg1,
  * lv_fs_res_t trunc_cb(struct _lv_fs_drv_t *drv, void *file_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_trunc_cb_callback(lv_fs_drv_t * arg0, void * arg1)
+STATIC lv_fs_res_t lv_fs_drv_t_trunc_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34642,7 +34642,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_trunc_cb_callback(lv_fs_drv_t * arg0, void * arg1
  * lv_fs_res_t size_cb(struct _lv_fs_drv_t *drv, void *file_p, uint32_t *size_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_size_cb_callback(lv_fs_drv_t * arg0, void * arg1, uint32_t * arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_size_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34659,7 +34659,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_size_cb_callback(lv_fs_drv_t * arg0, void * arg1,
  * lv_fs_res_t rename_cb(struct _lv_fs_drv_t *drv, const char *oldname, const char *newname)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_rename_cb_callback(lv_fs_drv_t * arg0, const char * arg1, const char * arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_rename_cb_callback(struct _lv_fs_drv_t * arg0, const char * arg1, const char * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34676,7 +34676,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_rename_cb_callback(lv_fs_drv_t * arg0, const char
  * lv_fs_res_t free_space_cb(struct _lv_fs_drv_t *drv, uint32_t *total_p, uint32_t *free_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_free_space_cb_callback(lv_fs_drv_t * arg0, uint32_t * arg1, uint32_t * arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_free_space_cb_callback(struct _lv_fs_drv_t * arg0, uint32_t * arg1, uint32_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34693,7 +34693,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_free_space_cb_callback(lv_fs_drv_t * arg0, uint32
  * lv_fs_res_t dir_open_cb(struct _lv_fs_drv_t *drv, void *rddir_p, const char *path)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_dir_open_cb_callback(lv_fs_drv_t * arg0, void * arg1, const char * arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_dir_open_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, const char * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34710,7 +34710,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_dir_open_cb_callback(lv_fs_drv_t * arg0, void * a
  * lv_fs_res_t dir_read_cb(struct _lv_fs_drv_t *drv, void *rddir_p, char *fn)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(lv_fs_drv_t * arg0, void * arg1, char * arg2)
+STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, char * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -34727,7 +34727,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(lv_fs_drv_t * arg0, void * a
  * lv_fs_res_t dir_close_cb(struct _lv_fs_drv_t *drv, void *rddir_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(lv_fs_drv_t * arg0, void * arg1)
+STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
