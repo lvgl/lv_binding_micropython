@@ -18,7 +18,6 @@
 #define __ESP_EXAMPLE_SH2_LIB_H_
 
 typedef struct nghttp2_session nghttp2_session;
-typedef struct nghttp2_nv nghttp2_nv;
 typedef struct esp_tls esp_tls;
 
 /*
@@ -33,6 +32,7 @@ typedef struct esp_tls esp_tls;
  * - Allowing to query response code, content-type etc in the receive callback
  * - A simple function for per-stream header callback
  */
+
 /**
  * @brief Handle for working with sh2lib APIs
  */
@@ -41,6 +41,15 @@ struct sh2lib_handle {
     char            *hostname;     /*!< The hostname we are connected to */
     struct esp_tls  *http2_tls;    /*!< Pointer to the TLS session handle */
     void            *user_data;    /*!< Needed for Micropython binding */
+};
+
+/**
+ * @brief Wrapper for nghttp2_nv
+ */
+struct sh2lib_nv {
+    const char *name;
+    const char *value;
+    uint8_t flags;
 };
 
 /** Flag indicating receive stream is reset */
@@ -65,7 +74,7 @@ struct sh2lib_handle {
  *
  * @return The function should return 0
  */
-typedef int (*sh2lib_frame_data_recv_cb_t)(struct sh2lib_handle *handle, const char *data, size_t len, int flags);
+typedef int (*sh2lib_frame_data_recv_cb_t)(struct sh2lib_handle *handle, const void *data, size_t len, int flags);
 
 /**
  * @brief Function Prototype for callback to send data in PUT/POST
@@ -83,7 +92,7 @@ typedef int (*sh2lib_frame_data_recv_cb_t)(struct sh2lib_handle *handle, const c
  * @return The function should return the number of valid bytes stored in the
  * data pointer
  */
-typedef int (*sh2lib_putpost_data_cb_t)(struct sh2lib_handle *handle, char *data, size_t len, uint32_t *data_flags);
+typedef int (*sh2lib_putpost_data_cb_t)(struct sh2lib_handle *handle, void *data, size_t len, uint32_t *data_flags);
 
 /**
  * @brief Connect to a URI using HTTP/2
@@ -199,8 +208,7 @@ int sh2lib_execute(struct sh2lib_handle *hd);
 
 #define SH2LIB_MAKE_NV(NAME, VALUE)                                    \
   {                                                                    \
-    (uint8_t *)NAME, (uint8_t *)VALUE, strlen(NAME), strlen(VALUE),    \
-        NGHTTP2_NV_FLAG_NONE                                           \
+    NAME, VALUE, NGHTTP2_NV_FLAG_NONE                                  \
   }
 
 /**
@@ -229,7 +237,7 @@ int sh2lib_execute(struct sh2lib_handle *hd);
  *             - ESP_OK if request setup is successful
  *             - ESP_FAIL if the request setup fails
  */
-int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const nghttp2_nv *nva, size_t nvlen, sh2lib_frame_data_recv_cb_t recv_cb);
+int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv nva[], size_t nvlen, sh2lib_frame_data_recv_cb_t recv_cb);
 
 /**
  * @brief Setup an HTTP PUT/POST request stream with custom name-value pairs
@@ -260,7 +268,7 @@ int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const nghttp2_nv *nva, size_
  *             - ESP_OK if request setup is successful
  *             - ESP_FAIL if the request setup fails
  */
-int sh2lib_do_putpost_with_nv(struct sh2lib_handle *hd, const nghttp2_nv *nva, size_t nvlen,
+int sh2lib_do_putpost_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv nva[], size_t nvlen,
                               sh2lib_putpost_data_cb_t send_cb,
                               sh2lib_frame_data_recv_cb_t recv_cb);
 

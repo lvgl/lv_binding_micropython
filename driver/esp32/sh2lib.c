@@ -45,6 +45,24 @@ static const char *TAG = "sh2lib";
 #define ESP_TLS_ERR_SSL_TIMEOUT                            MBEDTLS_ERR_SSL_TIMEOUT
 #endif
 
+/**
+ * Conversion between sh2lib name-value pairs and nghttp2 pairs
+ * sh2lib_nv arrays can be populated from Micropython
+ */
+static void shlib_load_nva(nghttp2_nv ng_nva[], const struct sh2lib_nv nva[], size_t nvlen)
+{
+    for (size_t i = 0; i < nvlen; i++){
+        const struct sh2lib_nv *nv = &nva[i];
+        ng_nva[i] = (nghttp2_nv){
+            (uint8_t *)nv->name,
+            (uint8_t *)nv->value,
+            strlen(nv->name),
+            strlen(nv->value),
+            nv->flags
+        };
+    }
+}
+
 /*
  * The implementation of nghttp2_send_callback type. Here we write
  * |data| with size |length| to the network and return the number of
@@ -316,9 +334,12 @@ int sh2lib_execute(struct sh2lib_handle *hd)
     return 0;
 }
 
-int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const nghttp2_nv *nva, size_t nvlen, sh2lib_frame_data_recv_cb_t recv_cb)
+int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv nva[], size_t nvlen, sh2lib_frame_data_recv_cb_t recv_cb)
 {
-    int ret = nghttp2_submit_request(hd->http2_sess, NULL, nva, nvlen, NULL, recv_cb);
+    nghttp2_nv ng_nva[nvlen];
+    shlib_load_nva(ng_nva, nva, nvlen);
+
+    int ret = nghttp2_submit_request(hd->http2_sess, NULL, ng_nva, nvlen, NULL, recv_cb);
     if (ret < 0) {
         ESP_LOGE(TAG, "[sh2-do-get] HEADERS call failed");
         return -1;
@@ -328,11 +349,11 @@ int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const nghttp2_nv *nva, size_
 
 int sh2lib_do_get(struct sh2lib_handle *hd, const char *path, sh2lib_frame_data_recv_cb_t recv_cb)
 {
-    const nghttp2_nv nva[] = { SH2LIB_MAKE_NV(":method", "GET"),
-                               SH2LIB_MAKE_NV(":scheme", "https"),
-                               SH2LIB_MAKE_NV(":authority", hd->hostname),
-                               SH2LIB_MAKE_NV(":path", path),
-                             };
+    const struct sh2lib_nv nva[] = { SH2LIB_MAKE_NV(":method", "GET"),
+                              SH2LIB_MAKE_NV(":scheme", "https"),
+                              SH2LIB_MAKE_NV(":authority", hd->hostname),
+                              SH2LIB_MAKE_NV(":path", path),
+                            };
     return sh2lib_do_get_with_nv(hd, nva, sizeof(nva) / sizeof(nva[0]), recv_cb);
 }
 
@@ -345,15 +366,17 @@ ssize_t sh2lib_data_provider_cb(nghttp2_session *session, int32_t stream_id, uin
     return (*data_cb)(h2, (char *)buf, length, data_flags);
 }
 
-int sh2lib_do_putpost_with_nv(struct sh2lib_handle *hd, const nghttp2_nv *nva, size_t nvlen,
+int sh2lib_do_putpost_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv nva[], size_t nvlen,
                               sh2lib_putpost_data_cb_t send_cb,
                               sh2lib_frame_data_recv_cb_t recv_cb)
 {
+    nghttp2_nv ng_nva[nvlen];
+    shlib_load_nva(ng_nva, nva, nvlen);
 
     nghttp2_data_provider sh2lib_data_provider;
     sh2lib_data_provider.read_callback = sh2lib_data_provider_cb;
     sh2lib_data_provider.source.ptr = send_cb;
-    int ret = nghttp2_submit_request(hd->http2_sess, NULL, nva, nvlen, &sh2lib_data_provider, recv_cb);
+    int ret = nghttp2_submit_request(hd->http2_sess, NULL, ng_nva, nvlen, &sh2lib_data_provider, recv_cb);
     if (ret < 0) {
         ESP_LOGE(TAG, "[sh2-do-putpost] HEADERS call failed");
         return -1;
@@ -365,11 +388,11 @@ int sh2lib_do_post(struct sh2lib_handle *hd, const char *path,
                    sh2lib_putpost_data_cb_t send_cb,
                    sh2lib_frame_data_recv_cb_t recv_cb)
 {
-    const nghttp2_nv nva[] = { SH2LIB_MAKE_NV(":method", "POST"),
-                               SH2LIB_MAKE_NV(":scheme", "https"),
-                               SH2LIB_MAKE_NV(":authority", hd->hostname),
-                               SH2LIB_MAKE_NV(":path", path),
-                             };
+    const struct sh2lib_nv nva[] = { SH2LIB_MAKE_NV(":method", "POST"),
+                              SH2LIB_MAKE_NV(":scheme", "https"),
+                              SH2LIB_MAKE_NV(":authority", hd->hostname),
+                              SH2LIB_MAKE_NV(":path", path),
+                            };
     return sh2lib_do_putpost_with_nv(hd, nva, sizeof(nva) / sizeof(nva[0]), send_cb, recv_cb);
 }
 
@@ -377,10 +400,10 @@ int sh2lib_do_put(struct sh2lib_handle *hd, const char *path,
                   sh2lib_putpost_data_cb_t send_cb,
                   sh2lib_frame_data_recv_cb_t recv_cb)
 {
-    const nghttp2_nv nva[] = { SH2LIB_MAKE_NV(":method", "PUT"),
-                               SH2LIB_MAKE_NV(":scheme", "https"),
-                               SH2LIB_MAKE_NV(":authority", hd->hostname),
-                               SH2LIB_MAKE_NV(":path", path),
-                             };
+    const struct sh2lib_nv nva[] = { SH2LIB_MAKE_NV(":method", "PUT"),
+                              SH2LIB_MAKE_NV(":scheme", "https"),
+                              SH2LIB_MAKE_NV(":authority", hd->hostname),
+                              SH2LIB_MAKE_NV(":path", path),
+                            };
     return sh2lib_do_putpost_with_nv(hd, nva, sizeof(nva) / sizeof(nva[0]), send_cb, recv_cb);
 }

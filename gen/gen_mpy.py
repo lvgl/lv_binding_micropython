@@ -132,6 +132,8 @@ def get_name(type):
         return type.name
     if isinstance(type, c_ast.Struct) and type.name and type.name in explicit_structs:
         return explicit_structs[type.name]
+    if isinstance(type, c_ast.Struct):
+        return type.name
     if isinstance(type, c_ast.TypeDecl):
         return type.declname
     if isinstance(type, c_ast.IdentifierType):
@@ -270,6 +272,7 @@ structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) fo
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
 # print('/* --> structs:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs if struct_name)))
+# print('/* --> structs_without_typedef:\n%s */' % ',\n'.join(sorted(str(structs_without_typedef[struct_name]) for struct_name in structs_without_typedef if struct_name)))
 # print('/* --> explicit_structs:\n%s */' % ',\n'.join(sorted(str(explicit_structs[struct_name]) for struct_name in explicit_structs if struct_name)))
 # eprint('/* --> structs without typedef:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs_without_typedef)))
 
@@ -1231,7 +1234,7 @@ def try_generate_struct(struct_name, struct):
     # print("/* Starting generating %s */" % struct_name)
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
-    # print('/* --> try_generate_struct %s: %s */' % (struct_name, gen.visit(struct)))
+    # print('/* --> try_generate_struct %s: %s\n%s */' % (struct_name, gen.visit(struct), struct))
     if not struct.decls:
         if struct_name == struct.name:
             return None
@@ -1311,26 +1314,26 @@ def try_generate_struct(struct_name, struct):
 
 STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type();
 
-STATIC inline {struct_name}* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
+STATIC inline {struct_tag}{struct_name}* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
 {{
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_{sanitized_struct_name}_type()));
-    return ({struct_name}*)self->data;
+    return ({struct_tag}{struct_name}*)self->data;
 }}
 
 #define mp_write_{sanitized_struct_name}(struct_obj) *mp_write_ptr_{sanitized_struct_name}(struct_obj)
 
-STATIC inline mp_obj_t mp_read_ptr_{sanitized_struct_name}({struct_name} *field)
+STATIC inline mp_obj_t mp_read_ptr_{sanitized_struct_name}({struct_tag}{struct_name} *field)
 {{
     return lv_to_mp_struct(get_mp_{sanitized_struct_name}_type(), (void*)field);
 }}
 
-#define mp_read_{sanitized_struct_name}(field) mp_read_ptr_{sanitized_struct_name}(copy_buffer(&field, sizeof({struct_name})))
+#define mp_read_{sanitized_struct_name}(field) mp_read_ptr_{sanitized_struct_name}(copy_buffer(&field, sizeof({struct_tag}{struct_name})))
 #define mp_read_byref_{sanitized_struct_name}(field) mp_read_ptr_{sanitized_struct_name}(&field)
 
 STATIC void mp_{sanitized_struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {{
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    {struct_name} *data = ({struct_name}*)self->data;
+    {struct_tag}{struct_name} *data = ({struct_tag}{struct_name}*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {{
         // load attribute
@@ -1380,6 +1383,7 @@ STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type()
     '''.format(
             sanitized_struct_name = sanitized_struct_name,
             struct_name = struct_name,
+            struct_tag = 'struct ' if struct_name in structs_without_typedef.keys() else '',
             write_cases = ';\n                '.join(write_cases),
             read_cases  = ';\n            '.join(read_cases),
             ));
@@ -1410,7 +1414,7 @@ def try_generate_array_type(type_ast):
     # print('/* --> try_generate_array_type %s: %s */' % (arr_name, type_ast))    
     dim = gen.visit(type_ast.dim) if hasattr(type_ast, 'dim') and type_ast.dim else None
     element_type = get_type(type_ast.type, remove_quals = True)
-    qualified_element_type = get_type(type_ast.type, remove_quals = False)
+    qualified_element_type = gen.visit(type_ast.type)
     if element_type not in mp_to_lv or not mp_to_lv[element_type]:
         try_generate_type(type_ast.type)
         if element_type not in mp_to_lv or not mp_to_lv[element_type]:
@@ -1438,7 +1442,7 @@ STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
     {check_dim}
-    {type} *lv_arr = ({type}*)m_malloc(len * sizeof({type}));
+    {struct_tag}{type} *lv_arr = ({struct_tag}{type}*)m_malloc(len * sizeof({struct_tag}{type}));
     mp_obj_t iter = mp_getiter(mp_arr, NULL);
     mp_obj_t item;
     size_t i = 0;
@@ -1461,6 +1465,7 @@ STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
         arr_to_mp_convertor_name = arr_to_mp_convertor_name ,
         arr_name = arr_name,
         type = element_type,
+        struct_tag = 'struct ' if element_type in structs_without_typedef.keys() else '',
         qualified_type = qualified_element_type,
         check_dim = '//TODO check dim!' if dim else '',
         mp_to_lv_convertor = mp_to_lv[element_type],
@@ -1996,7 +2001,7 @@ def generate_struct_functions(struct_list):
                 struct_funcs.remove(struct_func)
         print('''
 STATIC const mp_rom_map_elem_t mp_{sanitized_struct_name}_locals_dict_table[] = {{
-    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_name}))) }},
+    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
     {{ MP_ROM_QSTR(MP_QSTR_cast_instance), MP_ROM_PTR(&mp_lv_cast_instance_obj) }},
     {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
@@ -2006,6 +2011,7 @@ STATIC const mp_rom_map_elem_t mp_{sanitized_struct_name}_locals_dict_table[] = 
 STATIC MP_DEFINE_CONST_DICT(mp_{sanitized_struct_name}_locals_dict, mp_{sanitized_struct_name}_locals_dict_table);
         '''.format(
             struct_name = struct_name,
+            struct_tag = 'struct ' if struct_name in structs_without_typedef.keys() else '',
             sanitized_struct_name = sanitized_struct_name,
             functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
                 format(name = sanitize(noncommon_part(f.name, struct_name)), func = f.name) for f in struct_funcs]),
