@@ -324,12 +324,12 @@ class ili9XXX:
         # Initialize non-SPI GPIOs
 
         esp.gpio_pad_select_gpio(self.dc)
-        esp.gpio_pad_select_gpio(self.rst)
+        if self.rst != -1: esp.gpio_pad_select_gpio(self.rst)
         if self.backlight != -1: esp.gpio_pad_select_gpio(self.backlight)
         if self.power != -1: esp.gpio_pad_select_gpio(self.power)
 
         esp.gpio_set_direction(self.dc, esp.GPIO_MODE.OUTPUT)
-        esp.gpio_set_direction(self.rst, esp.GPIO_MODE.OUTPUT)
+        if self.rst != -1: esp.gpio_set_direction(self.rst, esp.GPIO_MODE.OUTPUT)
         if self.backlight != -1: esp.gpio_set_direction(self.backlight, esp.GPIO_MODE.OUTPUT)
         if self.power != -1: esp.gpio_set_direction(self.power, esp.GPIO_MODE.OUTPUT)
 
@@ -341,10 +341,11 @@ class ili9XXX:
 
         # Reset the display
 
-        esp.gpio_set_level(self.rst, 0)
-        sleep_ms(100)
-        esp.gpio_set_level(self.rst, 1)
-        sleep_ms(100)
+        if self.rst != -1:
+            esp.gpio_set_level(self.rst, 0)
+            sleep_ms(100)
+            esp.gpio_set_level(self.rst, 1)
+            sleep_ms(100)
 
         # Send all the commands
 
