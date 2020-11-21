@@ -239,7 +239,7 @@ disp_drv.hor_res = 480
 disp_drv.ver_res = 320
 disp_drv.register()
 
-# Regsiter SDL mouse driver
+# Register SDL mouse driver
 
 indev_drv = lv.indev_drv_t()
 indev_drv.init() 
@@ -257,7 +257,7 @@ import lvesp32
 
 # Import ILI9341 driver and initialized it
 
-from ili9341 import ili9341
+from ili9XXX import ili9341
 disp = ili9341()
 
 # Import XPT2046 driver and initalize it
