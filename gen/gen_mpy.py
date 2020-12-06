@@ -317,6 +317,10 @@ def get_struct_functions(struct_name):
     # eprint("get_struct_functions %s: %s" % (struct_name, [get_type(func.type.args.params[0].type.type, remove_quals = True) for func in funcs if func.name.startswith(base_struct_name)]))
     # eprint("get_struct_functions %s: %s" % (struct_name, struct_aliases[struct_name] if struct_name in struct_aliases else ""))
 
+    # for func in funcs:
+    #     print("/* get_struct_functions: func=%s, struct=%s, noncommon part=%s */" % (simplify_identifier(func.name), simplify_identifier(struct_name),
+    #         noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name))))
+
     reverse_aliases = [alias for alias in struct_aliases if struct_aliases[alias] == struct_name]
     
     return ([func for func in funcs \
@@ -425,6 +429,7 @@ mp_to_lv = {
     'short'                     : '(short)mp_obj_get_int',
     'long'                      : '(long)mp_obj_get_int',
     'long int'                  : '(long int)mp_obj_get_int',
+    'float'                     : 'mp_obj_get_float',
 }
 
 lv_to_mp = {
@@ -458,6 +463,7 @@ lv_to_mp = {
     'short'                     : 'mp_obj_new_int',
     'long'                      : 'mp_obj_new_int',
     'long int'                  : 'mp_obj_new_int',
+    'float'                     : 'mp_obj_new_float',
 }
 
 lv_mp_type = {
@@ -492,6 +498,7 @@ lv_mp_type = {
     'long'                      : 'int',
     'long int'                  : 'int',
     'void'                      : 'NoneType',
+    'float'                     : 'float',
 }
 
 lv_to_mp_byref = {}

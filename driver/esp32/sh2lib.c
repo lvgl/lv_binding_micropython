@@ -14,6 +14,8 @@
 //
 // This is a modified sh2lib, for better integration with LVGL Micropython bindings.
 
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
