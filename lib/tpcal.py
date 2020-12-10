@@ -9,10 +9,15 @@ import espidf as esp
 from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
 
 # select the orientation
-orientation = LANDSCAPE
-# orientation = PORTRAIT
+# orientation = LANDSCAPE
+orientation = PORTRAIT
+w=320
+h=240
+if orientation == PORTRAIT:
+    w,h = h,w
+    
 disp = ili9341(miso=19,mosi=23,clk=18, cs=26, dc=5, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
-               spihost=esp.VSPI_HOST, mhz=40, factor=4, hybrid=True, width=320, height=240,
+               spihost=esp.VSPI_HOST, mhz=40, factor=4, hybrid=True, width=w, height=h,
                colormode=COLOR_MODE_BGR, rot=orientation, invert=False, double_buffer=True, half_duplex=True)
 
 HRES = disp.width
