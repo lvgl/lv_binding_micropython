@@ -1,33 +1,29 @@
+
 import lvgl as lv
 lv.init()
-
-lv.log_register_print_cb(lambda level,path,line,msg: print('LOG: %s(%d): %s' % (path, line, msg)))
 
 # Initialize ILI9341 display
 
 import lvesp32
-from ili9XXX import ili9341
-disp = ili9341()
+import espidf as esp
+from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
 
-HRES = lv.disp_get_hor_res(lv.disp_t.cast(None))
-VRES = lv.disp_get_ver_res(lv.disp_t.cast(None))
+# select the orientation
+orientation = LANDSCAPE
+# orientation = PORTRAIT
+disp = ili9341(miso=19,mosi=23,clk=18, cs=26, dc=5, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
+               spihost=esp.VSPI_HOST, mhz=40, factor=4, hybrid=True, width=320, height=240,
+               colormode=COLOR_MODE_BGR, rot=orientation, invert=False, double_buffer=True, half_duplex=True)
 
-# Register raw resistive touch driver
-'''
-import rtch
-touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33, cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
-touch.init()
-indev_drv = lv.indev_drv_t()
-lv.indev_drv_init(indev_drv) 
-indev_drv.type = lv.INDEV_TYPE.POINTER;
-indev_drv.read_cb = touch.read;
-lv.indev_drv_register(indev_drv);
-'''
-
+HRES = disp.width
+VRES = disp.height
 # Register xpt touch driver
-import xpt2046 as xpt2046
-touch = xpt2046.xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
-
+from xpt2046 import xpt2046
+if orientation == LANDSCAPE:
+    touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=False)
+else:
+    touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=True)
+    
 # Point class, with both display and touch coordiantes
 
 class Tpcal_point():
@@ -70,11 +66,13 @@ class Tpcal():
         lv.scr_load(self.scr)
 
         # Create a big transparent button screen to receive clicks
-
+        style_transp = lv.style_t()
+        style_transp.init()
+        style_transp.set_bg_opa(lv.STATE.DEFAULT, lv.OPA.TRANSP)
         self.big_btn = lv.btn(lv.scr_act(), None)
         self.big_btn.set_size(TP_MAX_VALUE, TP_MAX_VALUE)
-        self.big_btn.set_style(lv.btn.STYLE.REL, lv.style_transp)
-        self.big_btn.set_style(lv.btn.STYLE.PR, lv.style_transp)
+        self.big_btn.add_style(lv.btn.PART.MAIN,style_transp)
+        self.big_btn.add_style(lv.btn.PART.MAIN,style_transp)
         self.big_btn.set_layout(lv.LAYOUT.OFF)
         self.big_btn.set_event_cb(lambda obj, event, self=self: self.calibrate_clicked() if event == lv.EVENT.CLICKED else None) 
 
@@ -83,12 +81,11 @@ class Tpcal():
         self.label_main = lv.label(lv.scr_act(), None)
 
         style_circ = lv.style_t()
-        lv.style_copy(style_circ, lv.style_pretty_color)
-        style_circ.body.radius = LV_RADIUS_CIRCLE
+        style_circ.init()
 
         self.circ_area = lv.obj(lv.scr_act(), None)
         self.circ_area.set_size(CIRCLE_SIZE, CIRCLE_SIZE)
-        self.circ_area.set_style(style_circ)
+        self.circ_area.add_style(lv.STATE.DEFAULT,style_circ)
         self.circ_area.set_click(False)
 
         self.show_circle()
@@ -105,14 +102,16 @@ class Tpcal():
               "%d left" % (self.touch_count - self.cur_touch))
         if point.display_coordinates.x < 0: point.display_coordinates.x += HRES
         if point.display_coordinates.y < 0: point.display_coordinates.y += VRES
+        # print("Circle coordinates: x: %d, y: %d"%(point.display_coordinates.x - self.CIRCLE_SIZE // 2,
+        #                                           point.display_coordinates.y - self.CIRCLE_SIZE // 2))
         self.circ_area.set_pos(point.display_coordinates.x - CIRCLE_SIZE // 2,
                                point.display_coordinates.y - CIRCLE_SIZE // 2)
 
     def calibrate_clicked(self):
         point = self.points[self.cur_point]
         indev = lv.indev_get_act()
-        lv.indev_get_point(indev, self.med[self.cur_touch])
-
+        indev.get_point(self.med[self.cur_touch])
+        # print("calibrate_clicked: x: %d, y: %d"%(self.med[self.cur_touch].x,self.med[self.cur_touch].y))        
         self.cur_touch += 1
 
         if self.cur_touch == self.touch_count:
@@ -139,7 +138,8 @@ class Tpcal():
     def check(self):
         point = lv.point_t()
         indev = lv.indev_get_act()
-        lv.indev_get_point(indev, point)
+        indev.get_point(point)
+        # print("click position: x: %d, y: %d"%(point.x,point.y))
         self.circ_area.set_pos(point.x - CIRCLE_SIZE // 2,
                                point.y - CIRCLE_SIZE // 2)
 
@@ -170,5 +170,5 @@ tpcal = Tpcal([
         Tpcal_point(-40, -40, "lower right-hand corner"),
     ], calibrate)
 
-# while True:
-#    pass
+while True:
+    pass
