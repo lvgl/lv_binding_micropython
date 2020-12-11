@@ -2,7 +2,7 @@
 import lvgl as lv
 lv.init()
 
-# lv.log_register_print_cb(lambda level,path,line,msg: print('LOG: %s(%d): %s' % (path, line, msg)))
+lv.log_register_print_cb(lambda level,filename,line,func,msg: print('LOG: %s file: %s in %s, line %d: %s' % (level, filename, func, line, msg)))
 
 # Initialize ILI9341 display
 
