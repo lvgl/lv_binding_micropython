@@ -2,6 +2,8 @@
 import lvgl as lv
 lv.init()
 
+# lv.log_register_print_cb(lambda level,path,line,msg: print('LOG: %s(%d): %s' % (path, line, msg)))
+
 # Initialize ILI9341 display
 
 import lvesp32
@@ -9,25 +11,28 @@ import espidf as esp
 from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
 
 # select the orientation
-# orientation = LANDSCAPE
-orientation = PORTRAIT
+orientation = LANDSCAPE
+# orientation = PORTRAIT
 w=320
 h=240
 if orientation == PORTRAIT:
     w,h = h,w
+    transp = True
+else:
+    transp = False
     
 disp = ili9341(miso=19,mosi=23,clk=18, cs=26, dc=5, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
                spihost=esp.VSPI_HOST, mhz=40, factor=4, hybrid=True, width=w, height=h,
                colormode=COLOR_MODE_BGR, rot=orientation, invert=False, double_buffer=True, half_duplex=True)
 
+
 HRES = disp.width
 VRES = disp.height
+# HRES =  lv.scr_act().get_disp().driver.hor_res
+# VRES =  lv.scr_act().get_disp().driver.ver_res
 # Register xpt touch driver
 from xpt2046 import xpt2046
-if orientation == LANDSCAPE:
-    touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=False)
-else:
-    touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=True)
+touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=transp)
     
 # Point class, with both display and touch coordiantes
 
@@ -87,7 +92,8 @@ class Tpcal():
 
         style_circ = lv.style_t()
         style_circ.init()
-
+        style_circ.set_radius(lv.STATE.DEFAULT,LV_RADIUS_CIRCLE)
+                              
         self.circ_area = lv.obj(lv.scr_act(), None)
         self.circ_area.set_size(CIRCLE_SIZE, CIRCLE_SIZE)
         self.circ_area.add_style(lv.STATE.DEFAULT,style_circ)
@@ -168,12 +174,12 @@ def calibrate(points):
     print("Calibration result: x0=%d, y0=%d, x1=%d, y1=%d" % (round(x0), round(y0), round(x1), round(y1)))
     touch.calibrate(round(x0), round(y0), round(x1), round(y1))
     
-# Run calibrationh
+# Run calibration
 
 tpcal = Tpcal([
         Tpcal_point(20,  20, "upper left-hand corner"),
         Tpcal_point(-40, -40, "lower right-hand corner"),
     ], calibrate)
 
-while True:
-    pass
+# while True:
+#     pass
