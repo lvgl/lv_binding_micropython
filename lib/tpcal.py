@@ -1,8 +1,8 @@
 
 import lvgl as lv
 lv.init()
-
-lv.log_register_print_cb(lambda level,filename,line,func,msg: print('LOG: %s file: %s in %s, line %d: %s' % (level, filename, func, line, msg)))
+log_level=["Trace", "Info", "Warning", "Error", "User"]
+lv.log_register_print_cb(lambda level,filename,line,func,msg: print('LOG: %s, file: %s in %s, line %d: %s' % (log_level[level], filename, func, line, msg)))
 
 # Initialize ILI9341 display
 
