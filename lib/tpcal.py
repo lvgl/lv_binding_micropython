@@ -9,31 +9,30 @@ lv.log_register_print_cb(lambda level,filename,line,func,msg: print('LOG: %s, fi
 import lvesp32
 import espidf as esp
 from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
-
-# select the orientation
-orientation = LANDSCAPE
-# orientation = PORTRAIT
-w=320
-h=240
-if orientation == PORTRAIT:
-    w,h = h,w
-    transp = True
-else:
-    transp = False
     
-disp = ili9341(miso=19,mosi=23,clk=18, cs=26, dc=5, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
-               spihost=esp.VSPI_HOST, mhz=40, factor=4, hybrid=True, width=w, height=h,
-               colormode=COLOR_MODE_BGR, rot=orientation, invert=False, double_buffer=True, half_duplex=True)
+disp = ili9341()
 
+# The call below is for a Lolin TFT-2.4 board
+# disp = ili9341(miso=19,mosi=23,clk=18, cs=26, dc=5, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
+#               spihost=esp.VSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
+#               colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True)
 
-HRES = disp.width
-VRES = disp.height
-# HRES =  lv.scr_act().get_disp().driver.hor_res
-# VRES =  lv.scr_act().get_disp().driver.ver_res
+# In order to calibrate in landscape mode please use:
+# disp = ili9341(rot=LANDSCAPE,width=320,height=240))
+
+HRES =  lv.scr_act().get_disp().driver.hor_res
+VRES =  lv.scr_act().get_disp().driver.ver_res
+
 # Register xpt touch driver
 from xpt2046 import xpt2046
-touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=transp)
-    
+touch = xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
+
+# The call below is for a Lolin TFT-2.4 board
+# touch = xpt2046(spihost=esp.VSPI_HOST,cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES, transpose=True)
+
+# In order to calibrate in landscape mode please use:
+# touch = xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES,transpose=False)
+
 # Point class, with both display and touch coordiantes
 
 class Tpcal_point():
