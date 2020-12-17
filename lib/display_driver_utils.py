@@ -71,7 +71,7 @@ class driver:
             
             # Register xpt2046 touch driver
             self.disp(rot=LANDSCAPE)
-            self.touch = xpt2046(transpose = False)
+            self.touch = xpt2046(cal_x0=3799, cal_x1 = 353, cal_y0=220, cal_y1 = 3719,transpose = False)
             self.type="ili9341"
         # self.disp = ili9341()
         
