@@ -1141,7 +1141,15 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
     }
 }
 
-// Dict to hold user data for global callbacks (callbacks without context)
+// Function pointers wrapper
+
+STATIC mp_obj_t mp_lv_funcptr(const mp_lv_obj_fun_builtin_var_t *mp_fun, void *lv_fun)
+{
+    mp_lv_obj_fun_builtin_var_t *funcptr = m_new_obj(mp_lv_obj_fun_builtin_var_t);
+    *funcptr = *mp_fun;
+    funcptr->lv_fun = lv_fun;
+    return MP_OBJ_FROM_PTR(funcptr);
+}
 
 """)
 
@@ -1313,6 +1321,9 @@ def try_generate_struct(struct_name, struct):
 
         if (type_name not in mp_to_lv or not mp_to_lv[type_name]) or (type_name not in lv_to_mp or not lv_to_mp[type_name]):
             # eprint("[%s] %s or %s : %s" % (isinstance(decl.type,c_ast.PtrDecl), type_name, get_type(decl.type), decl.type))
+            if type_name in generated_structs:
+                print("/* Already started generating %s! skipping field '%s' */" % (type_name, decl.name))
+                continue
             raise MissingConversionException('Missing conversion to %s when generating struct %s.%s' % (type_name, struct_name, get_name(decl)))             
 
         mp_to_lv_convertor = mp_to_lv[type_name]
@@ -1562,6 +1573,7 @@ def try_generate_type(type_ast):
         return mp_to_lv[type]
     if isinstance(type_ast, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         type = get_name(type_ast.type.type)
+        ptr_type = get_type(type_ast, remove_quals=True)
         print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
         if (type in structs):
             try_generate_struct(type, structs[type]) if type in structs else None
@@ -1570,6 +1582,12 @@ def try_generate_type(type_ast):
         if isinstance(type_ast.type, c_ast.FuncDecl):
             if isinstance(type_ast.type.type.type, c_ast.TypeDecl): type = type_ast.type.type.type.declname
             func_ptr_name = "funcptr_%s" % type
+
+            i = 1
+            while func_ptr_name in generated_funcs: # Make sure func_ptr_name is unique
+                func_ptr_name = "funcptr_%s_%d" % (type,i)
+                i += 1
+
             func = c_ast.Decl(
                     name=func_ptr_name,
                     quals=[],
@@ -1581,9 +1599,11 @@ def try_generate_type(type_ast):
             try:
                 print("#define %s NULL" % func_ptr_name)
                 gen_mp_func(func, None)
+                print("STATIC inline mp_obj_t mp_lv_{f}(void *fun){{ return mp_lv_funcptr(&mp_{f}_obj, fun); }}".format(f=func_ptr_name))
+                lv_to_mp[ptr_type] = "mp_lv_%s" % func_ptr_name
+                lv_mp_type[ptr_type] = 'function pointer'
             except MissingConversionException as exp:
-                print ('/* Function NOT generated from function pointer %s:\n    %s\n*/' % (func_ptr_name, repr(exp)))
-        ptr_type = get_type(type_ast, remove_quals=True)
+                gen_func_error(func, exp)
         # print('/* --> PTR %s */' % ptr_type)
         if not ptr_type in mp_to_lv: mp_to_lv[ptr_type] = mp_to_lv['void *']
         if not ptr_type in lv_to_mp: lv_to_mp[ptr_type] = lv_to_mp['void *']
