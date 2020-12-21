@@ -181,6 +181,7 @@ def remove_arg_names(ast):
         for param in ast.params: remove_arg_names(param)
 
 # Create a function prototype AST from a function AST
+@memoize
 def function_prototype(func):
     bare_func = copy.deepcopy(func)
     remove_declname(bare_func)
@@ -287,9 +288,11 @@ def is_global_callback(arg_type):
 def is_struct(type):
     return isinstance(type, c_ast.Struct) or isinstance(type, c_ast.Union)
 
-obj_metadata = {}
-func_metadata = {}
-callback_metadata = {}
+obj_metadata = collections.OrderedDict()
+func_metadata = collections.OrderedDict()
+callback_metadata = collections.OrderedDict()
+
+func_prototypes = {}
 
 parser = c_parser.CParser()
 gen = c_generator.CGenerator()
@@ -1289,10 +1292,10 @@ def try_generate_struct(struct_name, struct):
     if struct_name in generated_structs: return None
     sanitized_struct_name = sanitize(struct_name)
     generated_structs[struct_name] = False # Starting generating a struct
-    print("/* Starting generating %s */" % struct_name)
+    # print("/* Starting generating %s */" % struct_name)
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
-    print('/* --> try_generate_struct %s: %s\n%s */' % (struct_name, gen.visit(struct), struct))
+    # print('/* --> try_generate_struct %s: %s\n%s */' % (struct_name, gen.visit(struct), struct))
     if not struct.decls:
         if struct_name == struct.name:
             return None
@@ -1459,7 +1462,7 @@ STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type()
     lv_mp_type[struct_name] = simplify_identifier(sanitized_struct_name)
     lv_mp_type['%s *' % struct_name] = simplify_identifier(sanitized_struct_name)
     lv_mp_type['const %s *' % struct_name] = simplify_identifier(sanitized_struct_name)
-    print('/* --> struct "%s" generated! */' % (struct_name))
+    # print('/* --> struct "%s" generated! */' % (struct_name))
     generated_structs[struct_name] = True # Completed generating a struct
     return struct_name
 
@@ -1574,7 +1577,7 @@ def try_generate_type(type_ast):
     if isinstance(type_ast, (c_ast.PtrDecl, c_ast.ArrayDecl)): 
         type = get_name(type_ast.type.type)
         ptr_type = get_type(type_ast, remove_quals=True)
-        print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
+        # print('/* --> try_generate_type IS PtrDecl!! %s: %s */' % (type, type_ast))
         if (type in structs):
             try_generate_struct(type, structs[type]) if type in structs else None
         if isinstance(type_ast.type, c_ast.TypeDecl) and isinstance(type_ast.type.type, c_ast.Struct) and (type_ast.type.type.name in structs):
@@ -1597,9 +1600,9 @@ def try_generate_type(type_ast):
                     init=None,
                     bitsize=None)
             try:
-                print("#define %s NULL" % func_ptr_name)
+                print("#define %s NULL\n" % func_ptr_name)
                 gen_mp_func(func, None)
-                print("STATIC inline mp_obj_t mp_lv_{f}(void *fun){{ return mp_lv_funcptr(&mp_{f}_obj, fun); }}".format(f=func_ptr_name))
+                print("STATIC inline mp_obj_t mp_lv_{f}(void *fun){{ return mp_lv_funcptr(&mp_{f}_obj, fun); }}\n".format(f=func_ptr_name))
                 lv_to_mp[ptr_type] = "mp_lv_%s" % func_ptr_name
                 lv_mp_type[ptr_type] = 'function pointer'
             except MissingConversionException as exp:
@@ -1653,7 +1656,7 @@ def create_helper_struct(struct_str):
     print(struct_str)
     struct_str_ast = parser.parse(struct_str).ext[0].type
     struct_name = get_name(struct_str_ast)
-    print('/* --> %s: %s */' % (struct_name, struct_str_ast.type))
+    # print('/* --> %s: %s */' % (struct_name, struct_str_ast.type))
     structs[struct_name] = struct_str_ast.type
     try:
         try_generate_struct(struct_name, struct_str_ast.type)
@@ -1833,8 +1836,18 @@ def build_mp_func_arg(arg, index, func, obj_name):
             convertor = mp_to_lv[arg_type],
             i = index) 
 
+def emit_func_obj(func_obj_name, func_name, param_count, func_ptr, is_static):
+    print("""
+STATIC {builtin_macro}(mp_{func_obj_name}_obj, {param_count}, mp_{func_name}, {func_ptr});
+    """.format(
+            func_obj_name = func_obj_name,
+            func_name = func_name,
+            func_ptr = func_ptr,
+            param_count = param_count,
+            builtin_macro='MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR' if is_static else 'MP_DEFINE_CONST_LV_FUN_OBJ_VAR'))
+
 def gen_mp_func(func, obj_name):
-    print('/* gen_mp_func: %s : %s */' % (obj_name, func))
+    # print('/* gen_mp_func: %s : %s */' % (obj_name, func))
     if func.name in generated_funcs:
         print("""
 /*
@@ -1845,8 +1858,29 @@ def gen_mp_func(func, obj_name):
     # print("/* gen_mp_func %s */" % func.name)
     generated_funcs[func.name] = False # starting to generate the function
     func_metadata[func.name] = {'type': 'function', 'args':[]}
+
     args = func.type.args.params if func.type.args else []
     enumerated_args = enumerate(args)
+
+    # Handle the case of a single function argument which is "void"
+    if len(args)==1 and get_type(args[0].type, remove_quals = True) == "void":
+        param_count = 0
+        args = []
+    else:
+        param_count = len(args)
+
+    # If func prototype matches an already generated func, reuse it and only emit func obj that points to it.
+    prototype_str = gen.visit(function_prototype(func))
+    if prototype_str in func_prototypes:
+        original_func = func_prototypes[prototype_str]
+        if generated_funcs[original_func.name] == True:
+            print("/* Reusing %s for %s */" % (original_func.name, func.name))
+            emit_func_obj(func.name, original_func.name, param_count, func.name, is_static_member(func, base_obj_type))
+            func_metadata[func.name]['return_type'] = func_metadata[original_func.name]['return_type']
+            func_metadata[func.name]['args'] = func_metadata[original_func.name]['args']
+            generated_funcs[func.name] = True # completed generating the function
+            return
+    func_prototypes[prototype_str] = func
 
     # user_data argument must be handled first, if it exists
     try:
@@ -1857,12 +1891,6 @@ def gen_mp_func(func, obj_name):
     except ValueError:
         pass
 
-    # Handle the case of a single function argument which is "void"
-    if len(args)==1 and get_type(args[0].type, remove_quals = True) == "void":
-        param_count = 0
-        args = []
-    else:
-        param_count = len(args)
     return_type = get_type(func.type.type, remove_quals = False)
     if isinstance(func.type.type, c_ast.PtrDecl) and lv_func_returns_array.match(func.name):
         try_generate_array_type(func.type.type)
@@ -1879,7 +1907,7 @@ def gen_mp_func(func, obj_name):
         build_result = "%s _res = " % return_type
         cast = '(void*)' if isinstance(func.type.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
         build_return_value = "{type}({cast}_res)".format(type = lv_to_mp[return_type], cast = cast)
-        func_metadata[func.name]['return_value'] = lv_mp_type[return_type]
+        func_metadata[func.name]['return_type'] = lv_mp_type[return_type]
     print("""
 /*
  * {module_name} extension definition for:
@@ -1893,25 +1921,22 @@ STATIC mp_obj_t mp_{func}(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_fu
     return {build_return_value};
 }}
 
-STATIC {builtin_macro}(mp_{func}_obj, {count}, mp_{func}, {lv_func});
-
  """.format(
         module_name = module_name,
         func=func.name, 
-        lv_func=func.name,
-        func_ptr=gen.visit(function_prototype(func)),
+        func_ptr=prototype_str,
         print_func=gen.visit(func),
-        count=param_count, 
         build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerated_args 
             if isinstance(arg, c_ast.EllipsisParam) or
                (not isinstance(arg.type, c_ast.TypeDecl)) or
-               'void' not in arg.type.type.names]),# if hasattr(arg, 'name') and arg.name]), 
+               (not isinstance(arg.type.type, c_ast.IdentifierType)) or
+               'void' not in arg.type.type.names]), # Handle the case of 'void' param which should be ignored
         send_args=", ".join([(arg.name if (hasattr(arg, 'name') and arg.name) else ("arg%d" % i)) for i,arg in enumerate(args)]),
         build_result=build_result,
-        build_return_value=build_return_value,
-        builtin_macro='MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR' if is_static_member(func, base_obj_type) else 'MP_DEFINE_CONST_LV_FUN_OBJ_VAR'))
+        build_return_value=build_return_value))
 
-    generated_funcs[func.name] = True # complated generating the function
+    emit_func_obj(func.name, func.name, param_count, func.name, is_static_member(func, base_obj_type))
+    generated_funcs[func.name] = True # completed generating the function
     # print('/* is_struct_function() = %s, is_static_member() = %s, get_first_arg_type()=%s, obj_name = %s */' % (
     #    is_struct_function(func), is_static_member(func, base_obj_type), get_first_arg_type(func), base_obj_type))
 
@@ -1966,7 +1991,7 @@ def gen_obj_methods(obj_name):
 def gen_obj(obj_name):
     is_obj = has_ctor(obj_name)
     should_add_base_methods = is_obj and obj_name != 'obj'
-    obj_metadata[obj_name] = {'members' : {}}
+    obj_metadata[obj_name] = {'members' : collections.OrderedDict()}
     for method in get_methods(obj_name):
         try:
             gen_mp_func(method, obj_name)
@@ -2092,7 +2117,7 @@ def generate_struct_functions(struct_list):
         if not generated_structs[struct_name]: continue
         sanitized_struct_name = sanitize(struct_name)
         struct_funcs = get_struct_functions(struct_name)
-        print('/* Struct %s contains: %s */' % (struct_name, [f.name for f in struct_funcs]))
+        # print('/* Struct %s contains: %s */' % (struct_name, [f.name for f in struct_funcs]))
         for struct_func in struct_funcs[:]: # clone list because we are changing it in the loop.
             try:
                 if struct_func.name not in generated_funcs:
@@ -2278,7 +2303,7 @@ const mp_obj_module_t mp_module_{module_name} = {{
 # Save Metadata File, if specified. 
 
 if args.metadata:
-    metadata = {}
+    metadata = collections.OrderedDict()
     metadata['objects'] = {obj_name: obj_metadata[obj_name] for obj_name in obj_names}
     metadata['functions'] = {simplify_identifier(f.name): func_metadata[f.name] for f in module_funcs}
     metadata['enums'] = {get_enum_name(enum_name): obj_metadata[enum_name] for enum_name in enums.keys() if enum_name not in enum_referenced}
