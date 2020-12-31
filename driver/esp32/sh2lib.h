@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 // This is a modified sh2lib, for better integration with LVGL Micropython bindings.
+// To prevent including the entire nghttp2 header, only selected enums where copied here.
 
 #ifndef __ESP_EXAMPLE_SH2_LIB_H_
 #define __ESP_EXAMPLE_SH2_LIB_H_
@@ -33,6 +34,273 @@ typedef struct esp_tls esp_tls;
  * - A simple function for per-stream header callback
  */
 
+
+/**
+ * @enum
+ *
+ * Error codes used in this library.  The code range is [-999, -500],
+ * inclusive. The following values are defined:
+ */
+typedef enum {
+  /**
+   * Invalid argument passed.
+   */
+  SH2LIB_ERR_INVALID_ARGUMENT = -501,
+  /**
+   * Out of buffer space.
+   */
+  SH2LIB_ERR_BUFFER_ERROR = -502,
+  /**
+   * The specified protocol version is not supported.
+   */
+  SH2LIB_ERR_UNSUPPORTED_VERSION = -503,
+  /**
+   * Used as a return value from :type:`nghttp2_send_callback`,
+   * :type:`nghttp2_recv_callback` and
+   * :type:`nghttp2_send_data_callback` to indicate that the operation
+   * would block.
+   */
+  SH2LIB_ERR_WOULDBLOCK = -504,
+  /**
+   * General protocol error
+   */
+  SH2LIB_ERR_PROTO = -505,
+  /**
+   * The frame is invalid.
+   */
+  SH2LIB_ERR_INVALID_FRAME = -506,
+  /**
+   * The peer performed a shutdown on the connection.
+   */
+  SH2LIB_ERR_EOF = -507,
+  /**
+   * Used as a return value from
+   * :func:`nghttp2_data_source_read_callback` to indicate that data
+   * transfer is postponed.  See
+   * :func:`nghttp2_data_source_read_callback` for details.
+   */
+  SH2LIB_ERR_DEFERRED = -508,
+  /**
+   * Stream ID has reached the maximum value.  Therefore no stream ID
+   * is available.
+   */
+  SH2LIB_ERR_STREAM_ID_NOT_AVAILABLE = -509,
+  /**
+   * The stream is already closed; or the stream ID is invalid.
+   */
+  SH2LIB_ERR_STREAM_CLOSED = -510,
+  /**
+   * RST_STREAM has been added to the outbound queue.  The stream is
+   * in closing state.
+   */
+  SH2LIB_ERR_STREAM_CLOSING = -511,
+  /**
+   * The transmission is not allowed for this stream (e.g., a frame
+   * with END_STREAM flag set has already sent).
+   */
+  SH2LIB_ERR_STREAM_SHUT_WR = -512,
+  /**
+   * The stream ID is invalid.
+   */
+  SH2LIB_ERR_INVALID_STREAM_ID = -513,
+  /**
+   * The state of the stream is not valid (e.g., DATA cannot be sent
+   * to the stream if response HEADERS has not been sent).
+   */
+  SH2LIB_ERR_INVALID_STREAM_STATE = -514,
+  /**
+   * Another DATA frame has already been deferred.
+   */
+  SH2LIB_ERR_DEFERRED_DATA_EXIST = -515,
+  /**
+   * Starting new stream is not allowed (e.g., GOAWAY has been sent
+   * and/or received).
+   */
+  SH2LIB_ERR_START_STREAM_NOT_ALLOWED = -516,
+  /**
+   * GOAWAY has already been sent.
+   */
+  SH2LIB_ERR_GOAWAY_ALREADY_SENT = -517,
+  /**
+   * The received frame contains the invalid header block (e.g., There
+   * are duplicate header names; or the header names are not encoded
+   * in US-ASCII character set and not lower cased; or the header name
+   * is zero-length string; or the header value contains multiple
+   * in-sequence NUL bytes).
+   */
+  SH2LIB_ERR_INVALID_HEADER_BLOCK = -518,
+  /**
+   * Indicates that the context is not suitable to perform the
+   * requested operation.
+   */
+  SH2LIB_ERR_INVALID_STATE = -519,
+  /**
+   * The user callback function failed due to the temporal error.
+   */
+  SH2LIB_ERR_TEMPORAL_CALLBACK_FAILURE = -521,
+  /**
+   * The length of the frame is invalid, either too large or too small.
+   */
+  SH2LIB_ERR_FRAME_SIZE_ERROR = -522,
+  /**
+   * Header block inflate/deflate error.
+   */
+  SH2LIB_ERR_HEADER_COMP = -523,
+  /**
+   * Flow control error
+   */
+  SH2LIB_ERR_FLOW_CONTROL = -524,
+  /**
+   * Insufficient buffer size given to function.
+   */
+  SH2LIB_ERR_INSUFF_BUFSIZE = -525,
+  /**
+   * Callback was paused by the application
+   */
+  SH2LIB_ERR_PAUSE = -526,
+  /**
+   * There are too many in-flight SETTING frame and no more
+   * transmission of SETTINGS is allowed.
+   */
+  SH2LIB_ERR_TOO_MANY_INFLIGHT_SETTINGS = -527,
+  /**
+   * The server push is disabled.
+   */
+  SH2LIB_ERR_PUSH_DISABLED = -528,
+  /**
+   * DATA or HEADERS frame for a given stream has been already
+   * submitted and has not been fully processed yet.  Application
+   * should wait for the transmission of the previously submitted
+   * frame before submitting another.
+   */
+  SH2LIB_ERR_DATA_EXIST = -529,
+  /**
+   * The current session is closing due to a connection error or
+   * `nghttp2_session_terminate_session()` is called.
+   */
+  SH2LIB_ERR_SESSION_CLOSING = -530,
+  /**
+   * Invalid HTTP header field was received and stream is going to be
+   * closed.
+   */
+  SH2LIB_ERR_HTTP_HEADER = -531,
+  /**
+   * Violation in HTTP messaging rule.
+   */
+  SH2LIB_ERR_HTTP_MESSAGING = -532,
+  /**
+   * Stream was refused.
+   */
+  SH2LIB_ERR_REFUSED_STREAM = -533,
+  /**
+   * Unexpected internal error, but recovered.
+   */
+  SH2LIB_ERR_INTERNAL = -534,
+  /**
+   * Indicates that a processing was canceled.
+   */
+  SH2LIB_ERR_CANCEL = -535,
+  /**
+   * The errors < :enum:`SH2LIB_ERR_FATAL` mean that the library is
+   * under unexpected condition and processing was terminated (e.g.,
+   * out of memory).  If application receives this error code, it must
+   * stop using that :type:`nghttp2_session` object and only allowed
+   * operation for that object is deallocate it using
+   * `nghttp2_session_del()`.
+   */
+  SH2LIB_ERR_FATAL = -900,
+  /**
+   * Out of memory.  This is a fatal error.
+   */
+  SH2LIB_ERR_NOMEM = -901,
+  /**
+   * The user callback function failed.  This is a fatal error.
+   */
+  SH2LIB_ERR_CALLBACK_FAILURE = -902,
+  /**
+   * Invalid client magic (see :macro:`SH2LIB_CLIENT_MAGIC`) was
+   * received and further processing is not possible.
+   */
+  SH2LIB_ERR_BAD_CLIENT_MAGIC = -903,
+  /**
+   * Possible flooding by peer was detected in this HTTP/2 session.
+   * Flooding is measured by how many PING and SETTINGS frames with
+   * ACK flag set are queued for transmission.  These frames are
+   * response for the peer initiated frames, and peer can cause memory
+   * exhaustion on server side to send these frames forever and does
+   * not read network.
+   */
+  SH2LIB_ERR_FLOODED = -904
+} sh2lib_error;
+
+/**
+ * @enum
+ *
+ * The flags for header field name/value pair.
+ */
+typedef enum {
+  /**
+   * No flag set.
+   */
+  SH2LIB_NV_FLAG_NONE = 0,
+  /**
+   * Indicates that this name/value pair must not be indexed ("Literal
+   * Header Field never Indexed" representation must be used in HPACK
+   * encoding).  Other implementation calls this bit as "sensitive".
+   */
+  SH2LIB_NV_FLAG_NO_INDEX = 0x01,
+  /**
+   * This flag is set solely by application.  If this flag is set, the
+   * library does not make a copy of header field name.  This could
+   * improve performance.
+   */
+  SH2LIB_NV_FLAG_NO_COPY_NAME = 0x02,
+  /**
+   * This flag is set solely by application.  If this flag is set, the
+   * library does not make a copy of header field value.  This could
+   * improve performance.
+   */
+  SH2LIB_NV_FLAG_NO_COPY_VALUE = 0x04
+} sh2lib_nv_flag;
+
+/**
+ * @enum
+ *
+ * The flags used to set in |data_flags| output parameter in
+ * :type:`nghttp2_data_source_read_callback`.
+ */
+typedef enum {
+  /**
+   * No flag set.
+   */
+  SH2LIB_DATA_FLAG_NONE = 0,
+  /**
+   * Indicates EOF was sensed.
+   */
+  SH2LIB_DATA_FLAG_EOF = 0x01,
+  /**
+   * Indicates that END_STREAM flag must not be set even if
+   * SH2LIB_DATA_FLAG_EOF is set.  Usually this flag is used to send
+   * trailer fields with `nghttp2_submit_request()` or
+   * `nghttp2_submit_response()`.
+   */
+  SH2LIB_DATA_FLAG_NO_END_STREAM = 0x02,
+  /**
+   * Indicates that application will send complete DATA frame in
+   * :type:`nghttp2_send_data_callback`.
+   */
+  SH2LIB_DATA_FLAG_NO_COPY = 0x04
+} sh2lib_data_flag;
+
+/**
+ * @brief Flag returned by data_recv_cb to indicate recieve status
+ */
+typedef enum {
+    SH2LIB_DATA_RECV_NONE,              
+    SH2LIB_DATA_RECV_RST_STREAM,        /*!< Flag indicating receive stream is reset */
+    SH2LIB_DATA_RECV_FRAME_COMPLETE     /*!< Flag indicating frame is completely received */
+} sh2lib_data_recv_flag;
+
 /**
  * @brief Handle for working with sh2lib APIs
  */
@@ -52,10 +320,7 @@ struct sh2lib_nv {
     uint8_t flags;
 };
 
-/** Flag indicating receive stream is reset */
-#define DATA_RECV_RST_STREAM      1
-/** Flag indicating frame is completely received  */
-#define DATA_RECV_FRAME_COMPLETE  2
+
 
 /**
  * @brief Function Prototype for data receive callback
@@ -81,12 +346,12 @@ typedef int (*sh2lib_frame_data_recv_cb_t)(struct sh2lib_handle *handle, const v
  *
  * This function gets called whenever nghttp2 wishes to send data, like for
  * PUT/POST requests to the server. The function keeps getting called until this
- * function sets the flag NGHTTP2_DATA_FLAG_EOF to indicate end of data.
+ * function sets the flag SH2LIB_DATA_FLAG_EOF to indicate end of data.
  *
  * @param[in] handle       Pointer to the sh2lib handle.
  * @param[out] data        Pointer to a buffer that should contain the data to send.
  * @param[in] len          The maximum length of data that can be sent out by this function.
- * @param[out] data_flags  Pointer to the data flags. The NGHTTP2_DATA_FLAG_EOF
+ * @param[out] data_flags  Pointer to the data flags. The SH2LIB_DATA_FLAG_EOF
  *                         should be set in the data flags to indicate end of new data.
  *
  * @return The function should return the number of valid bytes stored in the
@@ -208,7 +473,7 @@ int sh2lib_execute(struct sh2lib_handle *hd);
 
 #define SH2LIB_MAKE_NV(NAME, VALUE)                                    \
   {                                                                    \
-    NAME, VALUE, NGHTTP2_NV_FLAG_NONE                                  \
+    NAME, VALUE, SH2LIB_NV_FLAG_NONE                                  \
   }
 
 /**
@@ -271,5 +536,21 @@ int sh2lib_do_get_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv nva[]
 int sh2lib_do_putpost_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv nva[], size_t nvlen,
                               sh2lib_putpost_data_cb_t send_cb,
                               sh2lib_frame_data_recv_cb_t recv_cb);
+
+/**
+ * @function
+ *
+ * Puts back previously deferred DATA frame in the stream |stream_id|
+ * to the outbound queue.
+ *
+ * This function returns 0 if it succeeds, or one of the following
+ * negative error codes:
+ *
+ * :enum:`SH2LIB_ERR_INVALID_ARGUMENT`
+ *     The stream does not exist; or no deferred data exist.
+ * :enum:`SH2LIB_ERR_NOMEM`
+ *     Out of memory.
+ */
+int sh2lib_session_resume_data(struct sh2lib_handle *hd, int32_t stream_id);
 
 #endif /* ! __ESP_EXAMPLE_SH2_LIB_H_ */

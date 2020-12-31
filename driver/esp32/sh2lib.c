@@ -199,7 +199,7 @@ static int callback_on_frame_recv(nghttp2_session *session,
     sh2lib_frame_data_recv_cb_t data_recv_cb = nghttp2_session_get_stream_user_data(session, frame->hd.stream_id);
     if (data_recv_cb) {
         struct sh2lib_handle *h2 = user_data;
-        (*data_recv_cb)(h2, NULL, 0, DATA_RECV_FRAME_COMPLETE);
+        (*data_recv_cb)(h2, NULL, 0, SH2LIB_DATA_RECV_FRAME_COMPLETE);
     }
     return 0;
 }
@@ -212,7 +212,7 @@ static int callback_on_stream_close(nghttp2_session *session, int32_t stream_id,
     sh2lib_frame_data_recv_cb_t data_recv_cb = nghttp2_session_get_stream_user_data(session, stream_id);
     if (data_recv_cb) {
         struct sh2lib_handle *h2 = user_data;
-        (*data_recv_cb)(h2, NULL, 0, DATA_RECV_RST_STREAM);
+        (*data_recv_cb)(h2, NULL, 0, SH2LIB_DATA_RECV_RST_STREAM);
     }
     return 0;
 }
@@ -408,4 +408,9 @@ int sh2lib_do_put(struct sh2lib_handle *hd, const char *path,
                               SH2LIB_MAKE_NV(":path", path),
                             };
     return sh2lib_do_putpost_with_nv(hd, nva, sizeof(nva) / sizeof(nva[0]), send_cb, recv_cb);
+}
+
+int sh2lib_session_resume_data(struct sh2lib_handle *hd, int32_t stream_id)
+{
+    return nghttp2_session_resume_data(hd->http2_sess, stream_id);
 }
