@@ -1,6 +1,6 @@
 /**
  * @file lv_conf.h
- * Configuration file for v7.8.0-dev
+ * Configuration file for v7.9.1
  */
 
 /*
@@ -85,7 +85,7 @@ typedef int16_t lv_coord_t;
 /* Size of the memory used by `lv_mem_alloc` in bytes (>= 2kB)*/
 #  define LV_MEM_SIZE    (32U * 1024U)
 
-/* Complier prefix for a big array declaration */
+/* Compiler prefix for a big array declaration */
 #  define LV_MEM_ATTR
 
 /* Set an address for the memory pool instead of allocating it as an array.
@@ -131,7 +131,7 @@ typedef int16_t lv_coord_t;
 #define LV_INDEV_DEF_DRAG_THROW           10
 
 /* Long press time in milliseconds.
- * Time to send `LV_EVENT_LONG_PRESSSED`) */
+ * Time to send `LV_EVENT_LONG_PRESSED`) */
 #define LV_INDEV_DEF_LONG_PRESS_TIME      400
 
 /* Repeated trigger period in long press [ms]
@@ -244,7 +244,7 @@ typedef void * lv_fs_drv_user_data_t;
  * (I.e. no new image decoder is added)
  * With complex image decoders (e.g. PNG or JPG) caching can save the continuous open/decode of images.
  * However the opened images might consume additional RAM.
- * LV_IMG_CACHE_DEF_SIZE must be >= 1 */
+ * Set it to 0 to disable caching */
 #define LV_IMG_CACHE_DEF_SIZE       1
 
 /*Declare the type of the user data of image decoder (can be e.g. `void *`, `int`, `struct`)*/
@@ -517,7 +517,7 @@ typedef void * lv_font_user_data_t;
 
 /* Support bidirectional texts.
  * Allows mixing Left-to-Right and Right-to-Left texts.
- * The direction will be processed according to the Unicode Bidirectioanl Algorithm:
+ * The direction will be processed according to the Unicode Bidirectional Algorithm:
  * https://www.w3.org/International/articles/inline-bidi-markup/uba-basics*/
 #define LV_USE_BIDI     1
 #if LV_USE_BIDI
