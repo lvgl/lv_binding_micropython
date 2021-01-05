@@ -562,6 +562,7 @@ lv_mp_type = {
 }
 
 lv_to_mp_byref = {}
+lv_to_mp_funcptr = {}
 
 #
 # Emit Header
@@ -1165,8 +1166,15 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
 
 // Function pointers wrapper
 
-STATIC mp_obj_t mp_lv_funcptr(const mp_lv_obj_fun_builtin_var_t *mp_fun, void *lv_fun)
+STATIC mp_obj_t mp_lv_funcptr(const mp_lv_obj_fun_builtin_var_t *mp_fun, void *lv_fun, void *lv_callback, qstr func_name, void *user_data)
 {
+    if (lv_fun == NULL)
+        return mp_const_none;
+    if (lv_fun == lv_callback) {
+        mp_obj_t callbacks = get_callback_dict_from_user_data(user_data);
+        if (callbacks)
+            return mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(func_name));
+    }
     mp_lv_obj_fun_builtin_var_t *funcptr = m_new_obj(mp_lv_obj_fun_builtin_var_t);
     *funcptr = *mp_fun;
     funcptr->lv_fun = lv_fun;
@@ -1375,20 +1383,22 @@ def try_generate_struct(struct_name, struct):
                 callbacks_used_on_structs.append(callback + (struct_name,))
             # Emit callback forward decl.
             if user_data in [user_data_decl.name for user_data_decl in flatten_struct_decls]:
-                full_user_data = '&data->%s' % user_data
+                full_user_data = 'data->%s' % user_data
+                full_user_data_ptr = '&%s' % full_user_data
                 lv_callback = '%s_%s_callback' % (struct_name, func_name)
                 print('STATIC %s %s_%s_callback(%s);' % (get_type(arg_type.type, remove_quals = False), struct_name, func_name, gen.visit(arg_type.args)))
             else:
                 full_user_data = 'NULL'
+                full_user_data_ptr = full_user_data
                 lv_callback = 'NULL'
                 if not user_data:
                     gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_%s_callback'" % (struct_name, func_name))
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
             write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting to callback {type_name}'.
-                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data, type_name = type_name, cast = cast))
-            read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from callback {type_name}'.
-                format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
+            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_obj, {cast}data->{field}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
+                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
         else:
             user_data = None
             # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
@@ -1634,7 +1644,10 @@ def try_generate_type(type_ast):
             try:
                 print("#define %s NULL\n" % func_ptr_name)
                 gen_mp_func(func, None)
-                print("STATIC inline mp_obj_t mp_lv_{f}(void *fun){{ return mp_lv_funcptr(&mp_{f}_obj, fun); }}\n".format(f=func_ptr_name))
+                print("STATIC inline mp_obj_t mp_lv_{f}(void *func){{ return mp_lv_funcptr(&mp_{f}_obj, func, NULL, MP_QSTR_, NULL); }}\n".format(
+                    f=func_ptr_name))
+                lv_to_mp_funcptr[ptr_type] = func_ptr_name
+                # eprint("/* --> lv_to_mp_funcptr[%s] = %s */" % (ptr_type, func_ptr_name))
                 lv_to_mp[ptr_type] = "mp_lv_%s" % func_ptr_name
                 lv_mp_type[ptr_type] = 'function pointer'
             except MissingConversionException as exp:
@@ -1670,6 +1683,8 @@ def try_generate_type(type_ast):
            if new_type in lv_to_mp:
                lv_to_mp[type] = lv_to_mp[new_type]
                lv_mp_type[type] = lv_mp_type[new_type]
+               if new_type in lv_to_mp_funcptr:
+                   lv_to_mp_funcptr[type] = lv_to_mp_funcptr[new_type]
                if new_type in lv_to_mp_byref:
                    lv_to_mp_byref[type] = lv_to_mp_byref[new_type]
                if new_type_ptr in lv_to_mp:

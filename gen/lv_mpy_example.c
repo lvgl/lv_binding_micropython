@@ -3,7 +3,7 @@
  * Auto-Generated file, DO NOT EDIT!
  *
  * Command line:
- * gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h
+ * gen_mpy.py -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_bindings -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include ../../lv_bindings/lvgl/lvgl.h
  *
  * Preprocessing command:
  * gcc -E -std=c99 -DPYCPARSER  -I ../../berkeley-db-1.xx/PORT/include -I ../../lv_bindings -I . -I ../.. -I build -I ../../mp-readline -I ../../lv_bindings/pycparser/utils/fake_libc_include -include ../../lv_bindings/lvgl/lvgl.h ../../lv_bindings/lvgl/lvgl.h
@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "py/obj.h"
+#include "py/objint.h"
 #include "py/objstr.h"
 #include "py/runtime.h"
 #include "py/binary.h"
@@ -576,12 +577,32 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
 
 // Function pointers wrapper
 
-STATIC mp_obj_t mp_lv_funcptr(const mp_lv_obj_fun_builtin_var_t *mp_fun, void *lv_fun)
+STATIC mp_obj_t mp_lv_funcptr(const mp_lv_obj_fun_builtin_var_t *mp_fun, void *lv_fun, void *lv_callback, qstr func_name, void *user_data)
 {
+    if (lv_fun == NULL)
+        return mp_const_none;
+    if (lv_fun == lv_callback) {
+        mp_obj_t callbacks = get_callback_dict_from_user_data(user_data);
+        if (callbacks)
+            return mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(func_name));
+    }
     mp_lv_obj_fun_builtin_var_t *funcptr = m_new_obj(mp_lv_obj_fun_builtin_var_t);
     *funcptr = *mp_fun;
     funcptr->lv_fun = lv_fun;
     return MP_OBJ_FROM_PTR(funcptr);
+}
+
+// Missing implementation for 64bit integer conversion
+
+STATIC unsigned long long mp_obj_get_ull(mp_obj_t obj)
+{
+    if (mp_obj_is_small_int(obj))
+        return MP_OBJ_SMALL_INT_VALUE(obj);
+
+    unsigned long long val = 0;
+    bool big_endian = !(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+    mp_obj_int_to_bytes_impl(obj, big_endian, sizeof(val), (byte*)&val);
+    return val;
 }
 
 
@@ -5828,7 +5849,7 @@ STATIC mp_obj_t mp_funcptr_get_glyph_dsc(size_t mp_n_args, const mp_obj_t *mp_ar
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_get_glyph_dsc_obj, 4, mp_funcptr_get_glyph_dsc, funcptr_get_glyph_dsc);
     
-STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_dsc(void *fun){ return mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_dsc(void *func){ return mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_struct *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
 #define funcptr_get_glyph_bitmap NULL
@@ -5851,7 +5872,7 @@ STATIC mp_obj_t mp_funcptr_get_glyph_bitmap(size_t mp_n_args, const mp_obj_t *mp
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_get_glyph_bitmap_obj, 2, mp_funcptr_get_glyph_bitmap, funcptr_get_glyph_bitmap);
     
-STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_bitmap(void *fun){ return mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_bitmap(void *func){ return mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_struct *, uint32_t);
 
@@ -5886,8 +5907,8 @@ STATIC void mp_lv_font_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_get_glyph_dsc: dest[0] = mp_lv_funcptr_get_glyph_dsc((void*)data->get_glyph_dsc); break; // converting from callback bool (*)(lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
-            case MP_QSTR_get_glyph_bitmap: dest[0] = mp_lv_funcptr_get_glyph_bitmap((void*)data->get_glyph_bitmap); break; // converting from callback uint8_t *(*)(lv_font_t *, uint32_t);
+            case MP_QSTR_get_glyph_dsc: dest[0] = mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, (void*)data->get_glyph_dsc, lv_font_t_get_glyph_dsc_callback ,MP_QSTR_lv_font_t_get_glyph_dsc, data->user_data); break; // converting from callback bool (*)(lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
+            case MP_QSTR_get_glyph_bitmap: dest[0] = mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, (void*)data->get_glyph_bitmap, lv_font_t_get_glyph_bitmap_callback ,MP_QSTR_lv_font_t_get_glyph_bitmap, data->user_data); break; // converting from callback uint8_t *(*)(lv_font_t *, uint32_t);
             case MP_QSTR_line_height: dest[0] = mp_obj_new_int(data->line_height); break; // converting from lv_coord_t;
             case MP_QSTR_base_line: dest[0] = mp_obj_new_int(data->base_line); break; // converting from lv_coord_t;
             case MP_QSTR_subpx: dest[0] = mp_obj_new_int_from_uint(data->subpx); break; // converting from uint8_t;
@@ -6296,7 +6317,7 @@ STATIC mp_obj_t mp_funcptr_lv_anim_exec_xcb_t(size_t mp_n_args, const mp_obj_t *
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_anim_exec_xcb_t_obj, 2, mp_funcptr_lv_anim_exec_xcb_t, funcptr_lv_anim_exec_xcb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_exec_xcb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_anim_exec_xcb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_exec_xcb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_anim_exec_xcb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -6324,7 +6345,7 @@ STATIC mp_obj_t mp_funcptr_lv_anim_start_cb_t(size_t mp_n_args, const mp_obj_t *
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_anim_start_cb_t_obj, 1, mp_funcptr_lv_anim_start_cb_t, funcptr_lv_anim_start_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_start_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_anim_start_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_start_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_anim_start_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_anim_t_start_cb_callback(struct _lv_anim_t *);
 STATIC void lv_anim_t_ready_cb_callback(struct _lv_anim_t *);
@@ -6362,9 +6383,9 @@ STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_var: dest[0] = ptr_to_mp((void*)data->var); break; // converting from void *;
-            case MP_QSTR_exec_cb: dest[0] = mp_lv_funcptr_lv_anim_exec_xcb_t(data->exec_cb); break; // converting from callback lv_anim_exec_xcb_t;
-            case MP_QSTR_start_cb: dest[0] = mp_lv_funcptr_lv_anim_start_cb_t(data->start_cb); break; // converting from callback lv_anim_start_cb_t;
-            case MP_QSTR_ready_cb: dest[0] = mp_lv_funcptr_lv_anim_start_cb_t(data->ready_cb); break; // converting from callback lv_anim_ready_cb_t;
+            case MP_QSTR_exec_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_anim_exec_xcb_t_obj, data->exec_cb, NULL ,MP_QSTR_lv_anim_t_exec_cb, NULL); break; // converting from callback lv_anim_exec_xcb_t;
+            case MP_QSTR_start_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_anim_start_cb_t_obj, data->start_cb, lv_anim_t_start_cb_callback ,MP_QSTR_lv_anim_t_start_cb, data->user_data); break; // converting from callback lv_anim_start_cb_t;
+            case MP_QSTR_ready_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_anim_start_cb_t_obj, data->ready_cb, lv_anim_t_ready_cb_callback ,MP_QSTR_lv_anim_t_ready_cb, data->user_data); break; // converting from callback lv_anim_ready_cb_t;
             case MP_QSTR_start: dest[0] = mp_obj_new_int(data->start); break; // converting from int32_t;
             case MP_QSTR_current: dest[0] = mp_obj_new_int(data->current); break; // converting from int32_t;
             case MP_QSTR_end: dest[0] = mp_obj_new_int(data->end); break; // converting from int32_t;
@@ -6455,7 +6476,7 @@ STATIC mp_obj_t mp_funcptr_lv_anim_path_cb_t(size_t mp_n_args, const mp_obj_t *m
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_anim_path_cb_t_obj, 2, mp_funcptr_lv_anim_path_cb_t, funcptr_lv_anim_path_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_path_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_anim_path_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_path_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_anim_path_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_anim_value_t lv_anim_path_t_cb_callback(const struct _lv_anim_path_t *, const struct _lv_anim_t *);
 
@@ -6490,7 +6511,7 @@ STATIC void mp_lv_anim_path_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_cb: dest[0] = mp_lv_funcptr_lv_anim_path_cb_t(data->cb); break; // converting from callback lv_anim_path_cb_t;
+            case MP_QSTR_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_anim_path_cb_t_obj, data->cb, lv_anim_path_t_cb_callback ,MP_QSTR_lv_anim_path_t_cb, data->user_data); break; // converting from callback lv_anim_path_cb_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
@@ -7599,7 +7620,7 @@ STATIC mp_obj_t mp_funcptr_flush_cb(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_flush_cb_obj, 3, mp_funcptr_flush_cb, funcptr_flush_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_flush_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_flush_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_flush_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_flush_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_flush_cb_callback(struct _disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p);
 #define funcptr_rounder_cb NULL
@@ -7622,7 +7643,7 @@ STATIC mp_obj_t mp_funcptr_rounder_cb(size_t mp_n_args, const mp_obj_t *mp_args,
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_rounder_cb_obj, 2, mp_funcptr_rounder_cb, funcptr_rounder_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_rounder_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_rounder_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_rounder_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_rounder_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_rounder_cb_callback(struct _disp_drv_t *disp_drv, lv_area_t *area);
 #define funcptr_set_px_cb NULL
@@ -7650,7 +7671,7 @@ STATIC mp_obj_t mp_funcptr_set_px_cb(size_t mp_n_args, const mp_obj_t *mp_args, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_set_px_cb_obj, 7, mp_funcptr_set_px_cb, funcptr_set_px_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_set_px_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_set_px_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_set_px_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_set_px_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_set_px_cb_callback(struct _disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
 #define funcptr_monitor_cb NULL
@@ -7674,7 +7695,7 @@ STATIC mp_obj_t mp_funcptr_monitor_cb(size_t mp_n_args, const mp_obj_t *mp_args,
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_monitor_cb_obj, 3, mp_funcptr_monitor_cb, funcptr_monitor_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_monitor_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_monitor_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_monitor_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_monitor_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_monitor_cb_callback(struct _disp_drv_t *disp_drv, uint32_t time, uint32_t px);
 #define funcptr_wait_cb NULL
@@ -7696,7 +7717,7 @@ STATIC mp_obj_t mp_funcptr_wait_cb(size_t mp_n_args, const mp_obj_t *mp_args, vo
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_wait_cb_obj, 1, mp_funcptr_wait_cb, funcptr_wait_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_wait_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_wait_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_wait_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_wait_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_wait_cb_callback(struct _disp_drv_t *disp_drv);
 STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _disp_drv_t *disp_drv);
@@ -7724,7 +7745,7 @@ STATIC mp_obj_t mp_funcptr_gpu_blend_cb(size_t mp_n_args, const mp_obj_t *mp_arg
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_gpu_blend_cb_obj, 5, mp_funcptr_gpu_blend_cb, funcptr_gpu_blend_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_gpu_blend_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_gpu_blend_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_gpu_blend_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_gpu_blend_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_gpu_blend_cb_callback(struct _disp_drv_t *disp_drv, lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa);
 #define funcptr_gpu_fill_cb NULL
@@ -7750,7 +7771,7 @@ STATIC mp_obj_t mp_funcptr_gpu_fill_cb(size_t mp_n_args, const mp_obj_t *mp_args
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_gpu_fill_cb_obj, 5, mp_funcptr_gpu_fill_cb, funcptr_gpu_fill_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_gpu_fill_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_gpu_fill_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_gpu_fill_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_gpu_fill_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, const lv_area_t *fill_area, lv_color_t color);
 
@@ -7791,15 +7812,15 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_antialiasing: dest[0] = mp_obj_new_int_from_uint(data->antialiasing); break; // converting from uint32_t;
             case MP_QSTR_rotated: dest[0] = mp_obj_new_int_from_uint(data->rotated); break; // converting from uint32_t;
             case MP_QSTR_dpi: dest[0] = mp_obj_new_int_from_uint(data->dpi); break; // converting from uint32_t;
-            case MP_QSTR_flush_cb: dest[0] = mp_lv_funcptr_flush_cb((void*)data->flush_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area, lv_color_t *color_p);
-            case MP_QSTR_rounder_cb: dest[0] = mp_lv_funcptr_rounder_cb((void*)data->rounder_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area);
-            case MP_QSTR_set_px_cb: dest[0] = mp_lv_funcptr_set_px_cb((void*)data->set_px_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
-            case MP_QSTR_monitor_cb: dest[0] = mp_lv_funcptr_monitor_cb((void*)data->monitor_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
-            case MP_QSTR_wait_cb: dest[0] = mp_lv_funcptr_wait_cb((void*)data->wait_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
-            case MP_QSTR_clean_dcache_cb: dest[0] = mp_lv_funcptr_wait_cb((void*)data->clean_dcache_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
-            case MP_QSTR_gpu_wait_cb: dest[0] = mp_lv_funcptr_wait_cb((void*)data->gpu_wait_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
-            case MP_QSTR_gpu_blend_cb: dest[0] = mp_lv_funcptr_gpu_blend_cb((void*)data->gpu_blend_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest, lv_color_t *src, uint32_t length, lv_opa_t opa);
-            case MP_QSTR_gpu_fill_cb: dest[0] = mp_lv_funcptr_gpu_fill_cb((void*)data->gpu_fill_cb); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, lv_area_t *fill_area, lv_color_t color);
+            case MP_QSTR_flush_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_flush_cb_obj, (void*)data->flush_cb, lv_disp_drv_t_flush_cb_callback ,MP_QSTR_lv_disp_drv_t_flush_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area, lv_color_t *color_p);
+            case MP_QSTR_rounder_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_rounder_cb_obj, (void*)data->rounder_cb, lv_disp_drv_t_rounder_cb_callback ,MP_QSTR_lv_disp_drv_t_rounder_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area);
+            case MP_QSTR_set_px_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_set_px_cb_obj, (void*)data->set_px_cb, lv_disp_drv_t_set_px_cb_callback ,MP_QSTR_lv_disp_drv_t_set_px_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
+            case MP_QSTR_monitor_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_monitor_cb_obj, (void*)data->monitor_cb, lv_disp_drv_t_monitor_cb_callback ,MP_QSTR_lv_disp_drv_t_monitor_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
+            case MP_QSTR_wait_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_obj, (void*)data->wait_cb, lv_disp_drv_t_wait_cb_callback ,MP_QSTR_lv_disp_drv_t_wait_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
+            case MP_QSTR_clean_dcache_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_obj, (void*)data->clean_dcache_cb, lv_disp_drv_t_clean_dcache_cb_callback ,MP_QSTR_lv_disp_drv_t_clean_dcache_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
+            case MP_QSTR_gpu_wait_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_obj, (void*)data->gpu_wait_cb, lv_disp_drv_t_gpu_wait_cb_callback ,MP_QSTR_lv_disp_drv_t_gpu_wait_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
+            case MP_QSTR_gpu_blend_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_gpu_blend_cb_obj, (void*)data->gpu_blend_cb, lv_disp_drv_t_gpu_blend_cb_callback ,MP_QSTR_lv_disp_drv_t_gpu_blend_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest, lv_color_t *src, uint32_t length, lv_opa_t opa);
+            case MP_QSTR_gpu_fill_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_gpu_fill_cb_obj, (void*)data->gpu_fill_cb, lv_disp_drv_t_gpu_fill_cb_callback ,MP_QSTR_lv_disp_drv_t_gpu_fill_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, lv_area_t *fill_area, lv_color_t color);
             case MP_QSTR_color_chroma_key: dest[0] = mp_read_byref_lv_color32_t(data->color_chroma_key); break; // converting from lv_color_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_disp_drv_user_data_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
@@ -7878,7 +7899,7 @@ STATIC mp_obj_t mp_funcptr_lv_task_cb_t(size_t mp_n_args, const mp_obj_t *mp_arg
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_task_cb_t_obj, 1, mp_funcptr_lv_task_cb_t, funcptr_lv_task_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_task_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_task_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_task_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_task_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_task_t_task_cb_callback(struct _lv_task_t *);
 
@@ -7915,7 +7936,7 @@ STATIC void mp_lv_task_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_period: dest[0] = mp_obj_new_int_from_uint(data->period); break; // converting from uint32_t;
             case MP_QSTR_last_run: dest[0] = mp_obj_new_int_from_uint(data->last_run); break; // converting from uint32_t;
-            case MP_QSTR_task_cb: dest[0] = mp_lv_funcptr_lv_task_cb_t(data->task_cb); break; // converting from callback lv_task_cb_t;
+            case MP_QSTR_task_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_task_cb_t_obj, data->task_cb, lv_task_t_task_cb_callback ,MP_QSTR_lv_task_t_task_cb, data->user_data); break; // converting from callback lv_task_cb_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
             case MP_QSTR_repeat_count: dest[0] = mp_obj_new_int(data->repeat_count); break; // converting from int32_t;
             case MP_QSTR_prio: dest[0] = mp_obj_new_int_from_uint(data->prio); break; // converting from uint8_t;
@@ -8694,7 +8715,7 @@ STATIC mp_obj_t mp_funcptr_lv_signal_cb_t(size_t mp_n_args, const mp_obj_t *mp_a
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_funcptr_lv_signal_cb_t_obj, 3, mp_funcptr_lv_signal_cb_t, funcptr_lv_signal_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_signal_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_signal_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_signal_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_signal_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -8734,7 +8755,7 @@ STATIC mp_obj_t mp_funcptr_lv_design_cb_t(size_t mp_n_args, const mp_obj_t *mp_a
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_funcptr_lv_design_cb_t_obj, 3, mp_funcptr_lv_design_cb_t, funcptr_lv_design_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_design_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_design_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_design_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_design_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -8773,7 +8794,7 @@ STATIC mp_obj_t mp_funcptr_lv_event_cb_t(size_t mp_n_args, const mp_obj_t *mp_ar
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_funcptr_lv_event_cb_t_obj, 2, mp_funcptr_lv_event_cb_t, funcptr_lv_event_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_event_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_event_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_event_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_event_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -11159,7 +11180,7 @@ STATIC mp_obj_t mp_funcptr_lv_img_decoder_info_f_t(size_t mp_n_args, const mp_ob
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_img_decoder_info_f_t_obj, 3, mp_funcptr_lv_img_decoder_info_f_t, funcptr_lv_img_decoder_info_f_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_info_f_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_info_f_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_info_f_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_info_f_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_res_t lv_img_decoder_t_info_cb_callback(struct _lv_img_decoder *decoder, const void *src, lv_img_header_t *header);
 #define funcptr_lv_img_decoder_open_f_t NULL
@@ -11182,7 +11203,7 @@ STATIC mp_obj_t mp_funcptr_lv_img_decoder_open_f_t(size_t mp_n_args, const mp_ob
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_img_decoder_open_f_t_obj, 2, mp_funcptr_lv_img_decoder_open_f_t, funcptr_lv_img_decoder_open_f_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_open_f_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_open_f_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_open_f_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_open_f_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_res_t lv_img_decoder_t_open_cb_callback(struct _lv_img_decoder *decoder, struct _lv_img_decoder_dsc *dsc);
 #define funcptr_lv_img_decoder_read_line_f_t NULL
@@ -11209,7 +11230,7 @@ STATIC mp_obj_t mp_funcptr_lv_img_decoder_read_line_f_t(size_t mp_n_args, const 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_img_decoder_read_line_f_t_obj, 6, mp_funcptr_lv_img_decoder_read_line_f_t, funcptr_lv_img_decoder_read_line_f_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_read_line_f_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_read_line_f_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_read_line_f_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_read_line_f_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_res_t lv_img_decoder_t_read_line_cb_callback(struct _lv_img_decoder *decoder, struct _lv_img_decoder_dsc *dsc, lv_coord_t x, lv_coord_t y, lv_coord_t len, uint8_t *buf);
 #define funcptr_lv_img_decoder_close_f_t NULL
@@ -11232,7 +11253,7 @@ STATIC mp_obj_t mp_funcptr_lv_img_decoder_close_f_t(size_t mp_n_args, const mp_o
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_img_decoder_close_f_t_obj, 2, mp_funcptr_lv_img_decoder_close_f_t, funcptr_lv_img_decoder_close_f_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_close_f_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_close_f_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_img_decoder_close_f_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_img_decoder_close_f_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_img_decoder_t_close_cb_callback(struct _lv_img_decoder *decoder, struct _lv_img_decoder_dsc *dsc);
 
@@ -11267,10 +11288,10 @@ STATIC void mp_lv_img_decoder_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_info_cb: dest[0] = mp_lv_funcptr_lv_img_decoder_info_f_t(data->info_cb); break; // converting from callback lv_img_decoder_info_f_t;
-            case MP_QSTR_open_cb: dest[0] = mp_lv_funcptr_lv_img_decoder_open_f_t(data->open_cb); break; // converting from callback lv_img_decoder_open_f_t;
-            case MP_QSTR_read_line_cb: dest[0] = mp_lv_funcptr_lv_img_decoder_read_line_f_t(data->read_line_cb); break; // converting from callback lv_img_decoder_read_line_f_t;
-            case MP_QSTR_close_cb: dest[0] = mp_lv_funcptr_lv_img_decoder_close_f_t(data->close_cb); break; // converting from callback lv_img_decoder_close_f_t;
+            case MP_QSTR_info_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_img_decoder_info_f_t_obj, data->info_cb, lv_img_decoder_t_info_cb_callback ,MP_QSTR_lv_img_decoder_t_info_cb, data->user_data); break; // converting from callback lv_img_decoder_info_f_t;
+            case MP_QSTR_open_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_img_decoder_open_f_t_obj, data->open_cb, lv_img_decoder_t_open_cb_callback ,MP_QSTR_lv_img_decoder_t_open_cb, data->user_data); break; // converting from callback lv_img_decoder_open_f_t;
+            case MP_QSTR_read_line_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_img_decoder_read_line_f_t_obj, data->read_line_cb, lv_img_decoder_t_read_line_cb_callback ,MP_QSTR_lv_img_decoder_t_read_line_cb, data->user_data); break; // converting from callback lv_img_decoder_read_line_f_t;
+            case MP_QSTR_close_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_img_decoder_close_f_t_obj, data->close_cb, lv_img_decoder_t_close_cb_callback ,MP_QSTR_lv_img_decoder_t_close_cb, data->user_data); break; // converting from callback lv_img_decoder_close_f_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_img_decoder_user_data_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
@@ -18080,7 +18101,7 @@ STATIC mp_obj_t mp_funcptr_lv_log_print_g_cb_t(size_t mp_n_args, const mp_obj_t 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_log_print_g_cb_t_obj, 5, mp_funcptr_lv_log_print_g_cb_t, funcptr_lv_log_print_g_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_log_print_g_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_log_print_g_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_log_print_g_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_log_print_g_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -18189,7 +18210,7 @@ STATIC mp_obj_t mp_funcptr_lv_async_cb_t(size_t mp_n_args, const mp_obj_t *mp_ar
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_async_cb_t_obj, 1, mp_funcptr_lv_async_cb_t, funcptr_lv_async_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_async_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_async_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_async_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_async_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 #define funcptr_read_cb NULL
 
@@ -18293,7 +18314,7 @@ STATIC mp_obj_t mp_funcptr_read_cb(size_t mp_n_args, const mp_obj_t *mp_args, vo
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_read_cb_obj, 2, mp_funcptr_read_cb, funcptr_read_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_read_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_read_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_read_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_read_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC bool lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
 #define funcptr_feedback_cb NULL
@@ -18316,7 +18337,7 @@ STATIC mp_obj_t mp_funcptr_feedback_cb(size_t mp_n_args, const mp_obj_t *mp_args
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_feedback_cb_obj, 2, mp_funcptr_feedback_cb, funcptr_feedback_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_feedback_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_feedback_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_feedback_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_feedback_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t *, uint8_t);
 
@@ -18352,8 +18373,8 @@ STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_indev_type_t;
-            case MP_QSTR_read_cb: dest[0] = mp_lv_funcptr_read_cb((void*)data->read_cb); break; // converting from callback bool (*)(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
-            case MP_QSTR_feedback_cb: dest[0] = mp_lv_funcptr_feedback_cb((void*)data->feedback_cb); break; // converting from callback void (*)(lv_indev_drv_t *, uint8_t);
+            case MP_QSTR_read_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_read_cb_obj, (void*)data->read_cb, lv_indev_drv_t_read_cb_callback ,MP_QSTR_lv_indev_drv_t_read_cb, data->user_data); break; // converting from callback bool (*)(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
+            case MP_QSTR_feedback_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_feedback_cb_obj, (void*)data->feedback_cb, lv_indev_drv_t_feedback_cb_callback ,MP_QSTR_lv_indev_drv_t_feedback_cb, data->user_data); break; // converting from callback void (*)(lv_indev_drv_t *, uint8_t);
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_indev_drv_user_data_t;
             case MP_QSTR_disp: dest[0] = mp_read_ptr_lv_disp_t((void*)data->disp); break; // converting from lv_disp_t *;
             case MP_QSTR_read_task: dest[0] = mp_read_ptr_lv_task_t((void*)data->read_task); break; // converting from lv_task_t *;
@@ -18777,7 +18798,7 @@ STATIC mp_obj_t mp_funcptr_lv_group_focus_cb_t(size_t mp_n_args, const mp_obj_t 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_group_focus_cb_t_obj, 1, mp_funcptr_lv_group_focus_cb_t, funcptr_lv_group_focus_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_group_focus_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_group_focus_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_group_focus_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_group_focus_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_group_t_focus_cb_callback(struct _lv_group_t *);
 
@@ -18814,7 +18835,7 @@ STATIC void mp_lv_group_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_obj_ll: dest[0] = mp_read_byref_lv_ll_t(data->obj_ll); break; // converting from lv_ll_t;
             case MP_QSTR_obj_focus: dest[0] = ptr_to_mp((void*)data->obj_focus); break; // converting from lv_obj_t **;
-            case MP_QSTR_focus_cb: dest[0] = mp_lv_funcptr_lv_group_focus_cb_t(data->focus_cb); break; // converting from callback lv_group_focus_cb_t;
+            case MP_QSTR_focus_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_group_focus_cb_t_obj, data->focus_cb, lv_group_t_focus_cb_callback ,MP_QSTR_lv_group_t_focus_cb, data->user_data); break; // converting from callback lv_group_focus_cb_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_group_user_data_t;
             case MP_QSTR_frozen: dest[0] = mp_obj_new_int_from_uint(data->frozen); break; // converting from uint8_t;
             case MP_QSTR_editing: dest[0] = mp_obj_new_int_from_uint(data->editing); break; // converting from uint8_t;
@@ -18975,7 +18996,7 @@ STATIC mp_obj_t mp_funcptr_lv_draw_mask_xcb_t(size_t mp_n_args, const mp_obj_t *
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_draw_mask_xcb_t_obj, 5, mp_funcptr_lv_draw_mask_xcb_t, funcptr_lv_draw_mask_xcb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_draw_mask_xcb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_draw_mask_xcb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_draw_mask_xcb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_draw_mask_xcb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -19016,7 +19037,7 @@ STATIC void mp_lv_draw_mask_common_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_ob
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_cb: dest[0] = mp_lv_funcptr_lv_draw_mask_xcb_t(data->cb); break; // converting from callback lv_draw_mask_xcb_t;
+            case MP_QSTR_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_draw_mask_xcb_t_obj, data->cb, NULL ,MP_QSTR_lv_draw_mask_common_dsc_t_cb, NULL); break; // converting from callback lv_draw_mask_xcb_t;
             case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_draw_mask_type_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
@@ -19956,7 +19977,7 @@ STATIC mp_obj_t mp_funcptr_ready_cb(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_ready_cb_obj, 1, mp_funcptr_ready_cb, funcptr_ready_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_ready_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_ready_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_ready_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_ready_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC bool lv_fs_drv_t_ready_cb_callback(struct _lv_fs_drv_t *drv);
 #define funcptr_open_cb NULL
@@ -19981,7 +20002,7 @@ STATIC mp_obj_t mp_funcptr_open_cb(size_t mp_n_args, const mp_obj_t *mp_args, vo
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_open_cb_obj, 4, mp_funcptr_open_cb, funcptr_open_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_open_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_open_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_open_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_open_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_open_cb_callback(struct _lv_fs_drv_t *drv, void *file_p, const char *path, lv_fs_mode_t mode);
 #define funcptr_close_cb NULL
@@ -20004,7 +20025,7 @@ STATIC mp_obj_t mp_funcptr_close_cb(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_close_cb_obj, 2, mp_funcptr_close_cb, funcptr_close_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_close_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_close_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_close_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_close_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(struct _lv_fs_drv_t *drv, void *file_p);
 #define funcptr_remove_cb NULL
@@ -20027,7 +20048,7 @@ STATIC mp_obj_t mp_funcptr_remove_cb(size_t mp_n_args, const mp_obj_t *mp_args, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_remove_cb_obj, 2, mp_funcptr_remove_cb, funcptr_remove_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_remove_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_remove_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_remove_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_remove_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_remove_cb_callback(struct _lv_fs_drv_t *drv, const char *fn);
 #define funcptr_read_cb_1 NULL
@@ -20053,7 +20074,7 @@ STATIC mp_obj_t mp_funcptr_read_cb_1(size_t mp_n_args, const mp_obj_t *mp_args, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_read_cb_1_obj, 5, mp_funcptr_read_cb_1, funcptr_read_cb_1);
     
-STATIC inline mp_obj_t mp_lv_funcptr_read_cb_1(void *fun){ return mp_lv_funcptr(&mp_funcptr_read_cb_1_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_read_cb_1(void *func){ return mp_lv_funcptr(&mp_funcptr_read_cb_1_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(struct _lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br);
 #define funcptr_write_cb NULL
@@ -20079,7 +20100,7 @@ STATIC mp_obj_t mp_funcptr_write_cb(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_write_cb_obj, 5, mp_funcptr_write_cb, funcptr_write_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_write_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_write_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_write_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_write_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(struct _lv_fs_drv_t *drv, void *file_p, const void *buf, uint32_t btw, uint32_t *bw);
 #define funcptr_seek_cb NULL
@@ -20103,7 +20124,7 @@ STATIC mp_obj_t mp_funcptr_seek_cb(size_t mp_n_args, const mp_obj_t *mp_args, vo
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_seek_cb_obj, 3, mp_funcptr_seek_cb, funcptr_seek_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_seek_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_seek_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_seek_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_seek_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(struct _lv_fs_drv_t *drv, void *file_p, uint32_t pos);
 #define funcptr_tell_cb NULL
@@ -20127,7 +20148,7 @@ STATIC mp_obj_t mp_funcptr_tell_cb(size_t mp_n_args, const mp_obj_t *mp_args, vo
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_tell_cb_obj, 3, mp_funcptr_tell_cb, funcptr_tell_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_tell_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_tell_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_tell_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_tell_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(struct _lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p);
 STATIC lv_fs_res_t lv_fs_drv_t_trunc_cb_callback(struct _lv_fs_drv_t *drv, void *file_p);
@@ -20137,7 +20158,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_trunc_cb_callback(struct _lv_fs_drv_t *drv, void 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_size_cb_obj, 3, mp_funcptr_tell_cb, funcptr_size_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_size_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_size_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_size_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_size_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_size_cb_callback(struct _lv_fs_drv_t *drv, void *file_p, uint32_t *size_p);
 #define funcptr_rename_cb NULL
@@ -20161,7 +20182,7 @@ STATIC mp_obj_t mp_funcptr_rename_cb(size_t mp_n_args, const mp_obj_t *mp_args, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_rename_cb_obj, 3, mp_funcptr_rename_cb, funcptr_rename_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_rename_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_rename_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_rename_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_rename_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_rename_cb_callback(struct _lv_fs_drv_t *drv, const char *oldname, const char *newname);
 #define funcptr_free_space_cb NULL
@@ -20185,7 +20206,7 @@ STATIC mp_obj_t mp_funcptr_free_space_cb(size_t mp_n_args, const mp_obj_t *mp_ar
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_free_space_cb_obj, 3, mp_funcptr_free_space_cb, funcptr_free_space_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_free_space_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_free_space_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_free_space_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_free_space_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_free_space_cb_callback(struct _lv_fs_drv_t *drv, uint32_t *total_p, uint32_t *free_p);
 #define funcptr_dir_open_cb NULL
@@ -20209,7 +20230,7 @@ STATIC mp_obj_t mp_funcptr_dir_open_cb(size_t mp_n_args, const mp_obj_t *mp_args
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_dir_open_cb_obj, 3, mp_funcptr_dir_open_cb, funcptr_dir_open_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_dir_open_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_dir_open_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_dir_open_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_dir_open_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_dir_open_cb_callback(struct _lv_fs_drv_t *drv, void *rddir_p, const char *path);
 #define funcptr_dir_read_cb NULL
@@ -20233,7 +20254,7 @@ STATIC mp_obj_t mp_funcptr_dir_read_cb(size_t mp_n_args, const mp_obj_t *mp_args
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_dir_read_cb_obj, 3, mp_funcptr_dir_read_cb, funcptr_dir_read_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_dir_read_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_dir_read_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_dir_read_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_dir_read_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(struct _lv_fs_drv_t *drv, void *rddir_p, char *fn);
 #define funcptr_dir_close_cb NULL
@@ -20242,7 +20263,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(struct _lv_fs_drv_t *drv, vo
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_dir_close_cb_obj, 2, mp_funcptr_close_cb, funcptr_dir_close_cb);
     
-STATIC inline mp_obj_t mp_lv_funcptr_dir_close_cb(void *fun){ return mp_lv_funcptr(&mp_funcptr_dir_close_cb_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_dir_close_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_dir_close_cb_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs_drv_t *drv, void *rddir_p);
 
@@ -20280,21 +20301,21 @@ STATIC void mp_lv_fs_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_letter: dest[0] = mp_obj_new_int(data->letter); break; // converting from char;
             case MP_QSTR_file_size: dest[0] = mp_obj_new_int_from_uint(data->file_size); break; // converting from uint16_t;
             case MP_QSTR_rddir_size: dest[0] = mp_obj_new_int_from_uint(data->rddir_size); break; // converting from uint16_t;
-            case MP_QSTR_ready_cb: dest[0] = mp_lv_funcptr_ready_cb((void*)data->ready_cb); break; // converting from callback bool (*)(lv_fs_drv_t *drv);
-            case MP_QSTR_open_cb: dest[0] = mp_lv_funcptr_open_cb((void*)data->open_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, char *path, lv_fs_mode_t mode);
-            case MP_QSTR_close_cb: dest[0] = mp_lv_funcptr_close_cb((void*)data->close_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p);
-            case MP_QSTR_remove_cb: dest[0] = mp_lv_funcptr_remove_cb((void*)data->remove_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, char *fn);
-            case MP_QSTR_read_cb: dest[0] = mp_lv_funcptr_read_cb_1((void*)data->read_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br);
-            case MP_QSTR_write_cb: dest[0] = mp_lv_funcptr_write_cb((void*)data->write_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btw, uint32_t *bw);
-            case MP_QSTR_seek_cb: dest[0] = mp_lv_funcptr_seek_cb((void*)data->seek_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, uint32_t pos);
-            case MP_QSTR_tell_cb: dest[0] = mp_lv_funcptr_tell_cb((void*)data->tell_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p);
-            case MP_QSTR_trunc_cb: dest[0] = mp_lv_funcptr_close_cb((void*)data->trunc_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p);
-            case MP_QSTR_size_cb: dest[0] = mp_lv_funcptr_size_cb((void*)data->size_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, uint32_t *size_p);
-            case MP_QSTR_rename_cb: dest[0] = mp_lv_funcptr_rename_cb((void*)data->rename_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, char *oldname, char *newname);
-            case MP_QSTR_free_space_cb: dest[0] = mp_lv_funcptr_free_space_cb((void*)data->free_space_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, uint32_t *total_p, uint32_t *free_p);
-            case MP_QSTR_dir_open_cb: dest[0] = mp_lv_funcptr_dir_open_cb((void*)data->dir_open_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p, char *path);
-            case MP_QSTR_dir_read_cb: dest[0] = mp_lv_funcptr_dir_read_cb((void*)data->dir_read_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p, char *fn);
-            case MP_QSTR_dir_close_cb: dest[0] = mp_lv_funcptr_dir_close_cb((void*)data->dir_close_cb); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p);
+            case MP_QSTR_ready_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_ready_cb_obj, (void*)data->ready_cb, lv_fs_drv_t_ready_cb_callback ,MP_QSTR_lv_fs_drv_t_ready_cb, data->user_data); break; // converting from callback bool (*)(lv_fs_drv_t *drv);
+            case MP_QSTR_open_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_open_cb_obj, (void*)data->open_cb, lv_fs_drv_t_open_cb_callback ,MP_QSTR_lv_fs_drv_t_open_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, char *path, lv_fs_mode_t mode);
+            case MP_QSTR_close_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_close_cb_obj, (void*)data->close_cb, lv_fs_drv_t_close_cb_callback ,MP_QSTR_lv_fs_drv_t_close_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p);
+            case MP_QSTR_remove_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_remove_cb_obj, (void*)data->remove_cb, lv_fs_drv_t_remove_cb_callback ,MP_QSTR_lv_fs_drv_t_remove_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, char *fn);
+            case MP_QSTR_read_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_read_cb_1_obj, (void*)data->read_cb, lv_fs_drv_t_read_cb_callback ,MP_QSTR_lv_fs_drv_t_read_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br);
+            case MP_QSTR_write_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_write_cb_obj, (void*)data->write_cb, lv_fs_drv_t_write_cb_callback ,MP_QSTR_lv_fs_drv_t_write_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btw, uint32_t *bw);
+            case MP_QSTR_seek_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_seek_cb_obj, (void*)data->seek_cb, lv_fs_drv_t_seek_cb_callback ,MP_QSTR_lv_fs_drv_t_seek_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, uint32_t pos);
+            case MP_QSTR_tell_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_tell_cb_obj, (void*)data->tell_cb, lv_fs_drv_t_tell_cb_callback ,MP_QSTR_lv_fs_drv_t_tell_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p);
+            case MP_QSTR_trunc_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_close_cb_obj, (void*)data->trunc_cb, lv_fs_drv_t_trunc_cb_callback ,MP_QSTR_lv_fs_drv_t_trunc_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p);
+            case MP_QSTR_size_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_size_cb_obj, (void*)data->size_cb, lv_fs_drv_t_size_cb_callback ,MP_QSTR_lv_fs_drv_t_size_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *file_p, uint32_t *size_p);
+            case MP_QSTR_rename_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_rename_cb_obj, (void*)data->rename_cb, lv_fs_drv_t_rename_cb_callback ,MP_QSTR_lv_fs_drv_t_rename_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, char *oldname, char *newname);
+            case MP_QSTR_free_space_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_free_space_cb_obj, (void*)data->free_space_cb, lv_fs_drv_t_free_space_cb_callback ,MP_QSTR_lv_fs_drv_t_free_space_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, uint32_t *total_p, uint32_t *free_p);
+            case MP_QSTR_dir_open_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_dir_open_cb_obj, (void*)data->dir_open_cb, lv_fs_drv_t_dir_open_cb_callback ,MP_QSTR_lv_fs_drv_t_dir_open_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p, char *path);
+            case MP_QSTR_dir_read_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_dir_read_cb_obj, (void*)data->dir_read_cb, lv_fs_drv_t_dir_read_cb_callback ,MP_QSTR_lv_fs_drv_t_dir_read_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p, char *fn);
+            case MP_QSTR_dir_close_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_dir_close_cb_obj, (void*)data->dir_close_cb, lv_fs_drv_t_dir_close_cb_callback ,MP_QSTR_lv_fs_drv_t_dir_close_cb, data->user_data); break; // converting from callback lv_fs_res_t (*)(lv_fs_drv_t *drv, void *rddir_p);
             case MP_QSTR_user_data: dest[0] = ptr_to_mp(data->user_data); break; // converting from lv_fs_drv_user_data_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
@@ -20528,7 +20549,7 @@ STATIC mp_obj_t mp_funcptr_lv_theme_apply_cb_t(size_t mp_n_args, const mp_obj_t 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_lv_theme_apply_cb_t_obj, 3, mp_funcptr_lv_theme_apply_cb_t, funcptr_lv_theme_apply_cb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_theme_apply_cb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_theme_apply_cb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_theme_apply_cb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_theme_apply_cb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 STATIC void lv_theme_t_apply_cb_callback(struct _lv_theme_t *, lv_obj_t *, lv_theme_style_t);
 #define funcptr_lv_theme_apply_xcb_t NULL
@@ -20551,7 +20572,7 @@ STATIC mp_obj_t mp_funcptr_lv_theme_apply_xcb_t(size_t mp_n_args, const mp_obj_t
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_funcptr_lv_theme_apply_xcb_t_obj, 2, mp_funcptr_lv_theme_apply_xcb_t, funcptr_lv_theme_apply_xcb_t);
     
-STATIC inline mp_obj_t mp_lv_funcptr_lv_theme_apply_xcb_t(void *fun){ return mp_lv_funcptr(&mp_funcptr_lv_theme_apply_xcb_t_obj, fun); }
+STATIC inline mp_obj_t mp_lv_funcptr_lv_theme_apply_xcb_t(void *func){ return mp_lv_funcptr(&mp_funcptr_lv_theme_apply_xcb_t_obj, func, NULL, MP_QSTR_, NULL); }
 
 
 /*
@@ -20592,8 +20613,8 @@ STATIC void mp_lv_theme_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_apply_cb: dest[0] = mp_lv_funcptr_lv_theme_apply_cb_t(data->apply_cb); break; // converting from callback lv_theme_apply_cb_t;
-            case MP_QSTR_apply_xcb: dest[0] = mp_lv_funcptr_lv_theme_apply_xcb_t(data->apply_xcb); break; // converting from callback lv_theme_apply_xcb_t;
+            case MP_QSTR_apply_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_theme_apply_cb_t_obj, data->apply_cb, lv_theme_t_apply_cb_callback ,MP_QSTR_lv_theme_t_apply_cb, data->user_data); break; // converting from callback lv_theme_apply_cb_t;
+            case MP_QSTR_apply_xcb: dest[0] = mp_lv_funcptr(&mp_funcptr_lv_theme_apply_xcb_t_obj, data->apply_xcb, NULL ,MP_QSTR_lv_theme_t_apply_xcb, NULL); break; // converting from callback lv_theme_apply_xcb_t;
             case MP_QSTR_base: dest[0] = ptr_to_mp((void*)data->base); break; // converting from lv_theme_t *;
             case MP_QSTR_color_primary: dest[0] = mp_read_byref_lv_color32_t(data->color_primary); break; // converting from lv_color_t;
             case MP_QSTR_color_secondary: dest[0] = mp_read_byref_lv_color32_t(data->color_secondary); break; // converting from lv_color_t;
@@ -25052,7 +25073,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_debug_check_str_obj, 1, mp_lv
 STATIC mp_obj_t mp_lv_debug_log_error(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     const char *msg = (char*)convert_from_str(mp_args[0]);
-    uint64_t value = (int)mp_obj_get_int(mp_args[1]);
+    uint64_t value = (uint64_t)mp_obj_get_ull(mp_args[1]);
     ((void (*)(const char *, uint64_t))lv_func_ptr)(msg, value);
     return mp_const_none;
 }
