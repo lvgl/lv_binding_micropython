@@ -56,7 +56,13 @@ typedef void *mp_obj_t;
 static inline void SPH0645_WORKAROUND(int i2s_num);
 static inline void get_ccount(int *ccount);
 
+// Memory management helper functions
+void * memcpy ( void * destination, const void * source, size_t num );
+void * memset ( void * ptr, int value, size_t num );
+
+
 #else // PYCPARSER
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // A workaround for SPH0645 I2S, see:

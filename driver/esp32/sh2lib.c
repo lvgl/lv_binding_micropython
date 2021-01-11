@@ -169,7 +169,7 @@ const char *sh2lib_frame_type_str(int type)
 static int callback_on_frame_send(nghttp2_session *session,
                                   const nghttp2_frame *frame, void *user_data)
 {
-    ESP_LOGD(TAG, "[frame-send] frame type %s", sh2lib_frame_type_str(frame->hd.type));
+    ESP_LOGD(TAG, "[frame-send] frame type %s (%d)", sh2lib_frame_type_str(frame->hd.type), frame->hd.type);
     switch (frame->hd.type) {
     case NGHTTP2_HEADERS:
         if (nghttp2_session_get_stream_user_data(session, frame->hd.stream_id)) {
@@ -191,7 +191,7 @@ static int callback_on_frame_send(nghttp2_session *session,
 static int callback_on_frame_recv(nghttp2_session *session,
                                   const nghttp2_frame *frame, void *user_data)
 {
-    ESP_LOGD(TAG, "[frame-recv][sid: %d] frame type  %s", frame->hd.stream_id, sh2lib_frame_type_str(frame->hd.type));
+    ESP_LOGD(TAG, "[frame-recv][sid: %d] frame type %s (%d)", frame->hd.stream_id, sh2lib_frame_type_str(frame->hd.type), frame->hd.type);
     if (frame->hd.type != NGHTTP2_DATA) {
         return 0;
     }
@@ -243,6 +243,13 @@ static int callback_on_header(nghttp2_session *session, const nghttp2_frame *fra
     return 0;
 }
 
+static int callback_on_extension(nghttp2_session *session, const nghttp2_frame_hd *hd, const uint8_t *data, size_t len, void *user_data)
+{
+    
+    ESP_LOGD(TAG, "[extension-recv][sid:%d] len=%d", hd->stream_id, len);
+    return 0;
+}
+
 static int do_http2_connect(struct sh2lib_handle *hd)
 {
     int ret;
@@ -255,6 +262,7 @@ static int do_http2_connect(struct sh2lib_handle *hd)
     nghttp2_session_callbacks_set_on_stream_close_callback(callbacks, callback_on_stream_close);
     nghttp2_session_callbacks_set_on_data_chunk_recv_callback(callbacks, callback_on_data_chunk_recv);
     nghttp2_session_callbacks_set_on_header_callback(callbacks, callback_on_header);
+    nghttp2_session_callbacks_set_on_extension_chunk_recv_callback(callbacks, callback_on_extension);
     ret = nghttp2_session_client_new(&hd->http2_sess, callbacks, hd);
     if (ret != 0) {
         ESP_LOGE(TAG, "[sh2-connect] New http2 session failed");
