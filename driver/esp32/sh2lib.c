@@ -280,23 +280,38 @@ static int do_http2_connect(struct sh2lib_handle *hd)
     return 0;
 }
 
+static void sh2lib_init_handle(struct sh2lib_handle *hd, const char *uri)
+{
+    if (!hd->http2_tls) {
+        hd->http2_tls = esp_tls_init();
+    }
+
+    if (!hd->http2_tls_cfg) {
+        hd->http2_tls_cfg = malloc(sizeof(struct esp_tls_cfg));
+        static const char *proto[] = {"h2", NULL};
+        *hd->http2_tls_cfg = (struct esp_tls_cfg) {
+            .alpn_protos = proto,
+            .non_block = true,
+            .timeout_ms = 10 * 1000,
+        };
+    }
+
+    if (!hd->hostname) {
+        struct http_parser_url u;
+        http_parser_url_init(&u);
+        http_parser_parse_url(uri, strlen(uri), 0, &u);
+        hd->hostname = strndup(&uri[u.field_data[UF_HOST].off], u.field_data[UF_HOST].len);
+    }
+}
+
 int sh2lib_connect(struct sh2lib_handle *hd, const char *uri)
 {
-    memset(hd, 0, sizeof(*hd));
-    const char *proto[] = {"h2", NULL};
-    esp_tls_cfg_t tls_cfg = {
-        .alpn_protos = proto,
-        .non_block = true,
-        .timeout_ms = 10 * 1000,
-    };
-    if ((hd->http2_tls = esp_tls_conn_http_new(uri, &tls_cfg)) == NULL) {
-        ESP_LOGE(TAG, "[sh2-connect] esp-tls connection failed");
+    sh2lib_init_handle(hd, uri);
+    int res = esp_tls_conn_new_sync(hd->hostname, strlen(hd->hostname), 443, hd->http2_tls_cfg, hd->http2_tls);
+    if (res != 1) {
+        ESP_LOGE(TAG, "[sh2-connect] esp-tls connection failed with error %d", res);
         goto error;
     }
-    struct http_parser_url u;
-    http_parser_url_init(&u);
-    http_parser_parse_url(uri, strlen(uri), 0, &u);
-    hd->hostname = strndup(&uri[u.field_data[UF_HOST].off], u.field_data[UF_HOST].len);
 
     /* HTTP/2 Connection */
     if (do_http2_connect(hd) != 0) {
@@ -310,6 +325,30 @@ error:
     return -1;
 }
 
+int sh2lib_connect_async(struct sh2lib_handle *hd, const char *uri)
+{
+    sh2lib_init_handle(hd, uri);
+    int res = esp_tls_conn_new_async(hd->hostname, strlen(hd->hostname), 443, hd->http2_tls_cfg, hd->http2_tls);
+    if (res == -1) {
+        ESP_LOGE(TAG, "[sh2-async_connect] esp-tls connection failed");
+        goto error;
+    }
+    else if (res == 0) {
+        return 0;
+    }
+
+    /* HTTP/2 Connection */
+    if (do_http2_connect(hd) != 0) {
+        ESP_LOGE(TAG, "[sh2-async_connect] HTTP2 Connection failed with %s", uri);
+        goto error;
+    }
+
+    return 1;
+error:
+    sh2lib_free(hd);
+    return -1;
+}
+
 void sh2lib_free(struct sh2lib_handle *hd)
 {
     if (hd->http2_sess) {
@@ -317,12 +356,16 @@ void sh2lib_free(struct sh2lib_handle *hd)
         hd->http2_sess = NULL;
     }
     if (hd->http2_tls) {
-	esp_tls_conn_delete(hd->http2_tls);
+        esp_tls_conn_delete(hd->http2_tls);
         hd->http2_tls = NULL;
     }
     if (hd->hostname) {
         free(hd->hostname);
         hd->hostname = NULL;
+    }
+    if (hd->http2_tls_cfg) {
+        free(hd->http2_tls_cfg);
+        hd->http2_tls_cfg = NULL;
     }
 }
 

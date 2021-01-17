@@ -20,6 +20,7 @@
 
 typedef struct nghttp2_session nghttp2_session;
 typedef struct esp_tls esp_tls;
+typedef struct esp_tls_cfg esp_tls_cfg;
 
 /*
  * This is a thin API wrapper over nghttp2 that offers simplified APIs for usage
@@ -305,10 +306,11 @@ typedef enum {
  * @brief Handle for working with sh2lib APIs
  */
 struct sh2lib_handle {
-    nghttp2_session *http2_sess;   /*!< Pointer to the HTTP2 session handle */
-    char            *hostname;     /*!< The hostname we are connected to */
-    struct esp_tls  *http2_tls;    /*!< Pointer to the TLS session handle */
-    void            *user_data;    /*!< Needed for Micropython binding */
+    nghttp2_session     *http2_sess;   /*!< Pointer to the HTTP2 session handle */
+    char                *hostname;     /*!< The hostname we are connected to */
+    struct esp_tls      *http2_tls;    /*!< Pointer to the TLS session handle */
+    struct esp_tls_cfg  *http2_tls_cfg;/*!< Pointer to the TLS session configuration */
+    void                *user_data;    /*!< Needed for Micropython binding */
 };
 
 /**
@@ -367,7 +369,8 @@ typedef int (*sh2lib_putpost_data_cb_t)(struct sh2lib_handle *handle, void *data
  *
  * Only 'https' URIs are supported.
  *
- * @param[out] hd      Pointer to a variable of the type 'struct sh2lib_handle'.
+ * @param[out] hd       Pointer to a variable of the type 'struct sh2lib_handle'.
+ *                      This struct is expected to be zeroed before passed as an argument!
  * @param[in]  uri      Pointer to the URI that should be connected to.
  *
  * @return
@@ -375,6 +378,27 @@ typedef int (*sh2lib_putpost_data_cb_t)(struct sh2lib_handle *handle, void *data
  *             - ESP_FAIL if the connection fails
  */
 int sh2lib_connect(struct sh2lib_handle *hd, const char *uri);
+
+/**
+ * @brief Async connect to a URI using HTTP/2
+ *
+ * This API opens a non blocking HTTP/2 connection with the provided URI. If successful, the
+ * hd pointer is populated with a valid handle for subsequent communication.
+ * The user is expected to call this function repeatedly until it does not return 0.
+ *
+ * Only 'https' URIs are supported.
+ *
+ * @param[out] hd      Pointer to a variable of the type 'struct sh2lib_handle'.
+ *                     This struct is expected to be zeroed before passed as an argument for the first time! 
+ *                     When this function is called repeatedly, pass the same struct without change.
+ * @param[in]  uri     Pointer to the URI that should be connected to.
+ *
+ * @return
+ *             - -1     If connection establishment fails.
+ *             -  0     If connection establishment is in progress.
+ *             -  1     If connection establishment is successful.
+ */
+int sh2lib_connect_async(struct sh2lib_handle *hd, const char *uri);
 
 /**
  * @brief Free a sh2lib handle
