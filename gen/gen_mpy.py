@@ -1202,6 +1202,9 @@ STATIC unsigned long long mp_obj_get_ull(mp_obj_t obj)
 
 enums = collections.OrderedDict()
 for enum_def in enum_defs:
+    # eprint("--> %s" % enum_def)
+    while hasattr(enum_def.type, 'name') and not enum_def.type.values:
+        enum_def  = next(e for e in enum_defs if hasattr(e.type, 'name') and e.type.name == enum_def.type.name and e.type.values)
     member_names = [member.name for member in enum_def.type.values.enumerators if not member.name.startswith('_')]
     enum_name = commonprefix(member_names)
     enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
@@ -1231,6 +1234,8 @@ print ('''
 ''')
 
 for enum_def in enum_defs:
+    if not enum_def.type.values:
+        continue
     member_names = [str_enum_to_str(member.name) for member in enum_def.type.values.enumerators if lv_str_enum_pattern.match(member.name)]
     enum_name = commonprefix(member_names)
     enum_name = "_".join(enum_name.split("_")[:-1]) # remove suffix 
@@ -1404,7 +1409,7 @@ def try_generate_struct(struct_name, struct):
             # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
             if isinstance(decl.type, c_ast.ArrayDecl):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), gen.visit(decl.type.dim))
-                write_cases.append('case MP_QSTR_{field}: memcpy(&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
+                write_cases.append('case MP_QSTR_{field}: memcpy((void*)&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
                     format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
                 read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
                     format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
