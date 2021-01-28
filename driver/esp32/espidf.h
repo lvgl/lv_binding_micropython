@@ -198,6 +198,11 @@ enum {
     ENUM_MALLOC_CAP_SPIRAM = MALLOC_CAP_SPIRAM,
 };
 
+enum {
+    ENUM_ESP_TASK_PRIO_MAX = ESP_TASK_PRIO_MAX,
+    ENUM_ESP_TASK_PRIO_MIN = ESP_TASK_PRIO_MIN,
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 // ili9xxx flush and ISR in C
 //

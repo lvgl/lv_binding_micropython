@@ -311,6 +311,7 @@ struct sh2lib_handle {
     struct esp_tls      *http2_tls;    /*!< Pointer to the TLS session handle */
     struct esp_tls_cfg  *http2_tls_cfg;/*!< Pointer to the TLS session configuration */
     void                *user_data;    /*!< Needed for Micropython binding */
+    int                 connect_result;/*!< Current result of the connection task */
 };
 
 /**
@@ -378,6 +379,31 @@ typedef int (*sh2lib_putpost_data_cb_t)(struct sh2lib_handle *handle, void *data
  *             - ESP_FAIL if the connection fails
  */
 int sh2lib_connect(struct sh2lib_handle *hd, const char *uri);
+
+/**
+ * @brief Connect to a URI using HTTP/2 concurrently on a different task
+ *
+ * This API opens an HTTP/2 connection with the provided URI. If successful, the
+ * hd pointer is populated with a valid handle for subsequent communication.
+ *
+ * The connection task is created by this function, and deletes itself when done.
+ * The connection task updates hd->connect_result to indicate connection status.
+ * The caller should poll hd->connect_result
+ * hd->connect_result indicates: 0 in progress, 1 succeeded, -1 failed.
+ *
+ * Only 'https' URIs are supported.
+ *
+ * @param[out] hd       Pointer to a variable of the type 'struct sh2lib_handle'.
+ *                      This struct is expected to be zeroed before passed as an argument!
+ * @param[in]  uri      Pointer to the URI that should be connected to.
+ * @param[in]  priority Connection task priority
+ * @param[in]  core_id  Connection task core id
+ *
+ * @return
+ *             - ESP_OK if the connection was successful
+ *             - ESP_FAIL if the connection fails
+ */
+int sh2lib_connect_task(struct sh2lib_handle *hd, const char *uri, int priority, int core_id);
 
 /**
  * @brief Async connect to a URI using HTTP/2

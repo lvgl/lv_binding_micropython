@@ -282,6 +282,8 @@ static int do_http2_connect(struct sh2lib_handle *hd)
 
 static void sh2lib_init_handle(struct sh2lib_handle *hd, const char *uri)
 {
+    hd->connect_result = 0;
+
     if (!hd->http2_tls) {
         hd->http2_tls = esp_tls_init();
     }
@@ -293,6 +295,7 @@ static void sh2lib_init_handle(struct sh2lib_handle *hd, const char *uri)
             .alpn_protos = proto,
             .non_block = true,
             .timeout_ms = 10 * 1000,
+            .skip_common_name = true
         };
     }
 
@@ -302,6 +305,38 @@ static void sh2lib_init_handle(struct sh2lib_handle *hd, const char *uri)
         http_parser_parse_url(uri, strlen(uri), 0, &u);
         hd->hostname = strndup(&uri[u.field_data[UF_HOST].off], u.field_data[UF_HOST].len);
     }
+}
+
+static void sh2lib_connect_task_function(void *param)
+{
+    struct sh2lib_handle *hd = param;
+
+    int res = esp_tls_conn_new_sync(hd->hostname, strlen(hd->hostname), 443, hd->http2_tls_cfg, hd->http2_tls);
+    if (res != 1) {
+        ESP_LOGE(TAG, "[sh2-connect] esp-tls connection failed with error %d", res);
+        goto error;
+    }
+
+    /* HTTP/2 Connection */
+    if (do_http2_connect(hd) != 0) {
+        ESP_LOGE(TAG, "[sh2-connect] HTTP2 Connection failed");
+        goto error;
+    }
+
+    hd->connect_result = 1;
+
+    vTaskDelete(NULL);
+error:
+    sh2lib_free(hd);
+    hd->connect_result = -1;
+    vTaskDelete(NULL);
+}
+
+int sh2lib_connect_task(struct sh2lib_handle *hd, const char *uri, int priority, int core_id)
+{
+    sh2lib_init_handle(hd, uri);
+    BaseType_t res = xTaskCreatePinnedToCore(sh2lib_connect_task_function, "sh2lib connect task", 4096, hd, priority, NULL, core_id);
+    return res == pdPASS? 0: -1;
 }
 
 int sh2lib_connect(struct sh2lib_handle *hd, const char *uri)
@@ -319,9 +354,11 @@ int sh2lib_connect(struct sh2lib_handle *hd, const char *uri)
         goto error;
     }
 
+    hd->connect_result = 1;
     return 0;
 error:
     sh2lib_free(hd);
+    hd->connect_result = -1;
     return -1;
 }
 
@@ -343,9 +380,11 @@ int sh2lib_connect_async(struct sh2lib_handle *hd, const char *uri)
         goto error;
     }
 
+    hd->connect_result = 1;
     return 1;
 error:
     sh2lib_free(hd);
+    hd->connect_result = -1;
     return -1;
 }
 
@@ -367,6 +406,7 @@ void sh2lib_free(struct sh2lib_handle *hd)
         free(hd->http2_tls_cfg);
         hd->http2_tls_cfg = NULL;
     }
+    hd->connect_result = 0;
 }
 
 int sh2lib_execute(struct sh2lib_handle *hd)
