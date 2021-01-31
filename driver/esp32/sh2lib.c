@@ -283,6 +283,7 @@ static int do_http2_connect(struct sh2lib_handle *hd)
 static void sh2lib_init_handle(struct sh2lib_handle *hd, const char *uri)
 {
     hd->connect_result = 0;
+    hd->connect_task_handle = NULL;
 
     if (!hd->http2_tls) {
         hd->http2_tls = esp_tls_init();
@@ -311,6 +312,8 @@ static void sh2lib_connect_task_function(void *param)
 {
     struct sh2lib_handle *hd = param;
 
+    if (!hd->hostname) goto error;
+
     int res = esp_tls_conn_new_sync(hd->hostname, strlen(hd->hostname), 443, hd->http2_tls_cfg, hd->http2_tls);
     if (res != 1) {
         ESP_LOGE(TAG, "[sh2-connect] esp-tls connection failed with error %d", res);
@@ -335,7 +338,7 @@ error:
 int sh2lib_connect_task(struct sh2lib_handle *hd, const char *uri, int priority, int core_id)
 {
     sh2lib_init_handle(hd, uri);
-    BaseType_t res = xTaskCreatePinnedToCore(sh2lib_connect_task_function, "sh2lib connect task", 4096, hd, priority, NULL, core_id);
+    BaseType_t res = xTaskCreatePinnedToCore(sh2lib_connect_task_function, "sh2lib connect task", 4096, hd, priority, hd->connect_task_handle, core_id);
     return res == pdPASS? 0: -1;
 }
 
@@ -405,6 +408,10 @@ void sh2lib_free(struct sh2lib_handle *hd)
     if (hd->http2_tls_cfg) {
         free(hd->http2_tls_cfg);
         hd->http2_tls_cfg = NULL;
+    }
+    if (hd->connect_task_handle) {
+        vTaskDelete(hd->connect_task_handle);
+        hd->connect_task_handle = NULL;
     }
     hd->connect_result = 0;
 }

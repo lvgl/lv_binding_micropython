@@ -306,12 +306,13 @@ typedef enum {
  * @brief Handle for working with sh2lib APIs
  */
 struct sh2lib_handle {
-    nghttp2_session     *http2_sess;   /*!< Pointer to the HTTP2 session handle */
-    char                *hostname;     /*!< The hostname we are connected to */
-    struct esp_tls      *http2_tls;    /*!< Pointer to the TLS session handle */
-    struct esp_tls_cfg  *http2_tls_cfg;/*!< Pointer to the TLS session configuration */
-    void                *user_data;    /*!< Needed for Micropython binding */
-    int                 connect_result;/*!< Current result of the connection task */
+    nghttp2_session     *http2_sess;                /*!< Pointer to the HTTP2 session handle */
+    char                *hostname;                  /*!< The hostname we are connected to */
+    struct esp_tls      *http2_tls;                 /*!< Pointer to the TLS session handle */
+    struct esp_tls_cfg  *http2_tls_cfg;             /*!< Pointer to the TLS session configuration */
+    void                *user_data;                 /*!< Needed for Micropython binding */
+    TaskHandle_t        connect_task_handle;        /*!< Connection task handle */
+    int                 connect_result;             /*!< Current result of the connection task */
 };
 
 /**

@@ -37,6 +37,7 @@
 typedef int	BaseType_t;
 typedef unsigned int	UBaseType_t;
 typedef void* system_event_t;
+typedef void * TaskHandle_t;
 
 // Exclude SOC just because it contains large structs that don't interest the user
 #define _SOC_SPI_PERIPH_H_
