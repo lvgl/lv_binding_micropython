@@ -37,7 +37,6 @@
 typedef int	BaseType_t;
 typedef unsigned int	UBaseType_t;
 typedef void* system_event_t;
-typedef void * TaskHandle_t;
 
 // Exclude SOC just because it contains large structs that don't interest the user
 #define _SOC_SPI_PERIPH_H_
@@ -47,9 +46,12 @@ typedef void *spi_dev_t;
 #define _ROM_LLDESC_H_
 typedef void *lldesc_t; 
 
-// FreeRTOS portmaco is excluded, but we still need TickType_t
+// FreeRTOS definitions we want available on Micropython
 #include <stdint.h>
 typedef uint32_t TickType_t;
+typedef void * TaskHandle_t;
+static inline uint32_t xPortGetCoreID();
+UBaseType_t uxTaskPriorityGet( TaskHandle_t xTask );
 
 // Micropython specific types
 typedef void *mp_obj_t;
