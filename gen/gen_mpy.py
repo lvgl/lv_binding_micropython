@@ -868,7 +868,18 @@ STATIC inline mp_obj_t convert_to_str(const char *str)
 
 STATIC inline const char *convert_from_str(mp_obj_t str)
 {
-    return (str == NULL || str == mp_const_none)? NULL: mp_obj_str_get_str(str);
+    if (str == NULL || str == mp_const_none)
+        return NULL;
+
+    if (MP_OBJ_IS_TYPE(str, &mp_type_bytearray) ||
+        MP_OBJ_IS_TYPE(str, &mp_type_memoryview)) {
+            mp_buffer_info_t buffer_info;
+            if (mp_get_buffer(str, &buffer_info, MP_BUFFER_READ)) {
+                return buffer_info.buf;
+            }
+    }
+
+    return mp_obj_str_get_str(str);
 }
 
 // struct handling
