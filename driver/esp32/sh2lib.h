@@ -18,6 +18,11 @@
 #ifndef __ESP_EXAMPLE_SH2_LIB_H_
 #define __ESP_EXAMPLE_SH2_LIB_H_
 
+#if __has_include("esp_idf_version.h")
+#   include "esp_idf_version.h"
+#endif
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
+
 typedef struct nghttp2_session nghttp2_session;
 typedef struct esp_tls esp_tls;
 typedef struct esp_tls_cfg esp_tls_cfg;
@@ -604,4 +609,7 @@ int sh2lib_do_putpost_with_nv(struct sh2lib_handle *hd, const struct sh2lib_nv n
  */
 int sh2lib_session_resume_data(struct sh2lib_handle *hd, int32_t stream_id);
 
+
+#endif // defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
 #endif /* ! __ESP_EXAMPLE_SH2_LIB_H_ */
+

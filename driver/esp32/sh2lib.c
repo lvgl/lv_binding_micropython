@@ -16,6 +16,11 @@
 
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 
+#if __has_include("esp_idf_version.h")
+#   include "esp_idf_version.h"
+#endif
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -512,3 +517,6 @@ int sh2lib_session_resume_data(struct sh2lib_handle *hd, int32_t stream_id)
 {
     return nghttp2_session_resume_data(hd->http2_sess, stream_id);
 }
+
+
+#endif // defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
