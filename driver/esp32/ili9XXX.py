@@ -363,6 +363,15 @@ class ili9XXX:
         if self.backlight != -1:
             print("Enable backlight")
             esp.gpio_set_level(self.backlight, self.backlight_on)
+
+    def power_down(self):
+
+        if self.power != -1:
+            esp.gpio_set_level(self.power, 1 - self.power_on)
+
+        if self.backlight != -1:
+            esp.gpio_set_level(self.backlight, 1 - self.backlight_on)
+
     
     ######################################################
 
