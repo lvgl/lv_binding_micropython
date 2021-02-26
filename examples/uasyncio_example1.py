@@ -17,7 +17,7 @@ sys.path.append("")
 
 from urandom import getrandbits, seed
 from utime import ticks_us
-from uasyncio import sleep, create_task, Loop
+from uasyncio import sleep, create_task, Loop, CancelledError
 from async_utils import lv_async
 import lvgl as lv
 
@@ -121,9 +121,6 @@ class MsgBox(lv.win):
 
         self.opened = True;
 
-    def set_text(self, txt):
-        self.label.set_text(txt)
-
     def is_open(self):
         return self.opened
 
@@ -131,37 +128,45 @@ class MsgBox(lv.win):
         if self.is_open():
             self.anim = lv.anim_t()
             self.anim.init()
+            self.anim.set_var(self)
             self.anim.set_time(500)
             self.anim.set_values(lv.OPA.COVER,lv.OPA.TRANSP)
             self.anim.set_custom_exec_cb(lambda obj, val:
                     self.set_style_local_opa_scale(self.PART.BG, lv.STATE.DEFAULT, val))
             self.anim.set_path(
                     lv.anim_path_t({'cb': lv.anim_path_t.ease_in}))
+            self.anim.set_ready_cb(lambda a: self.del_async())
             lv.anim_t.start(self.anim)
             self.opened = False
 
+    def set_text(self, txt):
+
+        # If the msg box is already closed, cancel the calling task
+        if not self.is_open():
+            raise CancelledError()
+
+        self.label.set_text(txt)
 
 ##################################################################################################
 # Async task
 ##################################################################################################
 
 async def btn_event_task(obj=None, event=-1):
-    if event == lv.EVENT.CLICKED:
 
-        # Create and position the a new msg box
+    # Create and position the a new msg box
 
-        msg_box = MsgBox(scr)
-        msg_box.align(scr, lv.ALIGN.CENTER, getrandbits(7) - 64, getrandbits(7) - 64)
+    msg_box = MsgBox(scr)
+    msg_box.align(scr, lv.ALIGN.CENTER, getrandbits(7) - 64, getrandbits(7) - 64)
 
-        # Countdown
+    # Countdown
 
-        for i in range(10, 0, -1):
-            msg_box.set_text(str(i))
-            await sleep(1)
+    for i in range(10, 0, -1):
+        msg_box.set_text(str(i))
+        await sleep(1)
 
-        # Close the msg box
+    # Close the msg box
 
-        msg_box.close_msg_box()
+    msg_box.close_msg_box()
 
 ##################################################################################################
 # Create objects and screen
@@ -171,7 +176,7 @@ scr = lv.obj()
 btn = lv.btn(scr)
 btn.align(scr, lv.ALIGN.IN_TOP_MID, 10, 10)
 btn.set_event_cb(
-        lambda o,e: create_task(btn_event_task(o,e)))
+        lambda obj,e: e == lv.EVENT.CLICKED and create_task(btn_event_task()))
 label = lv.label(btn)
 label.set_text('Click Me Again!')
 lv.scr_load(scr)
