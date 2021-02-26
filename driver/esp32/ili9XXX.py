@@ -32,10 +32,8 @@
 
 import espidf as esp
 import lvgl as lv
-import lvesp32
 import micropython
 import gc
-from utime import sleep_ms
 
 micropython.alloc_emergency_exception_buf(256)
 # gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
@@ -73,10 +71,14 @@ class ili9XXX:
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, display_type=0
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, display_type=0,
+        asynchronous=False, initialize=True
     ):
 
         # Initializations
+
+        self.asynchronous = asynchronous
+        self.initialize = initialize
 
         self.width = width
         self.height = height
@@ -102,8 +104,6 @@ class ili9XXX:
         if invert:
             self.init_cmds.append({'cmd': 0x21})
 
-        self.init()
-
         # Register display driver 
 
         self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
@@ -121,6 +121,7 @@ class ili9XXX:
 
         self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
         self.disp_drv.init()
+        self.disp_spi_init()
 
         self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': self.display_type}
         self.disp_drv.buffer = self.disp_buf
@@ -129,7 +130,9 @@ class ili9XXX:
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
         
-        self.disp_drv.register()
+        if self.initialize:
+            self.init()
+
 
 
     ######################################################
@@ -139,8 +142,10 @@ class ili9XXX:
         # Register finalizer callback to deinit SPI.
         # This would get called on soft reset.
 
-        self.finalizer = lvesp32.cb_finalizer(self.deinit)
-        lvesp32.init()
+        if not self.asynchronous:
+            import lvesp32
+            self.finalizer = lvesp32.cb_finalizer(self.deinit)
+            lvesp32.init()
 
         buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
@@ -238,9 +243,13 @@ class ili9XXX:
 
         print('Deinitializing {}..'.format(self.display_name))
 
+        self.disp_drv.remove()
+
         # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
 
-        lvesp32.deinit()
+        if not self.asynchronous:
+            import lvesp32
+            lvesp32.deinit()
 
         if self.spi:
 
@@ -318,8 +327,7 @@ class ili9XXX:
 
     ######################################################
 
-    def init(self):
-        self.disp_spi_init()
+    async def _init(self, sleep_func):
 
         # Initialize non-SPI GPIOs
 
@@ -337,15 +345,15 @@ class ili9XXX:
 
         if self.power != -1:
             esp.gpio_set_level(self.power, self.power_on)
-            sleep_ms(100)
+            await sleep_func(100)
 
         # Reset the display
 
         if self.rst != -1:
             esp.gpio_set_level(self.rst, 0)
-            sleep_ms(100)
+            await sleep_func(100)
             esp.gpio_set_level(self.rst, 1)
-            sleep_ms(100)
+            await sleep_func(100)
 
         # Send all the commands
 
@@ -354,7 +362,7 @@ class ili9XXX:
             if 'data' in cmd:
                 self.send_data(cmd['data'])
             if 'delay' in cmd:
-                sleep_ms(cmd['delay'])
+                await sleep_func(cmd['delay'])
 
         print("{} initialization completed".format(self.display_name))
 
@@ -363,6 +371,24 @@ class ili9XXX:
         if self.backlight != -1:
             print("Enable backlight")
             esp.gpio_set_level(self.backlight, self.backlight_on)
+
+        # Register the driver
+        self.disp_drv.register()
+
+    
+    def init(self):
+        import utime
+        generator = self._init(lambda ms:(yield ms))
+        try:
+            while True:
+                ms = next(generator)
+                utime.sleep_ms(ms)
+        except StopIteration:
+            pass
+
+    async def init_async(self):
+        import uasyncio
+        await self._init(uasyncio.sleep_ms)
 
     def power_down(self):
 
@@ -460,7 +486,8 @@ class ili9341(ili9XXX):
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True
     ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
@@ -501,7 +528,8 @@ class ili9341(ili9XXX):
         ]
 
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex)
+            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex,
+            asynchronous=asynchronous, initialize=initialize)
 
 
 class ili9488(ili9XXX):
@@ -509,7 +537,8 @@ class ili9488(ili9XXX):
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
-        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True
     ):
 
         if lv.color_t.SIZE != 4:
@@ -544,5 +573,6 @@ class ili9488(ili9XXX):
         ]
 
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488)
+            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488,
+            asynchronous=asynchronous, initialize=initialize)
 
