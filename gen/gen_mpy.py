@@ -994,7 +994,7 @@ STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
 STATIC void* mp_to_ptr(mp_obj_t self_in)
 {
     mp_buffer_info_t buffer_info;
-    if (self_in == mp_const_none)
+    if (self_in == NULL || self_in == mp_const_none)
         return NULL;
 
 //    if (MP_OBJ_IS_INT(self_in))

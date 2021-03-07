@@ -1,4 +1,4 @@
-#include "py/gc.h"
+#include "py/obj.h"
 
 /**
  * Implementation of memory allocation functions for lodepng, which delegate gc allocation
