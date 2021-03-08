@@ -174,7 +174,7 @@ async def btn_event_task(obj=None, event=-1):
 
 scr = lv.obj()
 btn = lv.btn(scr)
-btn.align(scr, lv.ALIGN.IN_TOP_MID, 10, 10)
+btn.align(scr, lv.ALIGN.IN_TOP_MID, 0, 10)
 btn.set_event_cb(
         lambda obj,e: e == lv.EVENT.CLICKED and create_task(btn_event_task()))
 label = lv.label(btn)
