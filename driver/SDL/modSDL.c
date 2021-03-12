@@ -26,9 +26,22 @@ STATIC int tick_thread(void * data)
 {
     (void)data;
 
+    Uint64 pfreq = SDL_GetPerformanceFrequency();
+    Uint64 one_ms = pfreq / 1000;
+    Uint64 delta, acc = 0;
+
     while(monitor_active()) {
+        delta = SDL_GetPerformanceCounter();
         SDL_Delay(1);   /*Sleep for 1 millisecond*/
-        lv_tick_inc(1); /*Tell LittelvGL that 1 milliseconds were elapsed*/
+        delta = SDL_GetPerformanceCounter() - delta;
+        acc += delta - one_ms;
+        if (acc >= one_ms) {
+            lv_tick_inc(2);
+            acc -= one_ms;
+        }
+        else {
+            lv_tick_inc(1); /*Tell LittelvGL that 1 milliseconds were elapsed*/
+        }
         mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
     }
 
