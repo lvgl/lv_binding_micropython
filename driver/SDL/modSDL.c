@@ -40,9 +40,22 @@ STATIC int tick_thread(void * data)
 {
     (void)data;
 
+    Uint64 pfreq = SDL_GetPerformanceFrequency();
+    Uint64 tick_ms = pfreq / 1000 * LV_TICK_RATE;
+    Uint64 delta, acc = 0;
+
     while(monitor_active()) {
+        delta = SDL_GetPerformanceCounter();
         SDL_Delay(LV_TICK_RATE);   /*Sleep for LV_TICK_RATE millisecond*/
-        lv_tick_inc(LV_TICK_RATE); /*Tell LittelvGL that LV_TICK_RATE milliseconds were elapsed*/
+        delta = SDL_GetPerformanceCounter() - delta;
+        acc += delta - tick_ms;
+        if (acc >= tick_ms) {
+            lv_tick_inc(LV_TICK_RATE * 2);
+            acc -= tick_ms;
+        }
+        else {
+            lv_tick_inc(LV_TICK_RATE); /*Tell LittelvGL that LV_TICK_RATE milliseconds were elapsed*/
+        }
         mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
         pthread_kill(mp_thread, SIGUSR1); // interrupt REPL blocking input. See handle_sigusr1
     }
