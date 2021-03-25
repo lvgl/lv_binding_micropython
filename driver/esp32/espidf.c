@@ -10,6 +10,7 @@
 #include "esp_system.h"
 #include "soc/cpu.h"
 
+
 // ESP IDF has some functions that are declared but not implemented.
 // To avoid linking errors, provide empty implementation
 
@@ -120,7 +121,7 @@ void ex_spi_post_cb_isr(spi_transaction_t *trans)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ILI9xxx flush and ISR implementation in C
 
-#include "../../lvgl/lvgl.h"
+#include "lvgl/lvgl.h"
 
 DMA_ATTR static uint8_t dma_buf[4] = {0};
 DMA_ATTR static spi_transaction_t spi_trans = {0};

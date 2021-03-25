@@ -17,6 +17,7 @@
 #include "lvgl/src/lv_core/lv_disp.h"  
 
 #include "esp_log.h"
+#include "soc/adc_channel.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Constants 
