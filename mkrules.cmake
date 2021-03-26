@@ -5,8 +5,18 @@ set(LV_BINDINGS_DIR ${MICROPY_DIR}/lib/lv_bindings)
 
 # Common function for creating LV bindings
 
-function(lv_bindings LV_OUTPUT LV_INPUT LV_DEP LV_PP_OPTIONS LV_GEN_OPTIONS)
+function(lv_bindings)
     # LV_PP_OPTIONS and LV_GEN_OPTIONS must be quoted when calling lv_bindings since they are lists.
+
+    set(_options)
+    set(_one_value_args OUTPUT INPUT FILTER)
+    set(_multi_value_args DEPENDS PP_OPTIONS GEN_OPTIONS)
+    cmake_parse_arguments(
+        PARSE_ARGV 0 LV 
+        "${_options}" 
+        "${_one_value_args}" 
+        "${_multi_value_args}"
+      )
 
     set(LV_PP ${LV_OUTPUT}.pp)
     set(LV_MPY_METADATA ${LV_OUTPUT}.json)
@@ -18,7 +28,7 @@ function(lv_bindings LV_OUTPUT LV_INPUT LV_DEP LV_PP_OPTIONS LV_GEN_OPTIONS)
         ${CMAKE_C_COMPILER} -E ${LV_PP_OPTIONS} ${LV_CFLAGS} -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
         DEPENDS
             ${LV_INPUT}
-            ${LV_DEP}
+            ${LV_DEPENDS}
             ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include
         VERBATIM
         COMMAND_EXPAND_LISTS
@@ -54,24 +64,49 @@ function(all_lv_bindings)
 
     # LVGL bindings
 
-    set(LV_MP_PP_OPTIONS)
-    set(LV_MP_GEN_OPTIONS -M lvgl -MP lv)
-    lv_bindings(${LV_MP} ${LVGL_DIR}/lvgl.h ${LVGL_DIR} "${LV_MP_PP_OPTIONS}" "${LV_MP_GEN_OPTIONS}")
-
+    lv_bindings(
+        OUTPUT
+            ${LV_MP}
+        INPUT
+            ${LVGL_DIR}/lvgl.h
+        DEPENDS
+            ${LVGL_DIR}
+        GEN_OPTIONS
+            -M lvgl -MP lv
+    )
+        
     # LODEPNG bindings
 
-    set(LV_PNG_PP_OPTIONS -DLODEPNG_NO_COMPILE_ENCODER -DLODEPNG_NO_COMPILE_DISK -DLODEPNG_NO_COMPILE_ALLOCATORS)
-    set(LV_PNG_GEN_OPTIONS -M lodepng)
     configure_file(${LV_PNG_DIR}/lodepng.cpp ${LV_PNG_C} COPYONLY)
     idf_build_set_property(COMPILE_DEFINITIONS "${LV_PNG_PP_OPTIONS}" APPEND)
-    lv_bindings(${LV_PNG} ${LV_PNG_DIR}/lodepng.h ${LV_PNG_DIR} "${LV_PNG_PP_OPTIONS}" "${LV_PNG_GEN_OPTIONS}")
+    lv_bindings(
+        OUTPUT
+            ${LV_PNG}
+        INPUT
+            ${LV_PNG_DIR}/lodepng.h
+        DEPENDS
+            ${LV_PNG_DIR}
+        PP_OPTIONS
+            -DLODEPNG_NO_COMPILE_ENCODER -DLODEPNG_NO_COMPILE_DISK -DLODEPNG_NO_COMPILE_ALLOCATORS
+        GEN_OPTIONS
+            -M lodepng
+    )
 
     # ESPIDF bindings
 
-    set(LV_ESPIDF_PP_OPTIONS -DPYCPARSER)
-    set(LV_ESPIDF_GEN_OPTIONS -M espidf)
     set(LV_ESPIDF_DEP ${IDF_PATH}/components ${LV_BINDINGS_DIR}/driver/esp32)
-    lv_bindings(${LV_ESPIDF} ${LV_BINDINGS_DIR}/driver/esp32/espidf.h "${LV_ESPIDF_DEP}" "${LV_ESPIDF_PP_OPTIONS}" "${LV_ESPIDF_GEN_OPTIONS}")
+    lv_bindings(
+        OUTPUT
+            ${LV_ESPIDF}
+        INPUT
+            ${LV_BINDINGS_DIR}/driver/esp32/espidf.h
+        DEPENDS
+            "${LV_ESPIDF_DEP}"
+        PP_OPTIONS
+            -DPYCPARSER
+        GEN_OPTIONS
+             -M espidf
+    )
 
 endfunction()
 
@@ -96,7 +131,7 @@ set(LV_SRC
     ${LV_PNG_C}
     ${LV_BINDINGS_DIR}/driver/png/mp_lodepng.c
 
-    #    ${LV_ESPIDF}
+    # ${LV_ESPIDF}
 )
 
 
