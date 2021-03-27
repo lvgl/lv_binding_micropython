@@ -1,20 +1,19 @@
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_program(AWK awk mawk gawk)
 
 set(LV_BINDINGS_DIR ${MICROPY_DIR}/lib/lv_bindings)
 
 # Common function for creating LV bindings
 
 function(lv_bindings)
-    # LV_PP_OPTIONS and LV_GEN_OPTIONS must be quoted when calling lv_bindings since they are lists.
-
     set(_options)
-    set(_one_value_args OUTPUT INPUT FILTER)
-    set(_multi_value_args DEPENDS PP_OPTIONS GEN_OPTIONS)
+    set(_one_value_args OUTPUT INPUT)
+    set(_multi_value_args DEPENDS PP_OPTIONS GEN_OPTIONS FILTER)
     cmake_parse_arguments(
-        PARSE_ARGV 0 LV 
-        "${_options}" 
-        "${_one_value_args}" 
+        PARSE_ARGV 0 LV
+        "${_options}"
+        "${_one_value_args}"
         "${_multi_value_args}"
       )
 
@@ -34,14 +33,39 @@ function(lv_bindings)
         COMMAND_EXPAND_LISTS
     )
 
+    if (DEFINED LV_FILTER)
+
+        set(LV_PP_FILTERED ${LV_PP}.filtered)
+        set(LV_AWK_CONDITION)
+        foreach(_f ${LV_FILTER})
+            string(APPEND LV_AWK_CONDITION "\$3!~\"${_f}\" && ")
+        endforeach()
+        string(APPEND LV_AWK_COMMAND "\$1==\"#\"{p=(${LV_AWK_CONDITION} 1)} p{print}")
+
+        # message("AWK COMMAND: ${LV_AWK_COMMAND}")
+
+        add_custom_command(
+            OUTPUT
+                ${LV_PP_FILTERED}
+            COMMAND
+                ${AWK} ${LV_AWK_COMMAND} ${LV_PP} > ${LV_PP_FILTERED}
+            DEPENDS
+                ${LV_PP}
+            VERBATIM
+            COMMAND_EXPAND_LISTS
+        )
+    else()
+        set(LV_PP_FILTERED ${LV_PP})
+    endif()
+
     add_custom_command(
         OUTPUT
             ${LV_OUTPUT}
         COMMAND
-            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP} ${LV_INPUT} > ${LV_OUTPUT}
+            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT}
         DEPENDS
             ${LV_BINDINGS_DIR}/gen/gen_mpy.py
-            ${LV_PP}
+            ${LV_PP_FILTERED}
         VERBATIM
         COMMAND_EXPAND_LISTS
     )
@@ -106,6 +130,16 @@ function(all_lv_bindings)
             -DPYCPARSER
         GEN_OPTIONS
              -M espidf
+        FILTER
+            i2s_ll.h
+            i2s_hal.h
+            esp_intr_alloc.h
+            soc/spi_periph.h
+            rom/ets_sys.h
+            soc/sens_struct.h
+            soc/rtc.h
+            driver/periph_ctrl.h
+            include/esp_private
     )
 
 endfunction()
@@ -131,7 +165,7 @@ set(LV_SRC
     ${LV_PNG_C}
     ${LV_BINDINGS_DIR}/driver/png/mp_lodepng.c
 
-    # ${LV_ESPIDF}
+    ${LV_ESPIDF}
 )
 
 
