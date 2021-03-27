@@ -10,6 +10,7 @@
 
 #ifdef PYCPARSER
 #define __attribute__(x)
+#define __extension__
 #define _SOC_IO_MUX_REG_H_
 #define _SYS_REENT_H_
 #define PORTMACRO_H

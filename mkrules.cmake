@@ -62,11 +62,10 @@ function(lv_bindings)
         OUTPUT
             ${LV_OUTPUT}
         COMMAND
-            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT}
+            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
         DEPENDS
             ${LV_BINDINGS_DIR}/gen/gen_mpy.py
             ${LV_PP_FILTERED}
-        VERBATIM
         COMMAND_EXPAND_LISTS
     )
 
