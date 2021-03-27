@@ -3,6 +3,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_program(AWK awk mawk gawk)
 
 set(LV_BINDINGS_DIR ${MICROPY_DIR}/lib/lv_bindings)
+set(LV_CFLAGS $ENV{LV_CFLAGS})
 
 # Common function for creating LV bindings
 
@@ -29,6 +30,8 @@ function(lv_bindings)
             ${LV_INPUT}
             ${LV_DEPENDS}
             ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include
+        IMPLICIT_DEPENDS
+            C ${LV_INPUT}
         VERBATIM
         COMMAND_EXPAND_LISTS
     )
@@ -87,19 +90,21 @@ function(all_lv_bindings)
 
     # LVGL bindings
 
+    file(GLOB_RECURSE LVGL_HEADERS ${LVGL_DIR}/src/*.h ${LV_BINDINGS_DIR}/lv_conf.h)
     lv_bindings(
         OUTPUT
             ${LV_MP}
         INPUT
             ${LVGL_DIR}/lvgl.h
         DEPENDS
-            ${LVGL_DIR}
+            ${LVGL_HEADERS}
         GEN_OPTIONS
             -M lvgl -MP lv
     )
         
     # LODEPNG bindings
 
+    file(GLOB_RECURSE LV_PNG_HEADERS ${LV_PNG_DIR}/*.h)
     configure_file(${LV_PNG_DIR}/lodepng.cpp ${LV_PNG_C} COPYONLY)
     idf_build_set_property(COMPILE_DEFINITIONS "${LV_PNG_PP_OPTIONS}" APPEND)
     lv_bindings(
@@ -108,7 +113,7 @@ function(all_lv_bindings)
         INPUT
             ${LV_PNG_DIR}/lodepng.h
         DEPENDS
-            ${LV_PNG_DIR}
+            ${LV_PNG_HEADERS}
         PP_OPTIONS
             -DLODEPNG_NO_COMPILE_ENCODER -DLODEPNG_NO_COMPILE_DISK -DLODEPNG_NO_COMPILE_ALLOCATORS
         GEN_OPTIONS
@@ -117,14 +122,14 @@ function(all_lv_bindings)
 
     # ESPIDF bindings
 
-    set(LV_ESPIDF_DEP ${IDF_PATH}/components ${LV_BINDINGS_DIR}/driver/esp32)
+    file(GLOB_RECURSE LV_ESPIDF_HEADERS ${IDF_PATH}/components/*.h ${LV_BINDINGS_DIR}/driver/esp32/*.h)
     lv_bindings(
         OUTPUT
             ${LV_ESPIDF}
         INPUT
             ${LV_BINDINGS_DIR}/driver/esp32/espidf.h
         DEPENDS
-            "${LV_ESPIDF_DEP}"
+            ${LV_ESPIDF_HEADERS}
         PP_OPTIONS
             -DPYCPARSER
         GEN_OPTIONS
