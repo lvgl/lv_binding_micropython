@@ -3,7 +3,6 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_program(AWK awk mawk gawk)
 
 set(LV_BINDINGS_DIR ${MICROPY_DIR}/lib/lv_bindings)
-set(LV_CFLAGS $ENV{LV_CFLAGS})
 
 # Common function for creating LV bindings
 
@@ -16,7 +15,7 @@ function(lv_bindings)
         "${_options}"
         "${_one_value_args}"
         "${_multi_value_args}"
-      )
+    )
 
     set(LV_PP ${LV_OUTPUT}.pp)
     set(LV_MPY_METADATA ${LV_OUTPUT}.json)
@@ -25,7 +24,7 @@ function(lv_bindings)
         OUTPUT 
             ${LV_PP}
         COMMAND
-        ${CMAKE_C_COMPILER} -E ${LV_PP_OPTIONS} ${LV_CFLAGS} -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
+        ${CMAKE_C_COMPILER} -E ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
         DEPENDS
             ${LV_INPUT}
             ${LV_DEPENDS}
