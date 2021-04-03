@@ -80,10 +80,12 @@ static ssize_t callback_send_inner(struct sh2lib_handle *hd, const uint8_t *data
                                    size_t length)
 {
     int rv = esp_tls_conn_write(hd->http2_tls, data, length);
-    if (rv <= 0) {
+    if (rv < 0) {
         if (rv == ESP_TLS_ERR_SSL_WANT_READ || rv == ESP_TLS_ERR_SSL_WANT_WRITE) {
             rv = NGHTTP2_ERR_WOULDBLOCK;
         } else {
+            ESP_LOGE(TAG, "[sh2-callback_send_inner] esp_tls_conn_write failed with error %d, (%s)", rv,
+                esp_err_to_name(esp_tls_get_and_clear_last_error(hd->http2_tls->error_handle, NULL, NULL)));
             rv = NGHTTP2_ERR_CALLBACK_FAILURE;
         }
     }
@@ -133,6 +135,8 @@ static ssize_t callback_recv(nghttp2_session *session, uint8_t *buf,
         if (rv == ESP_TLS_ERR_SSL_WANT_READ || rv == ESP_TLS_ERR_SSL_WANT_WRITE) {
             rv = NGHTTP2_ERR_WOULDBLOCK;
         } else {
+            ESP_LOGE(TAG, "[sh2-callback_recv] esp_tls_conn_read failed with error %d (%s)", rv,
+                esp_err_to_name(esp_tls_get_and_clear_last_error(hd->http2_tls->error_handle, NULL, NULL)));
             rv = NGHTTP2_ERR_CALLBACK_FAILURE;
         }
     } else if (rv == 0) {
