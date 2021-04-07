@@ -32,7 +32,7 @@
 
 bool fbdev_init(void);
 void fbdev_deinit(void);
-void fbdev_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
+void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
 
 /**********************
  *  STATIC VARIABLES
@@ -191,7 +191,7 @@ void fbdev_deinit(void)
  * @param area->y2 bottom coordinate
  * @param color_p an array of colors
  */
-void fbdev_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     if(fbp == NULL ||
             area->x2 < 0 ||

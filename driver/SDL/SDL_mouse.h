@@ -23,7 +23,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
-#include "lvgl/src/lv_hal/lv_hal_indev.h"
+#include "lvgl/src/hal/lv_hal_indev.h"
 
 
 #ifndef MONITOR_SDL_INCLUDE_PATH

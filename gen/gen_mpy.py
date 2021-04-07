@@ -267,11 +267,10 @@ def is_obj_ctor(func):
     if not create_obj_pattern.match(func.name): return False
     # ctor must return a base_obj type
     if not lv_base_obj_pattern.match(get_type(func.type.type, remove_quals=True)): return False
-    # ctor must receive (at least) two base obj parameters
+    # ctor must receive (at least) one base obj parameters
     args = func.type.args.params
-    if len(args) < 2: return False
+    if len(args) < 1: return False
     if not lv_base_obj_pattern.match(get_type(args[0].type, remove_quals=True)): return False
-    if not lv_base_obj_pattern.match(get_type(args[1].type, remove_quals=True)): return False
     return True
 
 def is_global_callback(arg_type):
@@ -297,15 +296,9 @@ func_prototypes = {}
 parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
-func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
-func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
-all_funcs = func_defs + func_decls
-funcs = [f for f in all_funcs if not f.name.startswith('_')] # functions that start with underscore are usually internal
-# eprint('... %s' % ',\n'.join(sorted('%s' % func.name for func in funcs)))
-obj_ctors = [func for func in funcs if is_obj_ctor(func)]
-for obj_ctor in obj_ctors:
-    funcs.remove(obj_ctor)
-obj_names = [create_obj_pattern.match(ctor.name).group(1) for ctor in obj_ctors]
+
+# Types and structs
+
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
 # eprint('... %s' % str(typedefs))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
@@ -317,6 +310,19 @@ explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname)
 # print('/* --> structs_without_typedef:\n%s */' % ',\n'.join(sorted(str(structs_without_typedef[struct_name]) for struct_name in structs_without_typedef if struct_name)))
 # print('/* --> explicit_structs:\n%s */' % ',\n'.join(sorted(str(explicit_structs[struct_name]) for struct_name in explicit_structs if struct_name)))
 # eprint('/* --> structs without typedef:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs_without_typedef)))
+
+# Functions and objects
+
+func_defs = [x.decl for x in ast.ext if isinstance(x, c_ast.FuncDef)]
+func_decls = [x for x in ast.ext if isinstance(x, c_ast.Decl) and isinstance(x.type, c_ast.FuncDecl)]
+all_funcs = func_defs + func_decls
+funcs = [f for f in all_funcs if not f.name.startswith('_')] # functions that start with underscore are usually internal
+# eprint('... %s' % ',\n'.join(sorted('%s' % func.name for func in funcs)))
+obj_ctors = [func for func in funcs if is_obj_ctor(func)]
+# eprint('CTORS(%d): %s' % (len(obj_ctors), ', '.join(sorted('%s' % ctor.name for ctor in obj_ctors))))
+for obj_ctor in obj_ctors:
+    funcs.remove(obj_ctor)
+obj_names = [create_obj_pattern.match(ctor.name).group(1) for ctor in obj_ctors]
 
 def has_ctor(obj_name):
     return ctor_name_from_obj_name(obj_name) in [ctor.name for ctor in obj_ctors]
@@ -764,8 +770,6 @@ STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
 
 #ifdef LV_OBJ_T
 
-typedef LV_OBJ_T* (*lv_create)(LV_OBJ_T * par, const LV_OBJ_T * copy);
-
 typedef struct mp_lv_obj_t {
     mp_obj_base_t base;
     LV_OBJ_T *lv_obj;
@@ -806,28 +810,26 @@ STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC void* mp_to_ptr(mp_obj_t self_in);
+
 STATIC mp_obj_t make_new(
-    lv_create create,
+    const mp_lv_obj_fun_builtin_var_t *lv_obj_var,
     const mp_obj_type_t *type,
     size_t n_args,
     size_t n_kw,
     const mp_obj_t *args)
 {
-    mp_arg_check_num(n_args, n_kw, 0, 2, false);
     mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
-    LV_OBJ_T *parent = n_args > 0? mp_to_lv(args[0]): NULL;
-    LV_OBJ_T *copy = n_args > 1? mp_to_lv(args[1]): NULL;
+    mp_obj_t lv_obj = mp_call_function_n_kw(MP_OBJ_FROM_PTR(lv_obj_var), n_args, n_kw, args);
     *self = (mp_lv_obj_t){
         .base = {type}, 
-        .lv_obj = create(parent, copy),
+        .lv_obj = mp_to_ptr(lv_obj),
         .callbacks = NULL,
     };
     if (!self->lv_obj) return mp_const_none;
     self->lv_obj->user_data = self;
     return MP_OBJ_FROM_PTR(self);
 }
-
-STATIC void* mp_to_ptr(mp_obj_t self_in);
 
 STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
 {
@@ -2052,14 +2054,25 @@ def gen_obj_methods(obj_name):
     return members + parent_members + enum_members + enum_types + helper_members
 
 def gen_obj(obj_name):
+    # eprint('Generating object %s...' % obj_name)
     is_obj = has_ctor(obj_name)
     should_add_base_methods = is_obj and obj_name != 'obj'
     obj_metadata[obj_name] = {'members' : collections.OrderedDict()}
+
+    # Generate object methods
     for method in get_methods(obj_name):
         try:
             gen_mp_func(method, obj_name)
         except MissingConversionException as exp:
             gen_func_error(method, exp)
+
+    # Generate object construction function, if needed
+    if is_obj:
+        ctor_func = get_ctor(obj_name)
+        try:
+            gen_mp_func(ctor_func, obj_name)
+        except MissingConversionException as exp:
+            gen_func_error(cctor_func, exp)
 
     # print([method.name for method in methods])
     ctor = """
@@ -2069,7 +2082,7 @@ STATIC mp_obj_t {obj}_make_new(
     size_t n_kw,
     const mp_obj_t *args)
 {{
-    return make_new(&lv_{obj}_create, type, n_args, n_kw, args);           
+    return make_new(&mp_{ctor_name}_obj, type, n_args, n_kw, args);
 }}
 """
 
@@ -2112,7 +2125,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
             obj = sanitize(obj_name), base_obj = base_obj_name,
             base_class = '&mp_%s_type' % base_obj_name if should_add_base_methods else 'NULL',
             locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
-            ctor = ctor.format(obj = obj_name) if has_ctor(obj_name) else '',
+            ctor = ctor.format(obj = obj_name, ctor_name = ctor_func.name) if has_ctor(obj_name) else '',
             make_new = '.make_new = %s_make_new,' % obj_name if is_obj else '',
             buffer_p = '.buffer_p = { .get_buffer = mp_lv_obj_get_buffer },' if is_obj else '',
             parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',

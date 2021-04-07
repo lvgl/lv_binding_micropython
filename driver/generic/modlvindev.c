@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "../include/common.h"
-#include "lvgl/src/lv_hal/lv_hal_indev.h"
+#include "lvgl/src/hal/lv_hal_indev.h"
 #include "py/obj.h"
 #include "py/runtime.h"
 
