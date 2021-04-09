@@ -215,7 +215,7 @@ lv_global_callback_pattern = re.compile('.*g_cb_t')
 lv_func_returns_array = re.compile('.*_array$')
 lv_enum_name_pattern = re.compile('^(ENUM_){{0,1}}({prefix}_){{0,1}}(.*)'.format(prefix=module_prefix.upper()))
 
-# Prevent identifies names which are Python reserved words (add underscore in such case)
+# Prevent identifier names which are Python reserved words (add underscore in such case)
 def sanitize(id, kwlist = 
         ['False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 
          'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 
@@ -820,14 +820,28 @@ STATIC mp_obj_t make_new(
     const mp_obj_t *args)
 {
     mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
-    mp_obj_t lv_obj = mp_call_function_n_kw(MP_OBJ_FROM_PTR(lv_obj_var), n_args, n_kw, args);
+
+    mp_obj_t lv_obj;
+    if (n_args == 0 && n_kw == 0) // allow no args, and pass NULL as parent in such case
+    {
+        const mp_obj_t no_args[] = {mp_const_none};
+        lv_obj = mp_call_function_n_kw(MP_OBJ_FROM_PTR(lv_obj_var), 1, 0, no_args);
+    }
+    else
+    {
+        lv_obj = mp_call_function_n_kw(MP_OBJ_FROM_PTR(lv_obj_var), n_args, n_kw, args);
+    }
+
     *self = (mp_lv_obj_t){
         .base = {type}, 
         .lv_obj = mp_to_ptr(lv_obj),
         .callbacks = NULL,
     };
     if (!self->lv_obj) return mp_const_none;
+
+    // Register the Python object in user_data
     self->lv_obj->user_data = self;
+
     return MP_OBJ_FROM_PTR(self);
 }
 
