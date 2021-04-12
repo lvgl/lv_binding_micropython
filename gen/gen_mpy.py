@@ -1971,9 +1971,10 @@ def gen_mp_func(func, obj_name):
         pass
 
     return_type = get_type(func.type.type, remove_quals = False)
+    qualified_return_type = gen.visit(func.type.type)
     if isinstance(func.type.type, c_ast.PtrDecl) and lv_func_returns_array.match(func.name):
         try_generate_array_type(func.type.type)
-    # print('/* --> return_type = %s, func.type.type = %s\n%s */' % (return_type, gen.visit(func.type.type), func.type.type))
+    # print('/* --> return_type = %s, qualified_return_type = %s\n%s */' % (return_type, qualified_return_type, func.type.type))
     if return_type == "void":        
         build_result = ""
         build_return_value = "mp_const_none" 
@@ -1983,7 +1984,7 @@ def gen_mp_func(func, obj_name):
             try_generate_type(func.type.type)
             if return_type not in lv_to_mp or not lv_to_mp[return_type]:
                 raise MissingConversionException("Missing convertion from %s" % return_type)
-        build_result = "%s _res = " % return_type
+        build_result = "%s _res = " % qualified_return_type
         cast = '(void*)' if isinstance(func.type.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
         build_return_value = "{type}({cast}_res)".format(type = lv_to_mp[return_type], cast = cast)
         func_metadata[func.name]['return_type'] = lv_mp_type[return_type]
