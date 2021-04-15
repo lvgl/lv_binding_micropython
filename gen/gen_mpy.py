@@ -728,8 +728,11 @@ STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
+    if (native_type == NULL)
+        return NULL;
     if (native_type->parent == NULL || 
-        (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer)) return mp_obj;
+        (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer))
+       return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
     return mp_obj_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
@@ -787,6 +790,10 @@ STATIC inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+    if (mp_lv_obj == NULL)
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, MP_ERROR_TEXT("'user_data' argument must be either a dict or None!")));
     if (!mp_lv_obj->callbacks) mp_lv_obj->callbacks = mp_obj_new_dict(0);
     return mp_lv_obj->callbacks;
 }
