@@ -1581,7 +1581,7 @@ def try_generate_array_type(type_ast):
  * Array convertors for {arr_name}
  */
 
-STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
+STATIC {type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
 {{
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -1594,7 +1594,7 @@ STATIC {qualified_type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {{
         lv_arr[i++] = {mp_to_lv_convertor}(item);
     }}
-    return ({qualified_type} *)lv_arr;
+    return ({type} *)lv_arr;
 }}
     
 STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
@@ -1917,8 +1917,10 @@ def build_mp_func_arg(arg, index, func, obj_name):
     arg_metadata = {'type': lv_mp_type[arg_type]}
     if arg.name: arg_metadata['name'] = arg.name
     func_metadata[func.name]['args'].append(arg_metadata)
-    return '{var} = {convertor}(mp_args[{i}]);'.format(
+    cast = ("(%s)" % gen.visit(fixed_arg.type)) if 'const' in arg.quals else "" # allow convertion from non const to const, sometimes requires cast
+    return '{var} = {cast}{convertor}(mp_args[{i}]);'.format(
             var = gen.visit(fixed_arg),
+            cast = cast,
             convertor = mp_to_lv[arg_type],
             i = index) 
 
