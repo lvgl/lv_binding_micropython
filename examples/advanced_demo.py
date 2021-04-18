@@ -25,12 +25,12 @@ lv.init()
 class ColorStyle(lv.style_t):
     def __init__(self, color):
         super().__init__()
-        # self.set_bg_opa(lv.OPA.COVER);
+        self.set_bg_opa(lv.OPA.COVER);
         self.set_bg_color(lv.color_hex3(color))
-        # self.set_bg_grad_color(lv.color_hex3(0xFFF));
-        # self.set_bg_grad_dir(lv.GRAD_DIR.VER);
-        # self.set_bg_main_stop(0);
-        # self.set_bg_grad_stop(128);
+        self.set_bg_grad_color(lv.color_hex3(0xFFF));
+        self.set_bg_grad_dir(lv.GRAD_DIR.VER);
+        self.set_bg_main_stop(0);
+        self.set_bg_grad_stop(128);
 
 class ChartPaddingStyle(lv.style_t):
     def __init__(self):
@@ -217,8 +217,7 @@ class Anim(lv.anim_t):
             self.set_custom_exec_cb(exec_cb)
         else:
             self.set_exec_cb(obj, exec_cb)
-        path = lv.anim_path_t({'cb': path_cb})
-        self.set_path(path)
+        self.set_path_cb(path_cb)
         if playback:
             self.set_playback(0)
         if ready_cb:
@@ -242,7 +241,7 @@ class AnimatedChart(lv.chart):
             self.val,
             self.size,
             lambda a, val: self.set_range(self.AXIS.PRIMARY_Y, 0, val),
-            lv.anim_path_t.ease_in,
+            lv.anim_t.path_ease_in,
             ready_cb=lambda a:self.anim_phase2(),
             time=(self.max * self.factor) // 100,
         )
@@ -253,7 +252,7 @@ class AnimatedChart(lv.chart):
             self.val + self.size,
             -self.size,
             lambda a, val: self.set_range(self.AXIS.PRIMARY_Y, 0, val),
-            lv.anim_path_t.ease_out,
+            lv.anim_t.path_ease_out,
             ready_cb=lambda a:self.anim_phase1(),
             time=(self.min * self.factor) // 100,
         )
