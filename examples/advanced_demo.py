@@ -25,48 +25,48 @@ lv.init()
 class ColorStyle(lv.style_t):
     def __init__(self, color):
         super().__init__()
-        self.set_bg_opa(lv.OPA.COVER);
+        self.set_bg_opa(lv.OPA.COVER)
         self.set_bg_color(lv.color_hex3(color))
-        self.set_bg_grad_color(lv.color_hex3(0xFFF));
-        self.set_bg_grad_dir(lv.GRAD_DIR.VER);
-        self.set_bg_main_stop(0);
-        self.set_bg_grad_stop(128);
+        self.set_bg_grad_color(lv.color_hex3(0xFFF))
+        self.set_bg_grad_dir(lv.GRAD_DIR.VER)
+        self.set_bg_main_stop(0)
+        self.set_bg_grad_stop(128)
 
 class ChartPaddingStyle(lv.style_t):
     def __init__(self):
         super().__init__()
-        self.set_pad_left(10);
-        self.set_pad_right(10);
-        self.set_pad_bottom(10);
-        self.set_pad_top(10);
+        self.set_pad_left(10)
+        self.set_pad_right(10)
+        self.set_pad_bottom(10)
+        self.set_pad_top(10)
 
 class ShadowStyle(lv.style_t):
     def __init__(self):
         super().__init__()
-        self.set_shadow_opa(lv.OPA.COVER);
-        self.set_shadow_width(3);
-        self.set_shadow_color(lv.color_hex3(0xAAA));
-        self.set_shadow_ofs_x(5);
-        self.set_shadow_ofs_y(3);
-        self.set_shadow_spread(0);
+        self.set_shadow_opa(lv.OPA.COVER)
+        self.set_shadow_width(3)
+        self.set_shadow_color(lv.color_hex3(0xAAA))
+        self.set_shadow_ofs_x(5)
+        self.set_shadow_ofs_y(3)
+        self.set_shadow_spread(0)
 
 # A square button with a shadow when not pressed
 class ButtonStyle(lv.style_t):
     def __init__(self):
         super().__init__()
         self.set_radius(lv.dpx(8))
-        self.set_shadow_opa(lv.OPA.COVER);
-        self.set_shadow_width(lv.dpx(10));
-        self.set_shadow_color(lv.color_hex3(0xAAA));
-        self.set_shadow_ofs_x(lv.dpx(10));
-        self.set_shadow_ofs_y(lv.dpx(10));
-        self.set_shadow_spread(0);
+        self.set_shadow_opa(lv.OPA.COVER)
+        self.set_shadow_width(lv.dpx(10))
+        self.set_shadow_color(lv.color_hex3(0xAAA))
+        self.set_shadow_ofs_x(lv.dpx(10))
+        self.set_shadow_ofs_y(lv.dpx(10))
+        self.set_shadow_spread(0)
 
 class ButtonPressedStyle(lv.style_t):
     def __init__(self):
         super().__init__()
-        self.set_shadow_ofs_x(lv.dpx(0));
-        self.set_shadow_ofs_y(lv.dpx(0));
+        self.set_shadow_ofs_x(lv.dpx(0))
+        self.set_shadow_ofs_y(lv.dpx(0))
 
 
 ##############################################################################
@@ -82,21 +82,20 @@ class AdvancedDemoTheme(lv.theme_t):
 
         # This theme is based on active theme (material)
         base_theme = lv.theme_get_from_obj(lv.scr_act())
-        # self.copy(base_theme)
 
         # This theme will be applied only after base theme is applied
-        # self.set_base(base_theme)
+        self.set_parent(base_theme)
 
         # Set the "apply" callback of this theme to our custom callback
         self.set_apply_cb(self.apply)
 
-        # Activate this theme
-        # self.set_act()
+        # Activate this theme on default display
+        lv.disp_get_default().set_theme(self)
     
-    def apply(self, theme, obj, name):
-        if name == lv.THEME.BTN:
-            obj.add_style(self.button_style, obj.PART.MAIN)
-            obj.add_style(self.button_pressed_style, obj.PART.MAIN | obj.STATE.PRESSED)
+    def apply(self, theme, obj):
+        if obj.get_class().__dereference__() == lv.btn_class.__dereference__():
+            obj.add_style(self.button_style, lv.PART.MAIN)
+            obj.add_style(self.button_pressed_style, lv.PART.MAIN | lv.STATE.PRESSED)
 
 ##############################################################################
 
@@ -124,6 +123,8 @@ class SymbolButton(lv.btn):
         self.symbol.set_text(symbol)
         self.label = lv.label(self)
         self.label.set_text(text)
+        self.set_flex_flow(lv.FLEX_FLOW.COLUMN)
+        self.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
 
 
 class Page_Buttons:
@@ -150,7 +151,7 @@ class Page_Buttons:
                 self.label.set_text('[%d] %s %s' % (self.btn_event_count[name], name, event_name))
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.add_event_cb(lambda event, btn_name=name: button_cb(event, btn_name), None)
+            btn.add_event_cb(lambda event, btn_name=name: button_cb(event, btn_name), lv.EVENT.ALL, None)
 
 
 class Page_Simple:
@@ -165,7 +166,7 @@ class Page_Simple:
         self.slider.align(lv.ALIGN.TOP_LEFT, 20, 20)
         self.slider_label = lv.label(page)
         self.slider_label.align(lv.ALIGN.OUT_RIGHT_MID, 15, 0)
-        self.slider.add_event_cb(self.on_slider_changed, None)
+        self.slider.add_event_cb(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
         self.on_slider_changed(None)
 
         # style selector
@@ -178,7 +179,7 @@ class Page_Simple:
         self.style_selector.add_style(ShadowStyle(), lv.PART.MAIN)
         self.style_selector.align(lv.ALIGN.OUT_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
-        self.style_selector.add_event_cb(self.on_style_selector_changed, None)
+        self.style_selector.add_event_cb(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
 
         # counter button
         self.counter_btn = lv.btn(page)
@@ -186,26 +187,22 @@ class Page_Simple:
         self.counter_btn.align(lv.ALIGN.BOTTOM_MID, 0, -20)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")
-        self.counter_btn.add_event_cb(self.on_counter_btn, None)
+        self.counter_btn.add_event_cb(self.on_counter_btn, lv.EVENT.CLICKED, None)
         self.counter = 0
 
     def on_slider_changed(self, event):
-        if event != None and event.code == lv.EVENT.VALUE_CHANGED:
-            self.slider_label.set_text(str(self.slider.get_value()))
+        self.slider_label.set_text(str(self.slider.get_value()))
 
     def on_style_selector_changed(self, event):
-        if event.code == lv.EVENT.VALUE_CHANGED:
-            selected = self.style_selector.get_selected()
-            tabview = self.app.screen_main.tabview
-            if hasattr(self, 'selected_style'): tabview.remove_style(self.selected_style, lv.PART.MAIN)
-            self.selected_style = self.styles[selected][1]
-            tabview.add_style(self.selected_style, lv.PART.MAIN)
+        selected = self.style_selector.get_selected()
+        tabview = self.app.screen_main.tabview
+        if hasattr(self, 'selected_style'): tabview.remove_style(self.selected_style, lv.PART.MAIN)
+        self.selected_style = self.styles[selected][1]
+        tabview.add_style(self.selected_style, lv.PART.MAIN)
 
     def on_counter_btn(self, event):
-        if event.code == lv.EVENT.CLICKED:
-            self.counter += 1
-            self.counter_label.set_text(str(self.counter))
-
+        self.counter += 1
+        self.counter_label.set_text(str(self.counter))
 
 class Anim(lv.anim_t):
     def __init__(self, obj, val, size, exec_cb, path_cb, time=500, playback=False, ready_cb=None):
@@ -262,13 +259,17 @@ class Page_Chart:
     def __init__(self, app, page):
         self.app = app
         self.page = page
+        self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
+        self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
+        self.page.set_style_pad_all(30, lv.PART.MAIN)
+        self.page.set_style_pad_gap(30, lv.PART.MAIN)
         self.chart = AnimatedChart(page, 100, 1000)
-        self.chart.set_width(page.get_width() - 80)
+        # self.chart.set_width(page.get_width() - 80)
         self.series1 = self.chart.add_series(lv.color_hex(0xFF0000), self.chart.AXIS.PRIMARY_Y)
         self.chart.set_type(self.chart.TYPE.LINE)
         self.chart.set_style_line_width(3, lv.PART.ITEMS)
         self.chart.add_style(ColorStyle(0x055), lv.PART.ITEMS)
-        self.chart.add_style(ChartPaddingStyle(), lv.PART.MAIN)
+        # self.chart.add_style(ChartPaddingStyle(), lv.PART.MAIN)
         self.chart.set_range(self.chart.AXIS.PRIMARY_Y, 0, 100)
         self.chart.set_point_count(10)
         self.chart.set_ext_array(self.series1, [10, 20, 30, 20, 10, 40, 50, 90, 95, 90])
@@ -277,22 +278,21 @@ class Page_Chart:
         # self.chart.set_y_tick_texts("1\n2\n3\n4\n5", 2, lv.chart.AXIS.DRAW_LAST_TICK)
         # self.chart.set_y_tick_length(10, 5)
         self.chart.set_div_line_count(3, 3)
-        self.chart.set_height(self.page.get_height() - 60)
-        self.chart.align(lv.ALIGN.CENTER, 0, 0)
+        # self.chart.set_height(self.page.get_height() - 60)
+        # self.chart.align(lv.ALIGN.CENTER, 0, 0)
 
         # Create a slider that controls the chart animation speed
 
         def on_slider_changed(event):
-            if event != None and event.code == lv.EVENT.VALUE_CHANGED:
-                self.chart.factor = self.slider.get_value()
+            self.chart.factor = self.slider.get_value()
 
         self.slider = lv.slider(page)
-        self.slider.align(lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
+        # self.slider.align(lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
         self.slider.set_width(10)
-        self.slider.set_height(self.chart.get_height())
+        self.slider.set_height(self.page.get_height())
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
-        self.slider.add_event_cb(on_slider_changed, None)
+        self.slider.add_event_cb(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
 
 
 class Screen_Main(lv.obj):
@@ -332,7 +332,7 @@ class AdvancedDemoApplication:
         indev_drv.init() 
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = SDL.mouse_read
-        indev_drv.register();
+        indev_drv.register()
         
     def init_gui_esp32(self):
 
@@ -352,9 +352,9 @@ class AdvancedDemoApplication:
         self.touch.init()
         indev_drv = lv.indev_drv_t()
         lv.indev_drv_init(indev_drv) 
-        indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read_cb = self.touch.read;
-        lv.indev_drv_register(indev_drv);
+        indev_drv.type = lv.INDEV_TYPE.POINTER
+        indev_drv.read_cb = self.touch.read
+        lv.indev_drv_register(indev_drv)
         """
 
         # Register xpt2046 touch driver
