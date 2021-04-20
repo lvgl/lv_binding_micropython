@@ -32,14 +32,6 @@ class ColorStyle(lv.style_t):
         self.set_bg_main_stop(0)
         self.set_bg_grad_stop(128)
 
-class ChartPaddingStyle(lv.style_t):
-    def __init__(self):
-        super().__init__()
-        self.set_pad_left(10)
-        self.set_pad_right(10)
-        self.set_pad_bottom(10)
-        self.set_pad_top(10)
-
 class ShadowStyle(lv.style_t):
     def __init__(self):
         super().__init__()
@@ -160,12 +152,13 @@ class Page_Simple:
         self.page = page
         self.test_events = []
 
+        self.page.set_flex_flow(lv.FLEX_FLOW.COLUMN)
+        self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
+
         # slider
         self.slider = lv.slider(page)
-        self.slider.set_width(160)
-        self.slider.align(lv.ALIGN.TOP_LEFT, 20, 20)
+        self.slider.set_width(lv.pct(80))
         self.slider_label = lv.label(page)
-        self.slider_label.align(lv.ALIGN.OUT_RIGHT_MID, 15, 0)
         self.slider.add_event_cb(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
         self.on_slider_changed(None)
 
@@ -184,9 +177,9 @@ class Page_Simple:
         # counter button
         self.counter_btn = lv.btn(page)
         self.counter_btn.set_size(80,80)
-        self.counter_btn.align(lv.ALIGN.BOTTOM_MID, 0, -20)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")
+        self.counter_label.align(lv.ALIGN.CENTER, 0, 0)
         self.counter_btn.add_event_cb(self.on_counter_btn, lv.EVENT.CLICKED, None)
         self.counter = 0
 
@@ -264,12 +257,12 @@ class Page_Chart:
         self.page.set_style_pad_all(30, lv.PART.MAIN)
         self.page.set_style_pad_gap(30, lv.PART.MAIN)
         self.chart = AnimatedChart(page, 100, 1000)
-        # self.chart.set_width(page.get_width() - 80)
+        self.chart.set_flex_grow(1)
+        self.chart.set_height(lv.pct(100))
         self.series1 = self.chart.add_series(lv.color_hex(0xFF0000), self.chart.AXIS.PRIMARY_Y)
         self.chart.set_type(self.chart.TYPE.LINE)
         self.chart.set_style_line_width(3, lv.PART.ITEMS)
         self.chart.add_style(ColorStyle(0x055), lv.PART.ITEMS)
-        # self.chart.add_style(ChartPaddingStyle(), lv.PART.MAIN)
         self.chart.set_range(self.chart.AXIS.PRIMARY_Y, 0, 100)
         self.chart.set_point_count(10)
         self.chart.set_ext_array(self.series1, [10, 20, 30, 20, 10, 40, 50, 90, 95, 90])
@@ -277,9 +270,7 @@ class Page_Chart:
         # self.chart.set_x_tick_length(10, 5)
         # self.chart.set_y_tick_texts("1\n2\n3\n4\n5", 2, lv.chart.AXIS.DRAW_LAST_TICK)
         # self.chart.set_y_tick_length(10, 5)
-        self.chart.set_div_line_count(3, 3)
-        # self.chart.set_height(self.page.get_height() - 60)
-        # self.chart.align(lv.ALIGN.CENTER, 0, 0)
+        self.chart.set_div_line_count(8, 8)
 
         # Create a slider that controls the chart animation speed
 
@@ -287,9 +278,7 @@ class Page_Chart:
             self.chart.factor = self.slider.get_value()
 
         self.slider = lv.slider(page)
-        # self.slider.align(lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
-        self.slider.set_width(10)
-        self.slider.set_height(self.page.get_height())
+        self.slider.set_size(10, lv.pct(100))
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
         self.slider.add_event_cb(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
