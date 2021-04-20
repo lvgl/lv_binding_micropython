@@ -85,7 +85,7 @@ class AdvancedDemoTheme(lv.theme_t):
         lv.disp_get_default().set_theme(self)
     
     def apply(self, theme, obj):
-        if obj.get_class().__dereference__() == lv.btn_class.__dereference__():
+        if obj.get_class() == lv.btn_class:
             obj.add_style(self.button_style, lv.PART.MAIN)
             obj.add_style(self.button_pressed_style, lv.PART.MAIN | lv.STATE.PRESSED)
 

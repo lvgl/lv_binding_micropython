@@ -949,6 +949,21 @@ STATIC mp_obj_t make_new_lv_struct(
     return MP_OBJ_FROM_PTR(self);
 }
 
+STATIC mp_obj_t lv_struct_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t rhs_in)
+{
+    mp_lv_struct_t *lhs = MP_OBJ_TO_PTR(lhs_in);
+    mp_lv_struct_t *rhs = MP_OBJ_TO_PTR(rhs_in);
+    switch (op)
+    {
+        case MP_BINARY_OP_EQUAL:
+            return mp_obj_new_bool(lhs->data == rhs->data);
+        case MP_BINARY_OP_NOT_EQUAL:
+            return mp_obj_new_bool(lhs->data != rhs->data);
+        default:
+            return MP_OBJ_NULL;
+    }
+}
+
 STATIC void *copy_buffer(const void *buffer, size_t size)
 {
     void *new_buffer = m_malloc(size);
@@ -1516,6 +1531,7 @@ STATIC const mp_obj_type_t mp_{sanitized_struct_name}_type = {{
     .name = MP_QSTR_{sanitized_struct_name},
     .print = mp_{sanitized_struct_name}_print,
     .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
     .attr = mp_{sanitized_struct_name}_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_{sanitized_struct_name}_locals_dict,
     .buffer_p = {{ .get_buffer = mp_blob_get_buffer }}
