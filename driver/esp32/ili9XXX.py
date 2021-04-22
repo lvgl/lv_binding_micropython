@@ -116,7 +116,7 @@ class ili9XXX:
         else:
             raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
 
-        self.disp_buf = lv.disp_buf_t()
+        self.disp_buf = lv.disp_draw_buf_t()
         self.disp_drv = lv.disp_drv_t()
 
         self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
@@ -124,7 +124,7 @@ class ili9XXX:
         self.disp_spi_init()
 
         self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': self.display_type}
-        self.disp_drv.buffer = self.disp_buf
+        self.disp_drv.draw_buf = self.disp_buf
         self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width

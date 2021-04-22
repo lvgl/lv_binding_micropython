@@ -13,8 +13,8 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_task.h"
-#include "lvgl/src/lv_hal/lv_hal_indev.h"
-#include "lvgl/src/lv_core/lv_disp.h"  
+#include "lvgl/src/hal/lv_hal_indev.h"
+#include "lvgl/src/core/lv_disp.h"
 
 #include "esp_log.h"
 #include "soc/adc_channel.h"
@@ -107,7 +107,7 @@ STATIC bool touch_read(lv_indev_drv_t * indev_drv, lv_indev_data_t *data)
     rtch_info_t *touch_info = &g_rtch->rtch_info;
     xSemaphoreTake(g_rtch->rtch_info_mutex, portMAX_DELAY);
     data->point = (lv_point_t){touch_info->x, touch_info->y};
-    data->state = touch_info->touched? LV_INDEV_STATE_PR: LV_INDEV_STATE_REL;
+    data->state = touch_info->touched? LV_INDEV_STATE_PRESSED: LV_INDEV_STATE_RELEASED;
     xSemaphoreGive(g_rtch->rtch_info_mutex);
     return false;
 }

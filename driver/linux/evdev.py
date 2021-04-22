@@ -69,7 +69,7 @@ class mouse_indev:
         data.point.y = max(data.point.y, 0)
 
         # Update "pressed" status
-        data.state = lv.INDEV_STATE.PR if ((mouse_data[0] & 1) == 1) else lv.INDEV_STATE.REL
+        data.state = lv.INDEV_STATE.PRESSED if ((mouse_data[0] & 1) == 1) else lv.INDEV_STATE.RELEASED
 
         # Draw cursor, if needed
         if self.cursor: self.cursor(data)

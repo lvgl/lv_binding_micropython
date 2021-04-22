@@ -125,16 +125,18 @@ class Page_Buttons:
         self.page = page
         self.btn_event_count = {'Play': 0, 'Pause': 0}
 
+        self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
+        self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.START)
+
         self.btn1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
         self.btn1.set_size(80, 80)
-        self.btn1.align(lv.ALIGN.TOP_LEFT, 30, 30)
 
         self.btn2 = SymbolButton(page, lv.SYMBOL.PAUSE, "Pause")
         self.btn2.set_size(80, 80)
-        self.btn2.align(lv.ALIGN.TOP_RIGHT, -30, 30)
 
         self.label = lv.label(page)
-        self.label.align(lv.ALIGN.BOTTOM_LEFT, 30, -30)
+        self.label.add_flag(lv.obj.FLAG.IGNORE_LAYOUT)
+        self.label.align(lv.ALIGN.BOTTOM_LEFT, 0, 0)
 
         def button_cb(event, name):
             self.btn_event_count[name] += 1
@@ -254,8 +256,8 @@ class Page_Chart:
         self.page = page
         self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
         self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
-        self.page.set_style_pad_all(30, lv.PART.MAIN)
-        self.page.set_style_pad_gap(30, lv.PART.MAIN)
+        self.page.set_style_pad_all(10, lv.PART.MAIN)
+        self.page.set_style_pad_gap(10, lv.PART.MAIN)
         self.chart = AnimatedChart(page, 100, 1000)
         self.chart.set_flex_grow(1)
         self.chart.set_height(lv.pct(100))
@@ -270,7 +272,7 @@ class Page_Chart:
         # self.chart.set_x_tick_length(10, 5)
         # self.chart.set_y_tick_texts("1\n2\n3\n4\n5", 2, lv.chart.AXIS.DRAW_LAST_TICK)
         # self.chart.set_y_tick_length(10, 5)
-        self.chart.set_div_line_count(8, 8)
+        self.chart.set_div_line_count(5, 5)
 
         # Create a slider that controls the chart animation speed
 

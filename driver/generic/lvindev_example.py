@@ -32,7 +32,7 @@ import lvindev as indev
 # and current button push state
 
 point = lv.point_t({'x':100,'y':100})
-state = lv.INDEV_STATE.REL
+state = lv.INDEV_STATE.RELEASED
 
 # "cb" is a callback called by lvgl to get the input device paramerters.
 # Its input is a pointer that needs to be casted to lv.indev_data_t struct.
@@ -81,7 +81,7 @@ btn.set_y(90)
 # Press the mouse button!
 # We change "state" global which is polled by the callback
 
-state = lv.INDEV_STATE.PR
+state = lv.INDEV_STATE.PRESSED
 
 # Move the mouse in a loop!
 # We change "point" global which is polled by the callback

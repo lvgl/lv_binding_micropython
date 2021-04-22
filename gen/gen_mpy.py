@@ -1572,7 +1572,7 @@ def try_generate_array_type(type_ast):
     arr_name = get_name(type_ast)
     if arr_name in mp_to_lv:
         return mp_to_lv[arr_name]
-    # print('/* --> try_generate_array_type %s: %s */' % (arr_name, type_ast))    
+    # print('/* --> try_generate_array_type %s: %s */' % (arr_name, type_ast))
     dim = gen.visit(type_ast.dim) if hasattr(type_ast, 'dim') and type_ast.dim else None
     element_type = get_type(type_ast.type, remove_quals = True)
     qualified_element_type = gen.visit(type_ast.type)
@@ -1597,7 +1597,7 @@ def try_generate_array_type(type_ast):
  * Array convertors for {arr_name}
  */
 
-STATIC {type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
+STATIC {struct_tag}{type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
 {{
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -1610,7 +1610,7 @@ STATIC {type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {{
         lv_arr[i++] = {mp_to_lv_convertor}(item);
     }}
-    return ({type} *)lv_arr;
+    return ({struct_tag}{type} *)lv_arr;
 }}
     
 STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)

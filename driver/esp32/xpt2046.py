@@ -209,9 +209,9 @@ class xpt2046:
 
         if coords:
             data.point.x ,data.point.y = coords
-            data.state = lv.INDEV_STATE.PR
+            data.state = lv.INDEV_STATE.PRESSED
             return False
-        data.state = lv.INDEV_STATE.REL
+        data.state = lv.INDEV_STATE.RELEASED
         return False
 
     def stat(self):
