@@ -365,15 +365,13 @@ class AdvancedDemoApplication:
         self.tick = lvstm32.lvstm32()
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_draw_buf_t()
-        buf1_1 = lcd.framebuffer(1)
-        buf1_2 = lcd.framebuffer(2)
+        buf1_1 = bytearray(hres * 50 * lv.color_t.SIZE)
+        buf1_2 = bytearray(hres * 50 * lv.color_t.SIZE)
         disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
         disp_drv.draw_buf = disp_buf1
         disp_drv.flush_cb = lcd.flush
-        disp_drv.gpu_blend_cb = lcd.gpu_blend
-        disp_drv.gpu_fill_cb = lcd.gpu_fill
         disp_drv.hor_res = hres
         disp_drv.ver_res = vres
         disp_drv.register()
