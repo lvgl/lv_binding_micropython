@@ -116,7 +116,7 @@ class SymbolButton(lv.btn):
         self.label = lv.label(self)
         self.label.set_text(text)
         self.set_flex_flow(lv.FLEX_FLOW.COLUMN)
-        self.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
+        self.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
 
 
 class Page_Buttons:
@@ -126,7 +126,7 @@ class Page_Buttons:
         self.btn_event_count = {'Play': 0, 'Pause': 0}
 
         self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
-        self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.START)
+        self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.START)
 
         self.btn1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
         self.btn1.set_size(80, 80)
@@ -155,7 +155,7 @@ class Page_Simple:
         self.test_events = []
 
         self.page.set_flex_flow(lv.FLEX_FLOW.COLUMN)
-        self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
+        self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
 
         # slider
         self.slider = lv.slider(page)
@@ -255,7 +255,7 @@ class Page_Chart:
         self.app = app
         self.page = page
         self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
-        self.page.set_flex_place(lv.FLEX_PLACE.SPACE_EVENLY, lv.FLEX_PLACE.CENTER, lv.FLEX_PLACE.CENTER)
+        self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
         self.page.set_style_pad_all(10, lv.PART.MAIN)
         self.page.set_style_pad_gap(10, lv.PART.MAIN)
         self.chart = AnimatedChart(page, 100, 1000)
