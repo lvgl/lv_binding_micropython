@@ -599,6 +599,7 @@ print ("""
 #include "py/runtime.h"
 #include "py/binary.h"
 #include "py/objarray.h"
+#include "py/objtype.h"
 
 /*
  * {module_name} includes
@@ -1037,6 +1038,11 @@ STATIC void* mp_to_ptr(mp_obj_t self_in)
 
 //    if (MP_OBJ_IS_INT(self_in))
 //        return (void*)mp_obj_get_int(self_in);
+
+    // If an object is user instance, take it as is so it could be used as user_data
+    if (mp_obj_is_instance_type(mp_obj_get_type(self_in))){
+        return MP_OBJ_TO_PTR(self_in);
+    }
 
     if (!mp_get_buffer(self_in, &buffer_info, MP_BUFFER_READ)) {
         // No buffer protocol - this is not a Struct or a Blob, it's some other mp object.
