@@ -5,6 +5,27 @@ lv.init()
 
 ##############################################################################
 
+# Helper debug function to print member name
+
+member_name_cache = {}
+
+def get_member_name(obj, value):
+    try:
+        return member_name_cache[id(obj)][id(value)]
+    except KeyError:
+        pass
+
+    for member in dir(obj):
+        if getattr(obj, member) == value:
+            try:
+                member_name_cache[id(obj)][id(value)] = member
+            except KeyError:
+                member_name_cache[id(obj)] = {id(value): member}
+            return member
+
+
+##############################################################################
+
 class CustomWidgetClass():
 
     def __init__(self):
@@ -26,6 +47,7 @@ class CustomWidgetClass():
         obj.add_flag(obj.FLAG.CLICKABLE);
         obj.add_flag(obj.FLAG.CHECKABLE);
         obj.add_flag(obj.FLAG.SCROLL_ON_FOCUS);
+        # print("Contructor called!")
 
     def destructor(self, lv_cls, obj):
         pass
@@ -37,25 +59,39 @@ class CustomWidgetClass():
         if res != lv.RES.OK:
             return
 
-        # Handle DRAW event
         code = e.get_code()
         obj = e.get_target()
+
+        # TODO remove this when user_data is set correctly.
+        if obj.__class__ == lv.obj:
+            return
+
+        # print("Event %s" % get_member_name(lv.EVENT, code))
+
         if code == lv.EVENT.DRAW_MAIN:
+            # Handle DRAW event
             clip_area = lv.area_t.cast(e.get_param())
             self.draw(obj, clip_area)
+        elif code in [
+                lv.EVENT.STYLE_CHANGED,
+                lv.EVENT.VALUE_CHANGED,
+                lv.EVENT.PRESSING,
+                lv.EVENT.RELEASED]:
+            # Check if need to recalculate widget parameters
+            obj.valid = False
 
-    def draw(self, obj, clip_area):
-        # Draw the custom widget
+    def calc(self, obj):
+        # Calculate object parameters
 
         area = lv.area_t()
         obj.get_content_coords(area)
 
-        draw_desc = lv.draw_rect_dsc_t()
-        draw_desc.init()
-        draw_desc.bg_opa = lv.OPA.COVER;
-        draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
+        obj.draw_desc = lv.draw_rect_dsc_t()
+        obj.draw_desc.init()
+        obj.draw_desc.bg_opa = lv.OPA.COVER;
+        obj.draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
         
-        points = [
+        obj.points = [
             {'x':area.x1 + area.get_width()//2,
              'y':area.y2 if obj.get_state() & lv.STATE.CHECKED else area.y1},
             {'x':area.x2,
@@ -64,7 +100,18 @@ class CustomWidgetClass():
              'y':area.y1 + area.get_height()//2},
         ]
 
-        lv.draw_polygon(points, len(points), clip_area, draw_desc)
+        obj.valid = True
+
+    def draw(self, obj, clip_area):
+
+        # If object invalidated, recalculate its parameters
+
+        if not obj.valid:
+            self.calc(obj)
+
+        # Draw the custom widget
+
+        lv.draw_polygon(obj.points, len(obj.points), clip_area, obj.draw_desc)
 
 ##############################################################################
 
@@ -72,19 +119,31 @@ class CustomWidgetClass():
 class CustomWidget():
     cls = CustomWidgetClass()
 
-    def __init__(self, parent):
-        # Create the LVGL object from class
-        self.lv_obj = type(self).cls.create(parent)
+    def __new__(cls, parent):
+        # Return a new lv object instead of CustomWidget, 
+        # but first bind the LVGL object with CustomWidgetWrapper
+        wrapper = cls.CustomWidgetWrapper(parent)
+        return wrapper.lv_obj
 
-        # Associate the LVGL object with CustomWidget
-        self.lv_obj.set_user_data(self)
+    class CustomWidgetWrapper():
+        def __init__(self, parent):
+            # Create the LVGL object from class
+            self.lv_obj = CustomWidget.cls.create(parent)
 
-    def __getattr__(self, attr):
-        # Provide access to LVGL object functions
-        return getattr(self.lv_obj, attr)
+            # Associate the LVGL object with CustomWidget wrapper
+            self.lv_obj.set_user_data(self)
 
-    def __repr__(self):
-        return "Custom Widget"
+            # Set specific custom widget attributes
+            # TODO: This should be in the constructor when it gets the right object
+            self.valid = False
+            
+        def __getattr__(self, attr):
+            # Provide access to LVGL object functions
+            # At this point it's possible to override them
+            return getattr(self.lv_obj, attr)
+
+        def __repr__(self):
+            return "Custom Widget"
 
 ##############################################################################
 
@@ -93,11 +152,19 @@ class CustomTheme(lv.theme_t):
     class Style(lv.style_t):
         def __init__(self):
             super().__init__()
+            self.init()
             self.set_bg_color(lv.palette_main(lv.PALETTE.GREY));
+
+            # TODO: enable the following when https://github.com/lvgl/lv_binding_micropython/issues/134 is completed, instead of the "l2.align" command
+            # self.set_layout(lv.LAYOUT.FLEX);
+            # self.set_flex_main_place(lv.FLEX.ALIGN_CENTER);
+            # self.set_flex_cross_place(lv.FLEX.ALIGN_CENTER);
+            # self.set_flex_track_place(lv.FLEX.ALIGN_CENTER);
 
     class PressedStyle(lv.style_t):
         def __init__(self):
             super().__init__()
+            self.init()
             self.set_bg_color(lv.palette_main(lv.PALETTE.BLUE));
 
     # A theme to apply styles to the custom widget
@@ -142,9 +209,10 @@ l1.set_text("Hello!")
 # Create the custom widget
 customWidget = CustomWidget(scr)
 
-# A child object must be added to the LVGL undelying object of the custom widget
-l2 = lv.label(customWidget.lv_obj)
+# Add a label to the custom widget
+l2 = lv.label(customWidget)
 
+# TODO: remove when theme handles centering by flex
 l2.align(lv.ALIGN.CENTER, 0, -10)
 l2.set_text("Click me!")
 
