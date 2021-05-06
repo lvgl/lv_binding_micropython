@@ -1671,7 +1671,7 @@ def try_generate_type(type_ast):
     if isinstance(type_ast, c_ast.Enum):
         mp_to_lv[type] = mp_to_lv['int']
         lv_to_mp[type] = lv_to_mp['int']
-        lv_mp_type[type] = type_ast.name
+        lv_mp_type[type] = 'int'
         return mp_to_lv[type]
     if type in mp_to_lv:
         return mp_to_lv[type]
@@ -2227,6 +2227,57 @@ def try_generate_structs_from_first_argument():
                 '''.format(struct=arg_type, err=e))
 
 #
+# Generate globals
+#
+
+# eprint("/* Generating globals */")
+
+def gen_global(global_name, global_type_ast):
+    global_type = get_type(global_type_ast, remove_quals=True)
+    generated_global = try_generate_type(global_type_ast)
+    # print("/* generated_global = %s */" % generated_global)
+    if global_type not in generated_structs:
+        wrapped_type = lv_mp_type[global_type]
+        if not wrapped_type:
+            raise MissingConversionException('Missing conversion to %s when generating global %s' % (wrapped_type, global_name))
+        global_type ="_lv_mp_%s_wrapper" % wrapped_type
+        custom_struct_str = """
+typedef struct {{
+    {type} value;
+}} {name};
+        """.format(
+            type = wrapped_type,
+            name = global_type)
+        if global_type not in generated_structs:
+            print("/* Global struct wrapper for %s */" % wrapped_type)
+            print(custom_struct_str)
+            try_generate_struct(global_type, parser.parse(custom_struct_str).ext[0].type.type)
+
+    print("""
+/*
+ * {module_name} {global_name} global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_{global_name} = {{
+    {{ &mp_{struct_name}_type }},
+    ({cast}*)&{global_name}
+}};
+    """.format(
+            module_name = module_name,
+            global_name = global_name,
+            struct_name = global_type,
+            sanitized_struct_name = sanitize(global_type),
+            cast = gen.visit(global_type_ast)))
+
+generated_globals = []
+for global_name in blobs:
+    try:
+        gen_global(global_name, blobs[global_name])
+        generated_globals.append(global_name)
+    except MissingConversionException as exp:
+        gen_func_error(global_name, exp)
+
+#
 # Generate struct-functions
 #
 
@@ -2306,42 +2357,6 @@ if len(functions_not_generated) > 0:
  */
 
 """.format(funcs = "\n * ".join(functions_not_generated)))
-
-#
-# Generate globals
-#
-
-# eprint("/* Generating globals */")
-
-def gen_global(global_name, global_type_ast):
-    global_type = get_type(global_type_ast, remove_quals=True)
-    try_generate_type(global_type_ast)
-    if global_type not in generated_structs:
-        raise MissingConversionException('Missing conversion to %s when generating global %s' % (global_type, global_name))
-
-    print("""
-/*
- * {module_name} {global_name} global definitions
- */
-
-STATIC const mp_lv_struct_t mp_{global_name} = {{
-    {{ &mp_{struct_name}_type }},
-    ({cast}*)&{global_name}
-}};
-    """.format(
-            module_name = module_name,
-            global_name = global_name,
-            struct_name = global_type,
-            sanitized_struct_name = sanitize(global_type),
-            cast = gen.visit(global_type_ast)))
-
-generated_globals = []
-for global_name in blobs:
-    try:
-        gen_global(global_name, blobs[global_name])
-        generated_globals.append(global_name)
-    except MissingConversionException as exp:
-        gen_func_error(global_name, exp)
 
 #
 # Generate callback functions
