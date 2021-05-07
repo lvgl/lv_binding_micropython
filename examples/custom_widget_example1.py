@@ -39,15 +39,16 @@ class CustomWidgetClass():
         self.lv_cls.group_def = lv.obj.CLASS_GROUP_DEF.TRUE
         self.lv_cls.base_class = lv.obj_class
 
-    def create(self, parent):
-        # Create LVGL object from class
-        return self.lv_cls.create_from_class(parent)
+    def create(self, parent, wrapper):
+        # Create LVGL object from class and associate wrapper (user_data)
+        return self.lv_cls.create_obj(parent, wrapper)
 
     def constructor(self, lv_cls, obj):
+        # obj.valid = False
         obj.add_flag(obj.FLAG.CLICKABLE);
         obj.add_flag(obj.FLAG.CHECKABLE);
         obj.add_flag(obj.FLAG.SCROLL_ON_FOCUS);
-        # print("Contructor called!")
+        print("Contructor called!")
 
     def destructor(self, lv_cls, obj):
         pass
@@ -64,9 +65,10 @@ class CustomWidgetClass():
 
         # TODO remove this when user_data is set correctly.
         if obj.__class__ == lv.obj:
+            print("!!! event_cb skipped!")
             return
 
-        # print("Event %s" % get_member_name(lv.EVENT, code))
+        print("Event %s" % get_member_name(lv.EVENT, code))
 
         if code == lv.EVENT.DRAW_MAIN:
             # Handle DRAW event
@@ -128,19 +130,19 @@ class CustomWidget():
     class CustomWidgetWrapper():
         def __init__(self, parent):
             # Create the LVGL object from class
-            self.lv_obj = CustomWidget.cls.create(parent)
-
-            # Associate the LVGL object with CustomWidget wrapper
+            # It also associates the LVGL object with CustomWidget wrapper
+            self.valid = False
+            self.lv_obj = CustomWidget.cls.create(parent, None) # self)
             self.lv_obj.set_user_data(self)
 
-            # Set specific custom widget attributes
-            # TODO: This should be in the constructor when it gets the right object
-            self.valid = False
-            
         def __getattr__(self, attr):
             # Provide access to LVGL object functions
             # At this point it's possible to override them
+            print("__getattr__(%s, %s)" % (repr(self), repr(attr)))
             return getattr(self.lv_obj, attr)
+
+        # def get_class(self):
+        #     return self.lv_obj.get_class()
 
         def __repr__(self):
             return "Custom Widget"
@@ -155,11 +157,10 @@ class CustomTheme(lv.theme_t):
             self.init()
             self.set_bg_color(lv.palette_main(lv.PALETTE.GREY));
 
-            # TODO: enable the following when https://github.com/lvgl/lv_binding_micropython/issues/134 is completed, instead of the "l2.align" command
-            # self.set_layout(lv.LAYOUT.FLEX);
-            # self.set_flex_main_place(lv.FLEX.ALIGN_CENTER);
-            # self.set_flex_cross_place(lv.FLEX.ALIGN_CENTER);
-            # self.set_flex_track_place(lv.FLEX.ALIGN_CENTER);
+            self.set_layout(lv.LAYOUT_FLEX.value);
+            self.set_flex_main_place(lv.FLEX_ALIGN.CENTER);
+            self.set_flex_cross_place(lv.FLEX_ALIGN.CENTER);
+            self.set_flex_track_place(lv.FLEX_ALIGN.CENTER);
 
     class PressedStyle(lv.style_t):
         def __init__(self):
@@ -212,8 +213,6 @@ customWidget = CustomWidget(scr)
 # Add a label to the custom widget
 l2 = lv.label(customWidget)
 
-# TODO: remove when theme handles centering by flex
-l2.align(lv.ALIGN.CENTER, 0, -10)
 l2.set_text("Click me!")
 
 # Add click events to both button and custom widget
