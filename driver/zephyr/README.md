@@ -43,6 +43,19 @@ CONFIG_MCUX_ELCDIF_PANEL_RK043FN02H=y
 CONFIG_KSCAN=y
 CONFIG_KSCAN_FT5336=y
 ```
+* Link Zephyr kernel with MPY app, adding following line to Zepjyr's port CMakelists.txt:
+```
+target_link_libraries(libmicropython INTERFACE kernel)
+```
+* edit lv_conf.h:
+```
+#define LV_TICK_CUSTOM_INCLUDE      "kernel.h"
+#define LV_TICK_CUSTOM_SYS_TIME_EXPR    (k_uptime_get_32())
+
+typedef void *lv_disp_drv_user_data_t;
+typedef void *lv_indev_drv_user_data_t;
+
+```
 
 #### Usage
 LVGL and driver initialization is following:

@@ -2,6 +2,14 @@
  * Copyright (c) 2018-2019 Jan Van Winkel <jan.van_winkel@dxplore.eu>
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * changes:
+ *		Zephyr's logging -> printf
+ *		CONFIG_LVGL_HOR_RES_MAX -> LV_HOR_RES_MAX
+ *		CONFIG_LVGL_VER_RES_MAX -> LV_VER_RES_MAX
+ *		added debug log
+ *		removed SYS_INIT for lvgl_init
+ *		lvgl_init no longer static
  */
 
 #include <init.h>
@@ -14,14 +22,11 @@
 #ifdef CONFIG_LVGL_USE_FILESYSTEM
 #include "lvgl_fs.h"
 #endif
+#define CONFIG_LVGL_POINTER_KSCAN 1
 #ifdef CONFIG_LVGL_POINTER_KSCAN
 #include <drivers/kscan.h>
 #endif
 #include LV_MEM_CUSTOM_INCLUDE
-
-#define LOG_LEVEL CONFIG_LVGL_LOG_LEVEL
-#include <logging/log.h>
-LOG_MODULE_REGISTER(lvgl);
 
 #ifdef CONFIG_LVGL_BUFFER_ALLOC_STATIC
 
@@ -42,36 +47,6 @@ static uint8_t buf1[BUFFER_SIZE] __aligned(4);
 #endif
 
 #endif /* CONFIG_LVGL_BUFFER_ALLOC_STATIC */
-
-#if CONFIG_LVGL_LOG_LEVEL != 0
-static void lvgl_log(lv_log_level_t level, const char *file, uint32_t line,
-		const char *func, const char *dsc)
-{
-	/* Convert LVGL log level to Zephyr log level
-	 *
-	 * LVGL log level mapping:
-	 * * LV_LOG_LEVEL_TRACE 0
-	 * * LV_LOG_LEVEL_INFO  1
-	 * * LV_LOG_LEVEL_WARN  2
-	 * * LV_LOG_LEVEL_ERROR 3
-	 * * LV_LOG_LEVEL_NUM  4
-	 *
-	 * Zephyr log level mapping:
-	 * *  LOG_LEVEL_NONE 0
-	 * * LOG_LEVEL_ERR 1
-	 * * LOG_LEVEL_WRN 2
-	 * * LOG_LEVEL_INF 3
-	 * * LOG_LEVEL_DBG 4
-	 */
-	uint8_t zephyr_level = LOG_LEVEL_DBG - level;
-
-	ARG_UNUSED(file);
-	ARG_UNUSED(line);
-	ARG_UNUSED(func);
-
-	Z_LOG(zephyr_level, "%s", log_strdup(dsc));
-}
-#endif
 
 #ifdef CONFIG_LVGL_BUFFER_ALLOC_STATIC
 
@@ -298,8 +273,10 @@ static int lvgl_pointer_kscan_init(void)
 	}
 
 	int err = kscan_enable_callback(kscan_dev);
-	if (err != 0)
-		printf("callback enabling failed\n");
+	if (err != 0) {
+		printf("Callback enabling failed\n");
+		return err;
+	}
 
 	return 0;
 }
