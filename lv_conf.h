@@ -377,6 +377,8 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 
 #define LV_USE_ARC          1
 
+#define LV_USE_ANIMIMG	    1
+
 #define LV_USE_BAR          1
 
 #define LV_USE_BTN          1
@@ -387,7 +389,6 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 
 #define LV_USE_CHECKBOX     1
 
-#define LV_USE_CHART        1
 
 #define LV_USE_DROPDOWN     1   /*Requires: lv_label*/
 
@@ -400,8 +401,6 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #endif
 
 #define LV_USE_LINE         1
-
-#define LV_USE_METER        1
 
 #define LV_USE_ROLLER       1   /*Requires: lv_label*/
 #if LV_USE_ROLLER
@@ -440,6 +439,8 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 # define LV_USE_CALENDAR_HEADER_DROPDOWN    1
 #endif  /*LV_USE_CALENDAR*/
 
+#define LV_USE_CHART        1
+
 #define LV_USE_COLORWHEEL   1
 
 #define LV_USE_IMGBTN       1
@@ -449,6 +450,8 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #define LV_USE_LED          1
 
 #define LV_USE_LIST         1
+
+#define LV_USE_METER        1
 
 #define LV_USE_MSGBOX       1
 
