@@ -226,6 +226,7 @@ def sanitize(id, kwlist =
         result = id
     result = result.strip()
     result = result.replace(' ','_')
+    result = result.replace('*','_ptr')
     return result
 
 @memoize
@@ -527,18 +528,18 @@ lv_to_mp = {
 }
 
 lv_mp_type = {
-    'mp_obj_t'                  : 'object',
+    'mp_obj_t'                  : '%s*' % base_obj_type,
     'va_list'                   : None,
-    'void *'                    : 'pointer',
-    'const uint8_t *'           : 'pointer',
-    'const void *'              : 'pointer',
+    'void *'                    : 'void*',
+    'const uint8_t *'           : 'void*',
+    'const void *'              : 'void*',
     'bool'                      : 'bool',
-    'char *'                    : 'str',
-    'const char *'              : 'str',
-    'const unsigned char *'     : 'str',
-    'char **'                   : 'pointer',
-    'const char **'             : 'pointer',
-    '%s_obj_t *'% module_prefix : 'object',
+    'char *'                    : 'char*',
+    'const char *'              : 'char*',
+    'const unsigned char *'     : 'char*',
+    'char **'                   : 'void*',
+    'const char **'             : 'void*',
+    '%s_obj_t *'% module_prefix : '%s*' % base_obj_type,
     'uint8_t'                   : 'int',
     'uint16_t'                  : 'int',
     'uint32_t'                  : 'int',
@@ -563,7 +564,7 @@ lv_mp_type = {
     'long int'                  : 'int',
     'long long'                 : 'int',
     'long long int'             : 'int',
-    'void'                      : 'NoneType',
+    'void'                      : None,
     'float'                     : 'float',
 }
 
@@ -1716,7 +1717,7 @@ def try_generate_type(type_ast):
         # print('/* --> PTR %s */' % ptr_type)
         if not ptr_type in mp_to_lv: mp_to_lv[ptr_type] = mp_to_lv['void *']
         if not ptr_type in lv_to_mp: lv_to_mp[ptr_type] = lv_to_mp['void *']
-        if not ptr_type in lv_mp_type: lv_mp_type[ptr_type] = 'pointer'
+        if not ptr_type in lv_mp_type: lv_mp_type[ptr_type] = 'void*'
         return mp_to_lv[ptr_type]
     if type in structs:
         if try_generate_struct(type, structs[type]):
@@ -2240,7 +2241,7 @@ def gen_global(global_name, global_type_ast):
         wrapped_type = lv_mp_type[global_type]
         if not wrapped_type:
             raise MissingConversionException('Missing conversion to %s when generating global %s' % (wrapped_type, global_name))
-        global_type ="_lv_mp_%s_wrapper" % wrapped_type
+        global_type = sanitize("_lv_mp_%s_wrapper" % wrapped_type)
         custom_struct_str = """
 typedef struct {{
     {type} value;
@@ -2251,6 +2252,7 @@ typedef struct {{
         if global_type not in generated_structs:
             print("/* Global struct wrapper for %s */" % wrapped_type)
             print(custom_struct_str)
+            # eprint("%s: %s\n" % (wrapped_type, custom_struct_str))
             try_generate_struct(global_type, parser.parse(custom_struct_str).ext[0].type.type)
 
     print("""

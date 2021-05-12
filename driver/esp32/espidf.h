@@ -34,6 +34,7 @@
 #define LWIP_HDR_NETIF_H
 #define ESP_EVENT_H_
 #define __SNTP_H__
+#define XTENSA_CONFIG_CORE_H
 
 typedef int	BaseType_t;
 typedef unsigned int	UBaseType_t;
