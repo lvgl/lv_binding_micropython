@@ -2,6 +2,11 @@
 
 This driver allows Micropython with LVGL as an external C module to run as a Zephyr OS application; thus, all boards, display, and input drivers can be used from Zephyr's codebase.
 
+### lv_micropython
+This driver is integrated for Micropython's Zephyr port build in the [lv_micropython project](https://github.com/lvgl/lv_micropython). Using the lv_micopython Zephyr port with LVGL requires:
+* specifying the display and input drivers in the your-board.prj and in the lvgl_driver.h
+* editing LV_TICK_CUSTOM_INCLUDE in lv_conf.h as stated below.
+
 ### Driver architecture
 This driver consist of three files:
 
