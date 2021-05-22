@@ -1735,7 +1735,7 @@ def try_generate_type(type_ast):
             if (try_generate_struct(new_type, structs[explicit_struct_name])):
                 if explicit_struct_name == new_type:
                     struct_aliases[new_type] = type
-        if try_generate_type(new_type_ast):
+        if type != new_type and try_generate_type(new_type_ast):
            # eprint('/* --> try_generate_type TYPEDEF!! %s: %s */' % (type, mp_to_lv[new_type]))
            mp_to_lv[type] = mp_to_lv[new_type]
            type_ptr = '%s *' % type
