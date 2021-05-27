@@ -38,7 +38,8 @@
 # Pure Micropython could be viable when ESP32 supports Viper code emitter.
 #
 # ili9488 driver DO NOT support pure micropython now (because of required
-# color convert). Pure micropython is supported only for ili9341 display!
+# color convert). Pure micropython is only supported the for ili9341 and
+# gc9a01 displays!
 ##############################################################################
 
 import espidf as esp
@@ -590,45 +591,25 @@ class ili9488(ili9XXX):
 
 
 class gc9a01(ili9XXX):
-    # On the tested display the wirte direction and colormode appear to be
-    #reversed from how they are presented in the datasheet and so have been
-    #included here as new definitions
-
-    # GC9A01 displays handle rotation differently than ili9XXX displays
-    ROTATE = {
-        0: 0x40,
-        90: 0x20,
-        180: 0x80,
-        270: 0xE0
-    }
-
-    # GC9A01 displays handle colour mode differently than ili9XXX displays
-    COLOR_MODE = {
-        'RGB': 0x08,
-        'BGR': 0x00
-    }
+    # On the tested display the write direction and colormode appear to be
+    # reversed from how they are presented in the datasheet
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=False, width=240, height=240,
-        colormode='RGB', rot=180, invert=False, double_buffer=True, half_duplex=True,
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
 
         if lv.color_t.SIZE != 2:
             raise RuntimeError('gc9a01 micropython driver requires defining LV_COLOR_DEPTH=16')
-        if hybrid:
-            raise RuntimeError('gc9a01 micropython driver does not currently support hybrid driver')
 
-        if rot not in self.ROTATE.keys():
-            raise RuntimeError('Rotation must be 0, 90, 180 or 270.')
-        else:
-            self.rotation = self.ROTATE[rot]
-
-        if colormode not in self.COLOR_MODE.keys():
-            raise RuntimeError('Color mode must be "RGB" or "BGR".')
-        else:
-            self.colormode = self.COLOR_MODE[colormode]
+        # This is included as the color mode appears to be reversed from the
+        # datasheet and the ili9XXX driver values
+        if colormode == COLOR_MODE_RGB:
+            self.colormode = COLOR_MODE_BGR
+        elif colormode == COLOR_MODE_BGR:
+            self.colormode = COLOR_MODE_RGB
 
         self.display_name = 'GC9A01'
         self.display_type = DISPLAY_TYPE_GC9A01
@@ -652,7 +633,7 @@ class gc9a01(ili9XXX):
             {'cmd': 0x8E, 'data': bytes([0xFF])},
             {'cmd': 0x8F, 'data': bytes([0xFF])},
             {'cmd': 0xB6, 'data': bytes([0x00, 0x00])}, 
-            {'cmd': 0x36, 'data': bytes([self.rotation | self.colormode])},
+            {'cmd': 0x36, 'data': bytes([rot | self.colormode])},
             {'cmd': 0x3A, 'data': bytes([0x05])},
             {'cmd': 0x90, 'data': bytes([0x08, 0x08, 0x08, 0x08])},
             {'cmd': 0xBD, 'data': bytes([0x06])},
@@ -687,5 +668,5 @@ class gc9a01(ili9XXX):
         ]
         
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, self.colormode, self.rotation, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488,
+            spihost, mhz, factor, hybrid, width, height, self.colormode, rot, invert, double_buffer, half_duplex, display_type=self.display_type,
             asynchronous=asynchronous, initialize=initialize)
