@@ -19,6 +19,17 @@
 #   redraw. to increase FPS, you can use 80MHz SPI - easily add parameter
 #   mhz=80 in initialization of driver.
 #
+# For gc9a01 display:
+#
+#   Build micropython with
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
+#   (make parameter) to configure LVGL use the same color format as ili9341
+#   and prevent the need to loop over all pixels to translate them.
+#
+#   Default SPI freq is set to 60MHz as that is the maximum the tested dislay
+#   would suport despite the datasheet suggesting that higher freqs would be
+#   supported
+#
 # Critical function for high FPS are flush and ISR.
 # when "hybrid=True", use C implementation for these functions instead of
 # pure python implementation. This improves each frame in about 15ms!
@@ -54,6 +65,7 @@ LANDSCAPE = MADCTL_MV
 
 DISPLAY_TYPE_ILI9341 = const(1)
 DISPLAY_TYPE_ILI9488 = const(2)
+DISPLAY_TYPE_GC9A01 = const(3)
 
 class ili9XXX:
 
@@ -537,7 +549,7 @@ class ili9488(ili9XXX):
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
-        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
+        colormode=COLOR_MODE_RGB, rot=180, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
 
@@ -576,3 +588,104 @@ class ili9488(ili9XXX):
             spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488,
             asynchronous=asynchronous, initialize=initialize)
 
+
+class gc9a01(ili9XXX):
+    # On the tested display the wirte direction and colormode appear to be
+    #reversed from how they are presented in the datasheet and so have been
+    #included here as new definitions
+
+    # GC9A01 displays handle rotation differently than ili9XXX displays
+    ROTATE = {
+        0: 0x40,
+        90: 0x20,
+        180: 0x80,
+        270: 0xE0
+    }
+
+    # GC9A01 displays handle colour mode differently than ili9XXX displays
+    COLOR_MODE = {
+        'RGB': 0x08,
+        'BGR': 0x00
+    }
+
+    def __init__(self,
+        miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
+        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=False, width=240, height=240,
+        colormode='RGB', rot=180, invert=False, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True
+    ):
+
+        if lv.color_t.SIZE != 2:
+            raise RuntimeError('gc9a01 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if hybrid:
+            raise RuntimeError('gc9a01 micropython driver does not currently support hybrid driver')
+
+        if rot not in self.ROTATE.keys():
+            raise RuntimeError('Rotation must be 0, 90, 180 or 270.')
+        else:
+            self.rotation = self.ROTATE[rot]
+
+        if colormode not in self.COLOR_MODE.keys():
+            raise RuntimeError('Color mode must be "RGB" or "BGR".')
+        else:
+            self.colormode = self.COLOR_MODE[colormode]
+
+        self.display_name = 'GC9A01'
+        self.display_type = DISPLAY_TYPE_GC9A01
+
+        self.init_cmds = [
+            {'cmd': 0xEF, 'data': bytes([0])},
+            {'cmd': 0xEB, 'data': bytes([0x14])},
+            {'cmd': 0xFE, 'data': bytes([0])},
+            {'cmd': 0xEF, 'data': bytes([0])},
+            {'cmd': 0xEB, 'data': bytes([0x14])},
+            {'cmd': 0x84, 'data': bytes([0x40])},
+            {'cmd': 0x85, 'data': bytes([0xFF])},
+            {'cmd': 0x86, 'data': bytes([0xFF])},
+            {'cmd': 0x87, 'data': bytes([0xFF])},
+            {'cmd': 0x88, 'data': bytes([0x0A])},
+            {'cmd': 0x89, 'data': bytes([0x21])},
+            {'cmd': 0x8A, 'data': bytes([0x00])},
+            {'cmd': 0x8B, 'data': bytes([0x80])},
+            {'cmd': 0x8C, 'data': bytes([0x01])},
+            {'cmd': 0x8D, 'data': bytes([0x01])},
+            {'cmd': 0x8E, 'data': bytes([0xFF])},
+            {'cmd': 0x8F, 'data': bytes([0xFF])},
+            {'cmd': 0xB6, 'data': bytes([0x00, 0x00])}, 
+            {'cmd': 0x36, 'data': bytes([self.rotation | self.colormode])},
+            {'cmd': 0x3A, 'data': bytes([0x05])},
+            {'cmd': 0x90, 'data': bytes([0x08, 0x08, 0x08, 0x08])},
+            {'cmd': 0xBD, 'data': bytes([0x06])},
+            {'cmd': 0xBC, 'data': bytes([0x00])},
+            {'cmd': 0xFF, 'data': bytes([0x60, 0x01, 0x04])},
+            {'cmd': 0xC3, 'data': bytes([0x13])},
+            {'cmd': 0xC4, 'data': bytes([0x13])},
+            {'cmd': 0xC9, 'data': bytes([0x22])},
+            {'cmd': 0xBE, 'data': bytes([0x11])},
+            {'cmd': 0xE1, 'data': bytes([0x10, 0x0E])},
+            {'cmd': 0xDF, 'data': bytes([0x21, 0x0c, 0x02])},
+            {'cmd': 0xF0, 'data': bytes([0x45, 0x09, 0x08, 0x08, 0x26, 0x2A])},
+            {'cmd': 0xF1, 'data': bytes([0x43, 0x70, 0x72, 0x36, 0x37, 0x6F])},
+            {'cmd': 0xF2, 'data': bytes([0x45, 0x09, 0x08, 0x08, 0x26, 0x2A])},
+            {'cmd': 0xF3, 'data': bytes([0x43, 0x70, 0x72, 0x36, 0x37, 0x6F])},
+            {'cmd': 0xED, 'data': bytes([0x1B, 0x0B])},
+            {'cmd': 0xAE, 'data': bytes([0x77])},
+            {'cmd': 0xCD, 'data': bytes([0x63])},
+            {'cmd': 0x70, 'data': bytes([0x07, 0x07, 0x04, 0x0E, 0x0F, 0x09, 0x07, 0x08, 0x03])},
+            {'cmd': 0xE8, 'data': bytes([0x34])},
+            {'cmd': 0x62, 'data': bytes([0x18, 0x0D, 0x71, 0xED, 0x70, 0x70, 0x18, 0x0F, 0x71, 0xEF, 0x70, 0x70])},
+            {'cmd': 0x63, 'data': bytes([0x18, 0x11, 0x71, 0xF1, 0x70, 0x70, 0x18, 0x13, 0x71, 0xF3, 0x70, 0x70])},
+            {'cmd': 0x64, 'data': bytes([0x28, 0x29, 0xF1, 0x01, 0xF1, 0x00, 0x07])},
+            {'cmd': 0x66, 'data': bytes([0x3C, 0x00, 0xCD, 0x67, 0x45, 0x45, 0x10, 0x00, 0x00, 0x00])},
+            {'cmd': 0x67, 'data': bytes([0x00, 0x3C, 0x00, 0x00, 0x00, 0x01, 0x54, 0x10, 0x32, 0x98])},
+            {'cmd': 0x74, 'data': bytes([0x10, 0x85, 0x80, 0x00, 0x00, 0x4E, 0x00])},
+            {'cmd': 0x98, 'data': bytes([0x3e, 0x07])},
+            {'cmd': 0x35, 'data': bytes([0])},
+            {'cmd': 0x21, 'data': bytes([0])},
+            {'cmd': 0x11, 'data': bytes([0]), 'delay': 20},
+            {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
+        ]
+        
+        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
+            spihost, mhz, factor, hybrid, width, height, self.colormode, self.rotation, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488,
+            asynchronous=asynchronous, initialize=initialize)
