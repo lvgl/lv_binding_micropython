@@ -115,7 +115,7 @@ STATIC mp_obj_t xpt2046_make_new(const mp_obj_type_t *type,
 
 STATIC mp_obj_t mp_xpt2046_init(mp_obj_t self_in);
 STATIC mp_obj_t mp_xpt2046_deinit(mp_obj_t self_in);
-STATIC bool xpt2046_read(lv_indev_data_t *data);
+STATIC bool xpt2046_read(lv_indev_drv_t * indev_drv, lv_indev_data_t *data);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_init_xpt2046_obj, mp_xpt2046_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_deinit_xpt2046_obj, mp_xpt2046_deinit);
@@ -203,10 +203,11 @@ static uint8_t tp_spi_xchg(xpt2046_obj_t *self, uint8_t data_send);
 
 /**
  * Get the current position and state of the touchpad
+ * @param indev_drv pointer to the caller input device driver
  * @param data store the read data here
  * @return false: because no ore data to be read
  */
-static bool xpt2046_read(lv_indev_data_t * data)
+static bool xpt2046_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     xpt2046_obj_t *self = MP_OBJ_TO_PTR(g_xpt2046 );
     if (!self || (!self->spi)) nlr_raise(
