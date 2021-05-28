@@ -158,12 +158,13 @@ Currently supported drivers for Micropyton are
 - Linux Frame Buffer (`/dev/fb0`)
 - ILI9341 driver for ESP32
 - XPT2046 driver for ESP32
+- FT6X36 (capacitive touch IC) for ESP32
 - Raw Resistive Touch for ESP32 (ADC connected to screen directly, no touch IC)
 
 Driver code is under `/driver` directory.
 
 Drivers can also be implemented in pure Micropython, by providing callbacks (`disp_drv.flush_cb`, `indev_drv.read_cb` etc.)
-Currently the supported ILI9341 and XPT2046 are pure micropython drivers
+Currently the supported ILI9341, FT6X36 and XPT2046 are pure micropython drivers
 
 ### Adding Micropython Bindings to a project
 
@@ -280,6 +281,17 @@ By default, both ILI9341 and XPT2046 are initialized on the same SPI bus with th
 
 You can change any of these parameters on ili9341/xpt2046 constructor.
 You can also initalize them on different SPI buses if you want, by providing miso/mosi/clk parameters. Set them to -1 to use existing (initialized) spihost bus.
+
+Here's another example, this time importing and initialising display and touch drivers for the M5Stack Core2 device, which uses an FT6336 chip on the I2C bus to read from its capacitive touch screen and uses an ili9342 display controller, which has some inverted signals compared to the ili9341:
+
+```python
+from ili9XXX import ili9341
+disp = ili9341(mosi=23, miso=38, clk=18, dc=15, cs=5, invert=True, rot=0x10)
+
+from ft6x36 import ft6x36
+touch = ft6x36(sda=21, scl=22, width=320, height=280)
+```
+
 
 ### Creating a screen with a button and a label
 ```python
