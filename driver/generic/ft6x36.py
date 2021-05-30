@@ -30,6 +30,14 @@ class ft6x36:
         self.inv_x, self.inv_y, self.swap_xy = inv_x, inv_y, swap_xy
         self.i2c = I2C(i2c_dev, sda=Pin(sda), scl=Pin(scl), freq=freq)
         self.addr = addr
+
+        if lv.version_major() < 8:
+            self.released = lv.INDEV_STATE.REL
+            self.pressed = lv.INDEV_STATE.PR
+        else:
+            self.released = lv.INDEV_STATE.RELEASED
+            self.pressed = lv.INDEV_STATE.PRESSED
+
         try:
             print("FT6X36 touch IC ready (fw id 0x{0:X} rel {1:d}, lib {2:X})".format( \
                 int.from_bytes(self.i2c.readfrom_mem(self.addr, 0xA6, 1), "big"), \
@@ -41,7 +49,7 @@ class ft6x36:
             return
         self.point = lv.point_t( {'x': 0, 'y': 0} )
         self.points = [lv.point_t( {'x': 0, 'y': 0} ), lv.point_t( {'x': 0, 'y': 0} )]
-        self.state = lv.INDEV_STATE.REL
+        self.state = self.released
         self.indev_drv = lv.indev_drv_t()
         self.indev_drv.init()
         self.indev_drv.type = lv.INDEV_TYPE.POINTER
@@ -76,5 +84,5 @@ class ft6x36:
         if sensorbytes[3] >> 4:
             self.points[0], self.points[1] = self.points[1], self.points[0]
         data.point = self.points[0]
-        data.state = self.state = lv.INDEV_STATE.PR if self.presses else lv.INDEV_STATE.REL
+        data.state = self.state = self.pressed if self.presses else self.released
         return False
