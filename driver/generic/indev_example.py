@@ -2,8 +2,8 @@
 # any hardware and instead just presses at location (50,100)
 #
 # In a real driver, always return the last position in data.point, even if
-# the data.state goes to 'released' (lv.INDEV_STATE.REL), so maybe keep that
-# in self.point.
+# the data.state goes to 'released' (lv.INDEV_STATE.RELEASED), so maybe keep
+# that in self.point.
 #
 # The 'return False' just means there is no further data to read, which is
 # what you want for a pointer-type driver.
@@ -29,5 +29,5 @@ class my_indev:
         # This is where you need to get the actual position from
         # the hardware. This just simulates pressed at 50, 100.
         data.point = lv.point_t( {'x': 50, 'y': 100} )
-        data.state = lv.INDEV_STATE.PR
+        data.state = lv.INDEV_STATE.PRESSED
         return False

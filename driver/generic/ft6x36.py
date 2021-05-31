@@ -41,7 +41,7 @@ class ft6x36:
             return
         self.point = lv.point_t( {'x': 0, 'y': 0} )
         self.points = [lv.point_t( {'x': 0, 'y': 0} ), lv.point_t( {'x': 0, 'y': 0} )]
-        self.state = lv.INDEV_STATE.REL
+        self.state = lv.INDEV_STATE.RELEASED
         self.indev_drv = lv.indev_drv_t()
         self.indev_drv.init()
         self.indev_drv.type = lv.INDEV_TYPE.POINTER
@@ -76,5 +76,5 @@ class ft6x36:
         if sensorbytes[3] >> 4:
             self.points[0], self.points[1] = self.points[1], self.points[0]
         data.point = self.points[0]
-        data.state = self.state = lv.INDEV_STATE.PR if self.presses else lv.INDEV_STATE.REL
+        data.state = self.state = lv.INDEV_STATE.PRESSED if self.presses else lv.INDEV_STATE.RELEASED
         return False
