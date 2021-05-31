@@ -267,7 +267,7 @@ class Page_Chart:
         self.chart.add_style(ColorStyle(0x055), lv.PART.ITEMS)
         self.chart.set_range(self.chart.AXIS.PRIMARY_Y, 0, 100)
         self.chart.set_point_count(10)
-        self.chart.set_ext_array(self.series1, [10, 20, 30, 20, 10, 40, 50, 90, 95, 90])
+        self.chart.set_ext_y_array(self.series1, [10, 20, 30, 20, 10, 40, 50, 90, 95, 90])
         # self.chart.set_x_tick_texts("a\nb\nc\nd\ne", 2, lv.chart.AXIS.DRAW_LAST_TICK)
         # self.chart.set_x_tick_length(10, 5)
         # self.chart.set_y_tick_texts("1\n2\n3\n4\n5", 2, lv.chart.AXIS.DRAW_LAST_TICK)
