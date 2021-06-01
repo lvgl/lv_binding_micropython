@@ -29,41 +29,27 @@ fs_driver.fs_register(fs_drv, 'S')
 scr = lv.scr_act()
 scr.clean()
 
-
 myfont_cn = lv.font_load("S:font/font-PHT-cn-20.bin")
-style1 = lv.style_t()
-style1.init()
 
 label1 = lv.label(scr)
-style1.set_text_font(lv.STATE.DEFAULT, myfont_cn)  # set font
-label1.add_style(label1.PART.MAIN, style1)
-
+label1.set_style_text_font(myfont_cn, 0)  # set the font
 label1.set_text("上中下乎")  
-label1.align(None, lv.ALIGN.CENTER, 0, -25)
-
+label1.align(lv.ALIGN.CENTER, 0, -25)
 
 myfont_en = lv.font_load("S:font/font-PHT-en-20.bin")
-style2 = lv.style_t()
-style2.init()
 
 label2 = lv.label(scr)
-style2.set_text_font(lv.STATE.DEFAULT, myfont_en)  # set font
-label2.add_style(label2.PART.MAIN, style2)
-
+label2.set_style_text_font(myfont_en, 0)  # set the font
 label2.set_text("Hello LVGL!")
-label2.align(None, lv.ALIGN.CENTER, 0, 25)
+label2.align(lv.ALIGN.CENTER, 0, 25)
 
 
 myfont_jp = lv.font_load("S:font/font-PHT-jp-20.bin")
-style3 = lv.style_t()
-style3.init()
 
 label3 = lv.label(scr)
-style3.set_text_font(lv.STATE.DEFAULT, myfont_jp)  # set font
-label3.add_style(label3.PART.MAIN, style3)
-
+label3.set_style_text_font(myfont_jp, 0)  # set the font
 label3.set_text("こんにちはありがとう")
-label3.align(None, lv.ALIGN.CENTER, 0, 0)
+label3.align(lv.ALIGN.CENTER, 0, 0)
 
 
 
