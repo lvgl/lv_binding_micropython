@@ -6,28 +6,25 @@ import lvgl as lv
 import uerrno
 import ustruct as struct
 
-def fs_open_cb(drv, fs_file, path, mode):
-    p_mode = ''
+def fs_open_cb(drv, path, mode):
+
     if mode == 1:
         p_mode = 'wb'
     elif mode == 2:
         p_mode = 'rb'
     elif mode == 3:
         p_mode = 'rb+'
-
-    if p_mode == '':
+    else:
         print("fs_open_callback() - open mode error, {} is invalid mode".format(mode))
-        return lv.FS_RES.INV_PARAM
+        return None
 
     try:
         f = open(path, p_mode)
-        ptr = lv.C_Pointer.cast(fs_file)
-        ptr.ptr_val = {'file' : f}
+
     except Exception as e:
         print("fs_open_callback() exception: ", uerrno.errorcode[e.args[0]])
-        return lv.FS_RES.FS_ERR
-
-    return lv.FS_RES.OK
+        return None
+    return {'file' : f}
 
 
 def fs_close_cb(drv, fs_file):
@@ -54,10 +51,10 @@ def fs_read_cb(drv, fs_file, buf, btr, br):
     return lv.FS_RES.OK
 
 
-def fs_seek_cb(drv, fs_file, pos):
+def fs_seek_cb(drv, fs_file, pos, whence):
     try:
         # to =
-        fs_file.cast()['file'].seek(pos, 0)
+        fs_file.cast()['file'].seek(pos, whence)
     except Exception as e:
         print("fs_seek_callback() exception ", uerrno.errorcode[e.args[0]])
         return lv.FS_RES.FS_ERR
