@@ -126,13 +126,14 @@ class Timer:
         self.period = period
         self.cb = callback
         timer_settime(self.tid, self.period, mode == Timer.PERIODIC)
-        self.org_sig = signal(SIGRTMIN + self.id, self.handler)
+        self.handler_ref = self.handler
+        self.org_sig = signal(SIGRTMIN + self.id, self.handler_ref)
         # print("Sig %d: %s" % (SIGRTMIN + self.id, self.org_sig))
 
     def deinit(self):
         timer_delete(self.tid)
 
-    def handler(self, signum):
+    def handler(self, signum=-1):
         # print('Signal handler called with signal', signum)
         try:
             self.cb(self)
