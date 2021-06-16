@@ -35,7 +35,6 @@ class driver:
         
     def init_gui_esp32(self):
 
-        import lvesp32
         import ILI9341 as ili
 
         # Initialize ILI9341 display

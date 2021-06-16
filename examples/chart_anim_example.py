@@ -48,7 +48,6 @@ class driver:
         return True
 
     def init_gui_esp32(self):
-        import lvesp32
         import ILI9341 as ili
 
         disp = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15)

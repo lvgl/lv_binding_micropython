@@ -160,7 +160,6 @@ set(LV_SRC
     ${LV_MP}
 
     ${LV_BINDINGS_DIR}/driver/esp32/espidf.c
-    ${LV_BINDINGS_DIR}/driver/esp32/modlvesp32.c
     ${LV_BINDINGS_DIR}/driver/esp32/modrtch.c
     ${LV_BINDINGS_DIR}/driver/esp32/sh2lib.c
 

@@ -26,6 +26,13 @@ SIGEV_SIGNAL = 0
 
 # C structs
 
+sigaction_t = {
+    "sa_handler" : (0 | uctypes.PTR, uctypes.UINT8),
+    "sa_mask"    : (8 | uctypes.ARRAY, 16 | uctypes.UINT64),
+    "sa_flags"   : (136 | uctypes.INT32),
+    "sa_restorer": (144 |uctypes.PTR, uctypes.UINT8), 
+}
+
 sigval_t = {
     "sival_int": 0 | uctypes.INT32,
     "sival_ptr": (0 | uctypes.PTR, uctypes.UINT8),
@@ -56,8 +63,7 @@ timer_create_ = librt.func("i", "timer_create", "ipp")
 timer_delete_ = librt.func("i", "timer_delete", "i")
 timer_settime_ = librt.func("i", "timer_settime", "PiPp")
 
-signal_i = libc.func("i", "signal", "ii")
-signal_p = libc.func("i", "signal", "ip")
+sigaction_ = libc.func("i", "sigaction", "iPp")
 
 # Create a new C struct
 
@@ -68,11 +74,17 @@ def new(sdesc):
 
 # Posix Signal handling
 
-def signal(n, handler):
-    if isinstance(handler, int):
-        return signal_i(n, handler)
-    cb = ffi.callback("v", handler, "i")
-    return signal_p(n, cb)
+
+def sigaction(signum, handler, flags=0):
+    sa = new(sigaction_t)
+    sa_old = new(sigaction_t)
+    cb = ffi.callback("v", handler, "i", lock=True)
+    memoryview(sa.sa_handler)[:] = memoryview(cb)[:]
+    sa.sa_flags = flags
+    r = sigaction_(signum, sa, sa_old)
+    if r != 0:
+        raise RuntimeError("sigaction_ error: %d (errno = %d)" % (r, os.errno()))
+    return cb # sa_old.sa_handler
 
 # Posix Timer handling
 
@@ -127,8 +139,8 @@ class Timer:
         self.cb = callback
         timer_settime(self.tid, self.period, mode == Timer.PERIODIC)
         self.handler_ref = self.handler
-        self.org_sig = signal(SIGRTMIN + self.id, self.handler_ref)
         # print("Sig %d: %s" % (SIGRTMIN + self.id, self.org_sig))
+        self.action = sigaction(SIGRTMIN + self.id, self.handler_ref)
 
     def deinit(self):
         timer_delete(self.tid)

@@ -46,8 +46,6 @@ class driver:
         
     def init_gui_ili9341(self):
 
-        import lvesp32
-
         # Initialize ILI9341 display
 
         from ili9XXX import ili9341,LANDSCAPE

@@ -261,7 +261,6 @@ Here is an alternative example for ESP32 ILI9341 + XPT2046 drivers:
 
 ```python
 import lvgl as lv
-import lvesp32
 
 # Import ILI9341 driver and initialized it
 

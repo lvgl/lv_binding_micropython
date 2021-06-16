@@ -1,4 +1,5 @@
 import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 # See: https://pymotw.com/2/sys/tracing.html
 
@@ -13,6 +14,7 @@ def mp_trace(frame, event, arg):
 # sys.settrace(mp_trace)
 
 import lvgl as lv
+import lv_utils
 
 # lvgl must be initialized before any lvgl function is called or object/struct is constructed!
 
@@ -302,7 +304,8 @@ class AdvancedDemoApplication:
 
         import SDL
 
-        SDL.init()
+        SDL.init(auto_refresh=False)
+        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
 
         # Register SDL display driver.
 
@@ -326,8 +329,6 @@ class AdvancedDemoApplication:
         indev_drv.register()
         
     def init_gui_esp32(self):
-
-        import lvesp32
 
         # Initialize ILI9341 display
 

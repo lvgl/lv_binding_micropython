@@ -143,9 +143,8 @@ class ili9XXX:
         # This would get called on soft reset.
 
         if not self.asynchronous:
-            import lvesp32
-            self.finalizer = lvesp32.cb_finalizer(self.deinit)
-            lvesp32.init()
+            import lv_utils
+            self.event_loop = lv_utils.event_loop()
 
         buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
@@ -248,8 +247,7 @@ class ili9XXX:
         # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
 
         if not self.asynchronous:
-            import lvesp32
-            lvesp32.deinit()
+            self.event_loop.deinit()
 
         if self.spi:
 

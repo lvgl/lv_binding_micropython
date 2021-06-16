@@ -6,7 +6,6 @@ lv.log_register_print_cb(lambda level,filename,line,func,msg: print('LOG: %s, fi
 
 # Initialize ILI9341 display
 
-import lvesp32
 import espidf as esp
 from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
     
