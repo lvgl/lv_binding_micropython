@@ -32,6 +32,7 @@
 
 import espidf as esp
 import lvgl as lv
+import lv_utils
 import micropython
 import gc
 
@@ -133,18 +134,16 @@ class ili9XXX:
         if self.initialize:
             self.init()
 
+        if not lv_utils.event_loop.is_running():
+            self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous)
 
 
     ######################################################
 
     def disp_spi_init(self):
 
-        # Register finalizer callback to deinit SPI.
-        # This would get called on soft reset.
-
-        if not self.asynchronous:
-            import lv_utils
-            self.event_loop = lv_utils.event_loop()
+        # TODO: Register finalizer callback to deinit SPI.
+        # That would get called on soft reset.
 
         buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
@@ -242,12 +241,12 @@ class ili9XXX:
 
         print('Deinitializing {}..'.format(self.display_name))
 
-        self.disp_drv.remove()
-
         # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
 
-        if not self.asynchronous:
+        if lv_utils.event_loop.is_running():
             self.event_loop.deinit()
+
+        self.disp_drv.remove()
 
         if self.spi:
 

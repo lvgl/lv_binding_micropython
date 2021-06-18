@@ -27,7 +27,7 @@ SIGEV_SIGNAL = 0
 # C structs
 
 sigaction_t = {
-    "sa_handler" : (0 | uctypes.PTR, uctypes.UINT8),
+    "sa_handler" : (0 | uctypes.UINT64),
     "sa_mask"    : (8 | uctypes.ARRAY, 16 | uctypes.UINT64),
     "sa_flags"   : (136 | uctypes.INT32),
     "sa_restorer": (144 |uctypes.PTR, uctypes.UINT8), 
@@ -79,7 +79,7 @@ def sigaction(signum, handler, flags=0):
     sa = new(sigaction_t)
     sa_old = new(sigaction_t)
     cb = ffi.callback("v", handler, "i", lock=True)
-    memoryview(sa.sa_handler)[:] = memoryview(cb)[:]
+    sa.sa_handler = cb.cfun()
     sa.sa_flags = flags
     r = sigaction_(signum, sa, sa_old)
     if r != 0:
