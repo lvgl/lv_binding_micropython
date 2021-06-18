@@ -1,6 +1,6 @@
 /**
  * @file lv_conf.h
- * Configuration file for v8.0.0
+ * Configuration file for v8.1.0-dev
  */
 
 /*
@@ -31,7 +31,7 @@
 #endif
 
 /*Enable more complex drawing routines to manage screens transparency.
- *Can be used if the UI is above an other layer, e.g. an OSD menu or video player.
+ *Can be used if the UI is above another layer, e.g. an OSD menu or video player.
  *Requires `LV_COLOR_DEPTH = 32` colors and the screen's `bg_opa` should be set to non LV_OPA_COVER value*/
 #define LV_COLOR_SCREEN_TRANSP    0
 
