@@ -45,6 +45,7 @@ static long int screensize = 0;
 static int fbfd = -1;
 static pthread_t tid;
 static pthread_t mp_thread;
+static bool auto_refresh = true;
 
 /**********************
  *  MODULE DEFINITION
@@ -85,21 +86,34 @@ static void handle_sigusr1(int signo)
     // See https://github.com/micropython/micropython/pull/5723
 }
 
-STATIC mp_obj_t mp_init_fb()
+STATIC mp_obj_t mp_init_fb(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
+    enum { ARG_auto_refresh };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_auto_refresh, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = true} },
+    };
+
+    // parse args
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     bool init_succeeded = fbdev_init();
     if (!init_succeeded) return mp_const_false;
-    int err = pthread_create(&tid, NULL, &tick_thread, NULL);
 
-    mp_thread = pthread_self();
-    struct sigaction sa;
-    sa.sa_handler = handle_sigusr1;
-    sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
+    int err = 0;
+    auto_refresh = args[ARG_auto_refresh].u_bool;
+    if (auto_refresh) {
+        err = pthread_create(&tid, NULL, &tick_thread, NULL);
+
+        mp_thread = pthread_self();
+        struct sigaction sa;
+        sa.sa_handler = handle_sigusr1;
+        sa.sa_flags = 0;
+        sigemptyset(&sa.sa_mask);
+        if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+            perror("sigaction");
+            exit(1);
+        }
     }
     
     return err == 0? mp_const_true: mp_const_false;
@@ -108,11 +122,13 @@ STATIC mp_obj_t mp_init_fb()
 STATIC mp_obj_t mp_deinit_fb()
 {
     fbdev_deinit();
-    pthread_join(tid, NULL);
+    if (auto_refresh) {
+        pthread_join(tid, NULL);
+    }
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_init_fb_obj, mp_init_fb);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_init_fb_obj, 0, mp_init_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_fb_obj, mp_deinit_fb);
 
 DEFINE_PTR_OBJ(fbdev_flush);
