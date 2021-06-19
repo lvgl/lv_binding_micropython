@@ -357,13 +357,12 @@ class AdvancedDemoApplication:
 
     def init_gui_stm32(self):
         import rk043fn48h as lcd
-        import lvstm32
 
         hres = 480
         vres = 272
 
         # Register display driver
-        self.tick = lvstm32.lvstm32()
+        self.event_loop = lv_utils.event_loop()
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(hres * 50 * lv.color_t.SIZE)

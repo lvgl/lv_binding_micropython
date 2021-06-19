@@ -1,6 +1,7 @@
 # init
 
 import lvgl as lv
+import lv_utils
 
 lv.init()
 
@@ -69,13 +70,12 @@ class driver:
 
     def init_gui_stm32(self):
         import rk043fn48h as lcd
-        import lvstm32
 
         hres = 480
         vres = 272
 
         # Register display driver
-        tick = lvstm32.lvstm32()
+        event_loop = lv_utils.event_loop()
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_buf_t()
         buf1_1 = lcd.framebuffer(1)

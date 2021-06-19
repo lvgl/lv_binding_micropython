@@ -2,12 +2,12 @@ import pyb
 import time
 import rk043fn48h as lcd
 import lvgl as lv
-import lvstm32
+import lv_utils
 
 hres = 480
 vres = 272
 lv.init()
-tick = lvstm32.lvstm32()
+event_loop = lv_utils.event_loop()
 lcd.init(w=hres, h=vres)
 disp_buf1 = lv.disp_buf_t()
 buf1_1 = bytearray(hres * 10 * lv.color_t.SIZE)
