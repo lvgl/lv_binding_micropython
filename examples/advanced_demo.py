@@ -362,7 +362,7 @@ class AdvancedDemoApplication:
         vres = 272
 
         # Register display driver
-        self.event_loop = lv_utils.event_loop()
+        self.event_loop = lv_utils.event_loop(timer_id=-1)
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(hres * 50 * lv.color_t.SIZE)
