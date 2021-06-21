@@ -151,8 +151,5 @@ class Timer:
             self.cb(self)
         except:
             self.deinit()
-            # print('Signal handler exception!')
-            exc = sys.exc_info()
-            print("%s : %s" % (exc[0], exc[1]))
-            if exc[2]: print(exc[2])
+            raise
 

@@ -32,6 +32,7 @@
 
 import lvgl as lv
 import micropython
+import usys
 
 # Try standard machine.Timer, or custom timer from lv_timer, if available
 
@@ -42,6 +43,13 @@ except:
         from lv_timer import Timer
     except:
         raise RuntimeError("Missing machine.Timer implementation!")
+
+# Try to determine default timer id
+
+default_timer_id = 0
+if usys.platform == 'pyboard':
+    # stm32 only supports SW timer -1
+    default_timer_id = -1
 
 # Try importing uasyncio, if available
 
@@ -57,7 +65,7 @@ class event_loop():
 
     _is_running = False
 
-    def __init__(self, freq=25, timer_id=4, max_scheduled=2, refresh_cb=None, asynchronous=False):
+    def __init__(self, freq=25, timer_id=default_timer_id, max_scheduled=2, refresh_cb=None, asynchronous=False):
         if self.is_running():
             raise RuntimeError("Event loop is already running!")
         event_loop._is_running = True
