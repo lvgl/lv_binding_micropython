@@ -1,5 +1,8 @@
 # init
 
+import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+
 import lvgl as lv
 import lv_utils
 
@@ -15,12 +18,12 @@ class driver:
 
         # Register SDL display driver.
 
-        disp_buf1 = lv.disp_buf_t()
+        disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(480*10)
         disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
-        disp_drv.buffer = disp_buf1
+        disp_drv.draw_buf = disp_buf1
         disp_drv.flush_cb = SDL.monitor_flush
         disp_drv.hor_res = 480
         disp_drv.ver_res = 320
@@ -45,12 +48,12 @@ class driver:
 
         # Register display driver
 
-        disp_buf1 = lv.disp_buf_t()
+        disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(480*10)
         disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
-        disp_drv.buffer = disp_buf1
+        disp_drv.draw_buf = disp_buf1
         disp_drv.flush_cb = disp.flush
         disp_drv.hor_res = 240
         disp_drv.ver_res = 320
@@ -77,13 +80,13 @@ class driver:
         # Register display driver
         event_loop = lv_utils.event_loop()
         lcd.init(w=hres, h=vres)
-        disp_buf1 = lv.disp_buf_t()
+        disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = lcd.framebuffer(1)
         buf1_2 = lcd.framebuffer(2)
         disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.SIZE)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
-        disp_drv.buffer = disp_buf1
+        disp_drv.draw_buf = disp_buf1
         disp_drv.flush_cb = lcd.flush
         disp_drv.gpu_blend_cb = lcd.gpu_blend
         disp_drv.gpu_fill_cb = lcd.gpu_fill
@@ -133,7 +136,7 @@ img_data = b'!fN\xff#WM\xff\x1aC8\xff\x1dbG\xff/\x80a\xff3v^\xff+]O\xff%MF\xff\x
 
 scr = lv.obj()
 img = lv.img(scr)
-img.align(scr, lv.ALIGN.CENTER, 0, 0)
+img.align(lv.ALIGN.CENTER, 0, 0)
 img_dsc = lv.img_dsc_t(
     {
         "header": {"always_zero": 0, "w": 100, "h": 75, "cf": lv.img.CF.TRUE_COLOR},
@@ -143,7 +146,7 @@ img_dsc = lv.img_dsc_t(
 )
 
 img.set_src(img_dsc)
-img.set_drag(True)
+# img.set_drag(True)
 
 # Load the screen and display image
 

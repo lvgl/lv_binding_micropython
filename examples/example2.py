@@ -1,24 +1,27 @@
 
 # init
 
+import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+
 import ustruct as struct
 
 import lodepng as png
 import lvgl as lv
 lv.init()
-lv.log_register_print_cb(lambda level,path,line,msg: print('%s(%d): %s' % (path, line, msg)))
+lv.log_register_print_cb(lambda msg: print('%s' % msg))
 
 import SDL
 SDL.init()
 
 # Register SDL display driver.
 
-disp_buf1 = lv.disp_buf_t()
+disp_buf1 = lv.disp_draw_buf_t()
 buf1_1 = bytes(480*10)
 disp_buf1.init(buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 disp_drv.init()
-disp_drv.buffer = disp_buf1
+disp_drv.draw_buf = disp_buf1
 disp_drv.flush_cb = SDL.monitor_flush
 disp_drv.hor_res = 480
 disp_drv.ver_res = 320
@@ -116,17 +119,16 @@ png_img_dsc = lv.img_dsc_t({
 scr = lv.obj()
 
 # Create an image on the left using the decoder
-
 lv.img.cache_set_size(2)
 img1 = lv.img(scr)
-img1.align(scr, lv.ALIGN.IN_LEFT_MID, -50, 0)
+img1.align(lv.ALIGN.LEFT_MID, 0, 0)
 img1.set_src(png_img_dsc)
-img1.set_drag(True)
+# img1.set_drag(True)
 
 # Create an image on the right directly without the decoder
 
 img2 = lv.img(scr)
-img2.align(scr, lv.ALIGN.IN_RIGHT_MID, 0, 0)
+img2.align(lv.ALIGN.RIGHT_MID, 0, 0)
 raw_dsc = lv.img_dsc_t()
 get_png_info(None, png_img_dsc, raw_dsc.header)
 dsc = lv.img_decoder_dsc_t({'src': png_img_dsc})
@@ -134,7 +136,7 @@ if open_png(None, dsc) == lv.RES.OK:
     raw_dsc.data = dsc.img_data
     raw_dsc.data_size = raw_dsc.header.w * raw_dsc.header.h * lv.color_t.SIZE
     img2.set_src(raw_dsc)
-    img2.set_drag(True)
+    # img2.set_drag(True)
 
 # Load the screen and display image
 
