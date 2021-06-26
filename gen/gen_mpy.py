@@ -346,14 +346,23 @@ def noncommon_part(member_name, stem_name):
     return member_name[n+1:]
 
 @memoize
-def get_first_arg_type(func):
+def get_first_arg(func):
     if not func.type.args:
         return None
     if not len(func.type.args.params) >= 1:
         return None
-    if not func.type.args.params[0].type.type:
+    if not func.type.args.params[0].type:
         return None
-    return get_type(func.type.args.params[0].type.type, remove_quals = True)
+    return func.type.args.params[0].type
+
+@memoize
+def get_first_arg_type(func):
+    first_arg = get_first_arg(func)
+    if not first_arg:
+        return None
+    if not first_arg.type:
+        return None
+    return get_type(first_arg.type, remove_quals = True)
 
 # "struct function" starts with struct name (without _t), and their first argument is a pointer to the struct
 # Need also to take into account struct functions of aliases of current struct.
@@ -386,6 +395,11 @@ def is_struct_function(func):
 
 @memoize
 def is_static_member(func, obj_type=base_obj_type):
+    first_arg = get_first_arg(func)
+    # print("/* %s : get_first_arg = %s */" % (get_name(func), first_arg))
+    if first_arg:
+        if isinstance(first_arg, c_ast.ArrayDecl):
+            return True # Arrays cannot have non static members
     if is_struct_function(func):
         return False
     first_arg_type = get_first_arg_type(func)
