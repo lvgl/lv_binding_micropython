@@ -3,6 +3,11 @@
 # MICROPYPATH=./:../lib ../../../ports/unix/micropython -i Dynamic_loading_font_example.py
 #
 
+import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+
+script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
+
 import lvgl as lv
 import fs_driver
 
@@ -10,9 +15,11 @@ lv.init()
 
 # display driver init...
 
-import display_driver # Default implementation. Replace by your driver
+import display_driver_utils # Default implementation. Replace by your driver
+driver = display_driver_utils.driver()
 
 # FS driver init.
+
 fs_drv = lv.fs_drv_t()
 fs_driver.fs_register(fs_drv, 'S')
 
@@ -29,14 +36,14 @@ fs_driver.fs_register(fs_drv, 'S')
 scr = lv.scr_act()
 scr.clean()
 
-myfont_cn = lv.font_load("S:font/font-PHT-cn-20.bin")
+myfont_cn = lv.font_load("S:%s/font/font-PHT-cn-20.bin" % script_path)
 
 label1 = lv.label(scr)
 label1.set_style_text_font(myfont_cn, 0)  # set the font
 label1.set_text("上中下乎")  
 label1.align(lv.ALIGN.CENTER, 0, -25)
 
-myfont_en = lv.font_load("S:font/font-PHT-en-20.bin")
+myfont_en = lv.font_load("S:%s/font/font-PHT-en-20.bin" % script_path)
 
 label2 = lv.label(scr)
 label2.set_style_text_font(myfont_en, 0)  # set the font
@@ -44,7 +51,7 @@ label2.set_text("Hello LVGL!")
 label2.align(lv.ALIGN.CENTER, 0, 25)
 
 
-myfont_jp = lv.font_load("S:font/font-PHT-jp-20.bin")
+myfont_jp = lv.font_load("S:%s/font/font-PHT-jp-20.bin" % script_path)
 
 label3 = lv.label(scr)
 label3.set_style_text_font(myfont_jp, 0)  # set the font
