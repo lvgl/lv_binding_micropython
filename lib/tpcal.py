@@ -1,15 +1,16 @@
+import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
 lv.init()
-log_level=["Trace", "Info", "Warning", "Error", "User"]
-lv.log_register_print_cb(lambda level,filename,line,func,msg: print('LOG: %s, file: %s in %s, line %d: %s' % (log_level[level], filename, func, line, msg)))
+# lv.log_register_print_cb(lambda msg: print(msg))
 
 # Initialize ILI9341 display
 
 import espidf as esp
 from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
     
-disp = ili9341()
+disp = ili9341(dc=32, cs=33, power=-1, backlight=-1)
 
 # The call below is for a Lolin TFT-2.4 board
 # disp = ili9341(miso=19,mosi=23,clk=18, cs=26, dc=5, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
@@ -69,39 +70,39 @@ class Tpcal():
         self.cur_point = 0
         self.cur_touch = 0
 
-        self.scr = lv.obj(None, None)
+        self.scr = lv.obj(None)
         self.scr.set_size(TP_MAX_VALUE, TP_MAX_VALUE)
         lv.scr_load(self.scr)
 
         # Create a big transparent button screen to receive clicks
         style_transp = lv.style_t()
         style_transp.init()
-        style_transp.set_bg_opa(lv.STATE.DEFAULT, lv.OPA.TRANSP)
-        self.big_btn = lv.btn(lv.scr_act(), None)
+        style_transp.set_bg_opa(lv.OPA.TRANSP)
+        self.big_btn = lv.btn(lv.scr_act())
         self.big_btn.set_size(TP_MAX_VALUE, TP_MAX_VALUE)
-        self.big_btn.add_style(lv.btn.PART.MAIN,style_transp)
-        self.big_btn.add_style(lv.btn.PART.MAIN,style_transp)
-        self.big_btn.set_layout(lv.LAYOUT.OFF)
-        self.big_btn.set_event_cb(lambda obj, event, self=self: self.calibrate_clicked() if event == lv.EVENT.CLICKED else None) 
+        self.big_btn.add_style(style_transp, lv.PART.MAIN)
+        self.big_btn.add_style(style_transp, lv.PART.MAIN)
+        #self.big_btn.set_layout(lv.LAYOUT.OFF)
+        self.big_btn.add_event_cb(lambda event, self=self: self.calibrate_clicked(),lv.EVENT.CLICKED, None) 
 
         # Create the screen, circle and label
 
-        self.label_main = lv.label(lv.scr_act(), None)
+        self.label_main = lv.label(lv.scr_act())
 
         style_circ = lv.style_t()
         style_circ.init()
-        style_circ.set_radius(lv.STATE.DEFAULT,LV_RADIUS_CIRCLE)
+        style_circ.set_radius(LV_RADIUS_CIRCLE)
                               
-        self.circ_area = lv.obj(lv.scr_act(), None)
+        self.circ_area = lv.obj(lv.scr_act())
         self.circ_area.set_size(CIRCLE_SIZE, CIRCLE_SIZE)
-        self.circ_area.add_style(lv.STATE.DEFAULT,style_circ)
-        self.circ_area.set_click(False)
+        self.circ_area.add_style(style_circ, lv.STATE.DEFAULT)
+        self.circ_area.clear_flag(lv.obj.FLAG.CLICKABLE) # self.circ_area.set_click(False)
 
         self.show_circle()
 
     def show_text(self, txt):
         self.label_main.set_text(txt)
-        self.label_main.set_align(lv.label.ALIGN.CENTER)
+        # self.label_main.set_align(lv.label.ALIGN.CENTER)
         self.label_main.set_pos((HRES - self.label_main.get_width() ) // 2,
                            (VRES - self.label_main.get_height()) // 2)
     def show_circle(self):
@@ -140,7 +141,7 @@ class Tpcal():
             self.cur_point = 0
             self.show_text("Click/drag on screen\n" + \
                            "to check calibration")
-            self.big_btn.set_event_cb(lambda obj, event, self=self: self.check() if event == lv.EVENT.PRESSING else None) 
+            self.big_btn.set_event_cb(lambda event, self=self: self.check(), lv.EVENT.PRESSING, None) 
         else:
             self.show_circle()
 
