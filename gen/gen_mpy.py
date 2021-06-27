@@ -893,6 +893,21 @@ STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo
     return 0;
 }
 
+STATIC mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t rhs_in)
+{
+    mp_lv_obj_t *lhs = MP_OBJ_TO_PTR(lhs_in);
+    mp_lv_obj_t *rhs = MP_OBJ_TO_PTR(rhs_in);
+    switch (op)
+    {
+        case MP_BINARY_OP_EQUAL:
+            return mp_obj_new_bool(lhs->lv_obj == rhs->lv_obj);
+        case MP_BINARY_OP_NOT_EQUAL:
+            return mp_obj_new_bool(lhs->lv_obj != rhs->lv_obj);
+        default:
+            return MP_OBJ_NULL;
+    }
+}
+
 #endif
 
 STATIC inline mp_obj_t convert_to_bool(bool b)
@@ -2176,6 +2191,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
     .name = MP_QSTR_{obj},
     .print = {obj}_print,
     {make_new}
+    {binary_op}
     .attr = call_parent_methods,
     .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
     {buffer_p}
@@ -2188,6 +2204,7 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
             locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
             ctor = ctor.format(obj = obj_name, ctor_name = ctor_func.name) if has_ctor(obj_name) else '',
             make_new = '.make_new = %s_make_new,' % obj_name if is_obj else '',
+            binary_op = '.binary_op = mp_lv_obj_binary_op,' if is_obj else '',
             buffer_p = '.buffer_p = { .get_buffer = mp_lv_obj_get_buffer },' if is_obj else '',
             parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
             ))
