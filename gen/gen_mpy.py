@@ -301,7 +301,17 @@ ast = parser.parse(s, filename='<none>')
 # Types and structs
 
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
-# eprint('... %s' % str(typedefs))
+# print('/* %s */' % str(typedefs))
+synonym = {}
+for t in typedefs:
+    if isinstance(t, c_ast.TypeDecl) and isinstance(t.type, c_ast.IdentifierType): 
+        if t.declname != t.type.names[0]:
+            synonym[t.declname] = t.type.names[0]
+            # eprint('%s === %s' % (t.declname, t.type.names[0]))
+    if isinstance(t, c_ast.TypeDecl) and isinstance(t.type, c_ast.Struct):
+        if t.declname != t.type.name:
+            synonym[t.declname] = t.type.name
+            # eprint('%s === struct %s' % (t.declname, t.type.name))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
 structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname)) 
 structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) for decl in ast.ext if hasattr(decl, 'type') and is_struct(decl.type))
@@ -1349,6 +1359,7 @@ for enum_def in enum_defs:
 #
 
 def decl_to_callback(decl):
+    # print('/* decl_to_callback %s */' % decl)
     if not hasattr(decl, 'type'):
         return None
     if (isinstance(decl.type, c_ast.PtrDecl) and isinstance(decl.type.type, c_ast.FuncDecl)):
@@ -1359,7 +1370,10 @@ def decl_to_callback(decl):
         # print('/* callback: ADDED CALLBACK: %s\n%s */' % (gen.visit(decl.type.type), decl.type.type))
     elif isinstance(decl.type, c_ast.TypeDecl) and hasattr(decl.type.type,'names'):
         func_typedef_name = decl.type.type.names[0]
-        # print('/* --> callback: TYPEDEF CALLBACK: %s: %s */' % (decl.name, func_typedef_name))
+        while func_typedef_name in synonym:
+            # eprint('decl_to_callback: %s --> %s' % (func_typedef_name, synonym[func_typedef_name]))
+            func_typedef_name = synonym[func_typedef_name]
+        # print('/* --> callback: TYPEDEF CALLBACK: %s: %s */' % (decl.name if hasattr(decl, 'name') else None, func_typedef_name))
         if func_typedef_name in func_typedefs:
             return (decl.name, func_typedefs[func_typedef_name].type.type)
             # print('/* callback: ADDED CALLBACK: %s\n%s */' % (func_typedef_name, func_typedefs[func_typedef_name]))
@@ -1467,6 +1481,7 @@ def try_generate_struct(struct_name, struct):
         callback = decl_to_callback(decl)
 
         if callback:
+            # print("/* %s callback %s */" % (gen.visit(decl), callback))
             func_name, arg_type  = callback
             user_data = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
             if not callback in callbacks_used_on_structs:
