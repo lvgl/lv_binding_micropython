@@ -46,7 +46,7 @@ static int16_t cached_clicks = 0;
  * @param data store the mouse data here
  * @return false: because the points are not buffered, so no more data to be read
  */
-bool mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+void mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     /* Replay cached clicks on its original coordinates */
     if (cached_clicks > 0) {
@@ -55,7 +55,8 @@ bool mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
         data->point.y = first_y;
         data->state = (cached_clicks&1)==1 ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
 
-        return true;
+        data->continue_reading = true;
+        return;
     }
 
     /* Store the collected data */
@@ -65,7 +66,8 @@ bool mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 
     mouse_was_read = true;
 
-    return false;
+    data->continue_reading = false;
+    return;
 }
 
 /**
