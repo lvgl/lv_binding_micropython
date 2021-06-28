@@ -242,7 +242,7 @@ class ili9XXX:
             #     micropython.schedule(post_isr, None)
             # except RuntimeError:
             #     pass
-        
+
         self.spi_callbacks = esp.spi_transaction_set_cb(None, flush_isr)
 
     #
@@ -308,13 +308,13 @@ class ili9XXX:
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         self.trans.user = None
         esp.spi_device_polling_transmit(self.spi, self.trans)
-    
+
     def spi_send_dma(self, data):
         self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         self.trans.user = self.spi_callbacks
         esp.spi_device_queue_trans(self.spi, self.trans, -1)
-    
+
     ######################################################
     ######################################################
 
@@ -550,7 +550,7 @@ class ili9488(ili9XXX):
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
-        colormode=COLOR_MODE_RGB, rot=180, invert=False, double_buffer=True, half_duplex=True,
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
 
@@ -596,7 +596,7 @@ class gc9a01(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=False, width=240, height=240,
+        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=True, width=240, height=240,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
