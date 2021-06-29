@@ -365,9 +365,9 @@ class AdvancedDemoApplication:
         self.event_loop = lv_utils.event_loop()
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_draw_buf_t()
-        buf1_1 = bytearray(hres * 50 * lv.color_t.SIZE)
-        buf1_2 = bytearray(hres * 50 * lv.color_t.SIZE)
-        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.SIZE)
+        buf1_1 = bytearray(hres * 50 * lv.color_t.__SIZE__)
+        buf1_2 = bytearray(hres * 50 * lv.color_t.__SIZE__)
+        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.__SIZE__)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
         disp_drv.draw_buf = disp_buf1

@@ -20,7 +20,7 @@ class driver:
 
         disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(480*10)
-        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
+        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.__SIZE__)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
         disp_drv.draw_buf = disp_buf1
@@ -50,7 +50,7 @@ class driver:
 
         disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(480*10)
-        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.SIZE)
+        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.__SIZE__)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
         disp_drv.draw_buf = disp_buf1
@@ -83,7 +83,7 @@ class driver:
         disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = lcd.framebuffer(1)
         buf1_2 = lcd.framebuffer(2)
-        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.SIZE)
+        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.__SIZE__)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
         disp_drv.draw_buf = disp_buf1

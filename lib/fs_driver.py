@@ -29,7 +29,7 @@ def fs_open_cb(drv, path, mode):
 
 def fs_close_cb(drv, fs_file):
     try:
-        fs_file.cast()['file'].close()
+        fs_file.__cast__()['file'].close()
     except Exception as e:
         print("fs_close_callback() exception ", uerrno.errorcode[e.args[0]])
         return lv.FS_RES.FS_ERR
@@ -39,7 +39,7 @@ def fs_close_cb(drv, fs_file):
 
 def fs_read_cb(drv, fs_file, buf, btr, br):
     try:
-        tmp_data = fs_file.cast()['file'].read(btr)
+        tmp_data = fs_file.__cast__()['file'].read(btr)
         # tmp_len = len(tmp_data)
         buf.__dereference__(btr)[0:len(tmp_data)] = tmp_data
         br.__dereference__(4)[0:4] = struct.pack("<L", len(tmp_data))
@@ -54,7 +54,7 @@ def fs_read_cb(drv, fs_file, buf, btr, br):
 def fs_seek_cb(drv, fs_file, pos, whence):
     try:
         # to =
-        fs_file.cast()['file'].seek(pos, whence)
+        fs_file.__cast__()['file'].seek(pos, whence)
     except Exception as e:
         print("fs_seek_callback() exception ", uerrno.errorcode[e.args[0]])
         return lv.FS_RES.FS_ERR
@@ -64,7 +64,7 @@ def fs_seek_cb(drv, fs_file, pos, whence):
 
 def fs_tell_cb(drv, fs_file, pos):
     try:
-        tpos = fs_file.cast()['file'].tell()
+        tpos = fs_file.__cast__()['file'].tell()
         pos.__dereference__(4)[0:4] = struct.pack("<L", tpos)
     except Exception as e:
         print("fs_tell_callback() exception ", uerrno.errorcode[e.args[0]])
@@ -75,7 +75,7 @@ def fs_tell_cb(drv, fs_file, pos):
 
 def fs_write_cb(drv, fs_file, buf, btw, bw):
     try:
-        wr = fs_file.cast()['file'].write(buf[0:btw])
+        wr = fs_file.__cast__()['file'].write(buf[0:btw])
         bw.__dereference__(4)[0:4] = struct.pack("<L", wr)
     except Exception as e:
         print("fs_write_callback() exception ", uerrno.errorcode[e.args[0]])

@@ -22,7 +22,7 @@ class xpt2046:
 
         # Initializations
 
-        disp = lv.disp_t.cast(None)
+        disp = lv.disp_t.__cast__(None)
         self.screen_width = disp.get_hor_res()
         self.screen_height = disp.get_ver_res()
         self.miso = miso

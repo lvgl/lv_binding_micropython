@@ -17,7 +17,7 @@ import lvgl as lv
 import lodepng as png
 import struct
 
-COLOR_SIZE = lv.color_t.SIZE
+COLOR_SIZE = lv.color_t.__SIZE__
 COLOR_IS_SWAPPED = hasattr(lv.color_t().ch,'green_h')
 
 class lodepng_error(RuntimeError):
@@ -37,7 +37,7 @@ def get_png_info(decoder, src, header):
     if lv.img.src_get_type(src) != lv.img.SRC.VARIABLE:
         return lv.RES.INV
 
-    png_header = bytes(lv.img_dsc_t.cast(src).data.__dereference__(24))
+    png_header = bytes(lv.img_dsc_t.__cast__(src).data.__dereference__(24))
 
     if png_header.startswith(b'\211PNG\r\n\032\n'):
         if png_header[12:16] == b'IHDR':
@@ -119,7 +119,7 @@ def convert_rgba8888_to_bgra8888(img_view):
 
 @micropython.native
 def open_png(decoder, dsc):
-    img_dsc = lv.img_dsc_t.cast(dsc.src)
+    img_dsc = lv.img_dsc_t.__cast__(dsc.src)
     png_data = img_dsc.data
     png_size = img_dsc.data_size
     png_decoded = png.C_Pointer()

@@ -960,7 +960,7 @@ STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 
 STATIC inline size_t get_lv_struct_size(const mp_obj_type_t *type)
 {
-    mp_obj_t size_obj = mp_obj_dict_get(type->locals_dict, MP_OBJ_NEW_QSTR(MP_QSTR_SIZE));
+    mp_obj_t size_obj = mp_obj_dict_get(type->locals_dict, MP_OBJ_NEW_QSTR(MP_QSTR___SIZE__));
     return (size_t)mp_obj_get_int(size_obj);
 }
 
@@ -1154,7 +1154,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_blob_cast_obj, 1, 2, mp_blob_cast)
 
 STATIC const mp_rom_map_elem_t mp_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_blob_cast_obj) },
+    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_blob_cast_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_blob_locals_dict, mp_blob_locals_dict_table);
@@ -2348,9 +2348,9 @@ def generate_struct_functions(struct_list):
                 struct_funcs.remove(struct_func)
         print('''
 STATIC const mp_rom_map_elem_t mp_{sanitized_struct_name}_locals_dict_table[] = {{
-    {{ MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},
-    {{ MP_ROM_QSTR(MP_QSTR_cast), MP_ROM_PTR(&mp_lv_cast_class_method) }},
-    {{ MP_ROM_QSTR(MP_QSTR_cast_instance), MP_ROM_PTR(&mp_lv_cast_instance_obj) }},
+    {{ MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},
+    {{ MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) }},
+    {{ MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) }},
     {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
     {functions}
 }};

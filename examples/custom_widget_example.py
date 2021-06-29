@@ -81,7 +81,7 @@ class CustomWidgetClass():
 
         if code == lv.EVENT.DRAW_MAIN:
             # Draw the widget
-            clip_area = lv.area_t.cast(e.get_param())
+            clip_area = lv.area_t.__cast__(e.get_param())
             self.draw(obj, clip_area)
         elif code in [
                 lv.EVENT.STYLE_CHANGED,

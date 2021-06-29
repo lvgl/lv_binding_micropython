@@ -36,6 +36,6 @@ def aligned_buf(buf, alignment):
     offset = alignment - mod if mod != 0 else 0
     if len(buf) <= offset: return None
     addr += offset
-    p = lv.C_Pointer.cast(ustruct.pack(buf_fmt, addr))
+    p = lv.C_Pointer.__cast__(ustruct.pack(buf_fmt, addr))
     return p.ptr_val.__dereference__(len(buf) - offset)
 
