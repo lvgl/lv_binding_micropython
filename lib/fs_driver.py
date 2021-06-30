@@ -15,15 +15,14 @@ def fs_open_cb(drv, path, mode):
     elif mode == 3:
         p_mode = 'rb+'
     else:
-        print("fs_open_callback() - open mode error, {} is invalid mode".format(mode))
-        return None
+        raise RuntimeError("fs_open_callback() - open mode error, {} is invalid mode".format(mode))
 
     try:
         f = open(path, p_mode)
 
     except Exception as e:
-        print("fs_open_callback() exception: ", uerrno.errorcode[e.args[0]])
-        return None
+        raise RuntimeError("fs_open_callback(%s) exception: " % (path), uerrno.errorcode[e.args[0]])
+
     return {'file' : f}
 
 

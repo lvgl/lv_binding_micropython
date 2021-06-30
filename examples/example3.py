@@ -1,36 +1,42 @@
 import sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
-import pyb
 import time
-import rk043fn48h as lcd
-import lvgl as lv
 import lv_utils
+import lvgl as lv
 
-hres = 480
-vres = 272
-lv.init()
-event_loop = lv_utils.event_loop()
-lcd.init(w=hres, h=vres)
-disp_buf1 = lv.disp_drwa_buf_t()
-buf1_1 = bytearray(hres * 10 * lv.color_t.__SIZE__)
-buf1_2 = bytearray(hres * 10 * lv.color_t.__SIZE__)
-disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.__SIZE__)
-disp_drv = lv.disp_drv_t()
-disp_drv.init()
-disp_drv.draw_buf = disp_buf1
-disp_drv.flush_cb = lcd.flush
-disp_drv.gpu_blend_cb = lcd.gpu_blend
-disp_drv.gpu_fill_cb = lcd.gpu_fill
-disp_drv.hor_res = hres
-disp_drv.ver_res = vres
-disp_drv.register()
+try:
+    import pyb
+    import rk043fn48h as lcd
 
-indev_drv = lv.indev_drv_t()
-indev_drv.init()
-indev_drv.type = lv.INDEV_TYPE.POINTER
-indev_drv.read_cb = lcd.ts_read
-indev_drv.register()
+    hres = 480
+    vres = 272
+    lv.init()
+    event_loop = lv_utils.event_loop()
+    lcd.init(w=hres, h=vres)
+    disp_buf1 = lv.disp_drwa_buf_t()
+    buf1_1 = bytearray(hres * 10 * lv.color_t.__SIZE__)
+    buf1_2 = bytearray(hres * 10 * lv.color_t.__SIZE__)
+    disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.__SIZE__)
+    disp_drv = lv.disp_drv_t()
+    disp_drv.init()
+    disp_drv.draw_buf = disp_buf1
+    disp_drv.flush_cb = lcd.flush
+    disp_drv.gpu_blend_cb = lcd.gpu_blend
+    disp_drv.gpu_fill_cb = lcd.gpu_fill
+    disp_drv.hor_res = hres
+    disp_drv.ver_res = vres
+    disp_drv.register()
+
+    indev_drv = lv.indev_drv_t()
+    indev_drv.init()
+    indev_drv.type = lv.INDEV_TYPE.POINTER
+    indev_drv.read_cb = lcd.ts_read
+    indev_drv.register()
+
+except ImportError:
+    import display_driver
+
 
 scr1 = lv.obj()
 scr2 = lv.obj()

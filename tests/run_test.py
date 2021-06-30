@@ -45,12 +45,14 @@ try:
 
     script = sys.argv[1]
     script_path = script[:script.rfind('/')] if script.find('/') >= 0 else '.'
+    script_name = script[script.rfind('/')+1:] if script.find('/') >= 0 else script
 
     print('Running %s ...' % script)
 
     with open(script, 'r') as file:
         file_string = file.read()
         os.chdir(script_path)
+        __file__ = script_name
         exec(file_string)
         time.sleep_ms(DELAY_MS)
         gc.collect()

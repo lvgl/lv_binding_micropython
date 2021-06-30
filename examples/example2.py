@@ -108,7 +108,7 @@ decoder.open_cb = open_png
 
 # Create a screen with a draggable image
 
-with open('lib/lv_bindings/examples/png_decoder_test.png','rb') as f:
+with open('png_decoder_test.png','rb') as f:
   png_data = f.read()
 
 png_img_dsc = lv.img_dsc_t({
