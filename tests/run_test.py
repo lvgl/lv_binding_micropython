@@ -33,11 +33,25 @@ scr = lv.scr_act()
 
 ##############################################################################
 
+def send_event(*events):
+    return ';'.join(['lv.event_send(%%s, lv.EVENT.%s, None)' % e for e in events])
+
 actions = {
-            r'^btn[^ms]':           'lv.event_send(%s, lv.EVENT.CLICKED, None)',
-            r'^cb$|^cb[0-9_]+':     'lv.event_send(%s, lv.EVENT.VALUE_CHANGED, None)',
-            r'^slider':             'lv.event_send(%s, lv.EVENT.VALUE_CHANGED, None)',
-            r'^dd|^dropdown':       'lv.event_send(%s, lv.EVENT.VALUE_CHANGED, None)'}
+            lv.btn:         send_event('CLICKED'),
+            lv.obj:         send_event('CLICKED', 'SCROLL'),
+            lv.textarea:    send_event('READY'),
+
+            lv.checkbox:    send_event('VALUE_CHANGED'),
+            lv.slider:      send_event('VALUE_CHANGED'),
+            lv.dropdown:    send_event('VALUE_CHANGED'),
+            lv.obj:         send_event('VALUE_CHANGED'),
+            lv.switch:      send_event('VALUE_CHANGED'),
+            # lv.btnmatrix:   send_event('VALUE_CHANGED'), # need param?
+            lv.roller:      send_event('VALUE_CHANGED'),
+            lv.table:       send_event('VALUE_CHANGED'),
+            # lv.msgbox:      send_event('VALUE_CHANGED'), # mbox.get_active_btn_text may be NULL
+            lv.calendar:    send_event('VALUE_CHANGED'),
+          }
 
 ##############################################################################
 
@@ -59,9 +73,7 @@ try:
 
         for action in actions:
             for g in globals():
-                if g.find('event') >= 0:
-                    continue
-                if re.search(action, g):
+                if eval('type(%s)' % g) == action:
                     cmd = actions[action] % g
                     print(cmd)
                     exec(cmd)
