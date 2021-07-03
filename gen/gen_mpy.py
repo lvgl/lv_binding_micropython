@@ -646,11 +646,17 @@ if len(obj_names) > 0:
     print("""
 #define LV_OBJ_T {obj_type}
 
-STATIC const mp_obj_type_t mp_{base_obj}_type;
+typedef struct mp_lv_obj_type_t {{
+    mp_obj_type_t mp_obj_type;
+    const lv_obj_class_t *lv_obj_class;
+}} mp_lv_obj_type_t;
+
+STATIC const mp_lv_obj_type_t mp_lv_{base_obj}_type;
+STATIC const mp_lv_obj_type_t *mp_lv_obj_types[];
 
 STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {{
-    return &mp_{base_obj}_type;
+    return &mp_lv_{base_obj}_type.mp_obj_type;
 }}
     """.format(
             obj_type = base_obj_type,
@@ -832,18 +838,48 @@ STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
     if (!self) 
     {
+        // Find the object type
+        const mp_obj_type_t *mp_obj_type = get_BaseObj_type();
+        const lv_obj_class_t *lv_obj_class = lv_obj_get_class(lv_obj);
+        const mp_lv_obj_type_t **iter = &mp_lv_obj_types[0];
+        for (; *iter; iter++) {
+            if ((*iter)->lv_obj_class == lv_obj_class) {
+                mp_obj_type = &(*iter)->mp_obj_type;
+            }
+        }
+
+        // Create the MP object
         self = m_new_obj(mp_lv_obj_t);
         *self = (mp_lv_obj_t){
-            .base = {get_BaseObj_type()},
+            .base = {mp_obj_type},
             .lv_obj = lv_obj,
             .callbacks = NULL,
         };
+
+        // Register the Python object in user_data
         lv_obj->user_data = self;
     }
     return MP_OBJ_FROM_PTR(self);
 }
 
 STATIC void* mp_to_ptr(mp_obj_t self_in);
+
+STATIC mp_obj_t cast_obj_type(const mp_obj_type_t* type, mp_obj_t obj)
+{
+    mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
+    *self = (mp_lv_obj_t){
+        .base = {type},
+        .lv_obj = mp_to_ptr(obj),
+        .callbacks = NULL,
+    };
+    if (!self->lv_obj) return mp_const_none;
+    return MP_OBJ_FROM_PTR(self);
+}
+
+STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
+{
+    return cast_obj_type(mp_obj_get_type(type_obj), obj);
+}
 
 STATIC mp_obj_t make_new(
     const mp_lv_obj_fun_builtin_var_t *lv_obj_var,
@@ -852,8 +888,6 @@ STATIC mp_obj_t make_new(
     size_t n_kw,
     const mp_obj_t *args)
 {
-    mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
-
     mp_obj_t lv_obj;
     if (n_args == 0 && n_kw == 0) // allow no args, and pass NULL as parent in such case
     {
@@ -865,29 +899,12 @@ STATIC mp_obj_t make_new(
         lv_obj = mp_call_function_n_kw(MP_OBJ_FROM_PTR(lv_obj_var), n_args, n_kw, args);
     }
 
-    *self = (mp_lv_obj_t){
-        .base = {type}, 
-        .lv_obj = mp_to_ptr(lv_obj),
-        .callbacks = NULL,
-    };
-    if (!self->lv_obj) return mp_const_none;
+    if (!lv_obj) return mp_const_none;
 
-    // Register the Python object in user_data
-    self->lv_obj->user_data = self;
-
-    return MP_OBJ_FROM_PTR(self);
-}
-
-STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
-{
-    mp_lv_obj_t *self = m_new_obj(mp_lv_obj_t);
-    *self = (mp_lv_obj_t){
-        .base = {(const mp_obj_type_t*)type_obj},
-        .lv_obj = mp_to_ptr(obj),
-        .callbacks = NULL,
-    };
-    if (!self->lv_obj) return mp_const_none;
-    return MP_OBJ_FROM_PTR(self);
+    mp_lv_obj_t *self = MP_OBJ_TO_PTR(lv_obj);
+    if (self->base.type != type)
+        return cast_obj_type(type, lv_obj);
+    return lv_obj;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(cast_obj_obj, cast_obj);
@@ -917,6 +934,12 @@ STATIC mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
             return MP_OBJ_NULL;
     }
 }
+
+#else
+
+typedef struct mp_lv_obj_type_t {
+    mp_obj_type_t mp_obj_type;
+} mp_lv_obj_type_t;
 
 #endif
 
@@ -2136,7 +2159,7 @@ def gen_obj_methods(obj_name):
     obj_metadata[obj_name]['members'].update({get_enum_member_name(enum_member_name): {'type':'enum_member'} for enum_member_name in get_enum_members(obj_name)})
     # add enums that match object name
     obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
-    enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }}".
+    enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type.mp_obj_type) }}".
                     format(name=sanitize(method_name_from_func_name(enum_name)), enum=enum_name) for enum_name in obj_enums]
     obj_metadata[obj_name]['members'].update({method_name_from_func_name(enum_name): {'type':'enum_type'} for enum_name in obj_enums})
     for enum_name in obj_enums:
@@ -2201,16 +2224,19 @@ STATIC void {obj}_print(const mp_print_t *print,
 
 {ctor}
 
-STATIC const mp_obj_type_t mp_{obj}_type = {{
-    {{ &mp_type_type }},
-    .name = MP_QSTR_{obj},
-    .print = {obj}_print,
-    {make_new}
-    {binary_op}
-    .attr = call_parent_methods,
-    .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
-    {buffer_p}
-    .parent = {parent},
+STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
+    {{
+        {{ &mp_type_type }},
+        .name = MP_QSTR_{obj},
+        .print = {obj}_print,
+        {make_new}
+        {binary_op}
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
+        {buffer_p}
+        .parent = {parent}
+    }},
+    {lv_class}
 }};
     """.format(
             module_name = module_name,
@@ -2221,7 +2247,8 @@ STATIC const mp_obj_type_t mp_{obj}_type = {{
             make_new = '.make_new = %s_make_new,' % obj_name if is_obj else '',
             binary_op = '.binary_op = mp_lv_obj_binary_op,' if is_obj else '',
             buffer_p = '.buffer_p = { .get_buffer = mp_lv_obj_get_buffer },' if is_obj else '',
-            parent = '&mp_%s_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
+            parent = '&mp_lv_%s_type.mp_obj_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
+            lv_class = '&lv_%s_class' % obj_name if is_obj else 'NULL',
             ))
 
 #
@@ -2454,11 +2481,11 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
 }};
 """.format(
         module_name = sanitize(module_name),
-        objects = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_{obj}_type) }},\n    '.
+        objects = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_lv_{obj}_type.mp_obj_type) }},\n    '.
             format(obj = sanitize(o)) for o in obj_names]),
         functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
             format(name = sanitize(simplify_identifier(f.name)), func = f.name) for f in module_funcs]),
-        enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{enum}_type) }},\n    '.
+        enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type.mp_obj_type) }},\n    '.
             format(name = sanitize(get_enum_name(enum_name)), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
         structs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
             format(name = sanitize(simplify_identifier(struct_name)), struct_name = sanitize(struct_name)) for struct_name in generated_structs \
@@ -2484,6 +2511,16 @@ const mp_obj_module_t mp_module_{module_name} = {{
 """.format(
         module_name = module_name,
     ))
+
+# Add an array of all object types
+
+if len(obj_names) > 0:
+    print('''
+STATIC const mp_lv_obj_type_t *mp_lv_obj_types[] = {{
+    {obj_types},
+    NULL
+}};
+    '''.format(obj_types = ',\n    '.join(['&mp_lv_%s_type' % obj_name for obj_name in obj_names])))
 
 # Save Metadata File, if specified. 
 
