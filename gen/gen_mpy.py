@@ -878,7 +878,7 @@ STATIC mp_obj_t cast_obj_type(const mp_obj_type_t* type, mp_obj_t obj)
 
 STATIC mp_obj_t cast_obj(mp_obj_t type_obj, mp_obj_t obj)
 {
-    return cast_obj_type(mp_obj_get_type(type_obj), obj);
+    return cast_obj_type((const mp_obj_type_t *)type_obj, obj);
 }
 
 STATIC mp_obj_t make_new(
