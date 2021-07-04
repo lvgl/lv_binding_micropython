@@ -935,7 +935,7 @@ STATIC mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
     }
 }
 
-#else
+#else // LV_OBJ_T
 
 typedef struct mp_lv_obj_type_t {
     mp_obj_type_t mp_obj_type;
@@ -2236,7 +2236,9 @@ STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
         {buffer_p}
         .parent = {parent}
     }},
+#ifdef LV_OBJ_T
     {lv_class}
+#endif
 }};
     """.format(
             module_name = module_name,
