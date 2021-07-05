@@ -814,7 +814,10 @@ typedef struct mp_lv_obj_t {
 STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t *mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+    mp_obj_t native_obj = get_native_obj(mp_obj);
+    if (mp_obj_get_type(native_obj)->buffer_p.get_buffer != mp_lv_obj_get_buffer)
+        return NULL;
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(native_obj);
     return mp_lv_obj->lv_obj;
 }
 
@@ -1879,7 +1882,7 @@ def build_callback_func_arg(arg, index, func, func_name = None):
                 i = index, cast = cast) 
 
 
-def gen_callback_func(func, func_name = None):
+def gen_callback_func(func, func_name = None, user_data_argument = False):
     global mp_to_lv
     if func_name in generated_callbacks:
         return
@@ -1892,12 +1895,13 @@ def gen_callback_func(func, func_name = None):
         full_user_data = 'MP_STATE_PORT(mp_lv_user_data)'
     else:
         user_data = get_user_data(func, func_name)
-        if user_data:
+
+        if user_data_argument and len(args) > 0 and gen.visit(args[-1]) == 'void *':
+            full_user_data = 'arg%d' % (len(args) - 1)
+        elif user_data:
             full_user_data = 'arg0->%s' % user_data
             if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
                 raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
-        elif len(args) > 0 and gen.visit(args[-1]) == 'void *':
-            full_user_data = 'arg%d' % (len(args) - 1)
         else:
             full_user_data = None
 
@@ -1962,18 +1966,20 @@ def build_mp_func_arg(arg, index, func, obj_name):
         # 1) last argument is a void* user_data which is passed to callback
         # 2) first argument is a struct with user_data field, which is passed to callback
 
-        func_name, arg_type  = callback
-        # print('/* --> callback %s ARG TYPE: %s */' % (func_name, arg_type))
+        callback_name, arg_type  = callback
+        # print('/* --> callback %s ARG TYPE: %s */' % (callback_name, arg_type))
 
         try:
+            user_data_argument = False
             if len(args) > 0 and gen.visit(args[-1].type) == 'void *' and args[-1].name == 'user_data':
-                callback_name = '%s' % (func_name)
+                callback_name = '%s_%s' % (func.name, callback_name)
                 full_user_data = '&user_data'
+                user_data_argument = True
             else:
                 first_arg = args[0]
                 struct_name = get_name(first_arg.type.type.type if hasattr(first_arg.type.type,'type') else first_arg.type.type)
-                callback_name = '%s_%s' % (struct_name, func_name)
-                user_data = get_user_data(arg_type, func_name)
+                callback_name = '%s_%s' % (struct_name, callback_name)
+                user_data = get_user_data(arg_type, callback_name)
                 if is_global_callback(arg_type):
                     full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
                 else:
@@ -1982,8 +1988,8 @@ def build_mp_func_arg(arg, index, func, obj_name):
                        raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
                     if not full_user_data:
                         raise MissingConversionException("Callback function '%s' must receive a struct pointer with user_data member as its first argument!" % gen.visit(arg))
-            # eprint("--> callback_metadata= %s_%s" % (struct_name, func_name))
-            gen_callback_func(arg_type, '%s' % callback_name)
+            # eprint("--> callback_metadata= %s_%s" % (struct_name, callback_name))
+            gen_callback_func(arg_type, '%s' % callback_name, user_data_argument)
             arg_metadata = {'type': 'callback', 'function': callback_metadata[callback_name]}
             if arg.name: arg_metadata['name'] = arg.name
             func_metadata[func.name]['args'].append(arg_metadata)
