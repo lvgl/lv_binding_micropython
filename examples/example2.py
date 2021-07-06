@@ -90,7 +90,7 @@ def open_png(decoder, dsc):
 
     # Convert png RGBA-big-endian format to lvgl ARGB-little-endian
     # Eventually - this means swapping red and blue.
-    # More info on https://forumtest.littlevgl.com/t/png-decoding-why-red-and-blue-are-swapped/72
+    # More info on https://forum.lvgl.io/t/png-decoding-why-red-and-blue-are-swapped/72
 
     img_view = img_data.__dereference__(img_size)
     for i in range(0, img_size, lv.color_t.__SIZE__):
