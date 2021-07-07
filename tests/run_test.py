@@ -15,7 +15,8 @@
 #
 ##############################################################################
 
-DELAY_MS=250
+DELAY_MS=25
+MAX_CHILDREN=100
 
 import sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
@@ -33,25 +34,38 @@ scr = lv.scr_act()
 
 ##############################################################################
 
-def send_event(*events):
-    return ';'.join(['lv.event_send(%%s, lv.EVENT.%s, None)' % e for e in events])
+member_name_cache = {}
 
-actions = {
-            lv.btn:         send_event('CLICKED'),
-            lv.obj:         send_event('CLICKED', 'SCROLL'),
-            lv.textarea:    send_event('READY'),
+def get_member_name(obj, value):
+    try:
+        return member_name_cache[id(obj)][id(value)]
+    except KeyError:
+        pass
 
-            lv.checkbox:    send_event('VALUE_CHANGED'),
-            lv.slider:      send_event('VALUE_CHANGED'),
-            lv.dropdown:    send_event('VALUE_CHANGED'),
-            lv.obj:         send_event('VALUE_CHANGED'),
-            lv.switch:      send_event('VALUE_CHANGED'),
-            # lv.btnmatrix:   send_event('VALUE_CHANGED'), # need param?
-            lv.roller:      send_event('VALUE_CHANGED'),
-            lv.table:       send_event('VALUE_CHANGED'),
-            # lv.msgbox:      send_event('VALUE_CHANGED'), # mbox.get_active_btn_text may be NULL
-            lv.calendar:    send_event('VALUE_CHANGED'),
-          }
+    for member in dir(obj):
+        if getattr(obj, member) == value:
+            try:
+                member_name_cache[id(obj)][id(value)] = member
+            except KeyError:
+                member_name_cache[id(obj)] = {id(value): member}
+            return member
+
+events = [lv.EVENT.SCROLL, lv.EVENT.CLICKED, lv.EVENT.VALUE_CHANGED, lv.EVENT.READY]
+
+def exec_actions(obj, user_data):
+    if obj.get_child_id() <= MAX_CHILDREN:
+        obj_info = ''
+        if hasattr(obj, 'get_text'):
+            obj_info += ' text:"%s"' % obj.get_text()
+        if hasattr(obj, 'get_value'):
+            obj_info += ' value:"%s"' % obj.get_value()
+        print('%s %s' % (obj, obj_info))
+        for event in events:
+            # print('\t%s' % get_member_name(lv.EVENT, event))
+            lv.event_send(obj, event, None)
+            time.sleep_ms(DELAY_MS)
+            gc.collect()
+    return lv.obj.TREE_WALK.NEXT
 
 ##############################################################################
 
@@ -70,15 +84,7 @@ try:
         exec(file_string)
         time.sleep_ms(DELAY_MS)
         gc.collect()
-
-        for action in actions:
-            for g in globals():
-                if eval('type(%s)' % g) == action:
-                    cmd = actions[action] % g
-                    print(cmd)
-                    exec(cmd)
-                    time.sleep_ms(DELAY_MS)
-                    gc.collect()
+        lv.scr_act().tree_walk(exec_actions, None)
 
 except:
     exc = sys.exc_info()
