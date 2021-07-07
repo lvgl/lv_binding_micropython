@@ -15,6 +15,10 @@
 /* Increasing this value might help with CPU usage at the cost of lower
  * responsiveness. */
 #define LV_TICK_RATE 20
+    
+/* Default screen dimensions */
+#define LV_HOR_RES_MAX          (480)
+#define LV_VER_RES_MAX          (320)
 
 //////////////////////////////////////////////////////////////////////////////
 

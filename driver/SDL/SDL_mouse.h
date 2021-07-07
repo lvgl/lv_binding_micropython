@@ -23,7 +23,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
-#include "lvgl/src/lv_hal/lv_hal_indev.h"
+#include "lvgl/src/hal/lv_hal_indev.h"
 
 
 #ifndef MONITOR_SDL_INCLUDE_PATH
@@ -53,7 +53,7 @@ void mouse_init(void);
  * @param data store the mouse data here
  * @return false: because the points are not buffered, so no more data to be read
  */
-bool mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+void mouse_read(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
 
 /**
  * It will be called from the main SDL thread

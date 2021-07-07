@@ -12,13 +12,13 @@ class crosshair_cursor:
         self.hor_res = self.scr.get_width()
         self.ver_res = self.scr.get_height()
         self.cursor_style = lv.style_t()
-        self.cursor_style.set_line_width(lv.STATE.DEFAULT,1)
-        self.cursor_style.set_line_dash_gap(lv.STATE.DEFAULT, 5)
-        self.cursor_style.set_line_dash_width(lv.STATE.DEFAULT, 1)
+        self.cursor_style.set_line_width(1)
+        self.cursor_style.set_line_dash_gap(5)
+        self.cursor_style.set_line_dash_width(1)
         self.cursor_hor = lv.line(self.scr)
-        self.cursor_hor.add_style(lv.line.PART.MAIN, self.cursor_style)
+        self.cursor_hor.add_style(self.cursor_style, lv.PART.MAIN)
         self.cursor_ver = lv.line(self.scr)
-        self.cursor_ver.add_style(lv.line.PART.MAIN, self.cursor_style)
+        self.cursor_ver.add_style(self.cursor_style, lv.PART.MAIN)
 
     def __call__(self, data):
         # print("%d : %d:%d" % (data.state, data.point.x, data.point.y))
@@ -69,7 +69,7 @@ class mouse_indev:
         data.point.y = max(data.point.y, 0)
 
         # Update "pressed" status
-        data.state = lv.INDEV_STATE.PR if ((mouse_data[0] & 1) == 1) else lv.INDEV_STATE.REL
+        data.state = lv.INDEV_STATE.PRESSED if ((mouse_data[0] & 1) == 1) else lv.INDEV_STATE.RELEASED
 
         # Draw cursor, if needed
         if self.cursor: self.cursor(data)

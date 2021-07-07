@@ -10,6 +10,7 @@
 
 #ifdef PYCPARSER
 #define __attribute__(x)
+#define __extension__
 #define _SOC_IO_MUX_REG_H_
 #define _SYS_REENT_H_
 #define PORTMACRO_H
@@ -33,10 +34,12 @@
 #define LWIP_HDR_NETIF_H
 #define ESP_EVENT_H_
 #define __SNTP_H__
+#define XTENSA_CONFIG_CORE_H
 
 typedef int	BaseType_t;
 typedef unsigned int	UBaseType_t;
 typedef void* system_event_t;
+typedef void *intr_handle_t;
 
 // Exclude SOC just because it contains large structs that don't interest the user
 #define _SOC_SPI_PERIPH_H_

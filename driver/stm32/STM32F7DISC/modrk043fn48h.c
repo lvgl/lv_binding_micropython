@@ -24,7 +24,7 @@
 LTDC_HandleTypeDef *hltdc = NULL;           // handle to LTDC, referenced in stm32_it.c
 DMA2D_HandleTypeDef *hdma2d = NULL;         // handle to DMA2D, referenced in stm32_it.c
 i2c_t *i2c_ts = NULL;                       // I2C handle for touchscreen
-struct _disp_drv_t *dma2d_disp_drv = NULL;  // handle to display driver
+lv_disp_drv_t *dma2d_disp_drv = NULL;  // handle to display driver
 lv_color_t *fb[2] = {NULL, NULL};           // framebuffer pointers
 uint32_t w = 0;                             // display width
 uint32_t h = 0;                             // display height
@@ -114,7 +114,7 @@ STATIC mp_obj_t mp_rk043fn48h_deinit() {
     return mp_const_none;
 }
 
-STATIC void mp_rk043fn48h_flush(struct _disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
+STATIC void mp_rk043fn48h_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
     if ((lv_area_get_width(area) == w) && (lv_area_get_height(area) == h)) {
         dma2d_disp_drv = disp_drv;
         SCB_CleanInvalidateDCache();
@@ -144,43 +144,6 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     lv_disp_flush_ready(dma2d_disp_drv);
 }
 
-STATIC void mp_rk043fn48h_gpu_blend(lv_disp_drv_t *drv, lv_color_t *dest, const lv_color_t *src, uint32_t length, lv_opa_t opa) {
-    while (dma2d_pend) {
-        ;
-    }
-    hdma2d->Init.Mode = DMA2D_M2M_BLEND;
-    hdma2d->Init.OutputOffset = 0;
-    hdma2d->LayerCfg[1].InputAlpha = opa;
-    SCB_CleanInvalidateDCache();
-    HAL_DMA2D_Init(hdma2d);
-    HAL_DMA2D_ConfigLayer(hdma2d, 1);
-    HAL_DMA2D_BlendingStart(hdma2d, (uint32_t)src, (uint32_t)dest, (uint32_t)dest, length, 1);
-    if (HAL_DMA2D_PollForTransfer(hdma2d, 10) != HAL_OK) {
-        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("blend timeout"));
-    }
-
-}
-
-STATIC void mp_rk043fn48h_gpu_fill(lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, const lv_area_t *fill_area, lv_color_t color) {
-    while (dma2d_pend) {
-        ;
-    }
-    hdma2d->Init.Mode = DMA2D_R2M;
-    hdma2d->Init.OutputOffset = dest_width - lv_area_get_width(fill_area);
-    hdma2d->LayerCfg[1].InputAlpha = 0xff;
-    SCB_CleanInvalidateDCache();
-    HAL_DMA2D_Init(hdma2d);
-    HAL_DMA2D_ConfigLayer(hdma2d, 1);
-    HAL_DMA2D_Start(hdma2d,
-        lv_color_to32(color),
-        (uint32_t)(dest_buf + fill_area->x1 + dest_width * fill_area->y1),
-        lv_area_get_width(fill_area),
-        lv_area_get_height(fill_area));
-    if (HAL_DMA2D_PollForTransfer(hdma2d, 10) != HAL_OK) {
-        mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("fill timeout"));
-    }
-}
-
 STATIC bool mp_rk043fn48h_ts_read(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
     static TS_StateTypeDef ts_state = {0};
     static lv_coord_t lastX = 0;
@@ -204,8 +167,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_rk043fn48h_init_obj, 0, mp_rk043fn48h_init)
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_rk043fn48h_deinit_obj, mp_rk043fn48h_deinit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_rk043fn48h_framebuffer_obj, mp_rk043fn48h_framebuffer);
 DEFINE_PTR_OBJ(mp_rk043fn48h_flush);
-DEFINE_PTR_OBJ(mp_rk043fn48h_gpu_blend);
-DEFINE_PTR_OBJ(mp_rk043fn48h_gpu_fill);
 DEFINE_PTR_OBJ(mp_rk043fn48h_ts_read);
 
 STATIC const mp_rom_map_elem_t rk043fn48h_globals_table[] = {
@@ -213,8 +174,6 @@ STATIC const mp_rom_map_elem_t rk043fn48h_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_rk043fn48h_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_rk043fn48h_deinit_obj) },
     { MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_flush))},
-    { MP_ROM_QSTR(MP_QSTR_gpu_blend), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_gpu_blend))},
-    { MP_ROM_QSTR(MP_QSTR_gpu_fill), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_gpu_fill))},
     { MP_ROM_QSTR(MP_QSTR_ts_read), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_ts_read))},
     { MP_ROM_QSTR(MP_QSTR_framebuffer), MP_ROM_PTR(&PTR_OBJ(mp_rk043fn48h_framebuffer))},
 };

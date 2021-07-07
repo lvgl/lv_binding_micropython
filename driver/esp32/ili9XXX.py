@@ -44,6 +44,7 @@
 
 import espidf as esp
 import lvgl as lv
+import lv_utils
 import micropython
 import gc
 
@@ -112,7 +113,7 @@ class ili9XXX:
         self.hybrid = hybrid
         self.half_duplex = half_duplex
 
-        self.buf_size = (self.width * self.height * lv.color_t.SIZE) // factor
+        self.buf_size = (self.width * self.height * lv.color_t.__SIZE__) // factor
 
         if invert:
             self.init_cmds.append({'cmd': 0x21})
@@ -129,15 +130,15 @@ class ili9XXX:
         else:
             raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
 
-        self.disp_buf = lv.disp_buf_t()
+        self.disp_buf = lv.disp_draw_buf_t()
         self.disp_drv = lv.disp_drv_t()
 
-        self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.SIZE)
+        self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.__SIZE__)
         self.disp_drv.init()
         self.disp_spi_init()
 
         self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': self.display_type}
-        self.disp_drv.buffer = self.disp_buf
+        self.disp_drv.draw_buf = self.disp_buf
         self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
@@ -146,19 +147,16 @@ class ili9XXX:
         if self.initialize:
             self.init()
 
+        if not lv_utils.event_loop.is_running():
+            self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous)
 
 
     ######################################################
 
     def disp_spi_init(self):
 
-        # Register finalizer callback to deinit SPI.
-        # This would get called on soft reset.
-
-        if not self.asynchronous:
-            import lvesp32
-            self.finalizer = lvesp32.cb_finalizer(self.deinit)
-            lvesp32.init()
+        # TODO: Register finalizer callback to deinit SPI.
+        # That would get called on soft reset.
 
         buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
@@ -222,7 +220,7 @@ class ili9XXX:
 
         self.bytes_transmitted = 0
         completed_spi_transaction = esp.spi_transaction_t()
-        cast_spi_transaction_instance = esp.spi_transaction_t.cast_instance
+        cast_spi_transaction_instance = esp.spi_transaction_t.__cast_instance__
 
         def post_isr(arg):
             reported_transmitted = self.bytes_transmitted
@@ -256,13 +254,12 @@ class ili9XXX:
 
         print('Deinitializing {}..'.format(self.display_name))
 
-        self.disp_drv.remove()
-
         # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
 
-        if not self.asynchronous:
-            import lvesp32
-            lvesp32.deinit()
+        if lv_utils.event_loop.is_running():
+            self.event_loop.deinit()
+
+        self.disp_drv.remove()
 
         if self.spi:
 
@@ -299,9 +296,9 @@ class ili9XXX:
 
     ######################################################
 
-    trans = esp.spi_transaction_t() # .cast(
+    trans = esp.spi_transaction_t() # .__cast__(
 #                esp.heap_caps_malloc(
-#                    esp.spi_transaction_t.SIZE, esp.MALLOC_CAP.DMA))
+#                    esp.spi_transaction_t.__SIZE__, esp.MALLOC_CAP.DMA))
 
     def spi_send(self, data):
         self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
@@ -453,7 +450,7 @@ class ili9XXX:
         self.send_cmd(0x2C)
 
         size = (area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1)
-        data_view = color_p.__dereference__(size * lv.color_t.SIZE)
+        data_view = color_p.__dereference__(size * lv.color_t.__SIZE__)
 
         esp.get_ccount(self.end_time_ptr)
         if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
@@ -505,7 +502,7 @@ class ili9341(ili9XXX):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
-        if lv.color_t.SIZE != 2:
+        if lv.color_t.__SIZE__ != 2:
             raise RuntimeError('ili9341 micropython driver requires defining LV_COLOR_DEPTH=16')
         if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
             raise RuntimeError('ili9341 BGR color mode requires defining LV_COLOR_16_SWAP=1')
@@ -554,7 +551,7 @@ class ili9488(ili9XXX):
         asynchronous=False, initialize=True
     ):
 
-        if lv.color_t.SIZE != 4:
+        if lv.color_t.__SIZE__ != 4:
             raise RuntimeError('ili9488 micropython driver requires defining LV_COLOR_DEPTH=32')
         if not hybrid:
             raise RuntimeError('ili9488 micropython driver do not support non-hybrid driver')

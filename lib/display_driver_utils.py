@@ -22,12 +22,12 @@ class driver:
 
         # Register SDL display driver.
 
-        disp_buf1 = lv.disp_buf_t()
+        disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(self.width*10)
         disp_buf1.init(buf1_1, None, len(buf1_1)//4)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
-        disp_drv.buffer = disp_buf1
+        disp_drv.draw_buf = disp_buf1
         disp_drv.flush_cb = SDL.monitor_flush
         disp_drv.hor_res = self.width
         disp_drv.ver_res = self.height
@@ -45,8 +45,6 @@ class driver:
         print("Running the SDL lvgl version")
         
     def init_gui_ili9341(self):
-
-        import lvesp32
 
         # Initialize ILI9341 display
 

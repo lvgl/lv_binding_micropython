@@ -22,7 +22,7 @@ class xpt2046:
 
         # Initializations
 
-        disp = lv.disp_t.cast(None)
+        disp = lv.disp_t.__cast__(None)
         self.screen_width = disp.get_hor_res()
         self.screen_height = disp.get_ver_res()
         self.miso = miso
@@ -209,9 +209,9 @@ class xpt2046:
 
         if coords:
             data.point.x ,data.point.y = coords
-            data.state = lv.INDEV_STATE.PR
+            data.state = lv.INDEV_STATE.PRESSED
             return False
-        data.state = lv.INDEV_STATE.REL
+        data.state = lv.INDEV_STATE.RELEASED
         return False
 
     def stat(self):

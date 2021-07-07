@@ -1,24 +1,27 @@
 
 # init
 
+import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+
 import ustruct as struct
 
 import lodepng as png
 import lvgl as lv
 lv.init()
-lv.log_register_print_cb(lambda level,path,line,msg: print('%s(%d): %s' % (path, line, msg)))
+lv.log_register_print_cb(lambda msg: print('%s' % msg))
 
 import SDL
 SDL.init()
 
 # Register SDL display driver.
 
-disp_buf1 = lv.disp_buf_t()
+disp_buf1 = lv.disp_draw_buf_t()
 buf1_1 = bytes(480*10)
 disp_buf1.init(buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 disp_drv.init()
-disp_drv.buffer = disp_buf1
+disp_drv.draw_buf = disp_buf1
 disp_drv.flush_cb = SDL.monitor_flush
 disp_drv.hor_res = 480
 disp_drv.ver_res = 320
@@ -41,7 +44,7 @@ def get_png_info(decoder, src, header):
     if lv.img.src_get_type(src) != lv.img.SRC.VARIABLE:
         return lv.RES.INV
 
-    png_header = bytes(lv.img_dsc_t.cast(src).data.__dereference__(24))
+    png_header = bytes(lv.img_dsc_t.__cast__(src).data.__dereference__(24))
 
     if png_header.startswith(b'\211PNG\r\n\032\n') and png_header[12:16] == b'IHDR':
         try:
@@ -73,7 +76,7 @@ def get_png_info(decoder, src, header):
 # Read and parse PNG file
 
 def open_png(decoder, dsc):
-    img_dsc = lv.img_dsc_t.cast(dsc.src)
+    img_dsc = lv.img_dsc_t.__cast__(dsc.src)
     png_data = img_dsc.data
     png_size = img_dsc.data_size
     png_decoded = png.C_Pointer()
@@ -82,7 +85,7 @@ def open_png(decoder, dsc):
     error = png.decode32(png_decoded, png_width, png_height, png_data, png_size);
     if error:
         return None # LV_IMG_DECODER_OPEN_FAIL
-    img_size = png_width.int_val * png_height.int_val * lv.color_t.SIZE
+    img_size = png_width.int_val * png_height.int_val * lv.color_t.__SIZE__
     img_data = png_decoded.ptr_val
 
     # Convert png RGBA-big-endian format to lvgl ARGB-little-endian
@@ -90,8 +93,8 @@ def open_png(decoder, dsc):
     # More info on https://forum.lvgl.io/t/png-decoding-why-red-and-blue-are-swapped/72
 
     img_view = img_data.__dereference__(img_size)
-    for i in range(0, img_size, lv.color_t.SIZE):
-        ch = lv.color_t.cast(img_view[i:i]).ch
+    for i in range(0, img_size, lv.color_t.__SIZE__):
+        ch = lv.color_t.__cast__(img_view[i:i]).ch
         ch.red, ch.blue = ch.blue, ch.red
 
     dsc.img_data = img_data
@@ -105,7 +108,7 @@ decoder.open_cb = open_png
 
 # Create a screen with a draggable image
 
-with open('lib/lv_bindings/examples/png_decoder_test.png','rb') as f:
+with open('png_decoder_test.png','rb') as f:
   png_data = f.read()
 
 png_img_dsc = lv.img_dsc_t({
@@ -116,25 +119,41 @@ png_img_dsc = lv.img_dsc_t({
 scr = lv.obj()
 
 # Create an image on the left using the decoder
-
 lv.img.cache_set_size(2)
 img1 = lv.img(scr)
-img1.align(scr, lv.ALIGN.IN_LEFT_MID, -50, 0)
+img1.set_pos(0,50)
 img1.set_src(png_img_dsc)
-img1.set_drag(True)
+# img1.set_drag(True)
 
 # Create an image on the right directly without the decoder
 
 img2 = lv.img(scr)
-img2.align(scr, lv.ALIGN.IN_RIGHT_MID, 0, 0)
+img2.set_pos(200,50)
 raw_dsc = lv.img_dsc_t()
 get_png_info(None, png_img_dsc, raw_dsc.header)
 dsc = lv.img_decoder_dsc_t({'src': png_img_dsc})
 if open_png(None, dsc) == lv.RES.OK:
     raw_dsc.data = dsc.img_data
-    raw_dsc.data_size = raw_dsc.header.w * raw_dsc.header.h * lv.color_t.SIZE
+    raw_dsc.data_size = raw_dsc.header.w * raw_dsc.header.h * lv.color_t.__SIZE__
     img2.set_src(raw_dsc)
-    img2.set_drag(True)
+    # img2.set_drag(True)
+
+# Drag handler
+
+def drag_event_handler(e):
+    self = e.get_target()
+    indev = lv.indev_get_act()
+    vect = lv.point_t()
+    indev.get_vect(vect)
+    x = self.get_x() + vect.x
+    y = self.get_y() + vect.y
+    self.set_pos(x, y)
+
+# Register drag handler for images
+
+for img in [img1, img2]:
+    img.add_flag(img.FLAG.CLICKABLE)
+    img.add_event_cb(drag_event_handler, lv.EVENT.PRESSING, None)
 
 # Load the screen and display image
 
