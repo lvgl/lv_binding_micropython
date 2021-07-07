@@ -2,9 +2,9 @@ name: Build lv_micropython unix port
 
 on:
   push:
-    branches: [ dev-8.0 ]
+    branches: [ master ]
   pull_request:
-    branches: [ dev-8.0 ]
+    branches: [ master ]
 
 jobs:
   build:
@@ -20,7 +20,7 @@ jobs:
     - name: Clone lv_micropython
       run: |
         git clone https://github.com/lvgl/lv_micropython.git .
-        git checkout dev-8.0
+        git checkout master
     - name: Update submodules
       run: git submodule update --init --recursive
     - name: Checkout lv_bindings
