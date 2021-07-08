@@ -33,7 +33,7 @@ jobs:
     - name: Build mpy-cross
       run: make -j $(nproc) -C mpy-cross
     - name: Build the unix port
-      run: make -j $(nproc) -C ports/unix VARIANT=dev DEBUG=1 LDFLAGS_MOD=-rdynamic
+      run: make -j $(nproc) -C ports/unix VARIANT=dev DEBUG=1 LDFLAGS_MOD="-rdynamic -ldl"
     - name: Run tests
       run: lib/lv_bindings/tests/run.sh
 
