@@ -54,6 +54,8 @@ events = [lv.EVENT.SCROLL, lv.EVENT.CLICKED, lv.EVENT.VALUE_CHANGED, lv.EVENT.RE
 
 def exec_actions(obj, user_data):
     if obj.get_child_id() <= MAX_CHILDREN:
+        if hasattr(obj, 'lv_obj'):
+            obj = obj.lv_obj
         obj_info = ''
         if hasattr(obj, 'get_text'):
             obj_info += ' text:"%s"' % obj.get_text()
