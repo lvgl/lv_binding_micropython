@@ -1,4 +1,9 @@
+import sys
+sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+
 import lvgl as lv
+import lv_utils
+
 lv.init()
 
 ORIENT_LANDSCAPE = False
@@ -13,12 +18,14 @@ class driver:
         self.disp = None
         self.touch = None
         self.type = None
-        self.init_gui()
+        if not lv_utils.event_loop.is_running():
+            self.init_gui()
         
     def init_gui_SDL(self):
 
         import SDL
-        SDL.init(w=self.width,h=self.height)
+        SDL.init(w=self.width, h=self.height, auto_refresh=False)
+        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
 
         # Register SDL display driver.
 
