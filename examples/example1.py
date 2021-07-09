@@ -121,8 +121,9 @@ class driver:
             pass
 
 
-drv = driver()
-drv.init_gui()
+if not lv_utils.event_loop.is_running():
+    drv = driver()
+    drv.init_gui()
 
 # Image data
 

@@ -14,7 +14,7 @@ def mp_trace(frame, event, arg):
 # sys.settrace(mp_trace)
 
 import lvgl as lv
-import lv_utils
+from lv_utils import event_loop
 
 # lvgl must be initialized before any lvgl function is called or object/struct is constructed!
 
@@ -305,7 +305,7 @@ class AdvancedDemoApplication:
         import SDL
 
         SDL.init(auto_refresh=False)
-        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
+        self.event_loop = event_loop(refresh_cb = SDL.refresh)
 
         # Register SDL display driver.
 
@@ -362,7 +362,7 @@ class AdvancedDemoApplication:
         vres = 272
 
         # Register display driver
-        self.event_loop = lv_utils.event_loop()
+        self.event_loop = event_loop()
         lcd.init(w=hres, h=vres)
         disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytearray(hres * 50 * lv.color_t.__SIZE__)
@@ -387,20 +387,21 @@ class AdvancedDemoApplication:
 
         # Identify platform and initialize it
 
-        try:
-            self.init_gui_esp32()
-        except ImportError:
-            pass
+        if not event_loop.is_running():
+            try:
+                self.init_gui_esp32()
+            except ImportError:
+                pass
 
-        try:
-            self.init_gui_SDL()
-        except ImportError:
-            pass
+            try:
+                self.init_gui_SDL()
+            except ImportError:
+                pass
 
-        try:
-            self.init_gui_stm32()
-        except ImportError:
-            pass
+            try:
+                self.init_gui_stm32()
+            except ImportError:
+                pass
 
         # Create the main screen and load it.
 

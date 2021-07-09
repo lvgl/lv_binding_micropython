@@ -8,32 +8,35 @@ import ustruct as struct
 
 import lodepng as png
 import lvgl as lv
+from lv_utils import event_loop
+
 lv.init()
 lv.log_register_print_cb(lambda msg: print('%s' % msg))
 
-import SDL
-SDL.init()
+if not event_loop.is_running():
+    import SDL
+    SDL.init()
 
-# Register SDL display driver.
+    # Register SDL display driver.
 
-disp_buf1 = lv.disp_draw_buf_t()
-buf1_1 = bytes(480*10)
-disp_buf1.init(buf1_1, None, len(buf1_1)//4)
-disp_drv = lv.disp_drv_t()
-disp_drv.init()
-disp_drv.draw_buf = disp_buf1
-disp_drv.flush_cb = SDL.monitor_flush
-disp_drv.hor_res = 480
-disp_drv.ver_res = 320
-disp_drv.register()
+    disp_buf1 = lv.disp_draw_buf_t()
+    buf1_1 = bytes(480*10)
+    disp_buf1.init(buf1_1, None, len(buf1_1)//4)
+    disp_drv = lv.disp_drv_t()
+    disp_drv.init()
+    disp_drv.draw_buf = disp_buf1
+    disp_drv.flush_cb = SDL.monitor_flush
+    disp_drv.hor_res = 480
+    disp_drv.ver_res = 320
+    disp_drv.register()
 
-# Regsiter SDL mouse driver
+    # Regsiter SDL mouse driver
 
-indev_drv = lv.indev_drv_t()
-indev_drv.init()
-indev_drv.type = lv.INDEV_TYPE.POINTER
-indev_drv.read_cb = SDL.mouse_read
-indev_drv.register()
+    indev_drv = lv.indev_drv_t()
+    indev_drv.init()
+    indev_drv.type = lv.INDEV_TYPE.POINTER
+    indev_drv.read_cb = SDL.mouse_read
+    indev_drv.register()
 
 # Parse PNG file header
 # Taken from https://github.com/shibukawa/imagesize_py/blob/ffef30c1a4715c5acf90e8945ceb77f4a2ed2d45/imagesize.py#L63-L85
