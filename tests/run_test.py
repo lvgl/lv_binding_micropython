@@ -91,6 +91,7 @@ try:
         time.sleep_ms(DELAY_MS)
         if lv_utils.event_loop.is_running():
             lv_utils.event_loop.current_instance().deinit()
+            time.sleep_ms(DELAY_MS)
 
 except:
     exc = sys.exc_info()

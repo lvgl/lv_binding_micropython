@@ -146,7 +146,8 @@ class Timer:
 
     def deinit(self):
         if self._valid:
-            timer_delete(self.tid)
+            timer_settime(self.tid, 0, mode == Timer.PERIODIC)
+            # timer_delete(self.tid)
             self._valid = False
 
     def handler(self, signum=-1):
