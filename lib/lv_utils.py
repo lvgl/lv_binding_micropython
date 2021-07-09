@@ -63,12 +63,12 @@ except:
 
 class event_loop():
 
-    _is_running = False
+    _current_instance = None
 
     def __init__(self, freq=25, timer_id=default_timer_id, max_scheduled=2, refresh_cb=None, asynchronous=False):
         if self.is_running():
             raise RuntimeError("Event loop is already running!")
-        event_loop._is_running = True
+        event_loop._current_instance = self
 
         self.delay = 1000 // freq
         self.refresh_cb = refresh_cb
@@ -93,11 +93,15 @@ class event_loop():
             self.timer_task.cancel()
         else:
             self.timer.deinit()
-        event_loop._is_running = False
+        event_loop._current_instance = None
 
     @staticmethod
     def is_running():
-        return event_loop._is_running
+        return event_loop._current_instance is not None
+
+    @staticmethod
+    def current_instance():
+        return event_loop._current_instance
 
     def task_handler(self, _):
         lv.task_handler()
