@@ -136,9 +136,10 @@ class Timer:
 
     def init(self, mode=PERIODIC, period=-1, callback=None):
         self.tid = timer_create(self.id)
+        self.mode = mode
         self.period = period
         self.cb = callback
-        timer_settime(self.tid, self.period, mode == Timer.PERIODIC)
+        timer_settime(self.tid, self.period, self.mode == Timer.PERIODIC)
         self.handler_ref = self.handler
         # print("Sig %d: %s" % (SIGRTMIN + self.id, self.org_sig))
         self.action = sigaction(SIGRTMIN + self.id, self.handler_ref)
@@ -146,7 +147,7 @@ class Timer:
 
     def deinit(self):
         if self._valid:
-            timer_settime(self.tid, 0, mode == Timer.PERIODIC)
+            timer_settime(self.tid, 0, self.mode == Timer.PERIODIC)
             # timer_delete(self.tid)
             self._valid = False
 
