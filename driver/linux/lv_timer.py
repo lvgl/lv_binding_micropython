@@ -132,6 +132,7 @@ class Timer:
 
     def __init__(self, id):
         self.id = id
+        self._valid = False
 
     def init(self, mode=PERIODIC, period=-1, callback=None):
         self.tid = timer_create(self.id)
@@ -141,9 +142,12 @@ class Timer:
         self.handler_ref = self.handler
         # print("Sig %d: %s" % (SIGRTMIN + self.id, self.org_sig))
         self.action = sigaction(SIGRTMIN + self.id, self.handler_ref)
+        self._valid = True
 
     def deinit(self):
-        timer_delete(self.tid)
+        if self._valid:
+            timer_delete(self.tid)
+            self._valid = False
 
     def handler(self, signum=-1):
         # print('Signal handler called with signal', signum)
