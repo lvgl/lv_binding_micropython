@@ -27,6 +27,7 @@ import re
 import time
 import lvgl as lv
 import display_driver_utils
+import lv_utils
 
 lv.init()
 driver = display_driver_utils.driver()
@@ -87,6 +88,9 @@ try:
         time.sleep_ms(DELAY_MS)
         gc.collect()
         lv.scr_act().tree_walk(exec_actions, None)
+        time.sleep_ms(DELAY_MS)
+        if lv_utils.event_loop.is_running():
+            lv_utils.event_loop.current_instance().deinit()
 
 except:
     exc = sys.exc_info()
