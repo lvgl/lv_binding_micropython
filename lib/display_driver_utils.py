@@ -2,7 +2,8 @@ import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
-import lv_utils
+if sys.platform != 'javascript':
+    import lv_utils
 
 lv.init()
 
@@ -18,14 +19,15 @@ class driver:
         self.disp = None
         self.touch = None
         self.type = None
-        if not lv_utils.event_loop.is_running():
+        if sys.platform == 'javascript' or not lv_utils.event_loop.is_running():
             self.init_gui()
         
     def init_gui_SDL(self):
 
         import SDL
         SDL.init(w=self.width, h=self.height, auto_refresh=False)
-        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
+        if sys.platform != 'javascript':
+            self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
 
         # Register SDL display driver.
 
