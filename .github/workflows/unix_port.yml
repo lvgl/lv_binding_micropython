@@ -21,8 +21,10 @@ jobs:
       run: |
         git clone https://github.com/lvgl/lv_micropython.git .
         git checkout master
-    - name: Update submodules
-      run: git submodule update --init --recursive
+    - name: Initialize lv_bindings submodule
+      run: git submodule update --init --recursive lib/lv_bindings
+    - name: Update Unix port submodules
+      run: make -C ports/unix VARIANT=dev DEBUG=1 submodules
     - name: Checkout lv_bindings
       working-directory: ./lib/lv_bindings
       run: |
@@ -34,6 +36,7 @@ jobs:
       run: make -j $(nproc) -C mpy-cross
     - name: Build the unix port
       run: make -j $(nproc) -C ports/unix VARIANT=dev DEBUG=1 LDFLAGS_MOD="-rdynamic -ldl -Wl,--copy-dt-needed-entries"
-    - name: Run tests
-      run: lib/lv_bindings/tests/run.sh
-
+    - name: Run tests      
+      run: |
+        export XDG_RUNTIME_DIR=/tmp
+        lib/lv_bindings/tests/run.sh
