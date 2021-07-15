@@ -24,7 +24,7 @@ function(lv_bindings)
         OUTPUT 
             ${LV_PP}
         COMMAND
-        ${CMAKE_C_COMPILER} -E ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
+        ${CMAKE_C_COMPILER} -E -DPYCPARSER ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
         DEPENDS
             ${LV_INPUT}
             ${LV_DEPENDS}
