@@ -1003,15 +1003,17 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
+    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
     *self = (mp_lv_struct_t){
         .base = {type}, 
-        .data = m_malloc(size)
+        .data = (other && other->data == NULL)? NULL: m_malloc(size)
     };
-    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
-    if (other) {
-        memcpy(self->data, other->data, size);
-    } else {
-        memset(self->data, 0, size);
+    if (self->data) {
+        if (other) {
+            memcpy(self->data, other->data, size);
+        } else {
+            memset(self->data, 0, size);
+        }
     }
     return MP_OBJ_FROM_PTR(self);
 }
