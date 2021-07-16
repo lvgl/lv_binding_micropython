@@ -10,6 +10,7 @@
 
 #ifdef PYCPARSER
 #define __attribute__(x)
+#define _Static_assert(x,y)
 #define __extension__
 #define _SOC_IO_MUX_REG_H_
 #define _SYS_REENT_H_
@@ -35,6 +36,7 @@
 #define ESP_EVENT_H_
 #define __SNTP_H__
 #define XTENSA_CONFIG_CORE_H
+#define _SOC_SPI_MEM_STRUCT_H_
 
 typedef int	BaseType_t;
 typedef unsigned int	UBaseType_t;
