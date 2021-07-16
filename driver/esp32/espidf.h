@@ -99,7 +99,17 @@ static inline void get_ccount(int *ccount)
 // All included files are API we want to include in the module
 
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
+#   if CONFIG_IDF_TARGET_ESP32
 #   include "esp32/clk.h"
+#   elif CONFIG_IDF_TARGET_ESP32S2
+#   include "esp32s2/clk.h"
+#   elif CONFIG_IDF_TARGET_ESP32S3
+#   include "esp32s3/clk.h"
+#   elif CONFIG_IDF_TARGET_ESP32C3
+#   include "esp32c3/clk.h"
+#   elif CONFIG_IDF_TARGET_ESP32H2
+#   include "esp32h2/clk.h"
+#   endif
 #else
 #   include "esp_clk.h"
 #endif
