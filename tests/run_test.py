@@ -84,6 +84,8 @@ try:
         file_string = file.read()
         os.chdir(script_path)
         __file__ = script_name
+        sys.argv[0] = __file__
+        del sys.argv[1]
         exec(file_string)
         time.sleep_ms(DELAY_MS)
         gc.collect()
