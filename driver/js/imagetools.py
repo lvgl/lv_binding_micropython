@@ -17,7 +17,7 @@
 
 import lvgl as lv
 import lodepng as png
-import struct
+import ustruct
 
 COLOR_SIZE = lv.color_t.__SIZE__
 COLOR_IS_SWAPPED = hasattr(lv.color_t().ch,'green_h')
@@ -47,8 +47,8 @@ def get_png_info(decoder, src, header):
         else:
             start = 8
         try:
-            width, height = struct.unpack(">LL", png_header[start:start+8])
-        except struct.error:
+            width, height = ustruct.unpack(">LL", png_header[start:start+8])
+        except ustruct.error:
             return lv.RES.INV
     else:
         return lv.RES.INV
