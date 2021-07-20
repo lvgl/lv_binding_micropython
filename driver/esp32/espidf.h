@@ -111,6 +111,8 @@ static inline void get_ccount(int *ccount)
 #   include "esp32c3/clk.h"
 #   elif CONFIG_IDF_TARGET_ESP32H2
 #   include "esp32h2/clk.h"
+#   else // CONFIG_IDF_TARGET_* not defined
+#   include "esp32/clk.h"
 #   endif
 #else
 #   include "esp_clk.h"
