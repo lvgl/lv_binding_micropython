@@ -38,7 +38,11 @@ def get_png_info(decoder, src, header):
     if lv.img.src_get_type(src) != lv.img.SRC.VARIABLE:
         return lv.RES.INV
 
-    png_header = bytes(lv.img_dsc_t.__cast__(src).data.__dereference__(24))
+    data = lv.img_dsc_t.__cast__(src).data
+    if data == None:
+        return lv.RES.INV
+    
+    png_header = bytes(data.__dereference__(24))
 
     if png_header.startswith(b'\211PNG\r\n\032\n'):
         if png_header[12:16] == b'IHDR':
