@@ -26,6 +26,10 @@ class ft6x36:
 
     def __init__(self, i2c_dev=0, sda=21, scl=22, freq=400000, addr=0x38, width=-1, height=-1, 
                  inv_x=False, inv_y=False, swap_xy=False):
+
+        if not lv.is_initialized():
+            lv.init()
+
         self.width, self.height = width, height
         self.inv_x, self.inv_y, self.swap_xy = inv_x, inv_y, swap_xy
         self.i2c = I2C(i2c_dev, sda=Pin(sda), scl=Pin(scl), freq=freq)

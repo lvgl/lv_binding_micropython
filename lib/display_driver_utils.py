@@ -4,14 +4,16 @@ sys.path.append('') # See: https://github.com/micropython/micropython/issues/641
 import lvgl as lv
 import lv_utils
 
-lv.init()
-
 ORIENT_LANDSCAPE = False
 ORIENT_PORTRAIT  = True
 
 class driver:
     
     def __init__(self,width=420,height=320,orientation=ORIENT_PORTRAIT):
+
+        if not lv.is_initialized():
+            lv.init()
+
         self.width = width
         self.height = height
         self.orientation = orientation

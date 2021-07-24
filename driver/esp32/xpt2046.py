@@ -22,6 +22,9 @@ class xpt2046:
 
         # Initializations
 
+        if not lv.is_initialized():
+            lv.init()
+
         disp = lv.disp_t.__cast__(None)
         self.screen_width = disp.get_hor_res()
         self.screen_height = disp.get_ver_res()

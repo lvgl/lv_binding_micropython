@@ -91,6 +91,9 @@ class ili9XXX:
 
         # Initializations
 
+        if not lv.is_initialized():
+            lv.init()
+
         self.asynchronous = asynchronous
         self.initialize = initialize
 
