@@ -21,7 +21,8 @@ def fs_open_cb(drv, path, mode):
         f = open(path, p_mode)
 
     except Exception as e:
-        raise RuntimeError("fs_open_callback(%s) exception: " % (path), uerrno.errorcode[e.args[0]])
+        errno = e.args[0]
+        raise RuntimeError("fs_open_callback(%s) exception: " % (path), uerrno.errorcode.get(errno, str(errno)))
 
     return {'file' : f}
 
