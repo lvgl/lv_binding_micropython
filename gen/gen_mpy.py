@@ -848,6 +848,7 @@ STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
         for (; *iter; iter++) {
             if ((*iter)->lv_obj_class == lv_obj_class) {
                 mp_obj_type = &(*iter)->mp_obj_type;
+                break;
             }
         }
 
