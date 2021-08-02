@@ -15,7 +15,7 @@
 
 # Workaround for including frozen modules when running micropython with a script argument
 # https://github.com/micropython/micropython/issues/6419
-import sys
+import usys as sys
 sys.path.append('')
 
 # Imports
