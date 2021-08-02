@@ -18,7 +18,10 @@ lv.init()
 driver = display_driver_utils.driver()
 scr = lv.scr_act()
 lv.img.cache_set_size(2)
-script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
+try:
+    script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
+except NameError: 
+    script_path = ''
 
 # Register an image decoder
 
