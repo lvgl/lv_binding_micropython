@@ -5,7 +5,7 @@
 # Initializations
 ##############################################################################
 
-import sys
+import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
