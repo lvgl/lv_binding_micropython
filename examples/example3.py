@@ -1,7 +1,6 @@
-import sys
+import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
-import time
 import lv_utils
 import lvgl as lv
 
