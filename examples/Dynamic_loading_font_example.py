@@ -3,7 +3,7 @@
 # MICROPYPATH=./:../lib ../../../ports/unix/micropython -i Dynamic_loading_font_example.py
 #
 
-import sys
+import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
