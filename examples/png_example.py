@@ -5,7 +5,7 @@
 #
 ##############################################################################
 
-import sys
+import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
@@ -18,7 +18,10 @@ lv.init()
 driver = display_driver_utils.driver()
 scr = lv.scr_act()
 lv.img.cache_set_size(2)
-script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
+try:
+    script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
+except NameError: 
+    script_path = ''
 
 # Register an image decoder
 
