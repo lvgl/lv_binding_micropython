@@ -8,8 +8,8 @@ set(LV_BINDINGS_DIR ${MICROPY_DIR}/lib/lv_bindings)
 
 function(lv_bindings)
     set(_options)
-    set(_one_value_args OUTPUT INPUT)
-    set(_multi_value_args DEPENDS PP_OPTIONS GEN_OPTIONS FILTER)
+    set(_one_value_args OUTPUT)
+    set(_multi_value_args INPUT DEPENDS PP_OPTIONS GEN_OPTIONS FILTER)
     cmake_parse_arguments(
         PARSE_ARGV 0 LV
         "${_options}"
