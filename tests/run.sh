@@ -12,5 +12,5 @@ EXCLUDE_PATH="$SCRIPT_PATH/../examples/fb_test.py $SCRIPT_PATH/../examples/uasyn
 EXCLUDE_FINDEXP=$(echo $EXCLUDE_PATH | sed "s/^\|[[:space:]]/ -and -not -path /g")
 
 find $TEST_PATH -name "*.py" $EXCLUDE_FINDEXP |\
-   xargs --max-args=1 --max-procs $NUMCPUS -I {} timeout 5m catchsegv $SCRIPT_PATH/../../../ports/unix/micropython-dev $SCRIPT_PATH/run_test.py {}
+   parallel --max-args=1 --max-procs $NUMCPUS -I {} timeout 5m catchsegv $SCRIPT_PATH/../../../ports/unix/micropython-dev $SCRIPT_PATH/run_test.py {}
 
