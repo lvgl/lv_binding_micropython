@@ -4,7 +4,7 @@ set -e # Exit on error
 
 SCRIPT_PATH="`dirname \"$0\"`"
 
-NUMCPUS=`grep -c ^processor /proc/cpuinfo`
+NUMCPUS=`nproc`
 
 TEST_PATH="$SCRIPT_PATH/../examples/*.py $SCRIPT_PATH/../lvgl/examples/"
 EXCLUDE_PATH="$SCRIPT_PATH/../examples/fb_test.py $SCRIPT_PATH/../examples/uasyncio*.py"
