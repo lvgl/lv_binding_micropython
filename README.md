@@ -4,52 +4,52 @@
 
 ---
 
-This repo is a submodule of [lv_micropython](https://github.com/lvgl/lv_micropython).  
+This repo is a submodule of [lv_micropython](https://github.com/lvgl/lv_micropython).
 Please fork [lv_micropython](https://github.com/lvgl/lv_micropython) for a quick start with LVGL Micropython Bindings.
 
 ---
 
 See also [Micropython + LittlevGL](https://blog.lvgl.io/2019-02-20/micropython-bindings) blog post. (LittlevGL is the previous name of LVGL.)
-For advanced features, see [Pure Micropython Display Driver](https://blog.lvgl.io/2019-08-05/micropython-pure-display-driver) blog post.  
+For advanced features, see [Pure Micropython Display Driver](https://blog.lvgl.io/2019-08-05/micropython-pure-display-driver) blog post.
 For questions and discussions - please use the forum: https://forum.lvgl.io/c/micropython
 
 ## Micropython
 
-Micropython Binding for LVGL provides an automatically generated Micropython module with classes and functions that allow the user access much of the lvgl library.  
-The module is generated automatically by the script [`gen_mpy.py`](https://github.com/lvgl/lv_binding_micropython/blob/master/micropython/gen_mpy.py).  
-This script reads, preprocesses and parses lvgl header files, and generates a C file `lv_mpy.c` which defines the Micropython module (API) for accessing lvgl from Micropython.  
+Micropython Binding for LVGL provides an automatically generated Micropython module with classes and functions that allow the user access much of the lvgl library.
+The module is generated automatically by the script [`gen_mpy.py`](https://github.com/lvgl/lv_binding_micropython/blob/master/micropython/gen_mpy.py).
+This script reads, preprocesses and parses lvgl header files, and generates a C file `lv_mpy.c` which defines the Micropython module (API) for accessing lvgl from Micropython.
 Micopython's build script (Makefile) should run `gen_mpy.py` automatically to generate and compile `lv_mpy.c`.
 
-- If you would like to see an example of how a generated `lv_mpy.c` looks like, have a look at [`v_mpy_example.c`](https://raw.githubusercontent.com/lvgl/lv_binding_micropython/master/gen/lv_mpy_example.c). Note that its only exported (non static) symbol is `mp_module_lvgl` which should be registered in Micropython as a module.  
+- If you would like to see an example of how a generated `lv_mpy.c` looks like, have a look at [`v_mpy_example.c`](https://raw.githubusercontent.com/lvgl/lv_binding_micropython/master/gen/lv_mpy_example.c). Note that its only exported (non static) symbol is `mp_module_lvgl` which should be registered in Micropython as a module.
 - An example project that builds Micropython + lvgl + lvgl-bindings: [`lv_mpy`](https://github.com/lvgl/lv_mpy)
 
 It's worth noting that the Mircopython Bindings module (`lv_mpy.c`) is dependant on lvgl configuration. lvgl is configured by `lv_conf.h` where different objects and features could be enabled or disabled. lvgl bindings are generated only for the enabled objects and features. Changing `lv_conf.h` requires re running `gen_mpy.py`, therfore it's useful to run it automatically in the build script.
 
 ### Memory Management
 
-When lvgl is built as a Micropython library, it is configured to allocate memory using Micropython memory allocation functions and take advantage of Micropython *Garbage Collection* ("gc").  
-This means that structs allocated for lvgl use don't need to be deallocated explicitly, gc takes care of that.  
-For this to work correctly, lvgl is configured to use gc and to use Micropython's memory allocation functions, and also register all lvgl "root" global variables to Micropython's gc.  
+When lvgl is built as a Micropython library, it is configured to allocate memory using Micropython memory allocation functions and take advantage of Micropython *Garbage Collection* ("gc").
+This means that structs allocated for lvgl use don't need to be deallocated explicitly, gc takes care of that.
+For this to work correctly, lvgl is configured to use gc and to use Micropython's memory allocation functions, and also register all lvgl "root" global variables to Micropython's gc.
 
-From the user's perspective, structs can be created and will be collected by gc when they are no longer referenced.  
-However, lvgl screen objects (`lv.obj` with no parent) are automatically assigned to default display, therefor not collected by gc even when no longer explicitly referenced.  
+From the user's perspective, structs can be created and will be collected by gc when they are no longer referenced.
+However, lvgl screen objects (`lv.obj` with no parent) are automatically assigned to default display, therefor not collected by gc even when no longer explicitly referenced.
 When you want to free a screen and all its decendants so gc could collect their memory, make sure you call `screen.delete()` when you no longer need it.
 
 ### Concurrency
 
-This implementation of Micropython Bindings to lvgl assumes that Micropython and lvgl are running **on a single thread** and **on the same thread** (or alternatively, running without multithreading at all).  
-No synchronization means (locks, mutexes) are taken.  
+This implementation of Micropython Bindings to lvgl assumes that Micropython and lvgl are running **on a single thread** and **on the same thread** (or alternatively, running without multithreading at all).
+No synchronization means (locks, mutexes) are taken.
 However, asynchronous calls to lvgl still take place periodically for screen refresh and other lvgl tasks such as animation.
 
-This is achieved by using the internal Micropython scheduler (that must be enabled), by calling `mp_sched_schedule`.  
-`mp_sched_schedule` is called when screen needs to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/lvgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting)). This is ususally handled in the display device driver.  
-Here is [an example](https://github.com/lvgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L23) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing lvgl. [`mp_lv_task_handler`](https://github.com/lvgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L7) is scheduled to run on the same thread Micropython is running, and it calls both `lv_task_handler` for lvgl task handling and `monitor_sdl_refr_core` for refreshing the display and handling mouse events.  
+This is achieved by using the internal Micropython scheduler (that must be enabled), by calling `mp_sched_schedule`.
+`mp_sched_schedule` is called when screen needs to be refreshed. lvgl expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/lvgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting)). This is ususally handled in the display device driver.
+Here is [an example](https://github.com/lvgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L23) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing lvgl. [`mp_lv_task_handler`](https://github.com/lvgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L7) is scheduled to run on the same thread Micropython is running, and it calls both `lv_task_handler` for lvgl task handling and `monitor_sdl_refr_core` for refreshing the display and handling mouse events.
 
 With REPL (interactive console), when waiting for the user input, asynchronous events can also happen. In [this example](https://github.com/lvgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/unix_mphal.c#L176) we just call `mp_handle_pending` periodically when waiting for a keypress. `mp_handle_pending` takes care of dispatching asynchronous events registered with `mp_sched_schedule`.
 
 ### Structs Classes and globals
 
-The lvgl binding script parses lvgl headers and provides API to access lvgl **classes** (such as `btn`) and **structs** (such as `color_t`). All structs and classes are available under lvgl micropython module.  
+The lvgl binding script parses lvgl headers and provides API to access lvgl **classes** (such as `btn`) and **structs** (such as `color_t`). All structs and classes are available under lvgl micropython module.
 
 lvgl Class contains:
 - functions (such as `set_x`)
@@ -69,11 +69,11 @@ All lvgl globals (functions, enums, types) are avaiable under lvgl module. For e
 
 ### Callbacks
 
-In C a callback is a function pointer.  
-In Micropython we would also need to register a *Micropython callable object* for each callback.  
-Therefore in the Micropython binding we need to register both a function pointer and a Micropython object for every callback.  
+In C a callback is a function pointer.
+In Micropython we would also need to register a *Micropython callable object* for each callback.
+Therefore in the Micropython binding we need to register both a function pointer and a Micropython object for every callback.
 
-Therefore we defined a **callback convention** that expects lvgl headers to be defined in a certain way. Callbacks that are declared according to the convention would allow the binding to register a Micropython object next to the function pointer when registering a callback, and access that object when the callback is called.  
+Therefore we defined a **callback convention** that expects lvgl headers to be defined in a certain way. Callbacks that are declared according to the convention would allow the binding to register a Micropython object next to the function pointer when registering a callback, and access that object when the callback is called.
 The Micropython callable object is automatically saved in a `user_data` variable which is provided when registering or calling the callback.
 
 The callback convetion assumes the following:
@@ -91,28 +91,28 @@ In this case, the user should provide either `None` or a dict as the `user_data`
 The callback will recieve a Blob which can be casted to the dict in the last argument.
 (See `async_call` example below)
 
-As long as the convention above is followed, the lvgl Micropython binding script would automatically set and use `user_data` when callbacks are set and used.  
+As long as the convention above is followed, the lvgl Micropython binding script would automatically set and use `user_data` when callbacks are set and used.
 
 From the user perspective, any python callable object (such as python regular function, class function, lambda etc.) can be user as an lvgl callbacks. For example:
 ```python
 lvgl.anim_set_custom_exec_cb(anim, lambda anim, val, obj=obj: obj.set_y(val))
 ```
-In this example an exec callback is registered for an animation `anim`, which would animate the y coordinate of `obj`.  
+In this example an exec callback is registered for an animation `anim`, which would animate the y coordinate of `obj`.
 An lvgl API function can also be used as a callback directly, so the example above could also be written like this:
 ```python
 lv.anim_set_exec_cb(anim, obj, obj.set_y)
 ```
 
-lvgl callbacks that do not follow the Callback Convention cannot be used with micropython callable objects. A discussion related to adjusting lvgl callbacks to the convention: https://github.com/lvgl/lvgl/issues/1036  
+lvgl callbacks that do not follow the Callback Convention cannot be used with micropython callable objects. A discussion related to adjusting lvgl callbacks to the convention: https://github.com/lvgl/lvgl/issues/1036
 
 The `user_data` field **must not be used directly by the user**, since it is used internally to hold pointers to Micropython objects.
 
 ### Display and Input Drivers
 
-LVGL can be configured to use different displays and different input devices. More information is available on [LVGL documentation](https://docs.lvgl.io/#Porting).  
-Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameter (actually a struct that contains function pointers). The function pointer is used to access the actual display / input device.  
-When using LVGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registration is perfomed in the Micropython script** to make it easy for the user to select and replace drivers without building the project and changing C files.  
-Technically, the driver can be written in either C or in pure Micropython using callbacks.  
+LVGL can be configured to use different displays and different input devices. More information is available on [LVGL documentation](https://docs.lvgl.io/#Porting).
+Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameter (actually a struct that contains function pointers). The function pointer is used to access the actual display / input device.
+When using LVGL with Micropython, it makes more sense to **implement the display and input driver in C**. However, **the device registration is perfomed in the Micropython script** to make it easy for the user to select and replace drivers without building the project and changing C files.
+Technically, the driver can be written in either C or in pure Micropython using callbacks.
 
 Example:
 
@@ -141,18 +141,18 @@ disp_drv.register()
 # Regsiter SDL mouse driver
 
 indev_drv = lv.indev_drv_t()
-indev_drv.init() 
+indev_drv.init()
 indev_drv.type = lv.INDEV_TYPE.POINTER
 indev_drv.read_cb = SDL.mouse_read
 indev_drv.register()
 ```
 
-In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush`, which are wrappers around function pointers and can be registerd as LVGL display and input driver.  
+In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush`, which are wrappers around function pointers and can be registerd as LVGL display and input driver.
 Behind the scences these objects implement the buffer protocol to give access to the function pointer bytes.
 
-Starting from version 6.0, lvgl supports setting the display settings (width, length) on runtime. In this example they are set to 480x320. Color depth is set on compile time.  
+Starting from version 6.0, lvgl supports setting the display settings (width, length) on runtime. In this example they are set to 480x320. Color depth is set on compile time.
 
-Currently supported drivers for Micropyton are 
+Currently supported drivers for Micropyton are
 
 - SDL unix drivers (display and mouse)
 - Linux Frame Buffer (`/dev/fb0`)
@@ -168,14 +168,14 @@ Currently the supported ILI9341, FT6X36 and XPT2046 are pure micropython drivers
 
 ### Adding Micropython Bindings to a project
 
-An example project of "Micropython + lvgl + Bindings" is [`lv_mpy`](https://github.com/lvgl/lv_mpy).  
+An example project of "Micropython + lvgl + Bindings" is [`lv_mpy`](https://github.com/lvgl/lv_mpy).
 Here is a procedure for adding lvgl to an existing Micropython project. (The examples in this list are taken from [`lv_mpy`](https://github.com/lvgl/lv_mpy)):
 
 - Add [`lv_bindings`](https://github.com/lvgl/lv_binding_micropython) as a sub-module under `lib`.
 - Add `lv_conf.h` in `lib`
 - Edit the Makefile to run `gen_mpy.py` and build its product automatically. Here is [an example](https://github.com/lvgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/py/py.mk#L22-L38).
 - Register lvgl module and display/input drivers in Micropython as a builtin module. [An example](https://github.com/lvgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/ports/unix/mpconfigport.h#L230).
-- Add lvgl roots to gc roots. [An example](https://github.com/lvgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/ports/unix/mpconfigport.h#L317-L318). 
+- Add lvgl roots to gc roots. [An example](https://github.com/lvgl/lv_micropython/blob/2940838bf6d4999050efecb29a4152ab5796d5b3/ports/unix/mpconfigport.h#L317-L318).
 - ~Configure lvgl to use *Garbage Collection* by setting several `LV_MEM_CUSTOM_*` and `LV_GC_*` macros [example](https://github.com/lvgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/lib/lv_conf.h#L28)~ lv_conf.h was moved to lv_binding_micropython git module.
 - Make sure you configure partitions correctly in `partitions.csv` and leave enough room for the LVGL module.
 - Something I forgot? Please let me know.
@@ -207,7 +207,7 @@ optional arguments:
                         Optional file to emit metadata (introspection)
 ```
 
-Example: 
+Example:
 
 ```
 python gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_binding_micropython -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_binding_micropython/pycparser/utils/fake_libc_include ../../lv_binding_micropython/lvgl/lvgl.h
@@ -215,8 +215,8 @@ python gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.x
 
 ### Binding other C libraries
 
-The lvgl binding script can be used to bind other C libraries to Micropython.  
-I used it with [lodepng](https://github.com/lvandeve/lodepng) and with parts of ESP-IDF.  
+The lvgl binding script can be used to bind other C libraries to Micropython.
+I used it with [lodepng](https://github.com/lvandeve/lodepng) and with parts of ESP-IDF.
 For more details please read [this blog post](https://blog.lvgl.io/2019-08-05/micropython-pure-display-driver).
 
 ## Micropython Bindings Usage
@@ -250,7 +250,7 @@ disp_drv.register()
 # Register SDL mouse driver
 
 indev_drv = lv.indev_drv_t()
-indev_drv.init() 
+indev_drv.init()
 indev_drv.type = lv.INDEV_TYPE.POINTER
 indev_drv.read_cb = SDL.mouse_read
 indev_drv.register()
@@ -291,6 +291,62 @@ from ft6x36 import ft6x36
 touch = ft6x36(sda=21, scl=22, width=320, height=280)
 ```
 
+### ST7789 Driver
+
+By default, the st7789 drive is initialized with the following parameters that are compatible with the TTGO T-Display:
+
+Arg | Default | Description
+--- | ------- | -----------
+miso |  -1 | Pin for SPI Data from display, -1 if not used as many st7789 displays do not have this pin
+mosi | 19 | Pin for SPI Data to display (REQUIRED)
+clk | 18 | Pin for SPI Clock (REQUIRED)
+cs |  5 |Pin for display CS
+dc | 16 | Pin for display DC (REQUIRED)
+rst | 23 | Pin for display RESET
+power | -1 | Pin for display Power ON, -1 if not used
+power_on | 0 |Pin value for Power ON
+backlight | 4 | Pin for display backlight control
+backlight_on | 1 | Pin value for backlight on
+spihost | esp.HSPI_HOST | ESP SPI Port
+mhz | 40 | SPI baud rate in mhz
+factor | 4 | Decrease frame buffer by factor
+hybrid | True | Boolean, True to use C refresh routine, False for pure Python driver
+width | 135 | Display width
+height | 240 | Display height
+colormode | COLOR_MODE_BGR | Display colormode
+rot | PORTRAIT | Display orientation, PORTRAIT, LANDSCAPE, INVERSE_PORTRAIT, INVERSE_LANDSCAPE
+invert | True | Display invert colors setting
+double_buffer | False | Boolean, True to use double buffering, False to use single buffer (saves memory)
+half_duplex | True | Boolean, True to use half duplex SPI communications
+asynchronous | False | Boolean, True to use asynchronous routines
+initialize | True | Boolean, True to initialize display
+#### TTGO T-Display example
+
+```
+import lvgl as lv
+from ili9XXX import st7789
+
+disp = st7789(width=135, height=240, rot=st7789.LANDSCAPE)
+```
+
+#### TTGO TWatch-2020 example
+
+```
+import lvgl as lv
+from ili9XXX import st7789
+
+import axp202c
+
+# init power manager, set backlight
+axp = axp202c.PMU()
+axp.enablePower(axp202c.AXP202_LDO2)
+axp.setLDO2Voltage(2800)
+
+# init display
+disp = st7789(
+    mosi=19, clk=18, cs=5, dc=27, rst=-1, backlight=12, power=-1,
+    width=240, height=240, rot=st7789.INVERSE_PORTRAIT, factor=4)
+```
 
 ### Creating a screen with a button and a label
 ```python
@@ -327,7 +383,7 @@ symbolstyle.text.color = {"red":0xff, "green":0xff, "blue":0xff}
 ```python
 self.tabview = lv.tabview(lv.scr_act())
 ```
-The first argument to an object constructor is the parent object, the second is which element to copy this element from.  
+The first argument to an object constructor is the parent object, the second is which element to copy this element from.
 Both arguments are optional.
 
 #### Calling an object method

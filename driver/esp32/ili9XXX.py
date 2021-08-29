@@ -68,6 +68,7 @@ LANDSCAPE = MADCTL_MV
 DISPLAY_TYPE_ILI9341 = const(1)
 DISPLAY_TYPE_ILI9488 = const(2)
 DISPLAY_TYPE_GC9A01 = const(3)
+DISPLAY_TYPE_ST7789 = const(4)
 
 class ili9XXX:
 
@@ -84,7 +85,7 @@ class ili9XXX:
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, display_type=0,
         asynchronous=False, initialize=True
     ):
@@ -99,6 +100,8 @@ class ili9XXX:
 
         self.width = width
         self.height = height
+        self.start_x = start_x
+        self.start_y = start_y
 
         self.miso = miso
         self.mosi = mosi
@@ -121,11 +124,11 @@ class ili9XXX:
         if invert:
             self.init_cmds.append({'cmd': 0x21})
 
-        # Register display driver 
+        # Register display driver
 
         self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
         self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA) if double_buffer else None
-        
+
         if self.buf1 and self.buf2:
             print("Double buffer")
         elif self.buf1:
@@ -140,13 +143,19 @@ class ili9XXX:
         self.disp_drv.init()
         self.disp_spi_init()
 
-        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': self.display_type}
+        self.disp_drv.user_data = {
+            'dc': self.dc,
+            'spi': self.spi,
+            'dt': self.display_type,
+            'start_x': self.start_x,
+            'start_y': self.start_y}
+
         self.disp_drv.draw_buf = self.disp_buf
         self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
-        
+
         if self.initialize:
             self.init()
 
@@ -194,16 +203,16 @@ class ili9XXX:
 
         # Initialize the SPI bus, if needed.
 
-        if buscfg.miso_io_num >= 0 and \
-           buscfg.mosi_io_num >= 0 and \
+        if buscfg.mosi_io_num >= 0 and \
            buscfg.sclk_io_num >= 0:
 
-                esp.gpio_pad_select_gpio(self.miso)
+                if self.miso >= 0:
+                    esp.gpio_pad_select_gpio(self.miso)
+                    esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
+                    esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
+
                 esp.gpio_pad_select_gpio(self.mosi)
                 esp.gpio_pad_select_gpio(self.clk)
-
-                esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
-                esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
                 esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
                 esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
 
@@ -304,13 +313,13 @@ class ili9XXX:
 #                    esp.spi_transaction_t.__SIZE__, esp.MALLOC_CAP.DMA))
 
     def spi_send(self, data):
-        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
+        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits.
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         self.trans.user = None
         esp.spi_device_polling_transmit(self.spi, self.trans)
 
     def spi_send_dma(self, data):
-        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
+        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits.
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         self.trans.user = self.spi_callbacks
         esp.spi_device_queue_trans(self.spi, self.trans, -1)
@@ -388,7 +397,7 @@ class ili9XXX:
         # Register the driver
         self.disp_drv.register()
 
-    
+
     def init(self):
         import utime
         generator = self._init(lambda ms:(yield ms))
@@ -411,7 +420,7 @@ class ili9XXX:
         if self.backlight != -1:
             esp.gpio_set_level(self.backlight, 1 - self.backlight_on)
 
-    
+
     ######################################################
 
     start_time_ptr = esp.C_Pointer()
@@ -429,8 +438,11 @@ class ili9XXX:
         # esp.spi_device_acquire_bus(self.spi, esp.ESP.MAX_DELAY)
 
         # Column addresses
+        self.send_cmd(0x2A)
 
-        self.send_cmd(0x2A);
+        if self.start_x:                # apply start_x offset if needed for st7789
+            area.x1 += self.start_x
+            area.x2 += self.start_x
 
         self.word_trans_data[0] = (area.x1 >> 8) & 0xFF
         self.word_trans_data[1] = area.x1 & 0xFF
@@ -440,7 +452,11 @@ class ili9XXX:
 
         # Page addresses
 
-        self.send_cmd(0x2B);
+        self.send_cmd(0x2B)
+
+        if self.start_y:                # apply start_y offset if needed for st7789
+            area.y1 += self.start_y
+            area.y2 += self.start_y
 
         self.word_trans_data[0] = (area.y1 >> 8) & 0xFF
         self.word_trans_data[1] = area.y1 & 0xFF
@@ -461,7 +477,7 @@ class ili9XXX:
         esp.get_ccount(self.start_time_ptr)
 
         self.send_data_dma(data_view)
-        
+
     ######################################################
 
     monitor_acc_time = 0
@@ -491,7 +507,6 @@ class ili9XXX:
         self.flush_acc_dma_cycles = 0
 
         return time, setup, dma, px
-
 
 
 class ili9341(ili9XXX):
@@ -568,8 +583,8 @@ class ili9488(ili9XXX):
             {'cmd': 0xE0, 'data': bytes([0x00, 0x03, 0x09, 0x08, 0x16, 0x0A, 0x3F, 0x78, 0x4C, 0x09, 0x0A, 0x08, 0x16, 0x1A, 0x0F])},
             {'cmd': 0xE1, 'data': bytes([0x00, 0x16, 0x19, 0x03, 0x0F, 0x05, 0x32, 0x45, 0x46, 0x04, 0x0E, 0x0D, 0x35, 0x37, 0x0F])},
             {'cmd': 0xC0, 'data': bytes([0x17, 0x15])}, ### 0x13, 0x13
-            {'cmd': 0xC1, 'data': bytes([0x41])},       ### 
-            {'cmd': 0xC2, 'data': bytes([0x44])},       ### 
+            {'cmd': 0xC1, 'data': bytes([0x41])},       ###
+            {'cmd': 0xC2, 'data': bytes([0x44])},       ###
             {'cmd': 0xC5, 'data': bytes([0x00, 0x12, 0x80])},
             #{'cmd': 0xC5, 'data': bytes([0x00, 0x0, 0x0, 0x0])},
             {'cmd': 0x36, 'data': bytes([rot | colormode])},    # Memory Access Control
@@ -632,8 +647,8 @@ class gc9a01(ili9XXX):
             {'cmd': 0x8D, 'data': bytes([0x01])},
             {'cmd': 0x8E, 'data': bytes([0xFF])},
             {'cmd': 0x8F, 'data': bytes([0xFF])},
-            {'cmd': 0xB6, 'data': bytes([0x00, 0x00])}, 
-            {'cmd': 0x36, 'data': bytes([rot | self.colormode])},
+            {'cmd': 0xB6, 'data': bytes([0x00, 0x00])},
+            {'cmd': 0x36, 'data': bytes([rot | self.colormode])},   # MADCTL
             {'cmd': 0x3A, 'data': bytes([0x05])},
             {'cmd': 0x90, 'data': bytes([0x08, 0x08, 0x08, 0x08])},
             {'cmd': 0xBD, 'data': bytes([0x06])},
@@ -666,7 +681,82 @@ class gc9a01(ili9XXX):
             {'cmd': 0x11, 'data': bytes([0]), 'delay': 20},
             {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
         ]
-        
+
         super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
             spihost, mhz, factor, hybrid, width, height, self.colormode, rot, invert, double_buffer, half_duplex, display_type=self.display_type,
             asynchronous=asynchronous, initialize=initialize)
+
+class st7789(ili9XXX):
+    PORTRAIT = const(0)
+    LANDSCAPE = const(1)
+    INVERSE_PORTRAIT = const(2)
+    INVERSE_LANDSCAPE = const(3)
+
+    def __init__(self,
+        miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=135, height=240, start_x=None, start_y=None,
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=False, half_duplex=True,
+        asynchronous=False, initialize=True):
+
+        # Make sure Micropython was built such that color won't require processing before DMA
+
+        if lv.color_t.__SIZE__ != 2:
+            raise RuntimeError('st7789 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
+            raise RuntimeError('st7789 BGR color mode requires defining LV_COLOR_16_SWAP=1')
+
+        self.display_name = 'ST7789'
+        self.display_type = DISPLAY_TYPE_ST7789
+
+        # MADCTL[rot % 4]
+        madctl = [0x00, 0x60, 0xc0, 0xa0][rot % 4]
+
+        #  width, height, xstart, ystart)[rot % 4]
+        if width == 320:
+            table = [
+                (320, 240,  0,  0), (240, 320,  0,  0),
+                (320, 240,  0,  0), (240, 320,  0,  0)
+            ]
+        elif width == 240:
+            table =  [
+                (240, 240,  0,  0), (240, 240,  0,  0),
+                (240, 240,  0, 80), (240, 240, 80,  0)
+            ]
+        elif width == 135:
+            table = [
+                (135, 240, 52, 40), (240, 135, 40, 53),
+                (135, 240, 53, 40), (240, 135, 40, 52)
+            ]
+        else:
+            raise ValueError(
+                "Unsupported display. 320x240, 240x240 and 135x240 are supported."
+            )
+
+        width, height, start_x, start_y = table[rot % 4]
+
+        self.init_cmds = [
+            {'cmd':  0x11, 'data': bytes([0x0]), 'delay': 120},
+            {'cmd':  0x13, 'data': bytes([0x0])},
+            {'cmd':  0x36, 'data': bytes([madctl | colormode])}, # MADCTL
+            {'cmd':  0xb6, 'data': bytes([0xa, 0x82])},
+            {'cmd':  0x3a, 'data': bytes([0x55]),'delay': 10},
+            {'cmd':  0xb2, 'data': bytes([0xc, 0xc, 0x0, 0x33, 0x33])},
+            {'cmd':  0xb7, 'data': bytes([0x35])},
+            {'cmd':  0xbb, 'data': bytes([0x28])},
+            {'cmd':  0xc0, 'data': bytes([0xc])},
+            {'cmd':  0xc2, 'data': bytes([0x1, 0xff])},
+            {'cmd':  0xc3, 'data': bytes([0x10])},
+            {'cmd':  0xc4, 'data': bytes([0x20])},
+            {'cmd':  0xc6, 'data': bytes([0xf])},
+            {'cmd':  0xd0, 'data': bytes([0xa4, 0xa1])},
+            {'cmd':  0xe0, 'data': bytes([0xd0, 0x0, 0x2, 0x7, 0xa, 0x28, 0x32, 0x44, 0x42, 0x6, 0xe, 0x12, 0x14, 0x17])},
+            {'cmd':  0xe1, 'data': bytes([0xd0, 0x0, 0x2, 0x7, 0xa, 0x28, 0x31, 0x54, 0x47, 0xe, 0x1c, 0x17, 0x1b, 0x1e])},
+            {'cmd':  0x21, 'data': bytes([0x0])},
+            {'cmd':  0x2a, 'data': bytes([0x0, 0x0, 0x0, 0xe5])},
+            {'cmd':  0x2b, 'data': bytes([0x0, 0x0, 0x1, 0x3f]), 'delay': 120},
+            {'cmd':  0x29, 'data': bytes([0x0]), 'delay': 120}
+        ]
+
+        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
+            spihost, mhz, factor, hybrid, width, height, start_x, start_y, colormode, rot, invert, double_buffer, half_duplex,
+            display_type=self.display_type, asynchronous=asynchronous, initialize=initialize)
