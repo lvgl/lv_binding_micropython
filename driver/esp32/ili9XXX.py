@@ -440,8 +440,8 @@ class ili9XXX:
         # Column addresses
         self.send_cmd(0x2A)
 
-        x1 = area.x1 + start_x if self.start_x else area.x1
-        x2 = area.x2 + start_x if self.start_x else area.x2
+        x1 = area.x1 + self.start_x if self.start_x else area.x1
+        x2 = area.x2 + self.start_x if self.start_x else area.x2
 
         self.word_trans_data[0] = (x1 >> 8) & 0xFF
         self.word_trans_data[1] = x1 & 0xFF
@@ -453,8 +453,8 @@ class ili9XXX:
 
         self.send_cmd(0x2B)
 
-        y1 = area.y1 + start_y if self.start_y else area.y1
-        y2 = area.y2 + start_y if self.start_y else area.y2
+        y1 = area.y1 + self.start_y if self.start_y else area.y1
+        y2 = area.y2 + self.start_y if self.start_y else area.y2
 
         self.word_trans_data[0] = (y1 >> 8) & 0xFF
         self.word_trans_data[1] = y1 & 0xFF
