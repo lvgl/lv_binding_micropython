@@ -206,18 +206,18 @@ class ili9XXX:
         if buscfg.mosi_io_num >= 0 and \
            buscfg.sclk_io_num >= 0:
 
-                if self.miso >= 0:
-                    esp.gpio_pad_select_gpio(self.miso)
-                    esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
-                    esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
+            if buscfg.miso_io_num  >= 0:
+                esp.gpio_pad_select_gpio(self.miso)
+                esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
+                esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
 
-                esp.gpio_pad_select_gpio(self.mosi)
-                esp.gpio_pad_select_gpio(self.clk)
-                esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
-                esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
+            esp.gpio_pad_select_gpio(self.mosi)
+            esp.gpio_pad_select_gpio(self.clk)
+            esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
+            esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
 
-                ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
-                if ret != 0: raise RuntimeError("Failed initializing SPI bus")
+            ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
+            if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
         self.trans_buffer = esp.heap_caps_malloc(TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
@@ -440,35 +440,33 @@ class ili9XXX:
         # Column addresses
         self.send_cmd(0x2A)
 
-        if self.start_x:                # apply start_x offset if needed for st7789
-            area.x1 += self.start_x
-            area.x2 += self.start_x
+        x1 = area.x1 + start_x if self.start_x else area.x1
+        x2 = area.x2 + start_x if self.start_x else area.x2
 
-        self.word_trans_data[0] = (area.x1 >> 8) & 0xFF
-        self.word_trans_data[1] = area.x1 & 0xFF
-        self.word_trans_data[2] = (area.x2 >> 8) & 0xFF
-        self.word_trans_data[3] = area.x2 & 0xFF
+        self.word_trans_data[0] = (x1 >> 8) & 0xFF
+        self.word_trans_data[1] = x1 & 0xFF
+        self.word_trans_data[2] = (x2 >> 8) & 0xFF
+        self.word_trans_data[3] = x2 & 0xFF
         self.send_trans_word()
 
         # Page addresses
 
         self.send_cmd(0x2B)
 
-        if self.start_y:                # apply start_y offset if needed for st7789
-            area.y1 += self.start_y
-            area.y2 += self.start_y
+        y1 = area.y1 + start_y if self.start_y else area.y1
+        y2 = area.y2 + start_y if self.start_y else area.y2
 
-        self.word_trans_data[0] = (area.y1 >> 8) & 0xFF
-        self.word_trans_data[1] = area.y1 & 0xFF
-        self.word_trans_data[2] = (area.y2 >> 8) & 0xFF
-        self.word_trans_data[3] = area.y2 & 0xFF
+        self.word_trans_data[0] = (y1 >> 8) & 0xFF
+        self.word_trans_data[1] = y1 & 0xFF
+        self.word_trans_data[2] = (y2 >> 8) & 0xFF
+        self.word_trans_data[3] = y2 & 0xFF
         self.send_trans_word()
 
         # Memory write by DMA, disp_flush_ready when finished
 
         self.send_cmd(0x2C)
 
-        size = (area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1)
+        size = (x2 - x1 + 1) * (y2 - y1 + 1)
         data_view = color_p.__dereference__(size * lv.color_t.__SIZE__)
 
         esp.get_ccount(self.end_time_ptr)
@@ -695,7 +693,7 @@ class st7789(ili9XXX):
     def __init__(self,
         miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=135, height=240, start_x=None, start_y=None,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=False, half_duplex=True,
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
@@ -712,17 +710,17 @@ class st7789(ili9XXX):
         madctl = [0x00, 0x60, 0xc0, 0xa0][rot % 4]
 
         #  width, height, xstart, ystart)[rot % 4]
-        if width == 320:
+        if 320 in [width, height]:
             table = [
                 (320, 240,  0,  0), (240, 320,  0,  0),
                 (320, 240,  0,  0), (240, 320,  0,  0)
             ]
-        elif width == 240:
+        elif width == 240 and height == 240:
             table =  [
                 (240, 240,  0,  0), (240, 240,  0,  0),
                 (240, 240,  0, 80), (240, 240, 80,  0)
             ]
-        elif width == 135:
+        elif 135 in [width, height]:
             table = [
                 (135, 240, 52, 40), (240, 135, 40, 53),
                 (135, 240, 53, 40), (240, 135, 40, 52)

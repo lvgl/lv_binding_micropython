@@ -316,7 +316,7 @@ height | 240 | Display height
 colormode | COLOR_MODE_BGR | Display colormode
 rot | PORTRAIT | Display orientation, PORTRAIT, LANDSCAPE, INVERSE_PORTRAIT, INVERSE_LANDSCAPE
 invert | True | Display invert colors setting
-double_buffer | False | Boolean, True to use double buffering, False to use single buffer (saves memory)
+double_buffer | True | Boolean, True to use double buffering, False to use single buffer (saves memory)
 half_duplex | True | Boolean, True to use half duplex SPI communications
 asynchronous | False | Boolean, True to use asynchronous routines
 initialize | True | Boolean, True to initialize display
