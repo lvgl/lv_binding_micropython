@@ -86,8 +86,7 @@ class ili9XXX:
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, display_type=0,
-        asynchronous=False, initialize=True
+        invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True
     ):
 
         # Initializations
@@ -511,7 +510,7 @@ class ili9341(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
@@ -553,16 +552,17 @@ class ili9341(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay':100}
         ]
 
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex,
-            asynchronous=asynchronous, initialize=initialize)
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, asynchronous=asynchronous, initialize=initialize)
 
 
 class ili9488(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
+        spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480, start_x=0, start_y=0,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
@@ -598,10 +598,10 @@ class ili9488(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
         ]
 
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488,
-            asynchronous=asynchronous, initialize=initialize)
-
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, asynchronous=asynchronous, initialize=initialize)
 
 class gc9a01(ili9XXX):
     # On the tested display the write direction and colormode appear to be
@@ -609,7 +609,7 @@ class gc9a01(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=True, width=240, height=240,
+        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=True, width=240, height=240, start_x=0, start_y=0,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
@@ -680,9 +680,10 @@ class gc9a01(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
         ]
 
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, self.colormode, rot, invert, double_buffer, half_duplex, display_type=self.display_type,
-            asynchronous=asynchronous, initialize=initialize)
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, asynchronous=asynchronous, initialize=initialize)
 
 class st7789(ili9XXX):
     PORTRAIT = const(0)
@@ -692,7 +693,7 @@ class st7789(ili9XXX):
 
     def __init__(self,
         miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=135, height=240, start_x=None, start_y=None,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=135, height=240, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True):
 
@@ -755,6 +756,7 @@ class st7789(ili9XXX):
             {'cmd':  0x29, 'data': bytes([0x0]), 'delay': 120}
         ]
 
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, start_x, start_y, colormode, rot, invert, double_buffer, half_duplex,
-            display_type=self.display_type, asynchronous=asynchronous, initialize=initialize)
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, asynchronous=asynchronous, initialize=initialize)
