@@ -440,8 +440,8 @@ class ili9XXX:
         # Column addresses
         self.send_cmd(0x2A)
 
-        x1 = area.x1 + self.start_x if self.start_x else area.x1
-        x2 = area.x2 + self.start_x if self.start_x else area.x2
+        x1 = area.x1 + self.start_x
+        x2 = area.x2 + self.start_x
 
         self.word_trans_data[0] = (x1 >> 8) & 0xFF
         self.word_trans_data[1] = x1 & 0xFF
@@ -453,8 +453,8 @@ class ili9XXX:
 
         self.send_cmd(0x2B)
 
-        y1 = area.y1 + self.start_y if self.start_y else area.y1
-        y2 = area.y2 + self.start_y if self.start_y else area.y2
+        y1 = area.y1 + self.start_y
+        y2 = area.y2 + self.start_y
 
         self.word_trans_data[0] = (y1 >> 8) & 0xFF
         self.word_trans_data[1] = y1 & 0xFF
@@ -709,18 +709,18 @@ class st7789(ili9XXX):
         # MADCTL[rot % 4]
         madctl = [0x00, 0x60, 0xc0, 0xa0][rot % 4]
 
-        #  width, height, xstart, ystart)[rot % 4]
-        if 320 in [width, height]:
+        #  (width, height, start_x, start_y)[rot % 4]
+        if [width, height] == [320, 240] or [width, height] == [240, 320]:
             table = [
                 (320, 240,  0,  0), (240, 320,  0,  0),
                 (320, 240,  0,  0), (240, 320,  0,  0)
             ]
-        elif width == 240 and height == 240:
+        elif [width, height] == [240, 240]:
             table =  [
                 (240, 240,  0,  0), (240, 240,  0,  0),
                 (240, 240,  0, 80), (240, 240, 80,  0)
             ]
-        elif 135 in [width, height]:
+        if [width, height] == [135, 240] or [width, height] == [240, 135]:
             table = [
                 (135, 240, 52, 40), (240, 135, 40, 53),
                 (135, 240, 53, 40), (240, 135, 40, 52)

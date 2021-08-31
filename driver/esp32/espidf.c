@@ -179,6 +179,8 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 	lv_disp_drv_t *disp_drv = _disp_drv;
 	const lv_area_t *area = _area;
 	lv_color_t *color_p = _color_p;
+    int start_x = 0;
+    int start_y = 0;
 
 	// We use disp_drv->user_data to pass data from MP to C
 	// The following lines extract dc and spi
@@ -189,24 +191,16 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 	mp_get_buffer_raise(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
 	spi_device_handle_t *spi_ptr = buffer_info.buf;
 
-    int x1 = area->x1;
-    int x2 = area->x2;
-    int y1 = area->y1;
-    int y2 = area->y2;
-
-    // st7789 may need a start_x and start_y offset for display smaller then 320x240 like the TTGO T-Display.
+    // st7789 may need a start_x and start_y offset for display smaller than 320x240 like the TTGO T-Display.
     if (dt == DISPLAY_TYPE_ST7789) {
-        int start_x = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_x)));
-        if (start_x) {
-            x1 += start_x;
-            x2 += start_x;
-        }
-        int start_y = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_y)));
-        if (start_y) {
-            y1 += start_y;
-            y2 += start_y;
-        }
+        start_x = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_x)));
+        start_y = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_y)));
     }
+
+    int x1 = area->x1 + start_x;
+    int x2 = area->x2 + start_x;
+    int y1 = area->y1 + start_y;
+    int y2 = area->y2 + start_y;
 
 	// Column addresses
 
