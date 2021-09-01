@@ -169,8 +169,7 @@ set(LV_SRC
 )
 
 if(ESP_PLATFORM)
-    set(LV_SRC
-        ${LV_SRC}
+    LIST(APPEND LV_SRC
         ${LV_BINDINGS_DIR}/driver/esp32/espidf.c
         ${LV_BINDINGS_DIR}/driver/esp32/modrtch.c
         ${LV_BINDINGS_DIR}/driver/esp32/sh2lib.c
