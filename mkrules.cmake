@@ -109,6 +109,8 @@ function(all_lv_bindings)
     configure_file(${LV_PNG_DIR}/lodepng.cpp ${LV_PNG_C} COPYONLY)
     if(ESP_PLATFORM)
         idf_build_set_property(COMPILE_DEFINITIONS "${LV_PNG_PP_OPTIONS}" APPEND)
+    else()
+        add_definitions(${LV_PNG_PP_OPTIONS})
     endif()
     lv_bindings(
         OUTPUT
