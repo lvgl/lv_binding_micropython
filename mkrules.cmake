@@ -2,7 +2,7 @@
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_program(AWK awk mawk gawk)
 
-set(LV_BINDINGS_DIR ${MICROPY_DIR}/lib/lv_bindings)
+set(LV_BINDINGS_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 # Common function for creating LV bindings
 
@@ -178,5 +178,3 @@ if(ESP_PLATFORM)
         ${LV_ESPIDF}
     )
 endif(ESP_PLATFORM)
-
-
