@@ -193,7 +193,17 @@ Currently supported drivers for Micropyton are
 Driver code is under `/driver` directory.
 
 Drivers can also be implemented in pure Micropython, by providing callbacks (`disp_drv.flush_cb`, `indev_drv.read_cb` etc.)
-Currently the supported ILI9341, FT6X36 and XPT2046 are pure micropython drivers
+Currently the supported ILI9341, FT6X36 and XPT2046 are pure micropython drivers.
+
+### Where are the drivers?
+
+LVGL C drivers and Micropython drivers (either C or Python) are **separate and independent** from each other.  
+The main reason is configuration:
+- The C driver is usually configured with C macros (which pins it uses, frequency, etc.)  
+Any configuration change requires rebuilding the firmware but that's understandable since any change in the application requires rebuilding the firmware anyway.
+- In Micropython the driver is built once with Micropython firmware (if it's a C driver) or not built at all (if it's pure Python driver). On runtime the user initializes the driver and configures it. If the user switches SPI pins or some other configuration, there is no need to rebuild the firmware, just change the Python script and initialize the driver differently **on runtime**.
+
+So the location for Micropython drivers is https://github.com/lvgl/lv_binding_micropython/tree/master/driver and is unrelated to https://github.com/lvgl/lv_drivers.
 
 ### The Event Loop
 
