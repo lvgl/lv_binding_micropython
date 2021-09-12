@@ -9,7 +9,7 @@ set(LV_BINDINGS_DIR ${CMAKE_CURRENT_LIST_DIR})
 function(lv_bindings)
     set(_options)
     set(_one_value_args OUTPUT)
-    set(_multi_value_args INPUT DEPENDS PP_OPTIONS GEN_OPTIONS FILTER)
+    set(_multi_value_args INPUT DEPENDS COMPILE_OPTIONS PP_OPTIONS GEN_OPTIONS FILTER)
     cmake_parse_arguments(
         PARSE_ARGV 0 LV
         "${_options}"
@@ -24,7 +24,7 @@ function(lv_bindings)
         OUTPUT 
             ${LV_PP}
         COMMAND
-        ${CMAKE_C_COMPILER} -E -DPYCPARSER ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
+        ${CMAKE_C_COMPILER} -E -DPYCPARSER ${LV_COMPILE_OPTIONS} ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
         DEPENDS
             ${LV_INPUT}
             ${LV_DEPENDS}
@@ -34,6 +34,8 @@ function(lv_bindings)
         VERBATIM
         COMMAND_EXPAND_LISTS
     )
+
+    target_compile_options(${COMPONENT_LIB} PRIVATE ${LV_COMPILE_OPTIONS})
 
     if (DEFINED LV_FILTER)
 
@@ -119,7 +121,7 @@ function(all_lv_bindings)
             ${LV_PNG_DIR}/lodepng.h
         DEPENDS
             ${LV_PNG_HEADERS}
-        PP_OPTIONS
+        COMPILE_OPTIONS
             -DLODEPNG_NO_COMPILE_ENCODER -DLODEPNG_NO_COMPILE_DISK -DLODEPNG_NO_COMPILE_ALLOCATORS
         GEN_OPTIONS
             -M lodepng
@@ -135,8 +137,6 @@ function(all_lv_bindings)
                 ${LV_BINDINGS_DIR}/driver/esp32/espidf.h
             DEPENDS
                 ${LV_ESPIDF_HEADERS}
-            PP_OPTIONS
-                -DPYCPARSER
             GEN_OPTIONS
                  -M espidf
             FILTER
