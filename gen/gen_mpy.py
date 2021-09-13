@@ -625,6 +625,7 @@ print ("""
 #include "py/binary.h"
 #include "py/objarray.h"
 #include "py/objtype.h"
+#include "py/objexcept.h"
 
 /*
  * {module_name} includes
@@ -658,6 +659,8 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {{
     return &mp_lv_{base_obj}_type.mp_obj_type;
 }}
+
+MP_DEFINE_EXCEPTION(LvReferenceError, Exception)
     """.format(
             obj_type = base_obj_type,
             base_obj = base_obj_name
@@ -818,6 +821,11 @@ STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t *mp_obj)
     if (mp_obj_get_type(native_obj)->buffer_p.get_buffer != mp_lv_obj_get_buffer)
         return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(native_obj);
+    if (mp_lv_obj->lv_obj == NULL) {
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_LvReferenceError, MP_ERROR_TEXT("Referenced object was deleted!")));
+    }
     return mp_lv_obj->lv_obj;
 }
 
@@ -834,6 +842,17 @@ STATIC inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
 }
 
 STATIC inline const mp_obj_type_t *get_BaseObj_type();
+
+STATIC void mp_lv_delete_cb(lv_event_t * e)
+{
+    LV_OBJ_T *lv_obj = e->target;
+    if (lv_obj){
+        mp_lv_obj_t *self = lv_obj->user_data;
+        if (self) {
+            self->lv_obj = NULL;
+        }
+    }
+}
 
 STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
 {
@@ -862,6 +881,9 @@ STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
 
         // Register the Python object in user_data
         lv_obj->user_data = self;
+        
+        // Register a "Delete" event callback
+        lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
     }
     return MP_OBJ_FROM_PTR(self);
 }
@@ -2489,6 +2511,9 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
     {struct_aliases}
     {blobs}
     {int_constants}
+#ifdef LV_OBJ_T
+    {{ MP_ROM_QSTR(MP_QSTR_LvReferenceError), MP_ROM_PTR(&mp_type_LvReferenceError) }},
+#endif // LV_OBJ_T
 }};
 """.format(
         module_name = sanitize(module_name),
