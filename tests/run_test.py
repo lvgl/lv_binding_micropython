@@ -38,25 +38,30 @@ class __test():
         self.lv.init()
         driver = display_driver_utils.driver()
         scr = self.lv.scr_act()
+        self.objects = []
 
-
-    def exec_actions(self, obj, user_data):
-        if obj.get_child_id() <= self.MAX_CHILDREN:
-            if hasattr(obj, 'lv_obj'):
-                obj = obj.lv_obj
-            obj_info = ''
-            if hasattr(obj, 'get_text'):
-                obj_info += ' text:"%s"' % obj.get_text()
-            if hasattr(obj, 'get_value'):
-                obj_info += ' value:"%s"' % obj.get_value()
-            print('%s %s' % (obj, obj_info))
-            for event in self.events:
-                # print('\t%s' % get_member_name(lv.EVENT, event))
-                self.lv.event_send(obj, event, None)
-                self.time.sleep_ms(self.DELAY_MS)
-                self.gc.collect()
+    def collect_objects(self, obj, user_data):
+        if hasattr(obj, 'lv_obj'):
+            obj = obj.lv_obj
+        self.objects.append(obj)
         return self.lv.obj.TREE_WALK.NEXT
 
+    def send_events(self):
+        for obj in self.objects:
+            if self.lv.obj.__cast__(obj): # skip deleted objects
+                obj_info = ''
+                if hasattr(obj, 'get_text'):
+                    obj_info += ' text:"%s"' % obj.get_text()
+                if hasattr(obj, 'get_value'):
+                    obj_info += ' value:"%s"' % obj.get_value()
+                print('%s %s' % (obj, obj_info))
+                for event in self.events:
+                    if not self.lv.obj.__cast__(obj): # skip deleted objects
+                        continue
+                    # print('\t%s' % get_member_name(lv.EVENT, event))
+                    self.lv.event_send(obj, event, None)
+                    self.time.sleep_ms(self.DELAY_MS)
+                    self.gc.collect()
 
     def run(self):
         try:
@@ -78,7 +83,8 @@ class __test():
                 exec(file_string)
                 self.time.sleep_ms(self.DELAY_MS)
                 self.gc.collect()
-                self.lv.scr_act().tree_walk(self.exec_actions, None)
+                self.lv.scr_act().tree_walk(self.collect_objects, None)
+                self.send_events()
                 self.time.sleep_ms(self.DELAY_MS)
                 if lv_utils.event_loop.is_running():
                     lv_utils.event_loop.current_instance().deinit()
