@@ -35,7 +35,11 @@ function(lv_bindings)
         COMMAND_EXPAND_LISTS
     )
 
-    target_compile_options(${COMPONENT_LIB} PRIVATE ${LV_COMPILE_OPTIONS})
+    if(ESP_PLATFORM)
+        target_compile_options(${COMPONENT_LIB} PRIVATE ${LV_COMPILE_OPTIONS})
+    else()
+        add_compile_options(${LV_COMPILE_OPTIONS})
+    endif()
 
     if (DEFINED LV_FILTER)
 
@@ -109,11 +113,6 @@ function(all_lv_bindings)
 
     file(GLOB_RECURSE LV_PNG_HEADERS ${LV_PNG_DIR}/*.h)
     configure_file(${LV_PNG_DIR}/lodepng.cpp ${LV_PNG_C} COPYONLY)
-    if(ESP_PLATFORM)
-        idf_build_set_property(COMPILE_DEFINITIONS "${LV_PNG_PP_OPTIONS}" APPEND)
-    else()
-        add_definitions(${LV_PNG_PP_OPTIONS})
-    endif()
     lv_bindings(
         OUTPUT
             ${LV_PNG}
