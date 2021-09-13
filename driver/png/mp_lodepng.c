@@ -5,6 +5,13 @@
  * This allows lodepng use the ram reserved for Micropython gc
  */
 
+#ifndef NO_QSTR
+
+#ifndef LODEPNG_NO_COMPILE_ALLOCATORS
+   #error LodePNG must be compiled with LODEPNG_NO_COMPILE_ALLOCATORS, which should be passed by the build system, but was not.
+#endif
+
+#endif
 
 void* lodepng_malloc(size_t size)
 {

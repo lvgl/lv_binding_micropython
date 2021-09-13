@@ -38,7 +38,7 @@ function(lv_bindings)
     if(ESP_PLATFORM)
         target_compile_options(${COMPONENT_LIB} PRIVATE ${LV_COMPILE_OPTIONS})
     else()
-        add_compile_options(${LV_COMPILE_OPTIONS})
+        target_compile_options(lvgl_interface INTERFACE ${LV_COMPILE_OPTIONS})
     endif()
 
     if (DEFINED LV_FILTER)
