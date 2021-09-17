@@ -1000,10 +1000,11 @@ STATIC inline const char *convert_from_str(mp_obj_t str)
 STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
+    mp_obj_t *native_obj = get_native_obj(mp_obj);
+    if ( (!MP_OBJ_IS_OBJ(native_obj)) || (mp_obj_get_type(native_obj)->make_new != &make_new_lv_struct) ) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, MP_ERROR_TEXT("Struct argument is not an object!")));
-    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Expected Struct object!")));
+    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(native_obj);
     return mp_lv_struct;
 }
 
@@ -1026,16 +1027,17 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
-    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
+    mp_lv_struct_t *other = (n_args > 0) && (!mp_obj_is_int(args[0])) ? mp_to_lv_struct(cast(args[0], type)): NULL;
+    size_t count = (n_args > 0) && (mp_obj_is_int(args[0]))? mp_obj_get_int(args[0]): 1;
     *self = (mp_lv_struct_t){
         .base = {type}, 
-        .data = (other && other->data == NULL)? NULL: m_malloc(size)
+        .data = (other && other->data == NULL)? NULL: m_malloc(size * count)
     };
     if (self->data) {
         if (other) {
-            memcpy(self->data, other->data, size);
+            memcpy(self->data, other->data, size * count);
         } else {
-            memset(self->data, 0, size);
+            memset(self->data, 0, size * count);
         }
     }
     return MP_OBJ_FROM_PTR(self);
@@ -1054,6 +1056,41 @@ STATIC mp_obj_t lv_struct_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
         default:
             return MP_OBJ_NULL;
     }
+}
+
+STATIC mp_obj_t lv_struct_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    mp_lv_struct_t *self = mp_to_lv_struct(self_in);
+
+    if ((!self) || (!self->data))
+        return NULL;
+    if (!mp_obj_is_int(index))
+        return NULL;
+
+    const mp_obj_type_t *type = mp_obj_get_type(self_in);
+    size_t element_size = get_lv_struct_size(type);
+    size_t element_index = mp_obj_get_int(index);
+    void *element_addr = (byte*)self->data + element_size*element_index;
+
+    if (value == MP_OBJ_NULL) {
+        memset(element_addr, 0, element_size);
+        return self_in;
+    }
+
+    mp_lv_struct_t *element_at_index = m_new_obj(mp_lv_struct_t);
+    *element_at_index = (mp_lv_struct_t){
+        .base = {type},
+        .data = element_addr
+    };
+
+    if (value != MP_OBJ_SENTINEL){
+        mp_lv_struct_t *other = mp_to_lv_struct(cast(value, type));
+        if ((!other) || (!other->data))
+            return NULL;
+        memcpy(element_at_index->data, other->data, element_size);
+    }
+
+    return MP_OBJ_FROM_PTR(element_at_index);
 }
 
 STATIC void *copy_buffer(const void *buffer, size_t size)
@@ -1634,6 +1671,7 @@ STATIC const mp_obj_type_t mp_{sanitized_struct_name}_type = {{
     .print = mp_{sanitized_struct_name}_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_{sanitized_struct_name}_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_{sanitized_struct_name}_locals_dict,
     .buffer_p = {{ .get_buffer = mp_blob_get_buffer }}
