@@ -759,7 +759,7 @@ STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo
 STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags){ return 0; }
 #endif
 
-STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
+STATIC mp_obj_t get_native_obj(mp_obj_t mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
@@ -780,9 +780,9 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t n_kw,
     const mp_obj_t *args);
 
-STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
+STATIC mp_obj_t cast(mp_obj_t mp_obj, const mp_obj_type_t *mp_type)
 {
-    mp_obj_t *res = NULL;
+    mp_obj_t res = NULL;
     if (mp_obj == mp_const_none && mp_type->make_new == &make_new_lv_struct) {
         res = MP_OBJ_FROM_PTR(&mp_lv_null_obj);
     } else if (MP_OBJ_IS_OBJ(mp_obj)) {
@@ -814,7 +814,7 @@ typedef struct mp_lv_obj_t {
     LV_OBJ_T *callbacks;
 } mp_lv_obj_t;
 
-STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t *mp_obj)
+STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_obj_t native_obj = get_native_obj(mp_obj);
@@ -854,7 +854,7 @@ STATIC void mp_lv_delete_cb(lv_event_t * e)
     }
 }
 
-STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
+STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
 {
     if (lv_obj == NULL) return mp_const_none;
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
@@ -1000,7 +1000,7 @@ STATIC inline const char *convert_from_str(mp_obj_t str)
 STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_obj_t *native_obj = get_native_obj(mp_obj);
+    mp_obj_t native_obj = get_native_obj(mp_obj);
     if ( (!MP_OBJ_IS_OBJ(native_obj)) || (mp_obj_get_type(native_obj)->make_new != &make_new_lv_struct) ) nlr_raise(
             mp_obj_new_exception_msg(
                 &mp_type_SyntaxError, MP_ERROR_TEXT("Expected Struct object!")));
@@ -1139,7 +1139,7 @@ STATIC void call_parent_methods(mp_obj_t obj, qstr attr, mp_obj_t *dest)
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
 {
     mp_obj_t mp_struct = make_new_lv_struct(type, 0, 0, NULL);
-    mp_obj_t *native_dict = cast(dict, &mp_type_dict);
+    mp_obj_t native_dict = cast(dict, &mp_type_dict);
     mp_map_t *map = mp_obj_dict_get_map(native_dict);
     if (map == NULL) return mp_const_none;
     for (uint i = 0; i < map->alloc; i++) {
