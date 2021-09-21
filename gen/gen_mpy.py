@@ -479,10 +479,9 @@ mp_to_lv = {
     'const void *'              : 'mp_to_ptr',
     'bool'                      : 'mp_obj_is_true',
     'char *'                    : '(char*)convert_from_str',
+    'char **'                   : 'mp_write_ptr_C_Pointer',
     'const char *'              : 'convert_from_str',
-    'const unsigned char *'     : 'convert_from_str',
-    'char **'                   : 'mp_to_ptr',
-    'const char **'             : 'mp_to_ptr',
+    'const char **'             : 'mp_write_ptr_C_Pointer',
     '%s_obj_t *'% module_prefix : 'mp_to_lv',
     'uint8_t'                   : '(uint8_t)mp_obj_get_int',
     'uint16_t'                  : '(uint16_t)mp_obj_get_int',
@@ -519,10 +518,9 @@ lv_to_mp = {
     'const void *'              : 'ptr_to_mp',
     'bool'                      : 'convert_to_bool',
     'char *'                    : 'convert_to_str',
+    'char **'                   : 'mp_read_ptr_C_Pointer',
     'const char *'              : 'convert_to_str',
-    'const unsigned char *'     : 'convert_to_str',
-    'char **'                   : 'ptr_to_mp',
-    'const char **'             : 'ptr_to_mp',
+    'const char **'             : 'mp_read_ptr_C_Pointer',
     '%s_obj_t *'% module_prefix : 'lv_to_mp',
     'uint8_t'                   : 'mp_obj_new_int_from_uint',
     'uint16_t'                  : 'mp_obj_new_int_from_uint',
@@ -559,10 +557,9 @@ lv_mp_type = {
     'const void *'              : 'void*',
     'bool'                      : 'bool',
     'char *'                    : 'char*',
+    'char **'                   : 'char**',
     'const char *'              : 'char*',
-    'const unsigned char *'     : 'char*',
-    'char **'                   : 'void*',
-    'const char **'             : 'void*',
+    'const char **'             : 'char**',
     '%s_obj_t *'% module_prefix : '%s*' % base_obj_type,
     'uint8_t'                   : 'int',
     'uint16_t'                  : 'int',
@@ -594,6 +591,66 @@ lv_mp_type = {
 
 lv_to_mp_byref = {}
 lv_to_mp_funcptr = {}
+
+# Add native array supported types
+# These types would be converted automatically to/from array type.
+# Supported array (pointer) types are signed/unsigned int: 8bit, 16bit, 32bit and 64bit.
+
+def register_int_ptr_type(convertor, *types):
+    for ptr_type in types:
+        for qualified_ptr_type in [ptr_type, 'const '+ptr_type]:
+            mp_to_lv[qualified_ptr_type] = 'mp_array_to_%s' % (convertor)
+            lv_to_mp[qualified_ptr_type] = 'mp_array_from_%s' % (convertor)
+            lv_mp_type[qualified_ptr_type] = 'void*'
+
+register_int_ptr_type('u8ptr',
+        'unsigned char *',
+        'uint8_t *')
+
+# char* is considered as string, not int ptr!
+'''
+register_int_ptr_type('i8ptr',
+        'char *',
+        'int8_t *')
+'''
+
+register_int_ptr_type('u16ptr',
+        'unsigned short *',
+        'uint16_t *')
+
+register_int_ptr_type('i16ptr',
+        'short *',
+        'int16_t *')
+
+register_int_ptr_type('u32ptr',
+        'uint32_t *',
+        'unsigned *',
+        'unsigned int *',
+        'unsigned long *',
+        'unsigned long int *',
+        'size_t *')
+
+register_int_ptr_type('i32ptr',
+        'int32_t *',
+        'signed *',
+        'signed int *',
+        'signed long *',
+        'signed long int *',
+        'long *',
+        'long int *',
+        'int *')
+
+register_int_ptr_type('u64ptr',
+        'int64_t *',
+        'signed long long *',
+        'long long *',
+        'long long int *')
+
+register_int_ptr_type('i64ptr',
+        'uint64_t *',
+        'unsigned long long *',
+        'unsigned long long int *')
+
 
 #
 # Emit Header
@@ -759,13 +816,16 @@ STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo
 STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags){ return 0; }
 #endif
 
-STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
+STATIC mp_int_t mp_blob_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+
+STATIC mp_obj_t get_native_obj(mp_obj_t mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
     if (native_type == NULL)
         return NULL;
-    if (native_type->parent == NULL || 
+    if (native_type->parent == NULL ||
+        (native_type->buffer_p.get_buffer == mp_blob_get_buffer) ||
         (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer))
        return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
@@ -780,9 +840,9 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t n_kw,
     const mp_obj_t *args);
 
-STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
+STATIC mp_obj_t cast(mp_obj_t mp_obj, const mp_obj_type_t *mp_type)
 {
-    mp_obj_t *res = NULL;
+    mp_obj_t res = NULL;
     if (mp_obj == mp_const_none && mp_type->make_new == &make_new_lv_struct) {
         res = MP_OBJ_FROM_PTR(&mp_lv_null_obj);
     } else if (MP_OBJ_IS_OBJ(mp_obj)) {
@@ -814,7 +874,7 @@ typedef struct mp_lv_obj_t {
     LV_OBJ_T *callbacks;
 } mp_lv_obj_t;
 
-STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t *mp_obj)
+STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_obj_t native_obj = get_native_obj(mp_obj);
@@ -854,7 +914,7 @@ STATIC void mp_lv_delete_cb(lv_event_t * e)
     }
 }
 
-STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
+STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
 {
     if (lv_obj == NULL) return mp_const_none;
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
@@ -997,13 +1057,14 @@ STATIC inline const char *convert_from_str(mp_obj_t str)
 
 // struct handling
 
-STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
+STATIC mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
+    mp_obj_t native_obj = get_native_obj(mp_obj);
+    if ( (!MP_OBJ_IS_OBJ(native_obj)) || (mp_obj_get_type(native_obj)->make_new != &make_new_lv_struct) ) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, MP_ERROR_TEXT("Struct argument is not an object!")));
-    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Expected Struct object!")));
+    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(native_obj);
     return mp_lv_struct;
 }
 
@@ -1026,16 +1087,17 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
-    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
+    mp_lv_struct_t *other = (n_args > 0) && (!mp_obj_is_int(args[0])) ? mp_to_lv_struct(cast(args[0], type)): NULL;
+    size_t count = (n_args > 0) && (mp_obj_is_int(args[0]))? mp_obj_get_int(args[0]): 1;
     *self = (mp_lv_struct_t){
         .base = {type}, 
-        .data = (other && other->data == NULL)? NULL: m_malloc(size)
+        .data = (other && other->data == NULL)? NULL: m_malloc(size * count)
     };
     if (self->data) {
         if (other) {
-            memcpy(self->data, other->data, size);
+            memcpy(self->data, other->data, size * count);
         } else {
-            memset(self->data, 0, size);
+            memset(self->data, 0, size * count);
         }
     }
     return MP_OBJ_FROM_PTR(self);
@@ -1054,6 +1116,44 @@ STATIC mp_obj_t lv_struct_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
         default:
             return MP_OBJ_NULL;
     }
+}
+
+STATIC mp_obj_t lv_struct_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    mp_lv_struct_t *self = mp_to_lv_struct(self_in);
+
+    if ((!self) || (!self->data))
+        return NULL;
+    if (!mp_obj_is_int(index)) {
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Subscript index must be an integer!")));
+    }
+
+    const mp_obj_type_t *type = mp_obj_get_type(self_in);
+    size_t element_size = get_lv_struct_size(type);
+    size_t element_index = mp_obj_get_int(index);
+    void *element_addr = (byte*)self->data + element_size*element_index;
+
+    if (value == MP_OBJ_NULL) {
+        memset(element_addr, 0, element_size);
+        return self_in;
+    }
+
+    mp_lv_struct_t *element_at_index = m_new_obj(mp_lv_struct_t);
+    *element_at_index = (mp_lv_struct_t){
+        .base = {type},
+        .data = element_addr
+    };
+
+    if (value != MP_OBJ_SENTINEL){
+        mp_lv_struct_t *other = mp_to_lv_struct(cast(value, type));
+        if ((!other) || (!other->data))
+            return NULL;
+        memcpy(element_at_index->data, other->data, element_size);
+    }
+
+    return MP_OBJ_FROM_PTR(element_at_index);
 }
 
 STATIC void *copy_buffer(const void *buffer, size_t size)
@@ -1102,7 +1202,7 @@ STATIC void call_parent_methods(mp_obj_t obj, qstr attr, mp_obj_t *dest)
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
 {
     mp_obj_t mp_struct = make_new_lv_struct(type, 0, 0, NULL);
-    mp_obj_t *native_dict = cast(dict, &mp_type_dict);
+    mp_obj_t native_dict = cast(dict, &mp_type_dict);
     mp_map_t *map = mp_obj_dict_get_map(native_dict);
     if (map == NULL) return mp_const_none;
     for (uint i = 0; i < map->alloc; i++) {
@@ -1339,6 +1439,151 @@ STATIC unsigned long long mp_obj_get_ull(mp_obj_t obj)
     mp_obj_int_to_bytes_impl(obj, big_endian, sizeof(val), (byte*)&val);
     return val;
 }
+
+
+// Array of natives
+
+typedef struct mp_lv_array_t
+{
+    mp_lv_struct_t base;
+    size_t element_size;
+    bool is_signed;
+} mp_lv_array_t;
+
+STATIC void mp_lv_array_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_lv_array_t *self = MP_OBJ_TO_PTR(self_in);
+    size_t element_size = self->element_size;
+    bool is_signed = self->is_signed;
+    mp_printf(print, "C Array (%sint%d[])", is_signed? "": "u", element_size*8);
+}
+
+STATIC mp_obj_t lv_array_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    mp_lv_array_t *self = MP_OBJ_TO_PTR(self_in);
+
+    if ((!self) || (!self->base.data))
+        return NULL;
+    if (!mp_obj_is_int(index)) {
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Subscript index must be an integer!")));
+    }
+
+    size_t element_size = self->element_size;
+    size_t element_index = mp_obj_get_int(index);
+    void *element_addr = (byte*)self->base.data + element_size*element_index;
+    bool is_signed = self->is_signed;
+    union {
+        long long val;
+        unsigned long long uval;
+    } element;
+    memset(&element, 0, sizeof(element));
+
+    if (value == MP_OBJ_NULL){
+        memset(element_addr, 0, element_size);
+    }
+    else if (value == MP_OBJ_SENTINEL){
+        memcpy(&element, element_addr, element_size);
+        return is_signed? mp_obj_new_int_from_ll(element.val): mp_obj_new_int_from_ull(element.uval);
+    } else {
+        if (!mp_obj_is_int(value)) {
+            nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Value '%s' must be an integer!"), mp_obj_get_type_str(value)));
+        }
+        element.uval = mp_obj_get_ull(value);
+        memcpy(element_addr, &element, element_size);
+    }
+
+    return self_in;
+}
+
+STATIC const mp_rom_map_elem_t mp_base_struct_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
+    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
+    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_base_struct_locals_dict, mp_base_struct_locals_dict_table);
+
+STATIC const mp_obj_type_t mp_lv_base_struct_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_Struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .locals_dict = (mp_obj_dict_t*)&mp_base_struct_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+};
+
+STATIC const mp_obj_type_t mp_lv_array_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_C_Array,
+    .print = mp_lv_array_print,
+    .make_new = NULL, // TODO: provide constructor
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_array_subscr,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .locals_dict = (mp_obj_dict_t*)&mp_base_struct_locals_dict,
+};
+
+GENMPY_UNUSED STATIC mp_obj_t mp_array_from_ptr(void *lv_arr, size_t element_size, bool is_signed)
+{
+    mp_lv_array_t *self = m_new_obj(mp_lv_array_t);
+    *self = (mp_lv_array_t){
+        { {&mp_lv_array_type}, lv_arr },
+        element_size,
+        is_signed
+    };
+    return MP_OBJ_FROM_PTR(self);
+}
+
+GENMPY_UNUSED STATIC void *mp_array_to_ptr(mp_obj_t *mp_arr, size_t element_size, GENMPY_UNUSED bool is_signed)
+{
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    void *lv_arr = m_malloc(len * element_size);
+    byte *element_addr = (byte*)lv_arr;
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        union {
+            long long val;
+            unsigned long long uval;
+        } element;
+        if (!mp_obj_is_int(item)) {
+            nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Value '%s' must be an integer!"), mp_obj_get_type_str(item)));
+        }
+        element.uval = mp_obj_get_ull(item);
+        memcpy(element_addr, &element, element_size);
+        element_addr += element_size;
+    }
+    return lv_arr;
+}
+
+#define MP_ARRAY_CONVERTOR(name, size, is_signed) \
+GENMPY_UNUSED STATIC mp_obj_t mp_array_from_ ## name(void *lv_arr)\
+{\
+    return mp_array_from_ptr(lv_arr, size, is_signed);\
+}\
+GENMPY_UNUSED STATIC void *mp_array_to_ ## name(mp_obj_t mp_arr)\
+{\
+    return mp_array_to_ptr(mp_arr, size, is_signed);\
+}
+
+MP_ARRAY_CONVERTOR(u8ptr, 1, false)
+MP_ARRAY_CONVERTOR(i8ptr, 1, true)
+MP_ARRAY_CONVERTOR(u16ptr, 2, false)
+MP_ARRAY_CONVERTOR(i16ptr, 2, true)
+MP_ARRAY_CONVERTOR(u32ptr, 4, false)
+MP_ARRAY_CONVERTOR(i32ptr, 4, true)
+MP_ARRAY_CONVERTOR(u64ptr, 8, false)
+MP_ARRAY_CONVERTOR(i64ptr, 8, true)
 
 """)
 
@@ -1584,9 +1829,9 @@ STATIC inline {struct_tag}{struct_name}* mp_write_ptr_{sanitized_struct_name}(mp
 
 #define mp_write_{sanitized_struct_name}(struct_obj) *mp_write_ptr_{sanitized_struct_name}(struct_obj)
 
-STATIC inline mp_obj_t mp_read_ptr_{sanitized_struct_name}({struct_tag}{struct_name} *field)
+STATIC inline mp_obj_t mp_read_ptr_{sanitized_struct_name}(void *field)
 {{
-    return lv_to_mp_struct(get_mp_{sanitized_struct_name}_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_{sanitized_struct_name}_type(), field);
 }}
 
 #define mp_read_{sanitized_struct_name}(field) mp_read_ptr_{sanitized_struct_name}(copy_buffer(&field, sizeof({struct_tag}{struct_name})))
@@ -1634,9 +1879,11 @@ STATIC const mp_obj_type_t mp_{sanitized_struct_name}_type = {{
     .print = mp_{sanitized_struct_name}_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_{sanitized_struct_name}_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_{sanitized_struct_name}_locals_dict,
-    .buffer_p = {{ .get_buffer = mp_blob_get_buffer }}
+    .buffer_p = {{ .get_buffer = mp_blob_get_buffer }},
+    .parent = &mp_lv_base_struct_type
 }};
 
 STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type()
@@ -1682,6 +1929,15 @@ def try_generate_array_type(type_ast):
         try_generate_type(type_ast.type)
         if element_type not in mp_to_lv or not mp_to_lv[element_type]:
             raise MissingConversionException('Missing conversion to %s while generating array type conversion' % element_type)
+    type_ptr_ast = c_ast.PtrDecl(
+        quals=[],
+        type=type_ast.type)
+    element_type_ptr = get_type(type_ptr_ast, remove_quals = True)
+    qualified_element_ptr_type = gen.visit(type_ptr_ast)
+    if element_type_ptr not in mp_to_lv or not mp_to_lv[element_type_ptr]:
+        try_generate_type(type_ptr_ast)
+        if element_type_ptr not in mp_to_lv or not mp_to_lv[element_type_ptr]:
+            raise MissingConversionException('Missing conversion to %s while generating array type conversion' % element_type_ptr)
     array_convertor_suffix = arr_name.\
         replace(' ','_').\
         replace('*','ptr').\
@@ -1694,12 +1950,12 @@ def try_generate_array_type(type_ast):
         replace('/','_div_')
     arr_to_c_convertor_name = 'mp_arr_to_%s' % array_convertor_suffix
     arr_to_mp_convertor_name = 'mp_arr_from_%s' % array_convertor_suffix
-    print('''
+    print((('''
 /*
  * Array convertors for {arr_name}
  */
 
-STATIC {struct_tag}{type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC {struct_tag}{type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
 {{
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -1714,8 +1970,8 @@ STATIC {struct_tag}{type} *{arr_to_c_convertor_name}(mp_obj_t mp_arr)
     }}
     return ({struct_tag}{type} *)lv_arr;
 }}
-    
-STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
+''') + ('''
+GENMPY_UNUSED STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
 {{
     mp_obj_t obj_arr[{dim}];
     for (size_t i=0; i<{dim}; i++){{
@@ -1723,16 +1979,25 @@ STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
     }}
     return mp_obj_new_list({dim}, obj_arr); // TODO: return custom iterable object!
 }}
-    '''.format(
+''' if dim else '''
+GENMPY_UNUSED STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
+{{
+    return {lv_to_mp_ptr_convertor}((void*)arr);
+}}
+''')).format(
         arr_to_c_convertor_name = arr_to_c_convertor_name,
         arr_to_mp_convertor_name = arr_to_mp_convertor_name ,
         arr_name = arr_name,
         type = element_type,
+        type_ptr = element_type_ptr,
         struct_tag = 'struct ' if element_type in structs_without_typedef.keys() else '',
         qualified_type = qualified_element_type,
+        qualified_ptr_type = qualified_element_ptr_type,
         check_dim = '//TODO check dim!' if dim else '',
         mp_to_lv_convertor = mp_to_lv[element_type],
         lv_to_mp_convertor = lv_to_mp[element_type],
+        mp_to_lv_ptr_convertor = mp_to_lv[element_type_ptr],
+        lv_to_mp_ptr_convertor = lv_to_mp[element_type_ptr],
         dim = dim if dim else 1,
         ))
     mp_to_lv[arr_name] = arr_to_c_convertor_name
@@ -1766,8 +2031,11 @@ def try_generate_type(type_ast):
     type = get_name(type_ast)
     if isinstance(type_ast, c_ast.Enum):
         mp_to_lv[type] = mp_to_lv['int']
+        mp_to_lv['%s *' % type] = mp_to_lv['int *']
         lv_to_mp[type] = lv_to_mp['int']
-        lv_mp_type[type] = 'int'
+        lv_to_mp['%s *' % type] = lv_to_mp['int *']
+        lv_mp_type[type] = lv_mp_type['int']
+        lv_mp_type['%s *' % type] = lv_mp_type['int *']
         return mp_to_lv[type]
     if type in mp_to_lv:
         return mp_to_lv[type]
@@ -1879,10 +2147,6 @@ typedef union {
     const char*     str_val;
     int             int_val;
     unsigned int    uint_val;
-    short           short_val[sizeof(void*) / sizeof(short)];
-    unsigned short  ushort_val[sizeof(void*) / sizeof(unsigned short)];
-    char            char_val[sizeof(void*) / sizeof(char)];
-    unsigned char   uchar_val[sizeof(void*) / sizeof(unsigned char)];
 } C_Pointer;
 ''')
 
@@ -2409,9 +2673,6 @@ def generate_struct_functions(struct_list):
         print('''
 STATIC const mp_rom_map_elem_t mp_{sanitized_struct_name}_locals_dict_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},
-    {{ MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) }},
-    {{ MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) }},
-    {{ MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) }},
     {functions}
 }};
 
