@@ -1604,6 +1604,8 @@ for enum_def in enum_defs:
         if member.name.startswith('_'):
             continue
         member_name = member.name[len(enum_name)+1:] if len(enum_name) > 0 else member.name
+        if member_name[0].isdigit():
+            member_name = '_' + member_name
         if len(enum_name) > 0 and get_enum_name(enum_name) != 'ENUM':
             enum[member_name] = 'MP_ROM_INT(%s)' % member.name
         else:
