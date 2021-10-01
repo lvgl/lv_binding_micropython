@@ -1542,6 +1542,12 @@ GENMPY_UNUSED STATIC mp_obj_t mp_array_from_ptr(void *lv_arr, size_t element_siz
 
 GENMPY_UNUSED STATIC void *mp_array_to_ptr(mp_obj_t *mp_arr, size_t element_size, GENMPY_UNUSED bool is_signed)
 {
+    if (MP_OBJ_IS_STR_OR_BYTES(mp_arr) ||
+        MP_OBJ_IS_TYPE(mp_arr, &mp_type_bytearray) ||
+        MP_OBJ_IS_TYPE(mp_arr, &mp_type_memoryview)){
+            return mp_to_ptr(mp_arr);
+    }
+
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
     mp_int_t len = mp_obj_get_int(mp_len);
