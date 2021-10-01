@@ -1156,7 +1156,7 @@ STATIC mp_obj_t lv_struct_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t valu
     return MP_OBJ_FROM_PTR(element_at_index);
 }
 
-STATIC void *copy_buffer(const void *buffer, size_t size)
+GENMPY_UNUSED STATIC void *copy_buffer(const void *buffer, size_t size)
 {
     void *new_buffer = m_malloc(size);
     memcpy(new_buffer, buffer, size);
@@ -1829,13 +1829,13 @@ def try_generate_struct(struct_name, struct):
 
 STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type();
 
-STATIC inline {struct_tag}{struct_name}* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
 {{
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_{sanitized_struct_name}_type()));
     return ({struct_tag}{struct_name}*)self->data;
 }}
 
-#define mp_write_{sanitized_struct_name}(struct_obj) *mp_write_ptr_{sanitized_struct_name}(struct_obj)
+#define mp_write_{sanitized_struct_name}(struct_obj) *(({struct_tag}{struct_name}*)mp_write_ptr_{sanitized_struct_name}(struct_obj))
 
 STATIC inline mp_obj_t mp_read_ptr_{sanitized_struct_name}(void *field)
 {{
@@ -2219,7 +2219,7 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
  * {func_prototype}
  */
 
-STATIC {return_type} {func_name}_callback({func_args})
+GENMPY_UNUSED STATIC {return_type} {func_name}_callback({func_args})
 {{
     mp_obj_t mp_args[{num_args}];
     {build_args}
