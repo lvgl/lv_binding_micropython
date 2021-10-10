@@ -601,7 +601,7 @@ class gc9a01(ili9XXX):
         asynchronous=False, initialize=True
     ):
 
-        if lv.color_t.SIZE != 2:
+        if lv.color_t.__SIZE__ != 2:
             raise RuntimeError('gc9a01 micropython driver requires defining LV_COLOR_DEPTH=16')
 
         # This is included as the color mode appears to be reversed from the
