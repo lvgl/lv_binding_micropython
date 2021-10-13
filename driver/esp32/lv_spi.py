@@ -74,7 +74,10 @@ class SPI(object):
             ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
             if ret != 0:
                 raise RuntimeError("Failed initializing SPI bus")
-  
+            
+        self.init()
+
+            
     
     def init(self, baudrate=None, phase=None, polarity=None, cs=-1):
         
@@ -93,8 +96,7 @@ class SPI(object):
         if self.spi:
             # Remove device (to change device configuration)
             esp.spi_bus_remove_device(self.spi)
-            self.spi = None
-            
+            self.spi = None            
             
         devcfg_flags = esp.SPI_DEVICE.NO_DUMMY
         if self.half_duplex : devcfg_flags |= esp.SPI_DEVICE.HALFDUPLEX
