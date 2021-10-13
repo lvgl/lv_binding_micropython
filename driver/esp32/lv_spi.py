@@ -77,8 +77,7 @@ class SPI(object):
             
         self.init()
 
-            
-    
+
     def init(self, baudrate=None, phase=None, polarity=None, cs=-1):
         
         if baudrate:
