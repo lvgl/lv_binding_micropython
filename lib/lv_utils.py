@@ -99,6 +99,12 @@ class event_loop():
             self.timer.deinit()
         event_loop._current_instance = None
 
+    def disable(self):
+        self.scheduled += self.max_scheduled
+
+    def enable(self):
+        self.scheduled -= self.max_scheduled
+
     @staticmethod
     def is_running():
         return event_loop._current_instance is not None
