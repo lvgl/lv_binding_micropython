@@ -1313,6 +1313,7 @@ STATIC MP_DEFINE_CONST_DICT(mp_blob_locals_dict, mp_blob_locals_dict_table);
 STATIC const mp_obj_type_t mp_blob_type = {
     { &mp_type_type },
     .name = MP_QSTR_Blob,
+    .binary_op = lv_struct_binary_op,
     .print = mp_blob_print,
     //.make_new = make_new_blob,
     .locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
