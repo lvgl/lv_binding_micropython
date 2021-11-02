@@ -507,7 +507,7 @@ mp_to_lv = {
     'long int'                  : '(long int)mp_obj_get_int',
     'long long'                 : '(long long)mp_obj_get_ull',
     'long long int'             : '(long long int)mp_obj_get_ull',
-    'float'                     : 'mp_obj_get_float',
+    'float'                     : '(float)mp_obj_get_float',
 }
 
 lv_to_mp = {

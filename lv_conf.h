@@ -66,6 +66,10 @@
 #  define LV_MEM_CUSTOM_REALLOC   m_realloc
 #endif     /*LV_MEM_CUSTOM*/
 
+/*Number of the intermediate memory buffer used during rendering and other internal processing mechanisms.
+ *You will see an error log message if there wasn't enough buffers. */
+#define LV_MEM_BUF_MAX_NUM 16
+
 /*Use the standard `memcpy` and `memset` instead of LVGL's own functions. (Might or might not be faster).*/
 #define LV_MEMCPY_MEMSET_STD 0
 
@@ -156,7 +160,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 /*Use exnternal renderer*/
 #define LV_USE_EXTERNAL_RENDERER 0
 
-/*Use SDL renderer API*/
+/*Use SDL renderer API. Requires LV_USE_EXTERNAL_RENDERER*/
 #define LV_USE_GPU_SDL 0
 #if LV_USE_GPU_SDL
 #  define LV_GPU_SDL_INCLUDE_PATH <SDL2/SDL.h>
@@ -568,6 +572,17 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #if LV_USE_FREETYPE
 /*Memory used by FreeType to cache characters [bytes] (-1: no caching)*/
 # define LV_FREETYPE_CACHE_SIZE (16 * 1024)
+#endif
+
+/* Rlottie library, check if available */
+#if defined __has_include
+#  if __has_include (<rlottie_capi.h>)
+#    define LV_USE_RLOTTIE 1
+#  else
+#    define LV_USE_RLOTTIE 0
+#  endif
+#else
+#define LV_USE_RLOTTIE 0
 #endif
 
 /*-----------
