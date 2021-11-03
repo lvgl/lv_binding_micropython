@@ -567,8 +567,17 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 /*QR code library*/
 #define LV_USE_QRCODE 1
 
-/*FreeType library*/
+/*FreeType library, if available*/
+#if defined __has_include
+#  if __has_include (<freetype2/ft2build.h>)
+#    define LV_USE_FREETYPE 1
+#  else
+#    define LV_USE_FREETYPE 0
+#  endif
+#else
 #define LV_USE_FREETYPE 0
+#endif
+
 #if LV_USE_FREETYPE
 /*Memory used by FreeType to cache characters [bytes] (-1: no caching)*/
 # define LV_FREETYPE_CACHE_SIZE (16 * 1024)
