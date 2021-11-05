@@ -221,10 +221,16 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 
 /*1: Show CPU usage and FPS count in the right bottom corner*/
 #define LV_USE_PERF_MONITOR 0
+#if LV_USE_PERF_MONITOR
+#define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
+#endif
 
 /*1: Show the used memory and the memory fragmentation in the left bottom corner
  * Requires LV_MEM_CUSTOM = 0*/
 #define LV_USE_MEM_MONITOR 0
+#if LV_USE_PERF_MONITOR
+#define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
+#endif
 
 /*1: Draw random colored rectangles over the redrawn areas*/
 #define LV_USE_REFR_DEBUG 0
@@ -407,7 +413,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 
 #define LV_USE_ARC        1
 
-#define LV_USE_ANIMIMG	  1
+#define LV_USE_ANIMIMG    1
 
 #define LV_USE_BAR        1
 
@@ -569,7 +575,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 
 /*FreeType library, if available*/
 #if defined __has_include
-#  if __has_include (<freetype2/ft2build.h>)
+#  if (__has_include (<ft2build.h>) || __has_include (<freetype2/ft2build.h>))
 #    define LV_USE_FREETYPE 1
 #  else
 #    define LV_USE_FREETYPE 0
