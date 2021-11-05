@@ -574,7 +574,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #define LV_USE_QRCODE 1
 
 /*FreeType library, if available*/
-#if defined __has_include
+#if defined(__linux__) && defined(__has_include)
 #  if (__has_include (<ft2build.h>) || __has_include (<freetype2/ft2build.h>))
 #    define LV_USE_FREETYPE 1
 #  else
@@ -590,8 +590,8 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #endif
 
 /* Rlottie library, if available */
-#if defined __has_include
-#  if __has_include (<rlottie_capi.h>)
+#if defined(__linux__) && defined(__has_include)
+#  if (__has_include (<rlottie_capi.h>))
 #    define LV_USE_RLOTTIE 1
 #  else
 #    define LV_USE_RLOTTIE 0
