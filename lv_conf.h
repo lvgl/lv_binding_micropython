@@ -1,6 +1,6 @@
 /**
  * @file lv_conf.h
- * Configuration file for v8.1.0-dev
+ * Configuration file for v8.1.1-dev
  */
 
 /*
@@ -37,6 +37,10 @@
  *Can be used if the UI is above another layer, e.g. an OSD menu or video player.
  *Requires `LV_COLOR_DEPTH = 32` colors and the screen's `bg_opa` should be set to non LV_OPA_COVER value*/
 #define LV_COLOR_SCREEN_TRANSP 0
+
+/* Adjust color mix functions rounding. GPUs might calculate color mix (blending) differently.
+ * 0: round down, 64: round up from x.75, 128: round up from half, 192: round up from x.25, 254: round up */
+#define LV_COLOR_MIX_ROUND_OFS (LV_COLOR_DEPTH == 32 ? 0: 128)
 
 /*Images pixels with this color will not be drawn if they are chroma keyed)*/
 #define LV_COLOR_CHROMA_KEY lv_color_hex(0x00ff00)         /*pure green*/
@@ -585,7 +589,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 # define LV_FREETYPE_CACHE_SIZE (16 * 1024)
 #endif
 
-/* Rlottie library, if available */
+/*Rlottie library, if available */
 #ifdef MICROPY_RLOTTIE
 #define LV_USE_RLOTTIE 1
 #else
