@@ -171,12 +171,16 @@ typedef struct {
 
 #define DISPLAY_TYPE_ILI9341 1
 #define DISPLAY_TYPE_ILI9488 2
+#define DISPLAY_TYPE_GC9A01  3
+#define DISPLAY_TYPE_ST7789  4
 
 void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
 	lv_disp_drv_t *disp_drv = _disp_drv;
 	const lv_area_t *area = _area;
 	lv_color_t *color_p = _color_p;
+    int start_x = 0;
+    int start_y = 0;
 
 	// We use disp_drv->user_data to pass data from MP to C
 	// The following lines extract dc and spi
@@ -187,24 +191,35 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 	mp_get_buffer_raise(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
 	spi_device_handle_t *spi_ptr = buffer_info.buf;
 
+    // Some devices may need a start_x and start_y offset for displays with LCD screens smaller
+    // than the devices built in frame buffer.
+
+    start_x = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_x)));
+    start_y = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_y)));
+
+    int x1 = area->x1 + start_x;
+    int x2 = area->x2 + start_x;
+    int y1 = area->y1 + start_y;
+    int y2 = area->y2 + start_y;
+
 	// Column addresses
 
 	ili9xxx_send_cmd(0x2A, dc, *spi_ptr);
+    dma_buf[0] = (x1 >> 8) & 0xFF;
+    dma_buf[1] = x1 & 0xFF;
+    dma_buf[2] = (x2 >> 8) & 0xFF;
+    dma_buf[3] = x2 & 0xFF;
 
-	dma_buf[0] = (area->x1 >> 8) & 0xFF;
-	dma_buf[1] = area->x1 & 0xFF;
-	dma_buf[2] = (area->x2 >> 8) & 0xFF;
-	dma_buf[3] = area->x2 & 0xFF;
 	ili9xxx_send_data(dma_buf, dc, *spi_ptr);
 
 	// Page addresses
 
 	ili9xxx_send_cmd(0x2B, dc, *spi_ptr);
+    dma_buf[0] = (y1 >> 8) & 0xFF;
+    dma_buf[1] = y1 & 0xFF;
+    dma_buf[2] = (y2 >> 8) & 0xFF;
+    dma_buf[3] = y2 & 0xFF;
 
-	dma_buf[0] = (area->y1 >> 8) & 0xFF;
-	dma_buf[1] = area->y1 & 0xFF;
-	dma_buf[2] = (area->y2 >> 8) & 0xFF;
-	dma_buf[3] = area->y2 & 0xFF;
 	ili9xxx_send_data(dma_buf, dc, *spi_ptr);
 
 	// Memory write by DMA, disp_flush_ready when finished
