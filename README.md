@@ -402,12 +402,12 @@ label.center()
 
 ```
 The program will draw a large RED fullscreen button with a 'F' character centered in the button.
-You can determine the `colororder` and `invert` parameters by observing the color displayed.
+You can determine the `colororder` and `invert` parameters by observing the color of the button.
 
-  - If the display is RED, the parameters are correct.
-  - If the display is BLUE, `color_order` should be `COLOR_MODE_BGR`.
-  - If the display is YELLOW, `invert` should be `True`.
-  - If the display is CYAN, `color_order` should be `COLOR_MODE_BGR` and `invert` should be `True`.
+  - If the button is RED, the parameters are correct.
+  - If the button is BLUE, `color_order` should be `COLOR_MODE_BGR`.
+  - If the button is YELLOW, `invert` should be `True`.
+  - If the button is CYAN, `color_order` should be `COLOR_MODE_BGR` and `invert` should be `True`.
 
 Match the orientation and direction of the 'F' character with the examples in the MADCTL Table to
 determine the `rot` parameter value.
