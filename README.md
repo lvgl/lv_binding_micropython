@@ -336,21 +336,21 @@ from ft6x36 import ft6x36
 touch = ft6x36(sda=21, scl=22, width=320, height=280)
 ```
 
-## Driver Configuration
+## Driver `init` parameters
 
-Many different display modules can be supported by providing the driver with `width`, `height`,
-`start_x`, `start_y`, `colormode`, `invert` and `rot` parameters.
+Many different display modules can be supported by providing the driver's init method with `width`,
+`height`, `start_x`, `start_y`, `colormode`, `invert` and `rot` parameters.
 
 ### Display size
 
 The `width` and `height` parameters should be set to the width and height of the display in the
-orientation the display will be used. Displays may have an internal framebuffer that is larger then
+orientation the display will be used. Displays may have an internal framebuffer that is larger than
 the visible display. The `start_x` and `start_y` parameters are used to indicate where visible
 pixels begin relative to the start of the internal framebuffer.
 
 ### Color handling
 
-The `colormode` and `invert` parameters control how the display processes colors.
+The `colormode` and `invert` parameters control how the display processes color.
 
 ### Orientations
 
@@ -368,12 +368,12 @@ display.  The following table shows the MADCTL bit flags and their effects.
   MADCTL_RGB | 0x00  | RGB color order
   MADCTL_BGR | 0x08  | BGR color order
 
-### Configuration assist program
+### Program to help determine the `colormode`, `invert`, and `rot` init parameters
 
-The following program will help determine the `colormode`, `invert`, and `rot` parameters for a
+The following program can help determine the `colormode`, `invert`, and `rot` parameters for a
 display. Set the `mosi`, `clk`, `dc`, `cs`, `backlight`, `width`, and `height` parameters for your
-display. Set the `rot` parameter to `0` and run the program with the display in the orientation you
-would like to configure.
+display. Start with `rot=0`, `colormode=COLOR_MODE_RGB`, and `rot=0`.  Run the program below with
+the display in the orientation you would like to configure.
 
 ```
 import lvgl as lv
@@ -381,11 +381,13 @@ from ili9XXX import *
 
 # ili9341 example
 disp = ili9341(
-    mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15, backlight_on=1, width=128, height=160, rot=0)
+    mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15, backlight_on=1,
+    width=128, height=160, colormode=COLOR_MODE_RGB, invert=False rot=0)
 
 # st7789 example
 # disp = st7789(
-#   mosi=19, clk=18, cs=5, dc=16, rst=23, backlight=4, backlight_on=1, width=240, height=320, rot=0)
+#   mosi=19, clk=18, cs=5, dc=16, rst=23, backlight=4, backlight_on=1,
+#   width=240, height=320, colormode=COLOR_MODE_RGB, invert=False, rot=0)
 
 style = lv.style_t()
 style.init()
@@ -401,18 +403,27 @@ label.set_text("F");
 label.center()
 
 ```
-The program will draw a large RED fullscreen button with a 'F' character centered in the button.
-You can determine the `colororder` and `invert` parameters by observing the color of the button.
+The program will draw a large red full screen button with the character 'F' centered in the button.
+You can determine the `colormode` and `invert` parameters by observing the color of the button.
 
-  - If the button is RED, the parameters are correct.
-  - If the button is BLUE, `color_order` should be `COLOR_MODE_BGR`.
+  - If the button is RED, the `colormode` and `invert` parameters are correct.
+  - If the button is BLUE, `colormode` should be `COLOR_MODE_BGR`.
   - If the button is YELLOW, `invert` should be `True`.
-  - If the button is CYAN, `color_order` should be `COLOR_MODE_BGR` and `invert` should be `True`.
+  - If the button is CYAN, `colormode` should be `COLOR_MODE_BGR` and `invert` should be `True`.
 
-Match the orientation and direction of the 'F' character with the examples in the MADCTL Table to
+Match the orientation and direction of the 'F' character with the examples in the table below to
 determine the `rot` parameter value.
 
-![MADCTL TABLE](/images/madctl_table.jpg)
+Image | `rot` parameter
+----- | ---------------
+![MADCTL_0](images/madctl_0.png) | 0
+![MADCTL_MY](images/madctl_y.png) | MADCTL_MY
+![MADCTL_MX](images/madctl_x.png) | MADCTL_MX
+![MADCTL_MX &#124; MADCTL_MY](images/madctl_xy.png) | MADCTL_MX &#124; MADCTL_MY
+![MADCTL_MV](images/madctl_v.png) | MADCTL_MV
+![MADCTL_MV &#124; MADCTL_MY](images/madctl_vy.png) | MADCTL_MV &#124; MADCTL_MY
+![MADCTL_MV &#124; MADCTL_MX](images/madctl_vx.png) | MADCTL_MV &#124; MADCTL_MX
+![MADCTL_MV &#124; MADCTL_MX &#124; MADCTL_MY](images/madctl_vxy.png) | MADCTL_MV &#124; MADCTL_MX &#124; MADCTL_MX
 
 
 By default, the st7789 driver is initialized with the following parameters that are compatible with the TTGO T-Display:
