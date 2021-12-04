@@ -352,78 +352,15 @@ pixels begin relative to the start of the internal framebuffer.
 
 The `colormode` and `invert` parameters control how the display processes color.
 
-### Orientations
+### Display orientation
 
 The `rot` parameter is used to set the MADCTL register of the display. The MADCTL register controls
 the order that pixels are written to the framebuffer. This sets the Orientation or Rotation of the
-display.  The following table shows the MADCTL bit flags and their effects.
+display.
 
-  Constant   | Value | Description
-  ---------- | ----- | ----------------------
-  MADCTL_MY  | 0x80  | Page Address Order
-  MADCTL_MX  | 0x40  | Column Address Order
-  MADCTL_MV  | 0x20  | Page/Column Order
-  MADCTL_ML  | 0x10  | Line Address Order
-  MADCTL_MH  | 0x04  | Display Data Latch Order
-  MADCTL_RGB | 0x00  | RGB color order
-  MADCTL_BGR | 0x08  | BGR color order
-
-### Program to help determine the `colormode`, `invert`, and `rot` init parameters
-
-The following program can help determine the `colormode`, `invert`, and `rot` parameters for a
-display. Set the `mosi`, `clk`, `dc`, `cs`, `backlight`, `width`, and `height` parameters for your
-display. Start with `rot=0`, `colormode=COLOR_MODE_RGB`, and `rot=0`.  Run the program below with
-the display in the orientation you would like to configure.
-
-```
-import lvgl as lv
-from ili9XXX import *
-
-# ili9341 example
-disp = ili9341(
-    mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15, backlight_on=1,
-    width=128, height=160, colormode=COLOR_MODE_RGB, invert=False rot=0)
-
-# st7789 example
-# disp = st7789(
-#   mosi=19, clk=18, cs=5, dc=16, rst=23, backlight=4, backlight_on=1,
-#   width=240, height=320, colormode=COLOR_MODE_RGB, invert=False, rot=0)
-
-style = lv.style_t()
-style.init()
-style.set_bg_color(lv.palette_main(lv.PALETTE.RED))
-
-btn = lv.btn(lv.scr_act())
-btn.set_size(disp.width, disp.height)
-btn.align(lv.ALIGN.CENTER,0,0)
-btn.add_style(style, 0)
-
-label = lv.label(btn)
-label.set_text("F");
-label.center()
-
-```
-The program will draw a large red full screen button with the character 'F' centered in the button.
-You can determine the `colormode` and `invert` parameters by observing the color of the button.
-
-  - If the button is RED, the `colormode` and `invert` parameters are correct.
-  - If the button is BLUE, `colormode` should be `COLOR_MODE_BGR`.
-  - If the button is YELLOW, `invert` should be `True`.
-  - If the button is CYAN, `colormode` should be `COLOR_MODE_BGR` and `invert` should be `True`.
-
-Match the orientation and direction of the 'F' character with the examples in the table below to
-determine the `rot` parameter value.
-
-Image | `rot` parameter
------ | ---------------
-![MADCTL_0](images/madctl_0.png) | 0
-![MADCTL_MY](images/madctl_y.png) | MADCTL_MY
-![MADCTL_MX](images/madctl_x.png) | MADCTL_MX
-![MADCTL_MX &#124; MADCTL_MY](images/madctl_xy.png) | MADCTL_MX &#124; MADCTL_MY
-![MADCTL_MV](images/madctl_v.png) | MADCTL_MV
-![MADCTL_MV &#124; MADCTL_MY](images/madctl_vy.png) | MADCTL_MV &#124; MADCTL_MY
-![MADCTL_MV &#124; MADCTL_MX](images/madctl_vx.png) | MADCTL_MV &#124; MADCTL_MX
-![MADCTL_MV &#124; MADCTL_MX &#124; MADCTL_MY](images/madctl_vxy.png) | MADCTL_MV &#124; MADCTL_MX &#124; MADCTL_MX
+See the [README.md](examples/madctl/README.md) file in the [examples/madctl](examples/madctl/)
+directory for more information on the MADCTL register and how to determine the `colormode` and `rot`
+parameters for a display.
 
 
 By default, the st7789 driver is initialized with the following parameters that are compatible with the TTGO T-Display:
