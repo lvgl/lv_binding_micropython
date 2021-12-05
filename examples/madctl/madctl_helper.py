@@ -4,7 +4,7 @@ from ili9XXX import *
 # ili9341 example
 disp = ili9341(
     mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15, backlight_on=1,
-    width=128, height=160, colormode=COLOR_MODE_RGB, invert=False rot=0)
+    width=128, height=160, colormode=COLOR_MODE_RGB, invert=False, rot=0)
 
 # st7789 example
 # disp = st7789(
