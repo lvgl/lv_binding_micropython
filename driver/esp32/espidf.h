@@ -1,7 +1,7 @@
 /**
  * This file defines the Micorpython API to ESP-IDF
  * It is used as input to gen_mpy.py to create a micropython module
- **/ 
+ **/
 #if __has_include("esp_idf_version.h")
 #   include "esp_idf_version.h"
 #endif
@@ -47,9 +47,9 @@ typedef void *intr_handle_t;
 #define _SOC_SPI_PERIPH_H_
 typedef void *spi_dev_t;
 
-// TODO: Check why lldesc_t causes inifinite recursion on gen_mpy.py 
+// TODO: Check why lldesc_t causes inifinite recursion on gen_mpy.py
 #define _ROM_LLDESC_H_
-typedef void *lldesc_t; 
+typedef void *lldesc_t;
 
 // FreeRTOS definitions we want available on Micropython
 #include <stdint.h>
@@ -91,7 +91,7 @@ static inline void SPH0645_WORKAROUND(int i2s_num)
 //
 static inline void get_ccount(int *ccount)
 {
-	asm volatile("rsr.ccount %0" : "=a"(*ccount));
+    asm volatile("rsr.ccount %0" : "=a"(*ccount));
 }
 
 
@@ -220,7 +220,7 @@ enum {
     ENUM_MALLOC_CAP_SPIRAM = MALLOC_CAP_SPIRAM,
     ENUM_MALLOC_CAP_INTERNAL = MALLOC_CAP_INTERNAL,
     ENUM_MALLOC_CAP_DEFAULT = MALLOC_CAP_DEFAULT,
-    // Missing on espidf v4.02: 
+    // Missing on espidf v4.02:
     // ENUM_MALLOC_CAP_IRAM_8BIT = MALLOC_CAP_IRAM_8BIT,
     ENUM_MALLOC_CAP_INVALID = MALLOC_CAP_INVALID,
 };
