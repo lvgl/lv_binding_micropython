@@ -173,6 +173,7 @@ typedef struct {
 #define DISPLAY_TYPE_ILI9488 2
 #define DISPLAY_TYPE_GC9A01  3
 #define DISPLAY_TYPE_ST7789  4
+#define DISPLAY_TYPE_ST7735  5
 
 void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 {

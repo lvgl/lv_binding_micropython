@@ -83,6 +83,7 @@ DISPLAY_TYPE_ILI9341 = const(1)
 DISPLAY_TYPE_ILI9488 = const(2)
 DISPLAY_TYPE_GC9A01 = const(3)
 DISPLAY_TYPE_ST7789 = const(4)
+DISPLAY_TYPE_ST7735 = const(5)
 
 class ili9XXX:
 
@@ -767,4 +768,62 @@ class st7789(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7789, asynchronous=asynchronous,
+            initialize=initialize)
+
+class st7735(ili9XXX):
+
+    # The st7735 display controller has an internal framebuffer arranged in 132x162 pixel
+    # configuration. Physical displays with pixel sizes less than 132x162 must supply a start_x and
+    # start_y argument to indicate where the physical display begins relative to the start of the
+    # display controllers internal framebuffer.
+
+    def __init__(self,
+        miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True):
+
+        # Make sure Micropython was built such that color won't require processing before DMA
+
+        if lv.color_t.__SIZE__ != 2:
+            raise RuntimeError('st7735 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
+            raise RuntimeError('st7735 BGR color mode requires defining LV_COLOR_16_SWAP=1')
+
+        self.display_name = 'ST7735'
+
+        self.init_cmds = [
+            {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
+            {'cmd': 0xED, 'data': bytes([0x64, 0x03, 0X12, 0X81])},
+            {'cmd': 0xE8, 'data': bytes([0x85, 0x01, 0x79])},
+            {'cmd': 0xCB, 'data': bytes([0x39, 0x2C, 0x00, 0x34, 0x02])},
+            {'cmd': 0xF7, 'data': bytes([0x20])},
+            {'cmd': 0xEA, 'data': bytes([0x00, 0x00])},
+            {'cmd': 0xC0, 'data': bytes([0x26])},               # Power control
+            {'cmd': 0xC1, 'data': bytes([0x11])},               # Power control
+            {'cmd': 0xC5, 'data': bytes([0x35, 0x3E])},	        # VCOM control
+            {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
+
+            {'cmd': 0x36, 'data': bytes([
+                self.madctl(colormode, rot, (MADCTL_MX | MADCTL_MY, MADCTL_MV | MADCTL_MY, MADCTL_MY | MADCTL_MX, MADCTL_MY | MADCTL_MV))])},  # MADCTL
+
+            {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
+            {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
+            {'cmd': 0xF2, 'data': bytes([0x08])},
+            {'cmd': 0x26, 'data': bytes([0x01])},
+            {'cmd': 0xE0, 'data': bytes([0x1F, 0x1A, 0x18, 0x0A, 0x0F, 0x06, 0x45, 0X87, 0x32, 0x0A, 0x07, 0x02, 0x07, 0x05, 0x00])},
+            {'cmd': 0XE1, 'data': bytes([0x00, 0x25, 0x27, 0x05, 0x10, 0x09, 0x3A, 0x78, 0x4D, 0x05, 0x18, 0x0D, 0x38, 0x3A, 0x1F])},
+            {'cmd': 0x2A, 'data': bytes([0x00, 0x00, 0x00, 0xEF])},
+            {'cmd': 0x2B, 'data': bytes([0x00, 0x00, 0x01, 0x3f])},
+            {'cmd': 0x2C, 'data': bytes([0])},
+            {'cmd': 0xB7, 'data': bytes([0x07])},
+            {'cmd': 0xB6, 'data': bytes([0x0A, 0x82, 0x27, 0x00])},
+            {'cmd': 0x11, 'data': bytes([0]), 'delay':100},
+            {'cmd': 0x29, 'data': bytes([0]), 'delay':100}
+        ]
+
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7735, asynchronous=asynchronous,
             initialize=initialize)
