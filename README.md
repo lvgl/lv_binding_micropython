@@ -362,6 +362,7 @@ See the [README.md](examples/madctl/README.md) file in the [examples/madctl](exa
 directory for more information on the MADCTL register and how to determine the `colormode` and `rot`
 parameters for a display.
 
+### st7789 driver class
 
 By default, the st7789 driver is initialized with the following parameters that are compatible with the TTGO T-Display:
 
@@ -374,8 +375,8 @@ By default, the st7789 driver is initialized with the following parameters that 
 
 ```
 
-  Arg | Description
-  --- | -----------
+  Parameter | Description
+  --------- | -----------
   miso | Pin for SPI Data from display, -1 if not used as many st7789 displays do not have this pin
   mosi | Pin for SPI Data to display (REQUIRED)
   clk | Pin for SPI Clock (REQUIRED)
@@ -427,29 +428,38 @@ disp = st7789(
     mosi=19, clk=18, cs=5, dc=27, rst=-1, backlight=12, power=-1,
     width=240, height=240, rot=st7789.INVERSE_PORTRAIT, factor=4)
 ```
+### st7735 driver class
+
+By default, the st7735 driver is initialized with the following parameters. The parameter descriptions are
+the same as the st7789.
+
+```
+    st7735(
+        miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True):
+```
+
 ### ST7735 128x128 Configuration Example
 
 ```
-from ili9XXX import ili9341, MADCTL_MX, MADCTL_MY
+from ili9XXX import st7735, MADCTL_MX, MADCTL_MY
 
-disp = ili9341(
-    mhz=3, mosi=18, clk=19, cs=13, dc=12, rst=4,
-    power=-1, backlight=15, backlight_on=1,
-    width=128, height=128, start_x=2, start_y=1,
-    invert=False, rot=MADCTL_MX | MADCTL_MY)
+disp = st7735(
+    mhz=3, mosi=18, clk=19, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1,
+    width=128, height=128, start_x=2, start_y=1, rot=PORTRAIT)
 
 ```
 
 ### ST7735 128x160 Configuration Example
 
 ```
-from ili9XXX import ili9341, COLOR_MODE_RGB, MADCTL_MX, MADCTL_MY
+from ili9XXX import st7735, COLOR_MODE_RGB, MADCTL_MX, MADCTL_MY
 
-disp = ili9341(
-    mhz=3, mosi=18, clk=19, cs=13, dc=12, rst=4,
-    backlight=15, backlight_on=1,
-    width=128, height=160,
-    colormode=COLOR_MODE_RGB, rot=MADCTL_MX | MADCTL_MY)
+disp = st7735(
+    mhz=3, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=15, backlight_on=1,
+    width=128, height=160, rot=PORTRAIT)
 ```
 
 ### Creating a screen with a button and a label
