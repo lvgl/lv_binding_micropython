@@ -805,7 +805,7 @@ class st7735(ili9XXX):
             {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
 
             {'cmd': 0x36, 'data': bytes([
-                self.madctl(colormode, rot, (MADCTL_MX | MADCTL_MY, MADCTL_MV | MADCTL_MY, MADCTL_MY | MADCTL_MX, MADCTL_MY | MADCTL_MV))])},  # MADCTL
+                self.madctl(colormode, rot, (MADCTL_MX | MADCTL_MY, MADCTL_MV | MADCTL_MY, 0, MADCTL_MX | MADCTL_MV))])},  # MADCTL
 
             {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
             {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
