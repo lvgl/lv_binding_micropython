@@ -4,3 +4,5 @@ yacctab.py
 *.swo
 *.swn
 *.bak
+.history
+.vscode

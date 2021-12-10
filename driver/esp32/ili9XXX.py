@@ -30,6 +30,13 @@
 #   would suport despite the datasheet suggesting that higher freqs would be
 #   supported
 #
+# For st7789 display:
+#
+#   Build micropython with
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
+#   (make parameter) to configure LVGL use the same color format as ili9341
+#   and prevent the need to loop over all pixels to translate them.
+#
 # Critical function for high FPS are flush and ISR.
 # when "hybrid=True", use C implementation for these functions instead of
 # pure python implementation. This improves each frame in about 15ms!
@@ -56,27 +63,32 @@ micropython.alloc_emergency_exception_buf(256)
 COLOR_MODE_RGB = const(0x00)
 COLOR_MODE_BGR = const(0x08)
 
-MADCTL_MH = const(0x04)
-MADCTL_ML = const(0x10)
-MADCTL_MV = const(0x20)
-MADCTL_MX = const(0x40)
-MADCTL_MY = const(0x80)
+MADCTL_MH = const(0x04)  # Refresh 0=Left to Right, 1=Right to Left
+MADCTL_ML = const(0x10)  # Refresh 0=Top to Bottom, 1=Bottom to Top
+MADCTL_MV = const(0x20)  # 0=Normal, 1=Row/column exchange
+MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
+MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
-PORTRAIT = MADCTL_MX
-LANDSCAPE = MADCTL_MV
+# MADCTL values for each of the orientation constants for non-st7789 displays.
+ORIENTATION_TABLE = (MADCTL_MX, MADCTL_MV, MADCTL_MY, MADCTL_MY | MADCTL_MX | MADCTL_MV)
+
+# Negative orientation constants indicate the MADCTL value will come from the ORIENTATION_TABLE,
+# otherwise the rot value is used as the MADCTL value.
+PORTRAIT = const(-1)
+LANDSCAPE = const(-2)
+REVERSE_PORTRAIT = const(-3)
+REVERSE_LANDSCAPE = const(-4)
 
 DISPLAY_TYPE_ILI9341 = const(1)
 DISPLAY_TYPE_ILI9488 = const(2)
 DISPLAY_TYPE_GC9A01 = const(3)
+DISPLAY_TYPE_ST7789 = const(4)
+DISPLAY_TYPE_ST7735 = const(5)
 
 class ili9XXX:
 
-
     TRANS_BUFFER_LEN = const(16)
-
     display_name = 'ili9XXX'
-    display_type = 0
-
     init_cmds = [ ]
 
     # Default values of "power" and "backlight" are reversed logic! 0 means ON.
@@ -84,9 +96,8 @@ class ili9XXX:
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
-        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, display_type=0,
-        asynchronous=False, initialize=True
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
+        invert=False, double_buffer=True, half_duplex=True, display_type=0, asynchronous=False, initialize=True
     ):
 
         # Initializations
@@ -99,6 +110,8 @@ class ili9XXX:
 
         self.width = width
         self.height = height
+        self.start_x = start_x
+        self.start_y = start_y
 
         self.miso = miso
         self.mosi = mosi
@@ -115,17 +128,18 @@ class ili9XXX:
         self.factor = factor
         self.hybrid = hybrid
         self.half_duplex = half_duplex
+        self.display_type = display_type
 
         self.buf_size = (self.width * self.height * lv.color_t.__SIZE__) // factor
 
         if invert:
             self.init_cmds.append({'cmd': 0x21})
 
-        # Register display driver 
+        # Register display driver
 
         self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
         self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA) if double_buffer else None
-        
+
         if self.buf1 and self.buf2:
             print("Double buffer")
         elif self.buf1:
@@ -140,13 +154,19 @@ class ili9XXX:
         self.disp_drv.init()
         self.disp_spi_init()
 
-        self.disp_drv.user_data = {'dc': self.dc, 'spi': self.spi, 'dt': self.display_type}
+        self.disp_drv.user_data = {
+            'dc': self.dc,
+            'spi': self.spi,
+            'dt': self.display_type,
+            'start_x': self.start_x,
+            'start_y': self.start_y}
+
         self.disp_drv.draw_buf = self.disp_buf
         self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
-        
+
         if self.initialize:
             self.init()
 
@@ -194,21 +214,21 @@ class ili9XXX:
 
         # Initialize the SPI bus, if needed.
 
-        if buscfg.miso_io_num >= 0 and \
-           buscfg.mosi_io_num >= 0 and \
+        if buscfg.mosi_io_num >= 0 and \
            buscfg.sclk_io_num >= 0:
 
+            if buscfg.miso_io_num  >= 0:
                 esp.gpio_pad_select_gpio(self.miso)
-                esp.gpio_pad_select_gpio(self.mosi)
-                esp.gpio_pad_select_gpio(self.clk)
-
                 esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
                 esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
-                esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
-                esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
 
-                ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
-                if ret != 0: raise RuntimeError("Failed initializing SPI bus")
+            esp.gpio_pad_select_gpio(self.mosi)
+            esp.gpio_pad_select_gpio(self.clk)
+            esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
+            esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
+
+            ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
+            if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
         self.trans_buffer = esp.heap_caps_malloc(TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
@@ -304,13 +324,13 @@ class ili9XXX:
 #                    esp.spi_transaction_t.__SIZE__, esp.MALLOC_CAP.DMA))
 
     def spi_send(self, data):
-        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
+        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits.
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         self.trans.user = None
         esp.spi_device_polling_transmit(self.spi, self.trans)
 
     def spi_send_dma(self, data):
-        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits. 
+        self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits.
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
         self.trans.user = self.spi_callbacks
         esp.spi_device_queue_trans(self.spi, self.trans, -1)
@@ -388,7 +408,7 @@ class ili9XXX:
         # Register the driver
         self.disp_drv.register()
 
-    
+
     def init(self):
         import utime
         generator = self._init(lambda ms:(yield ms))
@@ -411,7 +431,7 @@ class ili9XXX:
         if self.backlight != -1:
             esp.gpio_set_level(self.backlight, 1 - self.backlight_on)
 
-    
+
     ######################################################
 
     start_time_ptr = esp.C_Pointer()
@@ -429,30 +449,35 @@ class ili9XXX:
         # esp.spi_device_acquire_bus(self.spi, esp.ESP.MAX_DELAY)
 
         # Column addresses
+        self.send_cmd(0x2A)
 
-        self.send_cmd(0x2A);
+        x1 = area.x1 + self.start_x
+        x2 = area.x2 + self.start_x
 
-        self.word_trans_data[0] = (area.x1 >> 8) & 0xFF
-        self.word_trans_data[1] = area.x1 & 0xFF
-        self.word_trans_data[2] = (area.x2 >> 8) & 0xFF
-        self.word_trans_data[3] = area.x2 & 0xFF
+        self.word_trans_data[0] = (x1 >> 8) & 0xFF
+        self.word_trans_data[1] = x1 & 0xFF
+        self.word_trans_data[2] = (x2 >> 8) & 0xFF
+        self.word_trans_data[3] = x2 & 0xFF
         self.send_trans_word()
 
         # Page addresses
 
-        self.send_cmd(0x2B);
+        self.send_cmd(0x2B)
 
-        self.word_trans_data[0] = (area.y1 >> 8) & 0xFF
-        self.word_trans_data[1] = area.y1 & 0xFF
-        self.word_trans_data[2] = (area.y2 >> 8) & 0xFF
-        self.word_trans_data[3] = area.y2 & 0xFF
+        y1 = area.y1 + self.start_y
+        y2 = area.y2 + self.start_y
+
+        self.word_trans_data[0] = (y1 >> 8) & 0xFF
+        self.word_trans_data[1] = y1 & 0xFF
+        self.word_trans_data[2] = (y2 >> 8) & 0xFF
+        self.word_trans_data[3] = y2 & 0xFF
         self.send_trans_word()
 
         # Memory write by DMA, disp_flush_ready when finished
 
         self.send_cmd(0x2C)
 
-        size = (area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1)
+        size = (x2 - x1 + 1) * (y2 - y1 + 1)
         data_view = color_p.__dereference__(size * lv.color_t.__SIZE__)
 
         esp.get_ccount(self.end_time_ptr)
@@ -461,7 +486,7 @@ class ili9XXX:
         esp.get_ccount(self.start_time_ptr)
 
         self.send_data_dma(data_view)
-        
+
     ######################################################
 
     monitor_acc_time = 0
@@ -492,13 +517,26 @@ class ili9XXX:
 
         return time, setup, dma, px
 
+    def madctl(self, colormode, rotation, rotations):
 
+        # if rotation is 0 or positive use the value as is.
+
+        if rotation >= 0:
+            return rotation | colormode
+
+        # otherwise use abs(rotation)-1 as index to retreive value from rotations set
+
+        index = abs(rotation) - 1
+        if index > len(rotations):
+                RuntimeError('Invalid display rot value specified during init.')
+
+        return rotations[index] | colormode
 
 class ili9341(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
         asynchronous=False, initialize=True
     ):
@@ -511,7 +549,6 @@ class ili9341(ili9XXX):
             raise RuntimeError('ili9341 BGR color mode requires defining LV_COLOR_16_SWAP=1')
 
         self.display_name = 'ILI9341'
-        self.display_type = DISPLAY_TYPE_ILI9341
 
         self.init_cmds = [
             {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
@@ -524,7 +561,10 @@ class ili9341(ili9XXX):
             {'cmd': 0xC1, 'data': bytes([0x11])},               # Power control
             {'cmd': 0xC5, 'data': bytes([0x35, 0x3E])},	        # VCOM control
             {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
-            {'cmd': 0x36, 'data': bytes([rot | colormode])},    # Memory Access Control
+
+            {'cmd': 0x36, 'data': bytes([
+                self.madctl(colormode, rot, ORIENTATION_TABLE)])},  # MADCTL
+
             {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
             {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
             {'cmd': 0xF2, 'data': bytes([0x08])},
@@ -540,18 +580,17 @@ class ili9341(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay':100}
         ]
 
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex,
-            asynchronous=asynchronous, initialize=initialize)
-
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, display_type=DISPLAY_TYPE_ILI9341, asynchronous=asynchronous, initialize=initialize)
 
 class ili9488(ili9XXX):
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480,
-        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True
+        spihost=esp.HSPI_HOST, mhz=40, factor=8, hybrid=True, width=320, height=480, colormode=COLOR_MODE_RGB,
+        rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True
     ):
 
         if lv.color_t.__SIZE__ != 4:
@@ -560,7 +599,6 @@ class ili9488(ili9XXX):
             raise RuntimeError('ili9488 micropython driver do not support non-hybrid driver')
 
         self.display_name = 'ILI9488'
-        self.display_type = DISPLAY_TYPE_ILI9488
 
         self.init_cmds = [
             {'cmd': 0x01, 'data': bytes([0]), 'delay': 200},
@@ -568,11 +606,14 @@ class ili9488(ili9XXX):
             {'cmd': 0xE0, 'data': bytes([0x00, 0x03, 0x09, 0x08, 0x16, 0x0A, 0x3F, 0x78, 0x4C, 0x09, 0x0A, 0x08, 0x16, 0x1A, 0x0F])},
             {'cmd': 0xE1, 'data': bytes([0x00, 0x16, 0x19, 0x03, 0x0F, 0x05, 0x32, 0x45, 0x46, 0x04, 0x0E, 0x0D, 0x35, 0x37, 0x0F])},
             {'cmd': 0xC0, 'data': bytes([0x17, 0x15])}, ### 0x13, 0x13
-            {'cmd': 0xC1, 'data': bytes([0x41])},       ### 
-            {'cmd': 0xC2, 'data': bytes([0x44])},       ### 
+            {'cmd': 0xC1, 'data': bytes([0x41])},       ###
+            {'cmd': 0xC2, 'data': bytes([0x44])},       ###
             {'cmd': 0xC5, 'data': bytes([0x00, 0x12, 0x80])},
             #{'cmd': 0xC5, 'data': bytes([0x00, 0x0, 0x0, 0x0])},
-            {'cmd': 0x36, 'data': bytes([rot | colormode])},    # Memory Access Control
+
+            {'cmd': 0x36, 'data': bytes([
+                self.madctl(colormode, rot, ORIENTATION_TABLE)])},  # MADCTL
+
             {'cmd': 0x3A, 'data': bytes([0x66])},
             {'cmd': 0xB0, 'data': bytes([0x00])},
             {'cmd': 0xB1, 'data': bytes([0xA0])},
@@ -585,20 +626,20 @@ class ili9488(ili9XXX):
             {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
         ]
 
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, colormode, rot, invert, double_buffer, half_duplex, display_type=DISPLAY_TYPE_ILI9488,
-            asynchronous=asynchronous, initialize=initialize)
-
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
+            display_type=DISPLAY_TYPE_ILI9488, asynchronous=asynchronous, initialize=initialize)
 
 class gc9a01(ili9XXX):
+
     # On the tested display the write direction and colormode appear to be
     # reversed from how they are presented in the datasheet
 
     def __init__(self,
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
-        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=True, width=240, height=240,
-        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True
+        spihost=esp.HSPI_HOST, mhz=60, factor=4, hybrid=True, width=240, height=240, colormode=COLOR_MODE_RGB,
+        rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True
     ):
 
         if lv.color_t.__SIZE__ != 2:
@@ -606,13 +647,13 @@ class gc9a01(ili9XXX):
 
         # This is included as the color mode appears to be reversed from the
         # datasheet and the ili9XXX driver values
+
         if colormode == COLOR_MODE_RGB:
             self.colormode = COLOR_MODE_BGR
         elif colormode == COLOR_MODE_BGR:
             self.colormode = COLOR_MODE_RGB
 
         self.display_name = 'GC9A01'
-        self.display_type = DISPLAY_TYPE_GC9A01
 
         self.init_cmds = [
             {'cmd': 0xEF, 'data': bytes([0])},
@@ -632,8 +673,11 @@ class gc9a01(ili9XXX):
             {'cmd': 0x8D, 'data': bytes([0x01])},
             {'cmd': 0x8E, 'data': bytes([0xFF])},
             {'cmd': 0x8F, 'data': bytes([0xFF])},
-            {'cmd': 0xB6, 'data': bytes([0x00, 0x00])}, 
-            {'cmd': 0x36, 'data': bytes([rot | self.colormode])},
+            {'cmd': 0xB6, 'data': bytes([0x00, 0x00])},
+
+            {'cmd': 0x36, 'data': bytes([
+                self.madctl(colormode, rot, ORIENTATION_TABLE)])},  # MADCTL
+
             {'cmd': 0x3A, 'data': bytes([0x05])},
             {'cmd': 0x90, 'data': bytes([0x08, 0x08, 0x08, 0x08])},
             {'cmd': 0xBD, 'data': bytes([0x06])},
@@ -666,7 +710,120 @@ class gc9a01(ili9XXX):
             {'cmd': 0x11, 'data': bytes([0]), 'delay': 20},
             {'cmd': 0x29, 'data': bytes([0]), 'delay': 120}
         ]
-        
-        super().__init__(miso, mosi, clk, cs, dc, rst, power, backlight, backlight_on, power_on,
-            spihost, mhz, factor, hybrid, width, height, self.colormode, rot, invert, double_buffer, half_duplex, display_type=self.display_type,
-            asynchronous=asynchronous, initialize=initialize)
+
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
+            display_type=DISPLAY_TYPE_GC9A01, asynchronous=asynchronous, initialize=initialize)
+
+class st7789(ili9XXX):
+
+    # The st7789 display controller has an internal framebuffer arranged in a 320x240 pixel
+    # configuration. Physical displays with pixel sizes less than 320x240 must supply a start_x and
+    # start_y argument to indicate where the physical display begins relative to the start of the
+    # display controllers internal framebuffer.
+
+    def __init__(self,
+        miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=320, height=240, start_x=0, start_y=0,
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True):
+
+        # Make sure Micropython was built such that color won't require processing before DMA
+
+        if lv.color_t.__SIZE__ != 2:
+            raise RuntimeError('st7789 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
+            raise RuntimeError('st7789 BGR color mode requires defining LV_COLOR_16_SWAP=1')
+
+        self.display_name = 'ST7789'
+
+        self.init_cmds = [
+            {'cmd':  0x11, 'data': bytes([0x0]), 'delay': 120},
+            {'cmd':  0x13, 'data': bytes([0x0])},
+
+            {'cmd':  0x36, 'data': bytes([
+                self.madctl(colormode, rot, (0x0, MADCTL_MX | MADCTL_MV, MADCTL_MY | MADCTL_MX, MADCTL_MY | MADCTL_MV))])},  # MADCTL
+
+            {'cmd':  0xb6, 'data': bytes([0xa, 0x82])},
+            {'cmd':  0x3a, 'data': bytes([0x55]),'delay': 10},
+            {'cmd':  0xb2, 'data': bytes([0xc, 0xc, 0x0, 0x33, 0x33])},
+            {'cmd':  0xb7, 'data': bytes([0x35])},
+            {'cmd':  0xbb, 'data': bytes([0x28])},
+            {'cmd':  0xc0, 'data': bytes([0xc])},
+            {'cmd':  0xc2, 'data': bytes([0x1, 0xff])},
+            {'cmd':  0xc3, 'data': bytes([0x10])},
+            {'cmd':  0xc4, 'data': bytes([0x20])},
+            {'cmd':  0xc6, 'data': bytes([0xf])},
+            {'cmd':  0xd0, 'data': bytes([0xa4, 0xa1])},
+            {'cmd':  0xe0, 'data': bytes([0xd0, 0x0, 0x2, 0x7, 0xa, 0x28, 0x32, 0x44, 0x42, 0x6, 0xe, 0x12, 0x14, 0x17])},
+            {'cmd':  0xe1, 'data': bytes([0xd0, 0x0, 0x2, 0x7, 0xa, 0x28, 0x31, 0x54, 0x47, 0xe, 0x1c, 0x17, 0x1b, 0x1e])},
+            {'cmd':  0x21, 'data': bytes([0x0])},
+            {'cmd':  0x2a, 'data': bytes([0x0, 0x0, 0x0, 0xe5])},
+            {'cmd':  0x2b, 'data': bytes([0x0, 0x0, 0x1, 0x3f]), 'delay': 120},
+            {'cmd':  0x29, 'data': bytes([0x0]), 'delay': 120}
+        ]
+
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7789, asynchronous=asynchronous,
+            initialize=initialize)
+
+class st7735(ili9XXX):
+
+    # The st7735 display controller has an internal framebuffer arranged in 132x162 pixel
+    # configuration. Physical displays with pixel sizes less than 132x162 must supply a start_x and
+    # start_y argument to indicate where the physical display begins relative to the start of the
+    # display controllers internal framebuffer.
+
+    def __init__(self,
+        miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
+        spihost=esp.HSPI_HOST, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
+        colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True):
+
+        # Make sure Micropython was built such that color won't require processing before DMA
+
+        if lv.color_t.__SIZE__ != 2:
+            raise RuntimeError('st7735 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if colormode == COLOR_MODE_BGR and not hasattr(lv.color_t().ch, 'green_l'):
+            raise RuntimeError('st7735 BGR color mode requires defining LV_COLOR_16_SWAP=1')
+
+        self.display_name = 'ST7735'
+
+        self.init_cmds = [
+            {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
+            {'cmd': 0xED, 'data': bytes([0x64, 0x03, 0X12, 0X81])},
+            {'cmd': 0xE8, 'data': bytes([0x85, 0x01, 0x79])},
+            {'cmd': 0xCB, 'data': bytes([0x39, 0x2C, 0x00, 0x34, 0x02])},
+            {'cmd': 0xF7, 'data': bytes([0x20])},
+            {'cmd': 0xEA, 'data': bytes([0x00, 0x00])},
+            {'cmd': 0xC0, 'data': bytes([0x26])},               # Power control
+            {'cmd': 0xC1, 'data': bytes([0x11])},               # Power control
+            {'cmd': 0xC5, 'data': bytes([0x35, 0x3E])},	        # VCOM control
+            {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
+
+            {'cmd': 0x36, 'data': bytes([
+                self.madctl(colormode, rot, (MADCTL_MX | MADCTL_MY, MADCTL_MV | MADCTL_MY, 0, MADCTL_MX | MADCTL_MV))])},  # MADCTL
+
+            {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
+            {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
+            {'cmd': 0xF2, 'data': bytes([0x08])},
+            {'cmd': 0x26, 'data': bytes([0x01])},
+            {'cmd': 0xE0, 'data': bytes([0x1F, 0x1A, 0x18, 0x0A, 0x0F, 0x06, 0x45, 0X87, 0x32, 0x0A, 0x07, 0x02, 0x07, 0x05, 0x00])},
+            {'cmd': 0XE1, 'data': bytes([0x00, 0x25, 0x27, 0x05, 0x10, 0x09, 0x3A, 0x78, 0x4D, 0x05, 0x18, 0x0D, 0x38, 0x3A, 0x1F])},
+            {'cmd': 0x2A, 'data': bytes([0x00, 0x00, 0x00, 0xEF])},
+            {'cmd': 0x2B, 'data': bytes([0x00, 0x00, 0x01, 0x3f])},
+            {'cmd': 0x2C, 'data': bytes([0])},
+            {'cmd': 0xB7, 'data': bytes([0x07])},
+            {'cmd': 0xB6, 'data': bytes([0x0A, 0x82, 0x27, 0x00])},
+            {'cmd': 0x11, 'data': bytes([0]), 'delay':100},
+            {'cmd': 0x29, 'data': bytes([0]), 'delay':100}
+        ]
+
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7735, asynchronous=asynchronous,
+            initialize=initialize)
