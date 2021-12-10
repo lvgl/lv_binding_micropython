@@ -223,16 +223,16 @@
  * Others
  *-----------*/
 
-/*1: Show CPU usage and FPS count in the right bottom corner*/
+/*1: Show CPU usage and FPS count*/
 #define LV_USE_PERF_MONITOR 0
 #if LV_USE_PERF_MONITOR
     #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 #endif
 
-/*1: Show the used memory and the memory fragmentation in the left bottom corner
+/*1: Show the used memory and the memory fragmentation
  * Requires LV_MEM_CUSTOM = 0*/
 #define LV_USE_MEM_MONITOR 0
-#if LV_USE_PERF_MONITOR
+#if LV_USE_MEM_MONITOR
     #define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
 #endif
 
@@ -489,6 +489,8 @@
 #define LV_USE_LED        1
 
 #define LV_USE_LIST       1
+
+#define LV_USE_MENU       1
 
 #define LV_USE_METER      1
 
