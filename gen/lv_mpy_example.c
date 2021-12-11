@@ -8,7 +8,7 @@
  * Preprocessing command:
  * gcc -E -std=c99 -DPYCPARSER  -I ../../lv_bindings/pycparser/utils/fake_libc_include -include ../../lv_bindings/lvgl/lvgl.h ../../lv_bindings/lvgl/lvgl.h
  *
- * Generating Objects: obj(None), arc(obj), btn(obj), img(obj), label(obj), line(obj), table(obj), checkbox(obj), bar(obj), slider(obj), btnmatrix(obj), dropdown(obj), roller(obj), textarea(obj), canvas(obj), switch(obj), animimg(obj), calendar(obj), calendar_header_arrow(obj), calendar_header_dropdown(obj), chart(obj), keyboard(obj), list(obj), msgbox(obj), meter(obj), spinbox(obj), spinner(obj), tabview(obj), tileview(obj), win(obj), colorwheel(obj), led(obj), imgbtn(obj), spangroup(obj)
+ * Generating Objects: obj(None), arc(obj), btn(obj), img(obj), label(obj), line(obj), table(obj), checkbox(obj), bar(obj), slider(obj), btnmatrix(obj), dropdown(obj), roller(obj), textarea(obj), canvas(obj), switch(obj), animimg(obj), calendar(obj), calendar_header_arrow(obj), calendar_header_dropdown(obj), chart(obj), keyboard(obj), list(obj), menu(obj), menu_page(obj), menu_cont(obj), menu_section(obj), menu_separator(obj), msgbox(obj), meter(obj), spinbox(obj), spinner(obj), tabview(obj), tileview(obj), win(obj), colorwheel(obj), led(obj), imgbtn(obj), spangroup(obj), gif(obj), qrcode(obj)
  */
 
 /*
@@ -24,6 +24,7 @@
 #include "py/binary.h"
 #include "py/objarray.h"
 #include "py/objtype.h"
+#include "py/objexcept.h"
 
 /*
  * lvgl includes
@@ -46,6 +47,8 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {
     return &mp_lv_obj_type.mp_obj_type;
 }
+
+MP_DEFINE_EXCEPTION(LvReferenceError, Exception)
     
 
 /*
@@ -136,13 +139,16 @@ STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo
 STATIC mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags){ return 0; }
 #endif
 
-STATIC mp_obj_t get_native_obj(mp_obj_t *mp_obj)
+STATIC mp_int_t mp_blob_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+
+STATIC mp_obj_t get_native_obj(mp_obj_t mp_obj)
 {
     if (!MP_OBJ_IS_OBJ(mp_obj)) return mp_obj;
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
     if (native_type == NULL)
         return NULL;
-    if (native_type->parent == NULL || 
+    if (native_type->parent == NULL ||
+        (native_type->buffer_p.get_buffer == mp_blob_get_buffer) ||
         (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer))
        return mp_obj;
     while (native_type->parent) native_type = native_type->parent;
@@ -157,9 +163,9 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t n_kw,
     const mp_obj_t *args);
 
-STATIC mp_obj_t *cast(mp_obj_t *mp_obj, const mp_obj_type_t *mp_type)
+STATIC mp_obj_t cast(mp_obj_t mp_obj, const mp_obj_type_t *mp_type)
 {
-    mp_obj_t *res = NULL;
+    mp_obj_t res = NULL;
     if (mp_obj == mp_const_none && mp_type->make_new == &make_new_lv_struct) {
         res = MP_OBJ_FROM_PTR(&mp_lv_null_obj);
     } else if (MP_OBJ_IS_OBJ(mp_obj)) {
@@ -191,13 +197,18 @@ typedef struct mp_lv_obj_t {
     LV_OBJ_T *callbacks;
 } mp_lv_obj_t;
 
-STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t *mp_obj)
+STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_obj_t native_obj = get_native_obj(mp_obj);
     if (mp_obj_get_type(native_obj)->buffer_p.get_buffer != mp_lv_obj_get_buffer)
         return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(native_obj);
+    if (mp_lv_obj->lv_obj == NULL) {
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_LvReferenceError, MP_ERROR_TEXT("Referenced object was deleted!")));
+    }
     return mp_lv_obj->lv_obj;
 }
 
@@ -215,7 +226,18 @@ STATIC inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
 
 STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
-STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
+STATIC void mp_lv_delete_cb(lv_event_t * e)
+{
+    LV_OBJ_T *lv_obj = e->target;
+    if (lv_obj){
+        mp_lv_obj_t *self = lv_obj->user_data;
+        if (self) {
+            self->lv_obj = NULL;
+        }
+    }
+}
+
+STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
 {
     if (lv_obj == NULL) return mp_const_none;
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
@@ -228,6 +250,7 @@ STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
         for (; *iter; iter++) {
             if ((*iter)->lv_obj_class == lv_obj_class) {
                 mp_obj_type = &(*iter)->mp_obj_type;
+                break;
             }
         }
 
@@ -241,6 +264,9 @@ STATIC inline mp_obj_t *lv_to_mp(LV_OBJ_T *lv_obj)
 
         // Register the Python object in user_data
         lv_obj->user_data = self;
+        
+        // Register a "Delete" event callback
+        lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
     }
     return MP_OBJ_FROM_PTR(self);
 }
@@ -354,13 +380,14 @@ STATIC inline const char *convert_from_str(mp_obj_t str)
 
 // struct handling
 
-STATIC inline mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
+STATIC mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    if (!MP_OBJ_IS_OBJ(mp_obj)) nlr_raise(
+    mp_obj_t native_obj = get_native_obj(mp_obj);
+    if ( (!MP_OBJ_IS_OBJ(native_obj)) || (mp_obj_get_type(native_obj)->make_new != &make_new_lv_struct) ) nlr_raise(
             mp_obj_new_exception_msg(
-                &mp_type_SyntaxError, MP_ERROR_TEXT("Struct argument is not an object!")));
-    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Expected Struct object!")));
+    mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(native_obj);
     return mp_lv_struct;
 }
 
@@ -383,16 +410,17 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t size = get_lv_struct_size(type);
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
-    mp_lv_struct_t *other = n_args > 0? mp_to_lv_struct(cast(args[0], type)): NULL;
+    mp_lv_struct_t *other = (n_args > 0) && (!mp_obj_is_int(args[0])) ? mp_to_lv_struct(cast(args[0], type)): NULL;
+    size_t count = (n_args > 0) && (mp_obj_is_int(args[0]))? mp_obj_get_int(args[0]): 1;
     *self = (mp_lv_struct_t){
         .base = {type}, 
-        .data = (other && other->data == NULL)? NULL: m_malloc(size)
+        .data = (other && other->data == NULL)? NULL: m_malloc(size * count)
     };
     if (self->data) {
         if (other) {
-            memcpy(self->data, other->data, size);
+            memcpy(self->data, other->data, size * count);
         } else {
-            memset(self->data, 0, size);
+            memset(self->data, 0, size * count);
         }
     }
     return MP_OBJ_FROM_PTR(self);
@@ -413,7 +441,45 @@ STATIC mp_obj_t lv_struct_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
     }
 }
 
-STATIC void *copy_buffer(const void *buffer, size_t size)
+STATIC mp_obj_t lv_struct_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    mp_lv_struct_t *self = mp_to_lv_struct(self_in);
+
+    if ((!self) || (!self->data))
+        return NULL;
+    if (!mp_obj_is_int(index)) {
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Subscript index must be an integer!")));
+    }
+
+    const mp_obj_type_t *type = mp_obj_get_type(self_in);
+    size_t element_size = get_lv_struct_size(type);
+    size_t element_index = mp_obj_get_int(index);
+    void *element_addr = (byte*)self->data + element_size*element_index;
+
+    if (value == MP_OBJ_NULL) {
+        memset(element_addr, 0, element_size);
+        return self_in;
+    }
+
+    mp_lv_struct_t *element_at_index = m_new_obj(mp_lv_struct_t);
+    *element_at_index = (mp_lv_struct_t){
+        .base = {type},
+        .data = element_addr
+    };
+
+    if (value != MP_OBJ_SENTINEL){
+        mp_lv_struct_t *other = mp_to_lv_struct(cast(value, type));
+        if ((!other) || (!other->data))
+            return NULL;
+        memcpy(element_at_index->data, other->data, element_size);
+    }
+
+    return MP_OBJ_FROM_PTR(element_at_index);
+}
+
+GENMPY_UNUSED STATIC void *copy_buffer(const void *buffer, size_t size)
 {
     void *new_buffer = m_malloc(size);
     memcpy(new_buffer, buffer, size);
@@ -459,7 +525,7 @@ STATIC void call_parent_methods(mp_obj_t obj, qstr attr, mp_obj_t *dest)
 STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
 {
     mp_obj_t mp_struct = make_new_lv_struct(type, 0, 0, NULL);
-    mp_obj_t *native_dict = cast(dict, &mp_type_dict);
+    mp_obj_t native_dict = cast(dict, &mp_type_dict);
     mp_map_t *map = mp_obj_dict_get_map(native_dict);
     if (map == NULL) return mp_const_none;
     for (uint i = 0; i < map->alloc; i++) {
@@ -570,6 +636,7 @@ STATIC MP_DEFINE_CONST_DICT(mp_blob_locals_dict, mp_blob_locals_dict_table);
 STATIC const mp_obj_type_t mp_blob_type = {
     { &mp_type_type },
     .name = MP_QSTR_Blob,
+    .binary_op = lv_struct_binary_op,
     .print = mp_blob_print,
     //.make_new = make_new_blob,
     .locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
@@ -698,11 +765,155 @@ STATIC unsigned long long mp_obj_get_ull(mp_obj_t obj)
 }
 
 
+// Array of natives
+
+typedef struct mp_lv_array_t
+{
+    mp_lv_struct_t base;
+    size_t element_size;
+    bool is_signed;
+} mp_lv_array_t;
+
+STATIC void mp_lv_array_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_lv_array_t *self = MP_OBJ_TO_PTR(self_in);
+    size_t element_size = self->element_size;
+    bool is_signed = self->is_signed;
+    mp_printf(print, "C Array (%sint%d[])", is_signed? "": "u", element_size*8);
+}
+
+STATIC mp_obj_t lv_array_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    mp_lv_array_t *self = MP_OBJ_TO_PTR(self_in);
+
+    if ((!self) || (!self->base.data))
+        return NULL;
+    if (!mp_obj_is_int(index)) {
+        nlr_raise(
+            mp_obj_new_exception_msg(
+                &mp_type_SyntaxError, MP_ERROR_TEXT("Subscript index must be an integer!")));
+    }
+
+    size_t element_size = self->element_size;
+    size_t element_index = mp_obj_get_int(index);
+    void *element_addr = (byte*)self->base.data + element_size*element_index;
+    bool is_signed = self->is_signed;
+    union {
+        long long val;
+        unsigned long long uval;
+    } element;
+    memset(&element, 0, sizeof(element));
+
+    if (value == MP_OBJ_NULL){
+        memset(element_addr, 0, element_size);
+    }
+    else if (value == MP_OBJ_SENTINEL){
+        memcpy(&element, element_addr, element_size);
+        return is_signed? mp_obj_new_int_from_ll(element.val): mp_obj_new_int_from_ull(element.uval);
+    } else {
+        if (!mp_obj_is_int(value)) {
+            nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Value '%s' must be an integer!"), mp_obj_get_type_str(value)));
+        }
+        element.uval = mp_obj_get_ull(value);
+        memcpy(element_addr, &element, element_size);
+    }
+
+    return self_in;
+}
+
+STATIC const mp_rom_map_elem_t mp_base_struct_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
+    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
+    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_base_struct_locals_dict, mp_base_struct_locals_dict_table);
+
+STATIC const mp_obj_type_t mp_lv_base_struct_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_Struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .locals_dict = (mp_obj_dict_t*)&mp_base_struct_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+};
+
+STATIC const mp_obj_type_t mp_lv_array_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_C_Array,
+    .print = mp_lv_array_print,
+    .make_new = NULL, // TODO: provide constructor
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_array_subscr,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .locals_dict = (mp_obj_dict_t*)&mp_base_struct_locals_dict,
+};
+
+GENMPY_UNUSED STATIC mp_obj_t mp_array_from_ptr(void *lv_arr, size_t element_size, bool is_signed)
+{
+    mp_lv_array_t *self = m_new_obj(mp_lv_array_t);
+    *self = (mp_lv_array_t){
+        { {&mp_lv_array_type}, lv_arr },
+        element_size,
+        is_signed
+    };
+    return MP_OBJ_FROM_PTR(self);
+}
+
+GENMPY_UNUSED STATIC void *mp_array_to_ptr(mp_obj_t *mp_arr, size_t element_size, GENMPY_UNUSED bool is_signed)
+{
+    if (MP_OBJ_IS_STR_OR_BYTES(mp_arr) ||
+        MP_OBJ_IS_TYPE(mp_arr, &mp_type_bytearray) ||
+        MP_OBJ_IS_TYPE(mp_arr, &mp_type_memoryview)){
+            return mp_to_ptr(mp_arr);
+    }
+
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    void *lv_arr = m_malloc(len * element_size);
+    byte *element_addr = (byte*)lv_arr;
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        union {
+            long long val;
+            unsigned long long uval;
+        } element;
+        if (!mp_obj_is_int(item)) {
+            nlr_raise(
+                mp_obj_new_exception_msg_varg(
+                    &mp_type_SyntaxError, MP_ERROR_TEXT("Value '%s' must be an integer!"), mp_obj_get_type_str(item)));
+        }
+        element.uval = mp_obj_get_ull(item);
+        memcpy(element_addr, &element, element_size);
+        element_addr += element_size;
+    }
+    return lv_arr;
+}
+
+#define MP_ARRAY_CONVERTOR(name, size, is_signed) GENMPY_UNUSED STATIC mp_obj_t mp_array_from_ ## name(void *lv_arr){    return mp_array_from_ptr(lv_arr, size, is_signed);}GENMPY_UNUSED STATIC void *mp_array_to_ ## name(mp_obj_t mp_arr){    return mp_array_to_ptr(mp_arr, size, is_signed);}
+
+MP_ARRAY_CONVERTOR(u8ptr, 1, false)
+MP_ARRAY_CONVERTOR(i8ptr, 1, true)
+MP_ARRAY_CONVERTOR(u16ptr, 2, false)
+MP_ARRAY_CONVERTOR(i16ptr, 2, true)
+MP_ARRAY_CONVERTOR(u32ptr, 4, false)
+MP_ARRAY_CONVERTOR(i32ptr, 4, true)
+MP_ARRAY_CONVERTOR(u64ptr, 8, false)
+MP_ARRAY_CONVERTOR(i64ptr, 8, true)
+
+
 
 /*
  * LVGL string constants
  */
 
+MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BULLET, LV_SYMBOL_BULLET);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_AUDIO, LV_SYMBOL_AUDIO);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_VIDEO, LV_SYMBOL_VIDEO);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_LIST, LV_SYMBOL_LIST);
@@ -718,7 +929,7 @@ MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_MUTE, LV_SYMBOL_MUTE);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_VOLUME_MID, LV_SYMBOL_VOLUME_MID);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_VOLUME_MAX, LV_SYMBOL_VOLUME_MAX);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_IMAGE, LV_SYMBOL_IMAGE);
-MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_EDIT, LV_SYMBOL_EDIT);
+MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_TINT, LV_SYMBOL_TINT);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_PREV, LV_SYMBOL_PREV);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_PLAY, LV_SYMBOL_PLAY);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_PAUSE, LV_SYMBOL_PAUSE);
@@ -742,6 +953,8 @@ MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_CALL, LV_SYMBOL_CALL);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_CUT, LV_SYMBOL_CUT);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_COPY, LV_SYMBOL_COPY);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_SAVE, LV_SYMBOL_SAVE);
+MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BARS, LV_SYMBOL_BARS);
+MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_ENVELOPE, LV_SYMBOL_ENVELOPE);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_CHARGE, LV_SYMBOL_CHARGE);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_PASTE, LV_SYMBOL_PASTE);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BELL, LV_SYMBOL_BELL);
@@ -757,11 +970,11 @@ MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BATTERY_EMPTY, LV_SYMBOL_BATTERY_EMPTY);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_USB, LV_SYMBOL_USB);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BLUETOOTH, LV_SYMBOL_BLUETOOTH);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_TRASH, LV_SYMBOL_TRASH);
+MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_EDIT, LV_SYMBOL_EDIT);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BACKSPACE, LV_SYMBOL_BACKSPACE);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_SD_CARD, LV_SYMBOL_SD_CARD);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_NEW_LINE, LV_SYMBOL_NEW_LINE);
 MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_DUMMY, LV_SYMBOL_DUMMY);
-MP_DEFINE_STR_OBJ(mp_LV_SYMBOL_BULLET, LV_SYMBOL_BULLET);
 
 /*
  * Helper Structs
@@ -773,132 +986,8 @@ typedef union {
     const char*     str_val;
     int             int_val;
     unsigned int    uint_val;
-    short           short_val[sizeof(void*) / sizeof(short)];
-    unsigned short  ushort_val[sizeof(void*) / sizeof(unsigned short)];
-    char            char_val[sizeof(void*) / sizeof(char)];
-    unsigned char   uchar_val[sizeof(void*) / sizeof(unsigned char)];
 } C_Pointer;
 
-
-/*
- * Array convertors for short [(sizeof(void *)) / (sizeof(short))]
- */
-
-STATIC short *mp_arr_to_short_____sizeof__void_ptr______div____sizeof__short______(mp_obj_t mp_arr)
-{
-    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
-    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
-    mp_int_t len = mp_obj_get_int(mp_len);
-    //TODO check dim!
-    short *lv_arr = (short*)m_malloc(len * sizeof(short));
-    mp_obj_t iter = mp_getiter(mp_arr, NULL);
-    mp_obj_t item;
-    size_t i = 0;
-    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i++] = (short)mp_obj_get_int(item);
-    }
-    return (short *)lv_arr;
-}
-    
-STATIC mp_obj_t mp_arr_from_short_____sizeof__void_ptr______div____sizeof__short______(short *arr)
-{
-    mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(short))];
-    for (size_t i=0; i<(sizeof(void *)) / (sizeof(short)); i++){
-        obj_arr[i] = mp_obj_new_int(arr[i]);
-    }
-    return mp_obj_new_list((sizeof(void *)) / (sizeof(short)), obj_arr); // TODO: return custom iterable object!
-}
-    
-
-/*
- * Array convertors for unsigned short [(sizeof(void *)) / (sizeof(unsigned short))]
- */
-
-STATIC unsigned short *mp_arr_to_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(mp_obj_t mp_arr)
-{
-    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
-    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
-    mp_int_t len = mp_obj_get_int(mp_len);
-    //TODO check dim!
-    unsigned short *lv_arr = (unsigned short*)m_malloc(len * sizeof(unsigned short));
-    mp_obj_t iter = mp_getiter(mp_arr, NULL);
-    mp_obj_t item;
-    size_t i = 0;
-    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i++] = (unsigned short)mp_obj_get_int(item);
-    }
-    return (unsigned short *)lv_arr;
-}
-    
-STATIC mp_obj_t mp_arr_from_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(unsigned short *arr)
-{
-    mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(unsigned short))];
-    for (size_t i=0; i<(sizeof(void *)) / (sizeof(unsigned short)); i++){
-        obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
-    }
-    return mp_obj_new_list((sizeof(void *)) / (sizeof(unsigned short)), obj_arr); // TODO: return custom iterable object!
-}
-    
-
-/*
- * Array convertors for char [(sizeof(void *)) / (sizeof(char))]
- */
-
-STATIC char *mp_arr_to_char_____sizeof__void_ptr______div____sizeof__char______(mp_obj_t mp_arr)
-{
-    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
-    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
-    mp_int_t len = mp_obj_get_int(mp_len);
-    //TODO check dim!
-    char *lv_arr = (char*)m_malloc(len * sizeof(char));
-    mp_obj_t iter = mp_getiter(mp_arr, NULL);
-    mp_obj_t item;
-    size_t i = 0;
-    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i++] = (char)mp_obj_get_int(item);
-    }
-    return (char *)lv_arr;
-}
-    
-STATIC mp_obj_t mp_arr_from_char_____sizeof__void_ptr______div____sizeof__char______(char *arr)
-{
-    mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(char))];
-    for (size_t i=0; i<(sizeof(void *)) / (sizeof(char)); i++){
-        obj_arr[i] = mp_obj_new_int(arr[i]);
-    }
-    return mp_obj_new_list((sizeof(void *)) / (sizeof(char)), obj_arr); // TODO: return custom iterable object!
-}
-    
-
-/*
- * Array convertors for unsigned char [(sizeof(void *)) / (sizeof(unsigned char))]
- */
-
-STATIC unsigned char *mp_arr_to_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(mp_obj_t mp_arr)
-{
-    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
-    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
-    mp_int_t len = mp_obj_get_int(mp_len);
-    //TODO check dim!
-    unsigned char *lv_arr = (unsigned char*)m_malloc(len * sizeof(unsigned char));
-    mp_obj_t iter = mp_getiter(mp_arr, NULL);
-    mp_obj_t item;
-    size_t i = 0;
-    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i++] = (unsigned char)mp_obj_get_int(item);
-    }
-    return (unsigned char *)lv_arr;
-}
-    
-STATIC mp_obj_t mp_arr_from_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(unsigned char *arr)
-{
-    mp_obj_t obj_arr[(sizeof(void *)) / (sizeof(unsigned char))];
-    for (size_t i=0; i<(sizeof(void *)) / (sizeof(unsigned char)); i++){
-        obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
-    }
-    return mp_obj_new_list((sizeof(void *)) / (sizeof(unsigned char)), obj_arr); // TODO: return custom iterable object!
-}
-    
 
 /*
  * Struct C_Pointer
@@ -906,17 +995,17 @@ STATIC mp_obj_t mp_arr_from_unsigned_char_____sizeof__void_ptr______div____sizeo
 
 STATIC inline const mp_obj_type_t *get_mp_C_Pointer_type();
 
-STATIC inline C_Pointer* mp_write_ptr_C_Pointer(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_C_Pointer(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_C_Pointer_type()));
     return (C_Pointer*)self->data;
 }
 
-#define mp_write_C_Pointer(struct_obj) *mp_write_ptr_C_Pointer(struct_obj)
+#define mp_write_C_Pointer(struct_obj) *((C_Pointer*)mp_write_ptr_C_Pointer(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_C_Pointer(C_Pointer *field)
+STATIC inline mp_obj_t mp_read_ptr_C_Pointer(void *field)
 {
-    return lv_to_mp_struct(get_mp_C_Pointer_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_C_Pointer_type(), field);
 }
 
 #define mp_read_C_Pointer(field) mp_read_ptr_C_Pointer(copy_buffer(&field, sizeof(C_Pointer)))
@@ -935,10 +1024,6 @@ STATIC void mp_C_Pointer_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_str_val: dest[0] = convert_to_str((void*)data->str_val); break; // converting from char *;
             case MP_QSTR_int_val: dest[0] = mp_obj_new_int(data->int_val); break; // converting from int;
             case MP_QSTR_uint_val: dest[0] = mp_obj_new_int_from_uint(data->uint_val); break; // converting from unsigned int;
-            case MP_QSTR_short_val: dest[0] = mp_arr_from_short_____sizeof__void_ptr______div____sizeof__short______(data->short_val); break; // converting from short [(sizeof(void *)) / (sizeof(short))];
-            case MP_QSTR_ushort_val: dest[0] = mp_arr_from_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(data->ushort_val); break; // converting from unsigned short [(sizeof(void *)) / (sizeof(unsigned short))];
-            case MP_QSTR_char_val: dest[0] = mp_arr_from_char_____sizeof__void_ptr______div____sizeof__char______(data->char_val); break; // converting from char [(sizeof(void *)) / (sizeof(char))];
-            case MP_QSTR_uchar_val: dest[0] = mp_arr_from_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(data->uchar_val); break; // converting from unsigned char [(sizeof(void *)) / (sizeof(unsigned char))];
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
@@ -951,10 +1036,6 @@ STATIC void mp_C_Pointer_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 case MP_QSTR_str_val: data->str_val = (void*)(char*)convert_from_str(dest[1]); break; // converting to char *;
                 case MP_QSTR_int_val: data->int_val = (int)mp_obj_get_int(dest[1]); break; // converting to int;
                 case MP_QSTR_uint_val: data->uint_val = (unsigned int)mp_obj_get_int(dest[1]); break; // converting to unsigned int;
-                case MP_QSTR_short_val: memcpy((void*)&data->short_val, mp_arr_to_short_____sizeof__void_ptr______div____sizeof__short______(dest[1]), sizeof(short)*(sizeof(void *)) / (sizeof(short))); break; // converting to short [(sizeof(void *)) / (sizeof(short))];
-                case MP_QSTR_ushort_val: memcpy((void*)&data->ushort_val, mp_arr_to_unsigned_short_____sizeof__void_ptr______div____sizeof__unsigned_short______(dest[1]), sizeof(unsigned short)*(sizeof(void *)) / (sizeof(unsigned short))); break; // converting to unsigned short [(sizeof(void *)) / (sizeof(unsigned short))];
-                case MP_QSTR_char_val: memcpy((void*)&data->char_val, mp_arr_to_char_____sizeof__void_ptr______div____sizeof__char______(dest[1]), sizeof(char)*(sizeof(void *)) / (sizeof(char))); break; // converting to char [(sizeof(void *)) / (sizeof(char))];
-                case MP_QSTR_uchar_val: memcpy((void*)&data->uchar_val, mp_arr_to_unsigned_char_____sizeof__void_ptr______div____sizeof__unsigned_char______(dest[1]), sizeof(unsigned char)*(sizeof(void *)) / (sizeof(unsigned char))); break; // converting to unsigned char [(sizeof(void *)) / (sizeof(unsigned char))];
                 default: return;
             }
 
@@ -978,9 +1059,11 @@ STATIC const mp_obj_type_t mp_C_Pointer_type = {
     .print = mp_C_Pointer_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_C_Pointer_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_C_Pointer_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_C_Pointer_type()
@@ -1018,6 +1101,45 @@ STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_DPI_type = {
         
         .attr = call_parent_methods,
         .locals_dict = (mp_obj_dict_t*)&ENUM_LV_DPI_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl LV_RES object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t LV_RES_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_INV), MP_ROM_PTR(MP_ROM_INT(LV_RES_INV)) },
+    { MP_ROM_QSTR(MP_QSTR_OK), MP_ROM_PTR(MP_ROM_INT(LV_RES_OK)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(LV_RES_locals_dict, LV_RES_locals_dict_table);
+
+STATIC void LV_RES_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl LV_RES");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_LV_RES_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_LV_RES,
+        .print = LV_RES_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&LV_RES_locals_dict,
         
         .parent = NULL
     },
@@ -1071,45 +1193,6 @@ STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_LOG_LEVEL_type = {
     
 
 /*
- * lvgl LV_RES object definitions
- */
-    
-
-STATIC const mp_rom_map_elem_t LV_RES_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_INV), MP_ROM_PTR(MP_ROM_INT(LV_RES_INV)) },
-    { MP_ROM_QSTR(MP_QSTR_OK), MP_ROM_PTR(MP_ROM_INT(LV_RES_OK)) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(LV_RES_locals_dict, LV_RES_locals_dict_table);
-
-STATIC void LV_RES_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{
-    mp_printf(print, "lvgl LV_RES");
-}
-
-
-
-STATIC const mp_lv_obj_type_t mp_lv_LV_RES_type = {
-    {
-        { &mp_type_type },
-        .name = MP_QSTR_LV_RES,
-        .print = LV_RES_print,
-        
-        
-        .attr = call_parent_methods,
-        .locals_dict = (mp_obj_dict_t*)&LV_RES_locals_dict,
-        
-        .parent = NULL
-    },
-#ifdef LV_OBJ_T
-    NULL
-#endif
-};
-    
-
-/*
  * lvgl ENUM_LV_ANIM_REPEAT object definitions
  */
     
@@ -1138,6 +1221,120 @@ STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_ANIM_REPEAT_type = {
         
         .attr = call_parent_methods,
         .locals_dict = (mp_obj_dict_t*)&ENUM_LV_ANIM_REPEAT_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl ENUM_LV_ANIM_PLAYTIME object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t ENUM_LV_ANIM_PLAYTIME_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_INFINITE), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_ANIM_PLAYTIME_INFINITE)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(ENUM_LV_ANIM_PLAYTIME_locals_dict, ENUM_LV_ANIM_PLAYTIME_locals_dict_table);
+
+STATIC void ENUM_LV_ANIM_PLAYTIME_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl ENUM_LV_ANIM_PLAYTIME");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_ANIM_PLAYTIME_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_ENUM_LV_ANIM_PLAYTIME,
+        .print = ENUM_LV_ANIM_PLAYTIME_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_ANIM_PLAYTIME_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl ENUM_LV_COLOR object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t ENUM_LV_COLOR_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_DEPTH), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_COLOR_DEPTH)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(ENUM_LV_COLOR_locals_dict, ENUM_LV_COLOR_locals_dict_table);
+
+STATIC void ENUM_LV_COLOR_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl ENUM_LV_COLOR");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_COLOR_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_ENUM_LV_COLOR,
+        .print = ENUM_LV_COLOR_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_COLOR_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl ENUM_LV_COLOR_16 object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t ENUM_LV_COLOR_16_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_SWAP), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_COLOR_16_SWAP)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(ENUM_LV_COLOR_16_locals_dict, ENUM_LV_COLOR_16_locals_dict_table);
+
+STATIC void ENUM_LV_COLOR_16_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl ENUM_LV_COLOR_16");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_COLOR_16_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_ENUM_LV_COLOR_16,
+        .print = ENUM_LV_COLOR_16_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_COLOR_16_locals_dict,
         
         .parent = NULL
     },
@@ -1188,45 +1385,6 @@ STATIC const mp_lv_obj_type_t mp_lv_LV_OPA_type = {
         
         .attr = call_parent_methods,
         .locals_dict = (mp_obj_dict_t*)&LV_OPA_locals_dict,
-        
-        .parent = NULL
-    },
-#ifdef LV_OBJ_T
-    NULL
-#endif
-};
-    
-
-/*
- * lvgl ENUM_LV_COORD object definitions
- */
-    
-
-STATIC const mp_rom_map_elem_t ENUM_LV_COORD_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_MAX), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_COORD_MAX)) },
-    { MP_ROM_QSTR(MP_QSTR_MIN), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_COORD_MIN)) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(ENUM_LV_COORD_locals_dict, ENUM_LV_COORD_locals_dict_table);
-
-STATIC void ENUM_LV_COORD_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{
-    mp_printf(print, "lvgl ENUM_LV_COORD");
-}
-
-
-
-STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_COORD_type = {
-    {
-        { &mp_type_type },
-        .name = MP_QSTR_ENUM_LV_COORD,
-        .print = ENUM_LV_COORD_print,
-        
-        
-        .attr = call_parent_methods,
-        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_COORD_locals_dict,
         
         .parent = NULL
     },
@@ -1369,6 +1527,45 @@ STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_SIZE_type = {
         
         .attr = call_parent_methods,
         .locals_dict = (mp_obj_dict_t*)&ENUM_LV_SIZE_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl ENUM_LV_COORD object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t ENUM_LV_COORD_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_MAX), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_COORD_MAX)) },
+    { MP_ROM_QSTR(MP_QSTR_MIN), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_COORD_MIN)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(ENUM_LV_COORD_locals_dict, ENUM_LV_COORD_locals_dict_table);
+
+STATIC void ENUM_LV_COORD_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl ENUM_LV_COORD");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_COORD_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_ENUM_LV_COORD,
+        .print = ENUM_LV_COORD_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_COORD_locals_dict,
         
         .parent = NULL
     },
@@ -1698,7 +1895,8 @@ STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_IMG_ZOOM_type = {
 STATIC const mp_rom_map_elem_t LV_BLEND_MODE_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_NORMAL), MP_ROM_PTR(MP_ROM_INT(LV_BLEND_MODE_NORMAL)) },
     { MP_ROM_QSTR(MP_QSTR_ADDITIVE), MP_ROM_PTR(MP_ROM_INT(LV_BLEND_MODE_ADDITIVE)) },
-    { MP_ROM_QSTR(MP_QSTR_SUBTRACTIVE), MP_ROM_PTR(MP_ROM_INT(LV_BLEND_MODE_SUBTRACTIVE)) }
+    { MP_ROM_QSTR(MP_QSTR_SUBTRACTIVE), MP_ROM_PTR(MP_ROM_INT(LV_BLEND_MODE_SUBTRACTIVE)) },
+    { MP_ROM_QSTR(MP_QSTR_MULTIPLY), MP_ROM_PTR(MP_ROM_INT(LV_BLEND_MODE_MULTIPLY)) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(LV_BLEND_MODE_locals_dict, LV_BLEND_MODE_locals_dict_table);
@@ -2227,6 +2425,44 @@ STATIC const mp_lv_obj_type_t mp_lv_LV_IMG_SRC_type = {
     
 
 /*
+ * lvgl ENUM_LV_RADIUS object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t ENUM_LV_RADIUS_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_CIRCLE), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_RADIUS_CIRCLE)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(ENUM_LV_RADIUS_locals_dict, ENUM_LV_RADIUS_locals_dict_table);
+
+STATIC void ENUM_LV_RADIUS_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl ENUM_LV_RADIUS");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_RADIUS_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_ENUM_LV_RADIUS,
+        .print = ENUM_LV_RADIUS_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_RADIUS_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
  * lvgl LV_DRAW_MASK_RES object definitions
  */
     
@@ -2341,44 +2577,6 @@ STATIC const mp_lv_obj_type_t mp_lv_LV_DRAW_MASK_LINE_SIDE_type = {
         
         .attr = call_parent_methods,
         .locals_dict = (mp_obj_dict_t*)&LV_DRAW_MASK_LINE_SIDE_locals_dict,
-        
-        .parent = NULL
-    },
-#ifdef LV_OBJ_T
-    NULL
-#endif
-};
-    
-
-/*
- * lvgl ENUM_LV_RADIUS object definitions
- */
-    
-
-STATIC const mp_rom_map_elem_t ENUM_LV_RADIUS_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_CIRCLE), MP_ROM_PTR(MP_ROM_INT(ENUM_LV_RADIUS_CIRCLE)) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(ENUM_LV_RADIUS_locals_dict, ENUM_LV_RADIUS_locals_dict_table);
-
-STATIC void ENUM_LV_RADIUS_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{
-    mp_printf(print, "lvgl ENUM_LV_RADIUS");
-}
-
-
-
-STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_RADIUS_type = {
-    {
-        { &mp_type_type },
-        .name = MP_QSTR_ENUM_LV_RADIUS,
-        .print = ENUM_LV_RADIUS_print,
-        
-        
-        .attr = call_parent_methods,
-        .locals_dict = (mp_obj_dict_t*)&ENUM_LV_RADIUS_locals_dict,
         
         .parent = NULL
     },
@@ -2924,6 +3122,7 @@ STATIC const mp_rom_map_elem_t LV_BTNMATRIX_CTRL_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_CHECKABLE), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_CHECKABLE)) },
     { MP_ROM_QSTR(MP_QSTR_CHECKED), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_CHECKED)) },
     { MP_ROM_QSTR(MP_QSTR_CLICK_TRIG), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_CLICK_TRIG)) },
+    { MP_ROM_QSTR(MP_QSTR_POPOVER), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_POPOVER)) },
     { MP_ROM_QSTR(MP_QSTR_RECOLOR), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_RECOLOR)) },
     { MP_ROM_QSTR(MP_QSTR_CUSTOM_1), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_CUSTOM_1)) },
     { MP_ROM_QSTR(MP_QSTR_CUSTOM_2), MP_ROM_PTR(MP_ROM_INT(LV_BTNMATRIX_CTRL_CUSTOM_2)) }
@@ -3317,7 +3516,11 @@ STATIC const mp_rom_map_elem_t LV_KEYBOARD_MODE_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_TEXT_LOWER), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_TEXT_LOWER)) },
     { MP_ROM_QSTR(MP_QSTR_TEXT_UPPER), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_TEXT_UPPER)) },
     { MP_ROM_QSTR(MP_QSTR_SPECIAL), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_SPECIAL)) },
-    { MP_ROM_QSTR(MP_QSTR_NUMBER), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_NUMBER)) }
+    { MP_ROM_QSTR(MP_QSTR_NUMBER), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_NUMBER)) },
+    { MP_ROM_QSTR(MP_QSTR_USER_1), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_USER_1)) },
+    { MP_ROM_QSTR(MP_QSTR_USER_2), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_USER_2)) },
+    { MP_ROM_QSTR(MP_QSTR_USER_3), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_USER_3)) },
+    { MP_ROM_QSTR(MP_QSTR_USER_4), MP_ROM_PTR(MP_ROM_INT(LV_KEYBOARD_MODE_USER_4)) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(LV_KEYBOARD_MODE_locals_dict, LV_KEYBOARD_MODE_locals_dict_table);
@@ -3378,6 +3581,126 @@ STATIC const mp_lv_obj_type_t mp_lv_ENUM_LV_OBJ_FLAG_FLEX_IN_NEW_type = {
         
         .attr = call_parent_methods,
         .locals_dict = (mp_obj_dict_t*)&ENUM_LV_OBJ_FLAG_FLEX_IN_NEW_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl LV_MENU_HEADER object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t LV_MENU_HEADER_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_TOP_FIXED), MP_ROM_PTR(MP_ROM_INT(LV_MENU_HEADER_TOP_FIXED)) },
+    { MP_ROM_QSTR(MP_QSTR_TOP_UNFIXED), MP_ROM_PTR(MP_ROM_INT(LV_MENU_HEADER_TOP_UNFIXED)) },
+    { MP_ROM_QSTR(MP_QSTR_BOTTOM_FIXED), MP_ROM_PTR(MP_ROM_INT(LV_MENU_HEADER_BOTTOM_FIXED)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(LV_MENU_HEADER_locals_dict, LV_MENU_HEADER_locals_dict_table);
+
+STATIC void LV_MENU_HEADER_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl LV_MENU_HEADER");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_LV_MENU_HEADER_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_LV_MENU_HEADER,
+        .print = LV_MENU_HEADER_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&LV_MENU_HEADER_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl LV_MENU_ROOT_BACK_BTN object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t LV_MENU_ROOT_BACK_BTN_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_DISABLED), MP_ROM_PTR(MP_ROM_INT(LV_MENU_ROOT_BACK_BTN_DISABLED)) },
+    { MP_ROM_QSTR(MP_QSTR_ENABLED), MP_ROM_PTR(MP_ROM_INT(LV_MENU_ROOT_BACK_BTN_ENABLED)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(LV_MENU_ROOT_BACK_BTN_locals_dict, LV_MENU_ROOT_BACK_BTN_locals_dict_table);
+
+STATIC void LV_MENU_ROOT_BACK_BTN_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl LV_MENU_ROOT_BACK_BTN");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_LV_MENU_ROOT_BACK_BTN_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_LV_MENU_ROOT_BACK_BTN,
+        .print = LV_MENU_ROOT_BACK_BTN_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&LV_MENU_ROOT_BACK_BTN_locals_dict,
+        
+        .parent = NULL
+    },
+#ifdef LV_OBJ_T
+    NULL
+#endif
+};
+    
+
+/*
+ * lvgl LV_METER_INDICATOR_TYPE object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t LV_METER_INDICATOR_TYPE_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_NEEDLE_IMG), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_NEEDLE_IMG)) },
+    { MP_ROM_QSTR(MP_QSTR_NEEDLE_LINE), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_NEEDLE_LINE)) },
+    { MP_ROM_QSTR(MP_QSTR_SCALE_LINES), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_SCALE_LINES)) },
+    { MP_ROM_QSTR(MP_QSTR_ARC), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_ARC)) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(LV_METER_INDICATOR_TYPE_locals_dict, LV_METER_INDICATOR_TYPE_locals_dict_table);
+
+STATIC void LV_METER_INDICATOR_TYPE_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl LV_METER_INDICATOR_TYPE");
+}
+
+
+
+STATIC const mp_lv_obj_type_t mp_lv_LV_METER_INDICATOR_TYPE_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_LV_METER_INDICATOR_TYPE,
+        .print = LV_METER_INDICATOR_TYPE_print,
+        
+        
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&LV_METER_INDICATOR_TYPE_locals_dict,
         
         .parent = NULL
     },
@@ -4209,6 +4532,12 @@ STATIC const mp_rom_map_elem_t LV_EVENT_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_CANCEL), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CANCEL)) },
     { MP_ROM_QSTR(MP_QSTR_DELETE), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_DELETE)) },
     { MP_ROM_QSTR(MP_QSTR_CHILD_CHANGED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CHILD_CHANGED)) },
+    { MP_ROM_QSTR(MP_QSTR_CHILD_CREATED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CHILD_CREATED)) },
+    { MP_ROM_QSTR(MP_QSTR_CHILD_DELETED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CHILD_DELETED)) },
+    { MP_ROM_QSTR(MP_QSTR_SCREEN_UNLOAD_START), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_SCREEN_UNLOAD_START)) },
+    { MP_ROM_QSTR(MP_QSTR_SCREEN_LOAD_START), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_SCREEN_LOAD_START)) },
+    { MP_ROM_QSTR(MP_QSTR_SCREEN_LOADED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_SCREEN_LOADED)) },
+    { MP_ROM_QSTR(MP_QSTR_SCREEN_UNLOADED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_SCREEN_UNLOADED)) },
     { MP_ROM_QSTR(MP_QSTR_SIZE_CHANGED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_SIZE_CHANGED)) },
     { MP_ROM_QSTR(MP_QSTR_STYLE_CHANGED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_STYLE_CHANGED)) },
     { MP_ROM_QSTR(MP_QSTR_LAYOUT_CHANGED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_LAYOUT_CHANGED)) },
@@ -4734,47 +5063,6 @@ STATIC const mp_lv_obj_type_t mp_lv_LV_FLEX_FLOW_type = {
     
 
 /*
- * lvgl LV_METER_INDICATOR_TYPE object definitions
- */
-    
-
-STATIC const mp_rom_map_elem_t LV_METER_INDICATOR_TYPE_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_NEEDLE_IMG), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_NEEDLE_IMG)) },
-    { MP_ROM_QSTR(MP_QSTR_NEEDLE_LINE), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_NEEDLE_LINE)) },
-    { MP_ROM_QSTR(MP_QSTR_SCALE_LINES), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_SCALE_LINES)) },
-    { MP_ROM_QSTR(MP_QSTR_ARC), MP_ROM_PTR(MP_ROM_INT(LV_METER_INDICATOR_TYPE_ARC)) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(LV_METER_INDICATOR_TYPE_locals_dict, LV_METER_INDICATOR_TYPE_locals_dict_table);
-
-STATIC void LV_METER_INDICATOR_TYPE_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{
-    mp_printf(print, "lvgl LV_METER_INDICATOR_TYPE");
-}
-
-
-
-STATIC const mp_lv_obj_type_t mp_lv_LV_METER_INDICATOR_TYPE_type = {
-    {
-        { &mp_type_type },
-        .name = MP_QSTR_LV_METER_INDICATOR_TYPE,
-        .print = LV_METER_INDICATOR_TYPE_print,
-        
-        
-        .attr = call_parent_methods,
-        .locals_dict = (mp_obj_dict_t*)&LV_METER_INDICATOR_TYPE_locals_dict,
-        
-        .parent = NULL
-    },
-#ifdef LV_OBJ_T
-    NULL
-#endif
-};
-    
-
-/*
  * lvgl LV_METER_DRAW_PART object definitions
  */
     
@@ -4946,6 +5234,7 @@ STATIC const mp_lv_obj_type_t mp_lv_LV_GRID_ALIGN_type = {
     
 
 STATIC const mp_rom_map_elem_t LV_SYMBOL_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_BULLET), MP_ROM_PTR(&mp_LV_SYMBOL_BULLET) },
     { MP_ROM_QSTR(MP_QSTR_AUDIO), MP_ROM_PTR(&mp_LV_SYMBOL_AUDIO) },
     { MP_ROM_QSTR(MP_QSTR_VIDEO), MP_ROM_PTR(&mp_LV_SYMBOL_VIDEO) },
     { MP_ROM_QSTR(MP_QSTR_LIST), MP_ROM_PTR(&mp_LV_SYMBOL_LIST) },
@@ -4961,7 +5250,7 @@ STATIC const mp_rom_map_elem_t LV_SYMBOL_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_VOLUME_MID), MP_ROM_PTR(&mp_LV_SYMBOL_VOLUME_MID) },
     { MP_ROM_QSTR(MP_QSTR_VOLUME_MAX), MP_ROM_PTR(&mp_LV_SYMBOL_VOLUME_MAX) },
     { MP_ROM_QSTR(MP_QSTR_IMAGE), MP_ROM_PTR(&mp_LV_SYMBOL_IMAGE) },
-    { MP_ROM_QSTR(MP_QSTR_EDIT), MP_ROM_PTR(&mp_LV_SYMBOL_EDIT) },
+    { MP_ROM_QSTR(MP_QSTR_TINT), MP_ROM_PTR(&mp_LV_SYMBOL_TINT) },
     { MP_ROM_QSTR(MP_QSTR_PREV), MP_ROM_PTR(&mp_LV_SYMBOL_PREV) },
     { MP_ROM_QSTR(MP_QSTR_PLAY), MP_ROM_PTR(&mp_LV_SYMBOL_PLAY) },
     { MP_ROM_QSTR(MP_QSTR_PAUSE), MP_ROM_PTR(&mp_LV_SYMBOL_PAUSE) },
@@ -4985,6 +5274,8 @@ STATIC const mp_rom_map_elem_t LV_SYMBOL_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_CUT), MP_ROM_PTR(&mp_LV_SYMBOL_CUT) },
     { MP_ROM_QSTR(MP_QSTR_COPY), MP_ROM_PTR(&mp_LV_SYMBOL_COPY) },
     { MP_ROM_QSTR(MP_QSTR_SAVE), MP_ROM_PTR(&mp_LV_SYMBOL_SAVE) },
+    { MP_ROM_QSTR(MP_QSTR_BARS), MP_ROM_PTR(&mp_LV_SYMBOL_BARS) },
+    { MP_ROM_QSTR(MP_QSTR_ENVELOPE), MP_ROM_PTR(&mp_LV_SYMBOL_ENVELOPE) },
     { MP_ROM_QSTR(MP_QSTR_CHARGE), MP_ROM_PTR(&mp_LV_SYMBOL_CHARGE) },
     { MP_ROM_QSTR(MP_QSTR_PASTE), MP_ROM_PTR(&mp_LV_SYMBOL_PASTE) },
     { MP_ROM_QSTR(MP_QSTR_BELL), MP_ROM_PTR(&mp_LV_SYMBOL_BELL) },
@@ -5000,11 +5291,11 @@ STATIC const mp_rom_map_elem_t LV_SYMBOL_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_USB), MP_ROM_PTR(&mp_LV_SYMBOL_USB) },
     { MP_ROM_QSTR(MP_QSTR_BLUETOOTH), MP_ROM_PTR(&mp_LV_SYMBOL_BLUETOOTH) },
     { MP_ROM_QSTR(MP_QSTR_TRASH), MP_ROM_PTR(&mp_LV_SYMBOL_TRASH) },
+    { MP_ROM_QSTR(MP_QSTR_EDIT), MP_ROM_PTR(&mp_LV_SYMBOL_EDIT) },
     { MP_ROM_QSTR(MP_QSTR_BACKSPACE), MP_ROM_PTR(&mp_LV_SYMBOL_BACKSPACE) },
     { MP_ROM_QSTR(MP_QSTR_SD_CARD), MP_ROM_PTR(&mp_LV_SYMBOL_SD_CARD) },
     { MP_ROM_QSTR(MP_QSTR_NEW_LINE), MP_ROM_PTR(&mp_LV_SYMBOL_NEW_LINE) },
-    { MP_ROM_QSTR(MP_QSTR_DUMMY), MP_ROM_PTR(&mp_LV_SYMBOL_DUMMY) },
-    { MP_ROM_QSTR(MP_QSTR_BULLET), MP_ROM_PTR(&mp_LV_SYMBOL_BULLET) }
+    { MP_ROM_QSTR(MP_QSTR_DUMMY), MP_ROM_PTR(&mp_LV_SYMBOL_DUMMY) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(LV_SYMBOL_locals_dict, LV_SYMBOL_locals_dict_table);
@@ -5168,48 +5459,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_pad_row_obj, 2, mp_lv_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_pad_column_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_pad_column);
     
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_radius */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_radius_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_radius);
-    
-
-/*
- * lvgl extension definition for:
- * inline static bool lv_obj_get_style_clip_corner(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_clip_corner(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    bool _res = ((bool (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return convert_to_bool(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_clip_corner_obj, 2, mp_lv_obj_get_style_clip_corner, lv_obj_get_style_clip_corner);
-    
-
-/*
- * lvgl extension definition for:
- * inline static lv_opa_t lv_obj_get_style_opa(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_opa_t _res = ((lv_opa_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_opa);
-    
-#define funcptr_lv_color_filter_cb_t NULL
-
 typedef __typeof__( ((lv_color32_t*)(0))->ch ) lv_color32_ch_t;
 
 /*
@@ -5218,17 +5467,17 @@ typedef __typeof__( ((lv_color32_t*)(0))->ch ) lv_color32_ch_t;
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color32_ch_t_type();
 
-STATIC inline lv_color32_ch_t* mp_write_ptr_lv_color32_ch_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_color32_ch_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_color32_ch_t_type()));
     return (lv_color32_ch_t*)self->data;
 }
 
-#define mp_write_lv_color32_ch_t(struct_obj) *mp_write_ptr_lv_color32_ch_t(struct_obj)
+#define mp_write_lv_color32_ch_t(struct_obj) *((lv_color32_ch_t*)mp_write_ptr_lv_color32_ch_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_color32_ch_t(lv_color32_ch_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_color32_ch_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_color32_ch_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_color32_ch_t_type(), field);
 }
 
 #define mp_read_lv_color32_ch_t(field) mp_read_ptr_lv_color32_ch_t(copy_buffer(&field, sizeof(lv_color32_ch_t)))
@@ -5282,9 +5531,11 @@ STATIC const mp_obj_type_t mp_lv_color32_ch_t_type = {
     .print = mp_lv_color32_ch_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_color32_ch_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_color32_ch_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color32_ch_t_type()
@@ -5299,17 +5550,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_color32_ch_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color32_t_type();
 
-STATIC inline lv_color32_t* mp_write_ptr_lv_color32_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_color32_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_color32_t_type()));
     return (lv_color32_t*)self->data;
 }
 
-#define mp_write_lv_color32_t(struct_obj) *mp_write_ptr_lv_color32_t(struct_obj)
+#define mp_write_lv_color32_t(struct_obj) *((lv_color32_t*)mp_write_ptr_lv_color32_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_color32_t(lv_color32_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_color32_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_color32_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_color32_t_type(), field);
 }
 
 #define mp_read_lv_color32_t(field) mp_read_ptr_lv_color32_t(copy_buffer(&field, sizeof(lv_color32_t)))
@@ -5359,9 +5610,11 @@ STATIC const mp_obj_type_t mp_lv_color32_t_type = {
     .print = mp_lv_color32_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_color32_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_color32_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color32_t_type()
@@ -5369,6 +5622,608 @@ STATIC inline const mp_obj_type_t *get_mp_lv_color32_t_type()
     return &mp_lv_color32_t_type;
 }
     
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_color_t lv_obj_get_style_bg_color(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_bg_color(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    lv_color_t _res = ((lv_color_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_read_lv_color32_t(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_color_filtered);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_opa_t lv_obj_get_style_bg_opa(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_bg_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    lv_opa_t _res = ((lv_opa_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_bg_opa);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_grad_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_grad_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_grad_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_grad_color_filtered);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_grad_dir_t lv_obj_get_style_bg_grad_dir(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_bg_grad_dir(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    lv_grad_dir_t _res = ((lv_grad_dir_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_dir_obj, 2, mp_lv_obj_get_style_bg_grad_dir, lv_obj_get_style_bg_grad_dir);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_bg_main_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_main_stop_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_bg_main_stop);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_bg_grad_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_stop_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_bg_grad_stop);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static const void *lv_obj_get_style_bg_img_src(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_bg_img_src(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    const void * _res = ((const void *(*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return ptr_to_mp((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_src_obj, 2, mp_lv_obj_get_style_bg_img_src, lv_obj_get_style_bg_img_src);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_bg_img_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_bg_img_opa);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_img_recolor */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_recolor_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_img_recolor);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_img_recolor_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_recolor_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_img_recolor_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_bg_img_recolor_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_recolor_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_bg_img_recolor_opa);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static bool lv_obj_get_style_bg_img_tiled(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_bg_img_tiled(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    bool _res = ((bool (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_tiled_obj, 2, mp_lv_obj_get_style_bg_img_tiled, lv_obj_get_style_bg_img_tiled);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_border_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_border_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_border_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_border_color_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_border_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_border_opa);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_border_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_border_width);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_border_side_t lv_obj_get_style_border_side(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_border_side(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    lv_border_side_t _res = ((lv_border_side_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_side_obj, 2, mp_lv_obj_get_style_border_side, lv_obj_get_style_border_side);
+    
+/* Reusing lv_obj_get_style_bg_img_tiled for lv_obj_get_style_border_post */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_post_obj, 2, mp_lv_obj_get_style_bg_img_tiled, lv_obj_get_style_border_post);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_outline_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_outline_width);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_outline_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_outline_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_outline_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_outline_color_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_outline_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_outline_opa);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_outline_pad */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_pad_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_outline_pad);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_width);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_ofs_x */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_ofs_x_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_ofs_x);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_ofs_y */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_ofs_y_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_ofs_y);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_spread */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_spread_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_spread);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_shadow_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_shadow_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_shadow_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_shadow_color_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_shadow_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_shadow_opa);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_img_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_img_opa);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_img_recolor */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_recolor_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_img_recolor);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_img_recolor_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_recolor_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_img_recolor_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_img_recolor_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_recolor_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_img_recolor_opa);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_width);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_dash_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_dash_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_dash_width);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_dash_gap */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_dash_gap_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_dash_gap);
+    
+/* Reusing lv_obj_get_style_bg_img_tiled for lv_obj_get_style_line_rounded */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_rounded_obj, 2, mp_lv_obj_get_style_bg_img_tiled, lv_obj_get_style_line_rounded);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_line_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_line_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_line_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_line_color_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_line_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_line_opa);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_arc_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_arc_width);
+    
+/* Reusing lv_obj_get_style_bg_img_tiled for lv_obj_get_style_arc_rounded */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_rounded_obj, 2, mp_lv_obj_get_style_bg_img_tiled, lv_obj_get_style_arc_rounded);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_arc_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_arc_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_arc_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_arc_color_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_arc_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_arc_opa);
+    
+/* Reusing lv_obj_get_style_bg_img_src for lv_obj_get_style_arc_img_src */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_img_src_obj, 2, mp_lv_obj_get_style_bg_img_src, lv_obj_get_style_arc_img_src);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_text_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_text_color);
+    
+/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_text_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_text_color_filtered);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_text_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_text_opa);
+    
+#define funcptr_get_glyph_dsc NULL
+
+
+/*
+ * Struct lv_font_glyph_dsc_t
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_lv_font_glyph_dsc_t_type();
+
+STATIC inline void* mp_write_ptr_lv_font_glyph_dsc_t(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_font_glyph_dsc_t_type()));
+    return (lv_font_glyph_dsc_t*)self->data;
+}
+
+#define mp_write_lv_font_glyph_dsc_t(struct_obj) *((lv_font_glyph_dsc_t*)mp_write_ptr_lv_font_glyph_dsc_t(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_lv_font_glyph_dsc_t(void *field)
+{
+    return lv_to_mp_struct(get_mp_lv_font_glyph_dsc_t_type(), field);
+}
+
+#define mp_read_lv_font_glyph_dsc_t(field) mp_read_ptr_lv_font_glyph_dsc_t(copy_buffer(&field, sizeof(lv_font_glyph_dsc_t)))
+#define mp_read_byref_lv_font_glyph_dsc_t(field) mp_read_ptr_lv_font_glyph_dsc_t(&field)
+
+STATIC void mp_lv_font_glyph_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_font_glyph_dsc_t *data = (lv_font_glyph_dsc_t*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_resolved_font: dest[0] = ptr_to_mp((void*)data->resolved_font); break; // converting from lv_font_t *;
+            case MP_QSTR_adv_w: dest[0] = mp_obj_new_int_from_uint(data->adv_w); break; // converting from uint16_t;
+            case MP_QSTR_box_w: dest[0] = mp_obj_new_int_from_uint(data->box_w); break; // converting from uint16_t;
+            case MP_QSTR_box_h: dest[0] = mp_obj_new_int_from_uint(data->box_h); break; // converting from uint16_t;
+            case MP_QSTR_ofs_x: dest[0] = mp_obj_new_int(data->ofs_x); break; // converting from int16_t;
+            case MP_QSTR_ofs_y: dest[0] = mp_obj_new_int(data->ofs_y); break; // converting from int16_t;
+            case MP_QSTR_bpp: dest[0] = mp_obj_new_int_from_uint(data->bpp); break; // converting from uint8_t;
+            case MP_QSTR_is_placeholder: dest[0] = mp_obj_new_int_from_uint(data->is_placeholder); break; // converting from uint8_t;
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_resolved_font: data->resolved_font = (void*)mp_to_ptr(dest[1]); break; // converting to lv_font_t *;
+                case MP_QSTR_adv_w: data->adv_w = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_box_w: data->box_w = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_box_h: data->box_h = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_ofs_x: data->ofs_x = (int16_t)mp_obj_get_int(dest[1]); break; // converting to int16_t;
+                case MP_QSTR_ofs_y: data->ofs_y = (int16_t)mp_obj_get_int(dest[1]); break; // converting to int16_t;
+                case MP_QSTR_bpp: data->bpp = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_is_placeholder: data->is_placeholder = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_lv_font_glyph_dsc_t_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct lv_font_glyph_dsc_t");
+}
+
+STATIC const mp_obj_dict_t mp_lv_font_glyph_dsc_t_locals_dict;
+
+STATIC const mp_obj_type_t mp_lv_font_glyph_dsc_t_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_lv_font_glyph_dsc_t,
+    .print = mp_lv_font_glyph_dsc_t_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_lv_font_glyph_dsc_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_lv_font_glyph_dsc_t_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_lv_font_glyph_dsc_t_type()
+{
+    return &mp_lv_font_glyph_dsc_t_type;
+}
+    
+
+/*
+ * lvgl extension definition for:
+ * bool get_glyph_dsc(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_get_glyph_dsc(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_font_t *arg0 = (const struct _lv_font_t *)mp_to_ptr(mp_args[0]);
+    lv_font_glyph_dsc_t *arg1 = mp_write_ptr_lv_font_glyph_dsc_t(mp_args[1]);
+    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[2]);
+    uint32_t letter_next = (uint32_t)mp_obj_get_int(mp_args[3]);
+    bool _res = ((bool (*)(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t, uint32_t))lv_func_ptr)(arg0, arg1, letter, letter_next);
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_get_glyph_dsc_obj, 4, mp_funcptr_get_glyph_dsc, funcptr_get_glyph_dsc);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_dsc(void *func){ return mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, func, NULL, MP_QSTR_, NULL); }
+
+STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
+#define funcptr_get_glyph_bitmap NULL
+
+
+/*
+ * lvgl extension definition for:
+ * const uint8_t *get_glyph_bitmap(const struct _lv_font_t *, uint32_t)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_get_glyph_bitmap(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_font_t *arg0 = (const struct _lv_font_t *)mp_to_ptr(mp_args[0]);
+    uint32_t arg1 = (uint32_t)mp_obj_get_int(mp_args[1]);
+    const uint8_t * _res = ((const uint8_t *(*)(const struct _lv_font_t *, uint32_t))lv_func_ptr)(arg0, arg1);
+    return mp_array_from_u8ptr((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_get_glyph_bitmap_obj, 2, mp_funcptr_get_glyph_bitmap, funcptr_get_glyph_bitmap);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_bitmap(void *func){ return mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, func, NULL, MP_QSTR_, NULL); }
+
+STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_t *, uint32_t);
+
+/*
+ * Struct lv_font_t
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_lv_font_t_type();
+
+STATIC inline void* mp_write_ptr_lv_font_t(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_font_t_type()));
+    return (lv_font_t*)self->data;
+}
+
+#define mp_write_lv_font_t(struct_obj) *((lv_font_t*)mp_write_ptr_lv_font_t(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_lv_font_t(void *field)
+{
+    return lv_to_mp_struct(get_mp_lv_font_t_type(), field);
+}
+
+#define mp_read_lv_font_t(field) mp_read_ptr_lv_font_t(copy_buffer(&field, sizeof(lv_font_t)))
+#define mp_read_byref_lv_font_t(field) mp_read_ptr_lv_font_t(&field)
+
+STATIC void mp_lv_font_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_font_t *data = (lv_font_t*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_get_glyph_dsc: dest[0] = mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, (void*)data->get_glyph_dsc, lv_font_t_get_glyph_dsc_callback ,MP_QSTR_lv_font_t_get_glyph_dsc, data->user_data); break; // converting from callback bool (*)(lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
+            case MP_QSTR_get_glyph_bitmap: dest[0] = mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, (void*)data->get_glyph_bitmap, lv_font_t_get_glyph_bitmap_callback ,MP_QSTR_lv_font_t_get_glyph_bitmap, data->user_data); break; // converting from callback uint8_t *(*)(lv_font_t *, uint32_t);
+            case MP_QSTR_line_height: dest[0] = mp_obj_new_int(data->line_height); break; // converting from lv_coord_t;
+            case MP_QSTR_base_line: dest[0] = mp_obj_new_int(data->base_line); break; // converting from lv_coord_t;
+            case MP_QSTR_subpx: dest[0] = mp_obj_new_int_from_uint(data->subpx); break; // converting from uint8_t;
+            case MP_QSTR_underline_position: dest[0] = mp_obj_new_int(data->underline_position); break; // converting from int8_t;
+            case MP_QSTR_underline_thickness: dest[0] = mp_obj_new_int(data->underline_thickness); break; // converting from int8_t;
+            case MP_QSTR_dsc: dest[0] = ptr_to_mp((void*)data->dsc); break; // converting from void *;
+            case MP_QSTR_fallback: dest[0] = ptr_to_mp((void*)data->fallback); break; // converting from lv_font_t *;
+            case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_get_glyph_dsc: data->get_glyph_dsc = (void*)mp_lv_callback(dest[1], lv_font_t_get_glyph_dsc_callback ,MP_QSTR_lv_font_t_get_glyph_dsc, &data->user_data); break; // converting to callback bool (*)(lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
+                case MP_QSTR_get_glyph_bitmap: data->get_glyph_bitmap = (void*)mp_lv_callback(dest[1], lv_font_t_get_glyph_bitmap_callback ,MP_QSTR_lv_font_t_get_glyph_bitmap, &data->user_data); break; // converting to callback uint8_t *(*)(lv_font_t *, uint32_t);
+                case MP_QSTR_line_height: data->line_height = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_base_line: data->base_line = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_subpx: data->subpx = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_underline_position: data->underline_position = (int8_t)mp_obj_get_int(dest[1]); break; // converting to int8_t;
+                case MP_QSTR_underline_thickness: data->underline_thickness = (int8_t)mp_obj_get_int(dest[1]); break; // converting to int8_t;
+                case MP_QSTR_dsc: data->dsc = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
+                case MP_QSTR_fallback: data->fallback = (void*)mp_to_ptr(dest[1]); break; // converting to lv_font_t *;
+                case MP_QSTR_user_data: data->user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_lv_font_t_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct lv_font_t");
+}
+
+STATIC const mp_obj_dict_t mp_lv_font_t_locals_dict;
+
+STATIC const mp_obj_type_t mp_lv_font_t_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_lv_font_t,
+    .print = mp_lv_font_t_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_lv_font_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_lv_font_t_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_lv_font_t_type()
+{
+    return &mp_lv_font_t_type;
+}
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static const lv_font_t *lv_obj_get_style_text_font(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_text_font(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    const lv_font_t * _res = ((const lv_font_t *(*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_read_ptr_lv_font_t((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_font_obj, 2, mp_lv_obj_get_style_text_font, lv_obj_get_style_text_font);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_text_letter_space */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_letter_space_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_text_letter_space);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_text_line_space */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_line_space_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_text_line_space);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_text_decor_t lv_obj_get_style_text_decor(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_text_decor(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    lv_text_decor_t _res = ((lv_text_decor_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_decor_obj, 2, mp_lv_obj_get_style_text_decor, lv_obj_get_style_text_decor);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_text_align_t lv_obj_get_style_text_align(const struct _lv_obj_t *obj, uint32_t part)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_style_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    lv_text_align_t _res = ((lv_text_align_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_align_obj, 2, mp_lv_obj_get_style_text_align, lv_obj_get_style_text_align);
+    
+/* Reusing lv_obj_get_style_width for lv_obj_get_style_radius */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_radius_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_radius);
+    
+/* Reusing lv_obj_get_style_bg_img_tiled for lv_obj_get_style_clip_corner */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_clip_corner_obj, 2, mp_lv_obj_get_style_bg_img_tiled, lv_obj_get_style_clip_corner);
+    
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_opa);
+    
+#define funcptr_lv_color_filter_cb_t NULL
+
 
 /*
  * lvgl extension definition for:
@@ -5398,17 +6253,17 @@ STATIC lv_color_t lv_color_filter_dsc_t_filter_cb_callback(const struct _lv_colo
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color_filter_dsc_t_type();
 
-STATIC inline lv_color_filter_dsc_t* mp_write_ptr_lv_color_filter_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_color_filter_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_color_filter_dsc_t_type()));
     return (lv_color_filter_dsc_t*)self->data;
 }
 
-#define mp_write_lv_color_filter_dsc_t(struct_obj) *mp_write_ptr_lv_color_filter_dsc_t(struct_obj)
+#define mp_write_lv_color_filter_dsc_t(struct_obj) *((lv_color_filter_dsc_t*)mp_write_ptr_lv_color_filter_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_color_filter_dsc_t(lv_color_filter_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_color_filter_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_color_filter_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_color_filter_dsc_t_type(), field);
 }
 
 #define mp_read_lv_color_filter_dsc_t(field) mp_read_ptr_lv_color_filter_dsc_t(copy_buffer(&field, sizeof(lv_color_filter_dsc_t)))
@@ -5458,9 +6313,11 @@ STATIC const mp_obj_type_t mp_lv_color_filter_dsc_t_type = {
     .print = mp_lv_color_filter_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_color_filter_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_color_filter_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color_filter_dsc_t_type()
@@ -5486,9 +6343,9 @@ STATIC mp_obj_t mp_lv_obj_get_style_color_filter_dsc(size_t mp_n_args, const mp_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_color_filter_dsc_obj, 2, mp_lv_obj_get_style_color_filter_dsc, lv_obj_get_style_color_filter_dsc);
     
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_color_filter_opa */
+/* Reusing lv_obj_get_style_bg_opa for lv_obj_get_style_color_filter_opa */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_color_filter_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_color_filter_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_color_filter_opa_obj, 2, mp_lv_obj_get_style_bg_opa, lv_obj_get_style_color_filter_opa);
     
 
 /*
@@ -5596,17 +6453,17 @@ STATIC int32_t lv_anim_t_path_cb_callback(const struct _lv_anim_t *);
 
 STATIC inline const mp_obj_type_t *get_mp_lv_anim_t_type();
 
-STATIC inline lv_anim_t* mp_write_ptr_lv_anim_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_anim_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_anim_t_type()));
     return (lv_anim_t*)self->data;
 }
 
-#define mp_write_lv_anim_t(struct_obj) *mp_write_ptr_lv_anim_t(struct_obj)
+#define mp_write_lv_anim_t(struct_obj) *((lv_anim_t*)mp_write_ptr_lv_anim_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_anim_t(lv_anim_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_anim_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_anim_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_anim_t_type(), field);
 }
 
 #define mp_read_lv_anim_t(field) mp_read_ptr_lv_anim_t(copy_buffer(&field, sizeof(lv_anim_t)))
@@ -5641,7 +6498,6 @@ STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_playback_now: dest[0] = mp_obj_new_int_from_uint(data->playback_now); break; // converting from uint8_t;
             case MP_QSTR_run_round: dest[0] = mp_obj_new_int_from_uint(data->run_round); break; // converting from uint8_t;
             case MP_QSTR_start_cb_called: dest[0] = mp_obj_new_int_from_uint(data->start_cb_called); break; // converting from uint8_t;
-            case MP_QSTR_time_orig: dest[0] = mp_obj_new_int_from_uint(data->time_orig); break; // converting from uint32_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
@@ -5670,7 +6526,6 @@ STATIC void mp_lv_anim_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 case MP_QSTR_playback_now: data->playback_now = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
                 case MP_QSTR_run_round: data->run_round = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
                 case MP_QSTR_start_cb_called: data->start_cb_called = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_time_orig: data->time_orig = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 default: return;
             }
 
@@ -5694,9 +6549,11 @@ STATIC const mp_obj_type_t mp_lv_anim_t_type = {
     .print = mp_lv_anim_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_anim_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_anim_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_anim_t_type()
@@ -5737,17 +6594,17 @@ STATIC inline mp_obj_t mp_lv_funcptr_lv_anim_path_cb_t(void *func){ return mp_lv
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_transition_dsc_t_type();
 
-STATIC inline lv_style_transition_dsc_t* mp_write_ptr_lv_style_transition_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_style_transition_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_style_transition_dsc_t_type()));
     return (lv_style_transition_dsc_t*)self->data;
 }
 
-#define mp_write_lv_style_transition_dsc_t(struct_obj) *mp_write_ptr_lv_style_transition_dsc_t(struct_obj)
+#define mp_write_lv_style_transition_dsc_t(struct_obj) *((lv_style_transition_dsc_t*)mp_write_ptr_lv_style_transition_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_style_transition_dsc_t(lv_style_transition_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_style_transition_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_style_transition_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_style_transition_dsc_t_type(), field);
 }
 
 #define mp_read_lv_style_transition_dsc_t(field) mp_read_ptr_lv_style_transition_dsc_t(copy_buffer(&field, sizeof(lv_style_transition_dsc_t)))
@@ -5803,9 +6660,11 @@ STATIC const mp_obj_type_t mp_lv_style_transition_dsc_t_type = {
     .print = mp_lv_style_transition_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_style_transition_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_style_transition_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_transition_dsc_t_type()
@@ -5884,556 +6743,6 @@ STATIC mp_obj_t mp_lv_obj_get_style_base_dir(size_t mp_n_args, const mp_obj_t *m
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_base_dir_obj, 2, mp_lv_obj_get_style_base_dir, lv_obj_get_style_base_dir);
-    
-
-/*
- * lvgl extension definition for:
- * inline static lv_color_t lv_obj_get_style_bg_color(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_bg_color(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_color_t _res = ((lv_color_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_read_lv_color32_t(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_bg_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_bg_opa);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_grad_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_grad_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_grad_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_grad_color_filtered);
-    
-
-/*
- * lvgl extension definition for:
- * inline static lv_grad_dir_t lv_obj_get_style_bg_grad_dir(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_bg_grad_dir(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_grad_dir_t _res = ((lv_grad_dir_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_dir_obj, 2, mp_lv_obj_get_style_bg_grad_dir, lv_obj_get_style_bg_grad_dir);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_bg_main_stop */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_main_stop_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_bg_main_stop);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_bg_grad_stop */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_grad_stop_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_bg_grad_stop);
-    
-
-/*
- * lvgl extension definition for:
- * inline static const void *lv_obj_get_style_bg_img_src(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_bg_img_src(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    const void * _res = ((const void *(*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return ptr_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_src_obj, 2, mp_lv_obj_get_style_bg_img_src, lv_obj_get_style_bg_img_src);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_bg_img_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_bg_img_opa);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_img_recolor */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_recolor_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_img_recolor);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_bg_img_recolor_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_recolor_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_bg_img_recolor_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_bg_img_recolor_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_recolor_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_bg_img_recolor_opa);
-    
-/* Reusing lv_obj_get_style_clip_corner for lv_obj_get_style_bg_img_tiled */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_bg_img_tiled_obj, 2, mp_lv_obj_get_style_clip_corner, lv_obj_get_style_bg_img_tiled);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_border_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_border_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_border_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_border_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_border_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_border_opa);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_border_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_border_width);
-    
-
-/*
- * lvgl extension definition for:
- * inline static lv_border_side_t lv_obj_get_style_border_side(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_border_side(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_border_side_t _res = ((lv_border_side_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_side_obj, 2, mp_lv_obj_get_style_border_side, lv_obj_get_style_border_side);
-    
-/* Reusing lv_obj_get_style_clip_corner for lv_obj_get_style_border_post */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_border_post_obj, 2, mp_lv_obj_get_style_clip_corner, lv_obj_get_style_border_post);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_text_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_text_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_text_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_text_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_text_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_text_opa);
-    
-#define funcptr_get_glyph_dsc NULL
-
-
-/*
- * Struct lv_font_glyph_dsc_t
- */
-
-STATIC inline const mp_obj_type_t *get_mp_lv_font_glyph_dsc_t_type();
-
-STATIC inline lv_font_glyph_dsc_t* mp_write_ptr_lv_font_glyph_dsc_t(mp_obj_t self_in)
-{
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_font_glyph_dsc_t_type()));
-    return (lv_font_glyph_dsc_t*)self->data;
-}
-
-#define mp_write_lv_font_glyph_dsc_t(struct_obj) *mp_write_ptr_lv_font_glyph_dsc_t(struct_obj)
-
-STATIC inline mp_obj_t mp_read_ptr_lv_font_glyph_dsc_t(lv_font_glyph_dsc_t *field)
-{
-    return lv_to_mp_struct(get_mp_lv_font_glyph_dsc_t_type(), (void*)field);
-}
-
-#define mp_read_lv_font_glyph_dsc_t(field) mp_read_ptr_lv_font_glyph_dsc_t(copy_buffer(&field, sizeof(lv_font_glyph_dsc_t)))
-#define mp_read_byref_lv_font_glyph_dsc_t(field) mp_read_ptr_lv_font_glyph_dsc_t(&field)
-
-STATIC void mp_lv_font_glyph_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
-{
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    lv_font_glyph_dsc_t *data = (lv_font_glyph_dsc_t*)self->data;
-
-    if (dest[0] == MP_OBJ_NULL) {
-        // load attribute
-        switch(attr)
-        {
-            case MP_QSTR_adv_w: dest[0] = mp_obj_new_int_from_uint(data->adv_w); break; // converting from uint16_t;
-            case MP_QSTR_box_w: dest[0] = mp_obj_new_int_from_uint(data->box_w); break; // converting from uint16_t;
-            case MP_QSTR_box_h: dest[0] = mp_obj_new_int_from_uint(data->box_h); break; // converting from uint16_t;
-            case MP_QSTR_ofs_x: dest[0] = mp_obj_new_int(data->ofs_x); break; // converting from int16_t;
-            case MP_QSTR_ofs_y: dest[0] = mp_obj_new_int(data->ofs_y); break; // converting from int16_t;
-            case MP_QSTR_bpp: dest[0] = mp_obj_new_int_from_uint(data->bpp); break; // converting from uint8_t;
-            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
-        }
-    } else {
-        if (dest[1])
-        {
-            // store attribute
-            switch(attr)
-            {
-                case MP_QSTR_adv_w: data->adv_w = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_box_w: data->box_w = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_box_h: data->box_h = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_ofs_x: data->ofs_x = (int16_t)mp_obj_get_int(dest[1]); break; // converting to int16_t;
-                case MP_QSTR_ofs_y: data->ofs_y = (int16_t)mp_obj_get_int(dest[1]); break; // converting to int16_t;
-                case MP_QSTR_bpp: data->bpp = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
-                default: return;
-            }
-
-            dest[0] = MP_OBJ_NULL; // indicate success
-        }
-    }
-}
-
-STATIC void mp_lv_font_glyph_dsc_t_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{
-    mp_printf(print, "struct lv_font_glyph_dsc_t");
-}
-
-STATIC const mp_obj_dict_t mp_lv_font_glyph_dsc_t_locals_dict;
-
-STATIC const mp_obj_type_t mp_lv_font_glyph_dsc_t_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_lv_font_glyph_dsc_t,
-    .print = mp_lv_font_glyph_dsc_t_print,
-    .make_new = make_new_lv_struct,
-    .binary_op = lv_struct_binary_op,
-    .attr = mp_lv_font_glyph_dsc_t_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_lv_font_glyph_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
-};
-
-STATIC inline const mp_obj_type_t *get_mp_lv_font_glyph_dsc_t_type()
-{
-    return &mp_lv_font_glyph_dsc_t_type;
-}
-    
-
-/*
- * lvgl extension definition for:
- * bool get_glyph_dsc(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next)
- */
- 
-STATIC mp_obj_t mp_funcptr_get_glyph_dsc(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_font_t *arg0 = (const struct _lv_font_t *)mp_to_ptr(mp_args[0]);
-    lv_font_glyph_dsc_t *arg1 = mp_write_ptr_lv_font_glyph_dsc_t(mp_args[1]);
-    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[2]);
-    uint32_t letter_next = (uint32_t)mp_obj_get_int(mp_args[3]);
-    bool _res = ((bool (*)(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t, uint32_t))lv_func_ptr)(arg0, arg1, letter, letter_next);
-    return convert_to_bool(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_get_glyph_dsc_obj, 4, mp_funcptr_get_glyph_dsc, funcptr_get_glyph_dsc);
-    
-STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_dsc(void *func){ return mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, func, NULL, MP_QSTR_, NULL); }
-
-STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
-#define funcptr_get_glyph_bitmap NULL
-
-
-/*
- * lvgl extension definition for:
- * const uint8_t *get_glyph_bitmap(const struct _lv_font_t *, uint32_t)
- */
- 
-STATIC mp_obj_t mp_funcptr_get_glyph_bitmap(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_font_t *arg0 = (const struct _lv_font_t *)mp_to_ptr(mp_args[0]);
-    uint32_t arg1 = (uint32_t)mp_obj_get_int(mp_args[1]);
-    const uint8_t * _res = ((const uint8_t *(*)(const struct _lv_font_t *, uint32_t))lv_func_ptr)(arg0, arg1);
-    return ptr_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_get_glyph_bitmap_obj, 2, mp_funcptr_get_glyph_bitmap, funcptr_get_glyph_bitmap);
-    
-STATIC inline mp_obj_t mp_lv_funcptr_get_glyph_bitmap(void *func){ return mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, func, NULL, MP_QSTR_, NULL); }
-
-STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_t *, uint32_t);
-
-/*
- * Struct lv_font_t
- */
-
-STATIC inline const mp_obj_type_t *get_mp_lv_font_t_type();
-
-STATIC inline lv_font_t* mp_write_ptr_lv_font_t(mp_obj_t self_in)
-{
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_font_t_type()));
-    return (lv_font_t*)self->data;
-}
-
-#define mp_write_lv_font_t(struct_obj) *mp_write_ptr_lv_font_t(struct_obj)
-
-STATIC inline mp_obj_t mp_read_ptr_lv_font_t(lv_font_t *field)
-{
-    return lv_to_mp_struct(get_mp_lv_font_t_type(), (void*)field);
-}
-
-#define mp_read_lv_font_t(field) mp_read_ptr_lv_font_t(copy_buffer(&field, sizeof(lv_font_t)))
-#define mp_read_byref_lv_font_t(field) mp_read_ptr_lv_font_t(&field)
-
-STATIC void mp_lv_font_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
-{
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    lv_font_t *data = (lv_font_t*)self->data;
-
-    if (dest[0] == MP_OBJ_NULL) {
-        // load attribute
-        switch(attr)
-        {
-            case MP_QSTR_get_glyph_dsc: dest[0] = mp_lv_funcptr(&mp_funcptr_get_glyph_dsc_obj, (void*)data->get_glyph_dsc, lv_font_t_get_glyph_dsc_callback ,MP_QSTR_lv_font_t_get_glyph_dsc, data->user_data); break; // converting from callback bool (*)(lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
-            case MP_QSTR_get_glyph_bitmap: dest[0] = mp_lv_funcptr(&mp_funcptr_get_glyph_bitmap_obj, (void*)data->get_glyph_bitmap, lv_font_t_get_glyph_bitmap_callback ,MP_QSTR_lv_font_t_get_glyph_bitmap, data->user_data); break; // converting from callback uint8_t *(*)(lv_font_t *, uint32_t);
-            case MP_QSTR_line_height: dest[0] = mp_obj_new_int(data->line_height); break; // converting from lv_coord_t;
-            case MP_QSTR_base_line: dest[0] = mp_obj_new_int(data->base_line); break; // converting from lv_coord_t;
-            case MP_QSTR_subpx: dest[0] = mp_obj_new_int_from_uint(data->subpx); break; // converting from uint8_t;
-            case MP_QSTR_underline_position: dest[0] = mp_obj_new_int(data->underline_position); break; // converting from int8_t;
-            case MP_QSTR_underline_thickness: dest[0] = mp_obj_new_int(data->underline_thickness); break; // converting from int8_t;
-            case MP_QSTR_dsc: dest[0] = ptr_to_mp((void*)data->dsc); break; // converting from void *;
-            case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
-            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
-        }
-    } else {
-        if (dest[1])
-        {
-            // store attribute
-            switch(attr)
-            {
-                case MP_QSTR_get_glyph_dsc: data->get_glyph_dsc = (void*)mp_lv_callback(dest[1], lv_font_t_get_glyph_dsc_callback ,MP_QSTR_lv_font_t_get_glyph_dsc, &data->user_data); break; // converting to callback bool (*)(lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next);
-                case MP_QSTR_get_glyph_bitmap: data->get_glyph_bitmap = (void*)mp_lv_callback(dest[1], lv_font_t_get_glyph_bitmap_callback ,MP_QSTR_lv_font_t_get_glyph_bitmap, &data->user_data); break; // converting to callback uint8_t *(*)(lv_font_t *, uint32_t);
-                case MP_QSTR_line_height: data->line_height = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_base_line: data->base_line = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
-                case MP_QSTR_subpx: data->subpx = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
-                case MP_QSTR_underline_position: data->underline_position = (int8_t)mp_obj_get_int(dest[1]); break; // converting to int8_t;
-                case MP_QSTR_underline_thickness: data->underline_thickness = (int8_t)mp_obj_get_int(dest[1]); break; // converting to int8_t;
-                case MP_QSTR_dsc: data->dsc = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
-                case MP_QSTR_user_data: data->user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
-                default: return;
-            }
-
-            dest[0] = MP_OBJ_NULL; // indicate success
-        }
-    }
-}
-
-STATIC void mp_lv_font_t_print(const mp_print_t *print,
-    mp_obj_t self_in,
-    mp_print_kind_t kind)
-{
-    mp_printf(print, "struct lv_font_t");
-}
-
-STATIC const mp_obj_dict_t mp_lv_font_t_locals_dict;
-
-STATIC const mp_obj_type_t mp_lv_font_t_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_lv_font_t,
-    .print = mp_lv_font_t_print,
-    .make_new = make_new_lv_struct,
-    .binary_op = lv_struct_binary_op,
-    .attr = mp_lv_font_t_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_lv_font_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
-};
-
-STATIC inline const mp_obj_type_t *get_mp_lv_font_t_type()
-{
-    return &mp_lv_font_t_type;
-}
-    
-
-/*
- * lvgl extension definition for:
- * inline static const lv_font_t *lv_obj_get_style_text_font(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_text_font(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    const lv_font_t * _res = ((const lv_font_t *(*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_read_ptr_lv_font_t((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_font_obj, 2, mp_lv_obj_get_style_text_font, lv_obj_get_style_text_font);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_text_letter_space */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_letter_space_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_text_letter_space);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_text_line_space */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_line_space_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_text_line_space);
-    
-
-/*
- * lvgl extension definition for:
- * inline static lv_text_decor_t lv_obj_get_style_text_decor(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_text_decor(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_text_decor_t _res = ((lv_text_decor_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_decor_obj, 2, mp_lv_obj_get_style_text_decor, lv_obj_get_style_text_decor);
-    
-
-/*
- * lvgl extension definition for:
- * inline static lv_text_align_t lv_obj_get_style_text_align(const struct _lv_obj_t *obj, uint32_t part)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_text_align_t _res = ((lv_text_align_t (*)(const struct _lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_text_align_obj, 2, mp_lv_obj_get_style_text_align, lv_obj_get_style_text_align);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_img_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_img_opa);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_img_recolor */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_recolor_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_img_recolor);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_img_recolor_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_recolor_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_img_recolor_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_img_recolor_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_img_recolor_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_img_recolor_opa);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_outline_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_outline_width);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_outline_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_outline_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_outline_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_outline_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_outline_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_outline_opa);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_outline_pad */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_outline_pad_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_outline_pad);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_width);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_ofs_x */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_ofs_x_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_ofs_x);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_ofs_y */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_ofs_y_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_ofs_y);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_shadow_spread */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_spread_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_shadow_spread);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_shadow_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_shadow_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_shadow_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_shadow_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_shadow_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_shadow_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_shadow_opa);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_width);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_dash_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_dash_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_dash_width);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_dash_gap */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_dash_gap_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_dash_gap);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_line_rounded */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_rounded_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_line_rounded);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_line_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_line_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_line_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_line_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_line_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_line_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_line_opa);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_arc_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_width_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_arc_width);
-    
-/* Reusing lv_obj_get_style_width for lv_obj_get_style_arc_rounded */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_rounded_obj, 2, mp_lv_obj_get_style_width, lv_obj_get_style_arc_rounded);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_arc_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_color_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_arc_color);
-    
-/* Reusing lv_obj_get_style_bg_color for lv_obj_get_style_arc_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_color_filtered_obj, 2, mp_lv_obj_get_style_bg_color, lv_obj_get_style_arc_color_filtered);
-    
-/* Reusing lv_obj_get_style_opa for lv_obj_get_style_arc_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_opa_obj, 2, mp_lv_obj_get_style_opa, lv_obj_get_style_arc_opa);
-    
-/* Reusing lv_obj_get_style_bg_img_src for lv_obj_get_style_arc_img_src */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_arc_img_src_obj, 2, mp_lv_obj_get_style_bg_img_src, lv_obj_get_style_arc_img_src);
     
 
 /*
@@ -6526,6 +6835,44 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_dpx_obj, 2, mp_lv_obj_dpx, lv_ob
 
 /*
  * lvgl extension definition for:
+ * inline static void lv_obj_move_foreground(lv_obj_t *obj)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_move_foreground(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    ((void (*)(lv_obj_t *))lv_func_ptr)(obj);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_foreground_obj, 1, mp_lv_obj_move_foreground, lv_obj_move_foreground);
+    
+/* Reusing lv_obj_move_foreground for lv_obj_move_background */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_background_obj, 1, mp_lv_obj_move_foreground, lv_obj_move_background);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static uint32_t lv_obj_get_child_id(const struct _lv_obj_t *obj)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_get_child_id(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    uint32_t _res = ((uint32_t (*)(const struct _lv_obj_t *))lv_func_ptr)(obj);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_id_obj, 1, mp_lv_obj_get_child_id, lv_obj_get_child_id);
+    
+
+/*
+ * lvgl extension definition for:
  * inline static lv_flex_flow_t lv_obj_get_style_flex_flow(const lv_obj_t *obj, uint32_t part)
  */
  
@@ -6587,55 +6934,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_flex_grow_obj, 2, mp_l
     
 
 /*
- * Array convertors for lv_coord_t *
+ * Function NOT generated:
+ * Missing convertion from const lv_coord_t *
+ * inline static const lv_coord_t *lv_obj_get_style_grid_row_dsc_array(const lv_obj_t *obj, uint32_t part)
  */
-
-STATIC lv_coord_t *mp_arr_to_lv_coord_t_ptr(mp_obj_t mp_arr)
-{
-    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
-    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
-    mp_int_t len = mp_obj_get_int(mp_len);
-    
-    lv_coord_t *lv_arr = (lv_coord_t*)m_malloc(len * sizeof(lv_coord_t));
-    mp_obj_t iter = mp_getiter(mp_arr, NULL);
-    mp_obj_t item;
-    size_t i = 0;
-    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
-        lv_arr[i++] = (int16_t)mp_obj_get_int(item);
-    }
-    return (lv_coord_t *)lv_arr;
-}
-    
-STATIC mp_obj_t mp_arr_from_lv_coord_t_ptr(const lv_coord_t *arr)
-{
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_obj_new_int(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
-}
     
 
 /*
- * lvgl extension definition for:
- * inline static const lv_coord_t *lv_obj_get_style_grid_row_dsc_array(const lv_obj_t *obj, uint32_t part)
+ * Function NOT generated:
+ * Missing convertion from const lv_coord_t *
+ * inline static const lv_coord_t *lv_obj_get_style_grid_column_dsc_array(const lv_obj_t *obj, uint32_t part)
  */
- 
-STATIC mp_obj_t mp_lv_obj_get_style_grid_row_dsc_array(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_obj_t *obj = (const lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
-    const lv_coord_t * _res = ((const lv_coord_t *(*)(const lv_obj_t *, uint32_t))lv_func_ptr)(obj, part);
-    return mp_arr_from_lv_coord_t_ptr((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_grid_row_dsc_array_obj, 2, mp_lv_obj_get_style_grid_row_dsc_array, lv_obj_get_style_grid_row_dsc_array);
-    
-/* Reusing lv_obj_get_style_grid_row_dsc_array for lv_obj_get_style_grid_column_dsc_array */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_grid_column_dsc_array_obj, 2, mp_lv_obj_get_style_grid_row_dsc_array, lv_obj_get_style_grid_column_dsc_array);
     
 
 /*
@@ -6762,13 +7071,27 @@ STATIC mp_obj_t mp_lv_obj_set_parent(size_t mp_n_args, const mp_obj_t *mp_args, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_parent_obj, 2, mp_lv_obj_set_parent, lv_obj_set_parent);
     
-/* Reusing lv_obj_center for lv_obj_move_foreground */
+/* Reusing lv_obj_set_parent for lv_obj_swap */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_foreground_obj, 1, mp_lv_obj_center, lv_obj_move_foreground);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_swap_obj, 2, mp_lv_obj_set_parent, lv_obj_swap);
     
-/* Reusing lv_obj_center for lv_obj_move_background */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_background_obj, 1, mp_lv_obj_center, lv_obj_move_background);
+/*
+ * lvgl extension definition for:
+ * void lv_obj_move_to_index(struct _lv_obj_t *obj, int32_t index)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_move_to_index(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    int32_t index = (int32_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(struct _lv_obj_t *, int32_t))lv_func_ptr)(obj, index);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_move_to_index_obj, 2, mp_lv_obj_move_to_index, lv_obj_move_to_index);
     
 
 /*
@@ -6794,17 +7117,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_screen_obj, 1, mp_lv_obj_get
 
 STATIC inline const mp_obj_type_t *get_mp_lv_area_t_type();
 
-STATIC inline lv_area_t* mp_write_ptr_lv_area_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_area_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_area_t_type()));
     return (lv_area_t*)self->data;
 }
 
-#define mp_write_lv_area_t(struct_obj) *mp_write_ptr_lv_area_t(struct_obj)
+#define mp_write_lv_area_t(struct_obj) *((lv_area_t*)mp_write_ptr_lv_area_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_area_t(lv_area_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_area_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_area_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_area_t_type(), field);
 }
 
 #define mp_read_lv_area_t(field) mp_read_ptr_lv_area_t(copy_buffer(&field, sizeof(lv_area_t)))
@@ -6858,9 +7181,11 @@ STATIC const mp_obj_type_t mp_lv_area_t_type = {
     .print = mp_lv_area_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_area_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_area_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_area_t_type()
@@ -6875,17 +7200,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_area_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_draw_buf_t_type();
 
-STATIC inline lv_disp_draw_buf_t* mp_write_ptr_lv_disp_draw_buf_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_disp_draw_buf_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_disp_draw_buf_t_type()));
     return (lv_disp_draw_buf_t*)self->data;
 }
 
-#define mp_write_lv_disp_draw_buf_t(struct_obj) *mp_write_ptr_lv_disp_draw_buf_t(struct_obj)
+#define mp_write_lv_disp_draw_buf_t(struct_obj) *((lv_disp_draw_buf_t*)mp_write_ptr_lv_disp_draw_buf_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_disp_draw_buf_t(lv_disp_draw_buf_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_disp_draw_buf_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_disp_draw_buf_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_disp_draw_buf_t_type(), field);
 }
 
 #define mp_read_lv_disp_draw_buf_t(field) mp_read_ptr_lv_disp_draw_buf_t(copy_buffer(&field, sizeof(lv_disp_draw_buf_t)))
@@ -6949,9 +7274,11 @@ STATIC const mp_obj_type_t mp_lv_disp_draw_buf_t_type = {
     .print = mp_lv_disp_draw_buf_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_disp_draw_buf_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_disp_draw_buf_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_draw_buf_t_type()
@@ -7017,7 +7344,7 @@ STATIC void lv_disp_drv_t_rounder_cb_callback(struct _lv_disp_drv_t *disp_drv, l
 STATIC mp_obj_t mp_funcptr_set_px_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
-    uint8_t *buf = mp_to_ptr(mp_args[1]);
+    uint8_t *buf = mp_array_to_u8ptr(mp_args[1]);
     lv_coord_t buf_w = (int16_t)mp_obj_get_int(mp_args[2]);
     lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[3]);
     lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[4]);
@@ -7116,17 +7443,17 @@ STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _lv_disp_drv_t *disp_drv, 
 
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_drv_t_type();
 
-STATIC inline lv_disp_drv_t* mp_write_ptr_lv_disp_drv_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_disp_drv_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_disp_drv_t_type()));
     return (lv_disp_drv_t*)self->data;
 }
 
-#define mp_write_lv_disp_drv_t(struct_obj) *mp_write_ptr_lv_disp_drv_t(struct_obj)
+#define mp_write_lv_disp_drv_t(struct_obj) *((lv_disp_drv_t*)mp_write_ptr_lv_disp_drv_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_disp_drv_t(lv_disp_drv_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_disp_drv_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_disp_drv_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_disp_drv_t_type(), field);
 }
 
 #define mp_read_lv_disp_drv_t(field) mp_read_ptr_lv_disp_drv_t(copy_buffer(&field, sizeof(lv_disp_drv_t)))
@@ -7143,7 +7470,12 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_hor_res: dest[0] = mp_obj_new_int(data->hor_res); break; // converting from lv_coord_t;
             case MP_QSTR_ver_res: dest[0] = mp_obj_new_int(data->ver_res); break; // converting from lv_coord_t;
+            case MP_QSTR_physical_hor_res: dest[0] = mp_obj_new_int(data->physical_hor_res); break; // converting from lv_coord_t;
+            case MP_QSTR_physical_ver_res: dest[0] = mp_obj_new_int(data->physical_ver_res); break; // converting from lv_coord_t;
+            case MP_QSTR_offset_x: dest[0] = mp_obj_new_int(data->offset_x); break; // converting from lv_coord_t;
+            case MP_QSTR_offset_y: dest[0] = mp_obj_new_int(data->offset_y); break; // converting from lv_coord_t;
             case MP_QSTR_draw_buf: dest[0] = mp_read_ptr_lv_disp_draw_buf_t((void*)data->draw_buf); break; // converting from lv_disp_draw_buf_t *;
+            case MP_QSTR_direct_mode: dest[0] = mp_obj_new_int_from_uint(data->direct_mode); break; // converting from uint32_t;
             case MP_QSTR_full_refresh: dest[0] = mp_obj_new_int_from_uint(data->full_refresh); break; // converting from uint32_t;
             case MP_QSTR_sw_rotate: dest[0] = mp_obj_new_int_from_uint(data->sw_rotate); break; // converting from uint32_t;
             case MP_QSTR_antialiasing: dest[0] = mp_obj_new_int_from_uint(data->antialiasing); break; // converting from uint32_t;
@@ -7171,7 +7503,12 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             {
                 case MP_QSTR_hor_res: data->hor_res = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
                 case MP_QSTR_ver_res: data->ver_res = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_physical_hor_res: data->physical_hor_res = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_physical_ver_res: data->physical_ver_res = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_offset_x: data->offset_x = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
+                case MP_QSTR_offset_y: data->offset_y = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
                 case MP_QSTR_draw_buf: data->draw_buf = (void*)mp_write_ptr_lv_disp_draw_buf_t(dest[1]); break; // converting to lv_disp_draw_buf_t *;
+                case MP_QSTR_direct_mode: data->direct_mode = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_full_refresh: data->full_refresh = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_sw_rotate: data->sw_rotate = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_antialiasing: data->antialiasing = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
@@ -7212,9 +7549,11 @@ STATIC const mp_obj_type_t mp_lv_disp_drv_t_type = {
     .print = mp_lv_disp_drv_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_disp_drv_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_disp_drv_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_drv_t_type()
@@ -7251,17 +7590,17 @@ STATIC void lv_timer_t_timer_cb_callback(struct _lv_timer_t *);
 
 STATIC inline const mp_obj_type_t *get_mp_lv_timer_t_type();
 
-STATIC inline lv_timer_t* mp_write_ptr_lv_timer_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_timer_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_timer_t_type()));
     return (lv_timer_t*)self->data;
 }
 
-#define mp_write_lv_timer_t(struct_obj) *mp_write_ptr_lv_timer_t(struct_obj)
+#define mp_write_lv_timer_t(struct_obj) *((lv_timer_t*)mp_write_ptr_lv_timer_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_timer_t(lv_timer_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_timer_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_timer_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_timer_t_type(), field);
 }
 
 #define mp_read_lv_timer_t(field) mp_read_ptr_lv_timer_t(copy_buffer(&field, sizeof(lv_timer_t)))
@@ -7319,9 +7658,11 @@ STATIC const mp_obj_type_t mp_lv_timer_t_type = {
     .print = mp_lv_timer_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_timer_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_timer_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_timer_t_type()
@@ -7359,17 +7700,17 @@ STATIC void lv_theme_t_apply_cb_callback(struct _lv_theme_t *, lv_obj_t *);
 
 STATIC inline const mp_obj_type_t *get_mp_lv_theme_t_type();
 
-STATIC inline lv_theme_t* mp_write_ptr_lv_theme_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_theme_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_theme_t_type()));
     return (lv_theme_t*)self->data;
 }
 
-#define mp_write_lv_theme_t(struct_obj) *mp_write_ptr_lv_theme_t(struct_obj)
+#define mp_write_lv_theme_t(struct_obj) *((lv_theme_t*)mp_write_ptr_lv_theme_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_theme_t(lv_theme_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_theme_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_theme_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_theme_t_type(), field);
 }
 
 #define mp_read_lv_theme_t(field) mp_read_ptr_lv_theme_t(copy_buffer(&field, sizeof(lv_theme_t)))
@@ -7435,9 +7776,11 @@ STATIC const mp_obj_type_t mp_lv_theme_t_type = {
     .print = mp_lv_theme_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_theme_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_theme_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_theme_t_type()
@@ -7445,12 +7788,40 @@ STATIC inline const mp_obj_type_t *get_mp_lv_theme_t_type()
     return &mp_lv_theme_t_type;
 }
     
+#define funcptr_bg_fn NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void bg_fn(lv_area_t *)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_bg_fn(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_area_t *arg0 = mp_write_ptr_lv_area_t(mp_args[0]);
+    ((void (*)(lv_area_t *))lv_func_ptr)(arg0);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_bg_fn_obj, 1, mp_funcptr_bg_fn, funcptr_bg_fn);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_bg_fn(void *func){ return mp_lv_funcptr(&mp_funcptr_bg_fn_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_disp_t_bg_fn_callback'
+ * void (*bg_fn)(lv_area_t *)
+ */
+    
 
 /*
  * Array convertors for lv_area_t [32]
  */
 
-STATIC lv_area_t *mp_arr_to_lv_area_t___32__(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_area_t *mp_arr_to_lv_area_t___32__(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -7465,8 +7836,8 @@ STATIC lv_area_t *mp_arr_to_lv_area_t___32__(mp_obj_t mp_arr)
     }
     return (lv_area_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_area_t___32__(lv_area_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_area_t___32__(lv_area_t *arr)
 {
     mp_obj_t obj_arr[32];
     for (size_t i=0; i<32; i++){
@@ -7474,13 +7845,13 @@ STATIC mp_obj_t mp_arr_from_lv_area_t___32__(lv_area_t *arr)
     }
     return mp_obj_new_list(32, obj_arr); // TODO: return custom iterable object!
 }
-    
+
 
 /*
  * Array convertors for uint8_t [32]
  */
 
-STATIC uint8_t *mp_arr_to_uint8_t___32__(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC uint8_t *mp_arr_to_uint8_t___32__(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -7495,8 +7866,8 @@ STATIC uint8_t *mp_arr_to_uint8_t___32__(mp_obj_t mp_arr)
     }
     return (uint8_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_uint8_t___32__(uint8_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_uint8_t___32__(uint8_t *arr)
 {
     mp_obj_t obj_arr[32];
     for (size_t i=0; i<32; i++){
@@ -7504,7 +7875,7 @@ STATIC mp_obj_t mp_arr_from_uint8_t___32__(uint8_t *arr)
     }
     return mp_obj_new_list(32, obj_arr); // TODO: return custom iterable object!
 }
-    
+
 
 /*
  * Struct lv_disp_t
@@ -7512,17 +7883,17 @@ STATIC mp_obj_t mp_arr_from_uint8_t___32__(uint8_t *arr)
 
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_t_type();
 
-STATIC inline lv_disp_t* mp_write_ptr_lv_disp_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_disp_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_disp_t_type()));
     return (lv_disp_t*)self->data;
 }
 
-#define mp_write_lv_disp_t(struct_obj) *mp_write_ptr_lv_disp_t(struct_obj)
+#define mp_write_lv_disp_t(struct_obj) *((lv_disp_t*)mp_write_ptr_lv_disp_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_disp_t(lv_disp_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_disp_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_disp_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_disp_t_type(), field);
 }
 
 #define mp_read_lv_disp_t(field) mp_read_ptr_lv_disp_t(copy_buffer(&field, sizeof(lv_disp_t)))
@@ -7551,6 +7922,7 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_bg_opa: dest[0] = mp_obj_new_int_from_uint(data->bg_opa); break; // converting from lv_opa_t;
             case MP_QSTR_bg_color: dest[0] = mp_read_byref_lv_color32_t(data->bg_color); break; // converting from lv_color_t;
             case MP_QSTR_bg_img: dest[0] = ptr_to_mp((void*)data->bg_img); break; // converting from void *;
+            case MP_QSTR_bg_fn: dest[0] = mp_lv_funcptr(&mp_funcptr_bg_fn_obj, (void*)data->bg_fn, NULL ,MP_QSTR_lv_disp_t_bg_fn, NULL); break; // converting from callback void (*)(lv_area_t *);
             case MP_QSTR_inv_areas: dest[0] = mp_arr_from_lv_area_t___32__(data->inv_areas); break; // converting from lv_area_t [32];
             case MP_QSTR_inv_area_joined: dest[0] = mp_arr_from_uint8_t___32__(data->inv_area_joined); break; // converting from uint8_t [32];
             case MP_QSTR_inv_p: dest[0] = mp_obj_new_int_from_uint(data->inv_p); break; // converting from uint16_t;
@@ -7577,6 +7949,7 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 case MP_QSTR_bg_opa: data->bg_opa = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_opa_t;
                 case MP_QSTR_bg_color: data->bg_color = mp_write_lv_color32_t(dest[1]); break; // converting to lv_color_t;
                 case MP_QSTR_bg_img: data->bg_img = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
+                case MP_QSTR_bg_fn: data->bg_fn = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_disp_t_bg_fn, NULL); break; // converting to callback void (*)(lv_area_t *);
                 case MP_QSTR_inv_areas: memcpy((void*)&data->inv_areas, mp_arr_to_lv_area_t___32__(dest[1]), sizeof(lv_area_t)*32); break; // converting to lv_area_t [32];
                 case MP_QSTR_inv_area_joined: memcpy((void*)&data->inv_area_joined, mp_arr_to_uint8_t___32__(dest[1]), sizeof(uint8_t)*32); break; // converting to uint8_t [32];
                 case MP_QSTR_inv_p: data->inv_p = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
@@ -7604,9 +7977,11 @@ STATIC const mp_obj_type_t mp_lv_disp_t_type = {
     .print = mp_lv_disp_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_disp_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_disp_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_disp_t_type()
@@ -7653,26 +8028,13 @@ STATIC mp_obj_t mp_lv_obj_get_child(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_obj, 2, mp_lv_obj_get_child, lv_obj_get_child);
     
+/* Reusing lv_obj_get_child_id for lv_obj_get_child_cnt */
 
-/*
- * lvgl extension definition for:
- * uint32_t lv_obj_get_child_cnt(const struct _lv_obj_t *obj)
- */
- 
-STATIC mp_obj_t mp_lv_obj_get_child_cnt(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint32_t _res = ((uint32_t (*)(const struct _lv_obj_t *))lv_func_ptr)(obj);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_cnt_obj, 1, mp_lv_obj_get_child_cnt, lv_obj_get_child_cnt);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_cnt_obj, 1, mp_lv_obj_get_child_id, lv_obj_get_child_cnt);
     
-/* Reusing lv_obj_get_child_cnt for lv_obj_get_child_id */
+/* Reusing lv_obj_get_child_id for lv_obj_get_index */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_id_obj, 1, mp_lv_obj_get_child_cnt, lv_obj_get_child_id);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_index_obj, 1, mp_lv_obj_get_child_id, lv_obj_get_index);
     
 
 /*
@@ -7680,7 +8042,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_child_id_obj, 1, mp_lv_obj_g
  * lv_obj_tree_walk_res_t lv_obj_tree_walk_cb_t(struct _lv_obj_t *, void *)
  */
 
-STATIC lv_obj_tree_walk_res_t lv_obj_tree_walk_cb_callback(struct _lv_obj_t * arg0, void * arg1)
+GENMPY_UNUSED STATIC lv_obj_tree_walk_res_t lv_obj_tree_walk_cb_callback(struct _lv_obj_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = lv_to_mp((void*)arg0);
@@ -7935,6 +8297,14 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_y_obj, 1, mp_lv_obj_get_x, l
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_y2_obj, 1, mp_lv_obj_get_x, lv_obj_get_y2);
     
+/* Reusing lv_obj_get_x for lv_obj_get_x_aligned */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_x_aligned_obj, 1, mp_lv_obj_get_x, lv_obj_get_x_aligned);
+    
+/* Reusing lv_obj_get_x for lv_obj_get_y_aligned */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_y_aligned_obj, 1, mp_lv_obj_get_x, lv_obj_get_y_aligned);
+    
 /* Reusing lv_obj_get_x for lv_obj_get_width */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_width_obj, 1, mp_lv_obj_get_x, lv_obj_get_width);
@@ -8054,17 +8424,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_click_area_obj, 2, mp_lv_obj
 
 STATIC inline const mp_obj_type_t *get_mp_lv_point_t_type();
 
-STATIC inline lv_point_t* mp_write_ptr_lv_point_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_point_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_point_t_type()));
     return (lv_point_t*)self->data;
 }
 
-#define mp_write_lv_point_t(struct_obj) *mp_write_ptr_lv_point_t(struct_obj)
+#define mp_write_lv_point_t(struct_obj) *((lv_point_t*)mp_write_ptr_lv_point_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_point_t(lv_point_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_point_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_point_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_point_t_type(), field);
 }
 
 #define mp_read_lv_point_t(field) mp_read_ptr_lv_point_t(copy_buffer(&field, sizeof(lv_point_t)))
@@ -8114,9 +8484,11 @@ STATIC const mp_obj_type_t mp_lv_point_t_type = {
     .print = mp_lv_point_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_point_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_point_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_point_t_type()
@@ -8422,17 +8794,17 @@ typedef __typeof__( ((lv_style_t*)(0))->v_p ) lv_style_v_p_t;
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_value_t_type();
 
-STATIC inline lv_style_value_t* mp_write_ptr_lv_style_value_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_style_value_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_style_value_t_type()));
     return (lv_style_value_t*)self->data;
 }
 
-#define mp_write_lv_style_value_t(struct_obj) *mp_write_ptr_lv_style_value_t(struct_obj)
+#define mp_write_lv_style_value_t(struct_obj) *((lv_style_value_t*)mp_write_ptr_lv_style_value_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_style_value_t(lv_style_value_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_style_value_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_style_value_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_style_value_t_type(), field);
 }
 
 #define mp_read_lv_style_value_t(field) mp_read_ptr_lv_style_value_t(copy_buffer(&field, sizeof(lv_style_value_t)))
@@ -8484,9 +8856,11 @@ STATIC const mp_obj_type_t mp_lv_style_value_t_type = {
     .print = mp_lv_style_value_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_style_value_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_style_value_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_value_t_type()
@@ -8501,17 +8875,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_value_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_const_prop_t_type();
 
-STATIC inline lv_style_const_prop_t* mp_write_ptr_lv_style_const_prop_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_style_const_prop_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_style_const_prop_t_type()));
     return (lv_style_const_prop_t*)self->data;
 }
 
-#define mp_write_lv_style_const_prop_t(struct_obj) *mp_write_ptr_lv_style_const_prop_t(struct_obj)
+#define mp_write_lv_style_const_prop_t(struct_obj) *((lv_style_const_prop_t*)mp_write_ptr_lv_style_const_prop_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_style_const_prop_t(lv_style_const_prop_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_style_const_prop_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_style_const_prop_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_style_const_prop_t_type(), field);
 }
 
 #define mp_read_lv_style_const_prop_t(field) mp_read_ptr_lv_style_const_prop_t(copy_buffer(&field, sizeof(lv_style_const_prop_t)))
@@ -8561,9 +8935,11 @@ STATIC const mp_obj_type_t mp_lv_style_const_prop_t_type = {
     .print = mp_lv_style_const_prop_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_style_const_prop_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_style_const_prop_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_const_prop_t_type()
@@ -8578,17 +8954,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_const_prop_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_v_p_t_type();
 
-STATIC inline lv_style_v_p_t* mp_write_ptr_lv_style_v_p_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_style_v_p_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_style_v_p_t_type()));
     return (lv_style_v_p_t*)self->data;
 }
 
-#define mp_write_lv_style_v_p_t(struct_obj) *mp_write_ptr_lv_style_v_p_t(struct_obj)
+#define mp_write_lv_style_v_p_t(struct_obj) *((lv_style_v_p_t*)mp_write_ptr_lv_style_v_p_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_style_v_p_t(lv_style_v_p_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_style_v_p_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_style_v_p_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_style_v_p_t_type(), field);
 }
 
 #define mp_read_lv_style_v_p_t(field) mp_read_ptr_lv_style_v_p_t(copy_buffer(&field, sizeof(lv_style_v_p_t)))
@@ -8604,7 +8980,7 @@ STATIC void mp_lv_style_v_p_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         switch(attr)
         {
             case MP_QSTR_value1: dest[0] = mp_read_byref_lv_style_value_t(data->value1); break; // converting from lv_style_value_t;
-            case MP_QSTR_values_and_props: dest[0] = ptr_to_mp((void*)data->values_and_props); break; // converting from uint8_t *;
+            case MP_QSTR_values_and_props: dest[0] = mp_array_from_u8ptr((void*)data->values_and_props); break; // converting from uint8_t *;
             case MP_QSTR_const_props: dest[0] = mp_read_ptr_lv_style_const_prop_t((void*)data->const_props); break; // converting from lv_style_const_prop_t *;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
@@ -8615,7 +8991,7 @@ STATIC void mp_lv_style_v_p_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             switch(attr)
             {
                 case MP_QSTR_value1: data->value1 = mp_write_lv_style_value_t(dest[1]); break; // converting to lv_style_value_t;
-                case MP_QSTR_values_and_props: data->values_and_props = (void*)mp_to_ptr(dest[1]); break; // converting to uint8_t *;
+                case MP_QSTR_values_and_props: data->values_and_props = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to uint8_t *;
                 case MP_QSTR_const_props: data->const_props = (void*)mp_write_ptr_lv_style_const_prop_t(dest[1]); break; // converting to lv_style_const_prop_t *;
                 default: return;
             }
@@ -8640,9 +9016,11 @@ STATIC const mp_obj_type_t mp_lv_style_v_p_t_type = {
     .print = mp_lv_style_v_p_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_style_v_p_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_style_v_p_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_v_p_t_type()
@@ -8657,17 +9035,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_style_v_p_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_t_type();
 
-STATIC inline lv_style_t* mp_write_ptr_lv_style_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_style_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_style_t_type()));
     return (lv_style_t*)self->data;
 }
 
-#define mp_write_lv_style_t(struct_obj) *mp_write_ptr_lv_style_t(struct_obj)
+#define mp_write_lv_style_t(struct_obj) *((lv_style_t*)mp_write_ptr_lv_style_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_style_t(lv_style_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_style_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_style_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_style_t_type(), field);
 }
 
 #define mp_read_lv_style_t(field) mp_read_ptr_lv_style_t(copy_buffer(&field, sizeof(lv_style_t)))
@@ -8723,9 +9101,11 @@ STATIC const mp_obj_type_t mp_lv_style_t_type = {
     .print = mp_lv_style_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_style_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_style_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_style_t_type()
@@ -9043,36 +9423,36 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_pad_row_obj, 3, mp_lv_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_pad_column_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_pad_column);
     
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_radius */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_radius_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_radius);
-    
 
 /*
  * lvgl extension definition for:
- * void lv_obj_set_style_clip_corner(struct _lv_obj_t *obj, bool value, lv_style_selector_t selector)
+ * void lv_obj_set_style_bg_color(struct _lv_obj_t *obj, lv_color_t value, lv_style_selector_t selector)
  */
  
-STATIC mp_obj_t mp_lv_obj_set_style_clip_corner(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_obj_set_style_bg_color(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    bool value = mp_obj_is_true(mp_args[1]);
+    lv_color_t value = mp_write_lv_color32_t(mp_args[1]);
     lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, bool, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    ((void (*)(struct _lv_obj_t *, lv_color_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
     return mp_const_none;
 }
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_clip_corner_obj, 3, mp_lv_obj_set_style_clip_corner, lv_obj_set_style_clip_corner);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_color_filtered);
     
 
 /*
  * lvgl extension definition for:
- * void lv_obj_set_style_opa(struct _lv_obj_t *obj, lv_opa_t value, lv_style_selector_t selector)
+ * void lv_obj_set_style_bg_opa(struct _lv_obj_t *obj, lv_opa_t value, lv_style_selector_t selector)
  */
  
-STATIC mp_obj_t mp_lv_obj_set_style_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_obj_set_style_bg_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
     lv_opa_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
@@ -9083,7 +9463,340 @@ STATIC mp_obj_t mp_lv_obj_set_style_opa(size_t mp_n_args, const mp_obj_t *mp_arg
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_bg_opa);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_grad_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_grad_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_grad_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_grad_color_filtered);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_bg_grad_dir(struct _lv_obj_t *obj, lv_grad_dir_t value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_bg_grad_dir(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_grad_dir_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, lv_grad_dir_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_dir_obj, 3, mp_lv_obj_set_style_bg_grad_dir, lv_obj_set_style_bg_grad_dir);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_bg_main_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_main_stop_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_bg_main_stop);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_bg_grad_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_stop_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_bg_grad_stop);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_bg_img_src(struct _lv_obj_t *obj, const void *value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_bg_img_src(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    const void *value = (const void *)mp_to_ptr(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, const void *, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_src_obj, 3, mp_lv_obj_set_style_bg_img_src, lv_obj_set_style_bg_img_src);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_bg_img_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_bg_img_opa);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_img_recolor */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_recolor_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_img_recolor);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_img_recolor_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_recolor_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_img_recolor_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_bg_img_recolor_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_recolor_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_bg_img_recolor_opa);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_bg_img_tiled(struct _lv_obj_t *obj, bool value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_bg_img_tiled(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    bool value = mp_obj_is_true(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, bool, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_tiled_obj, 3, mp_lv_obj_set_style_bg_img_tiled, lv_obj_set_style_bg_img_tiled);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_border_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_border_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_border_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_border_color_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_border_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_border_opa);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_border_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_border_width);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_border_side(struct _lv_obj_t *obj, lv_border_side_t value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_border_side(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_border_side_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, lv_border_side_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_side_obj, 3, mp_lv_obj_set_style_border_side, lv_obj_set_style_border_side);
+    
+/* Reusing lv_obj_set_style_bg_img_tiled for lv_obj_set_style_border_post */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_post_obj, 3, mp_lv_obj_set_style_bg_img_tiled, lv_obj_set_style_border_post);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_outline_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_outline_width);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_outline_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_outline_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_outline_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_outline_color_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_outline_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_outline_opa);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_outline_pad */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_pad_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_outline_pad);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_width);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_ofs_x */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_ofs_x_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_ofs_x);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_ofs_y */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_ofs_y_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_ofs_y);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_spread */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_spread_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_spread);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_shadow_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_shadow_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_shadow_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_shadow_color_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_shadow_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_shadow_opa);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_img_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_img_opa);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_img_recolor */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_recolor_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_img_recolor);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_img_recolor_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_recolor_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_img_recolor_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_img_recolor_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_recolor_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_img_recolor_opa);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_width);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_dash_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_dash_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_dash_width);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_dash_gap */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_dash_gap_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_dash_gap);
+    
+/* Reusing lv_obj_set_style_bg_img_tiled for lv_obj_set_style_line_rounded */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_rounded_obj, 3, mp_lv_obj_set_style_bg_img_tiled, lv_obj_set_style_line_rounded);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_line_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_line_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_line_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_line_color_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_line_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_line_opa);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_arc_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_arc_width);
+    
+/* Reusing lv_obj_set_style_bg_img_tiled for lv_obj_set_style_arc_rounded */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_rounded_obj, 3, mp_lv_obj_set_style_bg_img_tiled, lv_obj_set_style_arc_rounded);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_arc_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_arc_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_arc_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_arc_color_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_arc_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_arc_opa);
+    
+/* Reusing lv_obj_set_style_bg_img_src for lv_obj_set_style_arc_img_src */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_img_src_obj, 3, mp_lv_obj_set_style_bg_img_src, lv_obj_set_style_arc_img_src);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_text_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_text_color);
+    
+/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_text_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_text_color_filtered);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_text_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_text_opa);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_text_font(struct _lv_obj_t *obj, const lv_font_t *value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_text_font(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    const lv_font_t *value = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, const lv_font_t *, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_font_obj, 3, mp_lv_obj_set_style_text_font, lv_obj_set_style_text_font);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_text_letter_space */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_letter_space_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_text_letter_space);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_text_line_space */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_line_space_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_text_line_space);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_text_decor(struct _lv_obj_t *obj, lv_text_decor_t value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_text_decor(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_text_decor_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, lv_text_decor_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_decor_obj, 3, mp_lv_obj_set_style_text_decor, lv_obj_set_style_text_decor);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_obj_set_style_text_align(struct _lv_obj_t *obj, lv_text_align_t value, lv_style_selector_t selector)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_set_style_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_text_align_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(struct _lv_obj_t *, lv_text_align_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_align_obj, 3, mp_lv_obj_set_style_text_align, lv_obj_set_style_text_align);
+    
+/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_radius */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_radius_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_radius);
+    
+/* Reusing lv_obj_set_style_bg_img_tiled for lv_obj_set_style_clip_corner */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_clip_corner_obj, 3, mp_lv_obj_set_style_bg_img_tiled, lv_obj_set_style_clip_corner);
+    
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_opa);
     
 
 /*
@@ -9104,9 +9817,9 @@ STATIC mp_obj_t mp_lv_obj_set_style_color_filter_dsc(size_t mp_n_args, const mp_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_color_filter_dsc_obj, 3, mp_lv_obj_set_style_color_filter_dsc, lv_obj_set_style_color_filter_dsc);
     
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_color_filter_opa */
+/* Reusing lv_obj_set_style_bg_opa for lv_obj_set_style_color_filter_opa */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_color_filter_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_color_filter_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_color_filter_opa_obj, 3, mp_lv_obj_set_style_bg_opa, lv_obj_set_style_color_filter_opa);
     
 
 /*
@@ -9210,335 +9923,21 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_base_dir_obj, 3, mp_lv
 
 /*
  * lvgl extension definition for:
- * void lv_obj_set_style_bg_color(struct _lv_obj_t *obj, lv_color_t value, lv_style_selector_t selector)
+ * lv_text_align_t lv_obj_calculate_style_text_align(const struct _lv_obj_t *obj, lv_part_t part, const char *txt)
  */
  
-STATIC mp_obj_t mp_lv_obj_set_style_bg_color(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_obj_calculate_style_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_color_t value = mp_write_lv_color32_t(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, lv_color_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
+    const struct _lv_obj_t *obj = (const struct _lv_obj_t *)mp_to_lv(mp_args[0]);
+    lv_part_t part = (uint32_t)mp_obj_get_int(mp_args[1]);
+    const char *txt = (const char *)(char*)convert_from_str(mp_args[2]);
+    lv_text_align_t _res = ((lv_text_align_t (*)(const struct _lv_obj_t *, lv_part_t, const char *))lv_func_ptr)(obj, part, txt);
+    return mp_obj_new_int_from_uint(_res);
 }
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_bg_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_bg_opa);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_grad_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_grad_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_grad_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_grad_color_filtered);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_obj_set_style_bg_grad_dir(struct _lv_obj_t *obj, lv_grad_dir_t value, lv_style_selector_t selector)
- */
- 
-STATIC mp_obj_t mp_lv_obj_set_style_bg_grad_dir(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_grad_dir_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, lv_grad_dir_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_dir_obj, 3, mp_lv_obj_set_style_bg_grad_dir, lv_obj_set_style_bg_grad_dir);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_bg_main_stop */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_main_stop_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_bg_main_stop);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_bg_grad_stop */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_grad_stop_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_bg_grad_stop);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_obj_set_style_bg_img_src(struct _lv_obj_t *obj, const void *value, lv_style_selector_t selector)
- */
- 
-STATIC mp_obj_t mp_lv_obj_set_style_bg_img_src(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    const void *value = (const void *)mp_to_ptr(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, const void *, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_src_obj, 3, mp_lv_obj_set_style_bg_img_src, lv_obj_set_style_bg_img_src);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_bg_img_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_bg_img_opa);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_img_recolor */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_recolor_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_img_recolor);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_bg_img_recolor_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_recolor_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_bg_img_recolor_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_bg_img_recolor_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_recolor_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_bg_img_recolor_opa);
-    
-/* Reusing lv_obj_set_style_clip_corner for lv_obj_set_style_bg_img_tiled */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_bg_img_tiled_obj, 3, mp_lv_obj_set_style_clip_corner, lv_obj_set_style_bg_img_tiled);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_border_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_border_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_border_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_border_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_border_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_border_opa);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_border_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_border_width);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_obj_set_style_border_side(struct _lv_obj_t *obj, lv_border_side_t value, lv_style_selector_t selector)
- */
- 
-STATIC mp_obj_t mp_lv_obj_set_style_border_side(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_border_side_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, lv_border_side_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_side_obj, 3, mp_lv_obj_set_style_border_side, lv_obj_set_style_border_side);
-    
-/* Reusing lv_obj_set_style_clip_corner for lv_obj_set_style_border_post */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_border_post_obj, 3, mp_lv_obj_set_style_clip_corner, lv_obj_set_style_border_post);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_text_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_text_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_text_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_text_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_text_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_text_opa);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_obj_set_style_text_font(struct _lv_obj_t *obj, const lv_font_t *value, lv_style_selector_t selector)
- */
- 
-STATIC mp_obj_t mp_lv_obj_set_style_text_font(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    const lv_font_t *value = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, const lv_font_t *, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_font_obj, 3, mp_lv_obj_set_style_text_font, lv_obj_set_style_text_font);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_text_letter_space */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_letter_space_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_text_letter_space);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_text_line_space */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_line_space_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_text_line_space);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_obj_set_style_text_decor(struct _lv_obj_t *obj, lv_text_decor_t value, lv_style_selector_t selector)
- */
- 
-STATIC mp_obj_t mp_lv_obj_set_style_text_decor(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_text_decor_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, lv_text_decor_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_decor_obj, 3, mp_lv_obj_set_style_text_decor, lv_obj_set_style_text_decor);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_obj_set_style_text_align(struct _lv_obj_t *obj, lv_text_align_t value, lv_style_selector_t selector)
- */
- 
-STATIC mp_obj_t mp_lv_obj_set_style_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_text_align_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    lv_style_selector_t selector = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_obj_t *, lv_text_align_t, lv_style_selector_t))lv_func_ptr)(obj, value, selector);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_text_align_obj, 3, mp_lv_obj_set_style_text_align, lv_obj_set_style_text_align);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_img_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_img_opa);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_img_recolor */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_recolor_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_img_recolor);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_img_recolor_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_recolor_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_img_recolor_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_img_recolor_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_img_recolor_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_img_recolor_opa);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_outline_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_outline_width);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_outline_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_outline_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_outline_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_outline_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_outline_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_outline_opa);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_outline_pad */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_outline_pad_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_outline_pad);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_width);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_ofs_x */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_ofs_x_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_ofs_x);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_ofs_y */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_ofs_y_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_ofs_y);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_shadow_spread */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_spread_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_shadow_spread);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_shadow_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_shadow_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_shadow_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_shadow_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_shadow_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_shadow_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_shadow_opa);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_width);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_dash_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_dash_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_dash_width);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_dash_gap */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_dash_gap_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_dash_gap);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_line_rounded */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_rounded_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_line_rounded);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_line_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_line_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_line_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_line_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_line_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_line_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_line_opa);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_arc_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_width_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_arc_width);
-    
-/* Reusing lv_obj_set_style_pad_all for lv_obj_set_style_arc_rounded */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_rounded_obj, 3, mp_lv_obj_set_style_pad_all, lv_obj_set_style_arc_rounded);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_arc_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_color_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_arc_color);
-    
-/* Reusing lv_obj_set_style_bg_color for lv_obj_set_style_arc_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_color_filtered_obj, 3, mp_lv_obj_set_style_bg_color, lv_obj_set_style_arc_color_filtered);
-    
-/* Reusing lv_obj_set_style_opa for lv_obj_set_style_arc_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_opa_obj, 3, mp_lv_obj_set_style_opa, lv_obj_set_style_arc_opa);
-    
-/* Reusing lv_obj_set_style_bg_img_src for lv_obj_set_style_arc_img_src */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_img_src_obj, 3, mp_lv_obj_set_style_bg_img_src, lv_obj_set_style_arc_img_src);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_calculate_style_text_align_obj, 3, mp_lv_obj_calculate_style_text_align, lv_obj_calculate_style_text_align);
     
 
 /*
@@ -9547,17 +9946,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_style_arc_img_src_obj, 3, mp
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_rect_dsc_t_type();
 
-STATIC inline lv_draw_rect_dsc_t* mp_write_ptr_lv_draw_rect_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_rect_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_rect_dsc_t_type()));
     return (lv_draw_rect_dsc_t*)self->data;
 }
 
-#define mp_write_lv_draw_rect_dsc_t(struct_obj) *mp_write_ptr_lv_draw_rect_dsc_t(struct_obj)
+#define mp_write_lv_draw_rect_dsc_t(struct_obj) *((lv_draw_rect_dsc_t*)mp_write_ptr_lv_draw_rect_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_rect_dsc_t(lv_draw_rect_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_rect_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_rect_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_rect_dsc_t_type(), field);
 }
 
 #define mp_read_lv_draw_rect_dsc_t(field) mp_read_ptr_lv_draw_rect_dsc_t(copy_buffer(&field, sizeof(lv_draw_rect_dsc_t)))
@@ -9661,9 +10060,11 @@ STATIC const mp_obj_type_t mp_lv_draw_rect_dsc_t_type = {
     .print = mp_lv_draw_rect_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_rect_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_rect_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_rect_dsc_t_type()
@@ -9697,17 +10098,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_init_draw_rect_dsc_obj, 3, mp_lv
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_label_dsc_t_type();
 
-STATIC inline lv_draw_label_dsc_t* mp_write_ptr_lv_draw_label_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_label_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_label_dsc_t_type()));
     return (lv_draw_label_dsc_t*)self->data;
 }
 
-#define mp_write_lv_draw_label_dsc_t(struct_obj) *mp_write_ptr_lv_draw_label_dsc_t(struct_obj)
+#define mp_write_lv_draw_label_dsc_t(struct_obj) *((lv_draw_label_dsc_t*)mp_write_ptr_lv_draw_label_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_label_dsc_t(lv_draw_label_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_label_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_label_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_label_dsc_t_type(), field);
 }
 
 #define mp_read_lv_draw_label_dsc_t(field) mp_read_ptr_lv_draw_label_dsc_t(copy_buffer(&field, sizeof(lv_draw_label_dsc_t)))
@@ -9734,8 +10135,8 @@ STATIC void mp_lv_draw_label_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *d
             case MP_QSTR_ofs_y: dest[0] = mp_obj_new_int(data->ofs_y); break; // converting from lv_coord_t;
             case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
             case MP_QSTR_bidi_dir: dest[0] = mp_obj_new_int_from_uint(data->bidi_dir); break; // converting from lv_base_dir_t;
-            case MP_QSTR_flag: dest[0] = mp_obj_new_int_from_uint(data->flag); break; // converting from lv_text_flag_t;
             case MP_QSTR_align: dest[0] = mp_obj_new_int_from_uint(data->align); break; // converting from lv_text_align_t;
+            case MP_QSTR_flag: dest[0] = mp_obj_new_int_from_uint(data->flag); break; // converting from lv_text_flag_t;
             case MP_QSTR_decor: dest[0] = mp_obj_new_int_from_uint(data->decor); break; // converting from lv_text_decor_t;
             case MP_QSTR_blend_mode: dest[0] = mp_obj_new_int_from_uint(data->blend_mode); break; // converting from lv_blend_mode_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
@@ -9758,8 +10159,8 @@ STATIC void mp_lv_draw_label_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *d
                 case MP_QSTR_ofs_y: data->ofs_y = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
                 case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_opa_t;
                 case MP_QSTR_bidi_dir: data->bidi_dir = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_base_dir_t;
-                case MP_QSTR_flag: data->flag = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_text_flag_t;
                 case MP_QSTR_align: data->align = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_text_align_t;
+                case MP_QSTR_flag: data->flag = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_text_flag_t;
                 case MP_QSTR_decor: data->decor = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_text_decor_t;
                 case MP_QSTR_blend_mode: data->blend_mode = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_blend_mode_t;
                 default: return;
@@ -9785,9 +10186,11 @@ STATIC const mp_obj_type_t mp_lv_draw_label_dsc_t_type = {
     .print = mp_lv_draw_label_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_label_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_label_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_label_dsc_t_type()
@@ -9821,17 +10224,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_init_draw_label_dsc_obj, 3, mp_l
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_img_dsc_t_type();
 
-STATIC inline lv_draw_img_dsc_t* mp_write_ptr_lv_draw_img_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_img_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_img_dsc_t_type()));
     return (lv_draw_img_dsc_t*)self->data;
 }
 
-#define mp_write_lv_draw_img_dsc_t(struct_obj) *mp_write_ptr_lv_draw_img_dsc_t(struct_obj)
+#define mp_write_lv_draw_img_dsc_t(struct_obj) *((lv_draw_img_dsc_t*)mp_write_ptr_lv_draw_img_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_img_dsc_t(lv_draw_img_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_img_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_img_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_img_dsc_t_type(), field);
 }
 
 #define mp_read_lv_draw_img_dsc_t(field) mp_read_ptr_lv_draw_img_dsc_t(copy_buffer(&field, sizeof(lv_draw_img_dsc_t)))
@@ -9895,9 +10298,11 @@ STATIC const mp_obj_type_t mp_lv_draw_img_dsc_t_type = {
     .print = mp_lv_draw_img_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_img_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_img_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_img_dsc_t_type()
@@ -9931,17 +10336,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_init_draw_img_dsc_obj, 3, mp_lv_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_line_dsc_t_type();
 
-STATIC inline lv_draw_line_dsc_t* mp_write_ptr_lv_draw_line_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_line_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_line_dsc_t_type()));
     return (lv_draw_line_dsc_t*)self->data;
 }
 
-#define mp_write_lv_draw_line_dsc_t(struct_obj) *mp_write_ptr_lv_draw_line_dsc_t(struct_obj)
+#define mp_write_lv_draw_line_dsc_t(struct_obj) *((lv_draw_line_dsc_t*)mp_write_ptr_lv_draw_line_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_line_dsc_t(lv_draw_line_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_line_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_line_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_line_dsc_t_type(), field);
 }
 
 #define mp_read_lv_draw_line_dsc_t(field) mp_read_ptr_lv_draw_line_dsc_t(copy_buffer(&field, sizeof(lv_draw_line_dsc_t)))
@@ -10005,9 +10410,11 @@ STATIC const mp_obj_type_t mp_lv_draw_line_dsc_t_type = {
     .print = mp_lv_draw_line_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_line_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_line_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_line_dsc_t_type()
@@ -10041,17 +10448,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_init_draw_line_dsc_obj, 3, mp_lv
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_arc_dsc_t_type();
 
-STATIC inline lv_draw_arc_dsc_t* mp_write_ptr_lv_draw_arc_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_arc_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_arc_dsc_t_type()));
     return (lv_draw_arc_dsc_t*)self->data;
 }
 
-#define mp_write_lv_draw_arc_dsc_t(struct_obj) *mp_write_ptr_lv_draw_arc_dsc_t(struct_obj)
+#define mp_write_lv_draw_arc_dsc_t(struct_obj) *((lv_draw_arc_dsc_t*)mp_write_ptr_lv_draw_arc_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_arc_dsc_t(lv_draw_arc_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_arc_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_arc_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_arc_dsc_t_type(), field);
 }
 
 #define mp_read_lv_draw_arc_dsc_t(field) mp_read_ptr_lv_draw_arc_dsc_t(copy_buffer(&field, sizeof(lv_draw_arc_dsc_t)))
@@ -10109,9 +10516,11 @@ STATIC const mp_obj_type_t mp_lv_draw_arc_dsc_t_type = {
     .print = mp_lv_draw_arc_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_arc_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_arc_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_arc_dsc_t_type()
@@ -10189,17 +10598,17 @@ STATIC void lv_obj_class_t_destructor_cb_callback(const struct _lv_obj_class_t *
 
 STATIC inline const mp_obj_type_t *get_mp_lv_event_t_type();
 
-STATIC inline lv_event_t* mp_write_ptr_lv_event_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_event_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_event_t_type()));
     return (lv_event_t*)self->data;
 }
 
-#define mp_write_lv_event_t(struct_obj) *mp_write_ptr_lv_event_t(struct_obj)
+#define mp_write_lv_event_t(struct_obj) *((lv_event_t*)mp_write_ptr_lv_event_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_event_t(lv_event_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_event_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_event_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_event_t_type(), field);
 }
 
 #define mp_read_lv_event_t(field) mp_read_ptr_lv_event_t(copy_buffer(&field, sizeof(lv_event_t)))
@@ -10259,9 +10668,11 @@ STATIC const mp_obj_type_t mp_lv_event_t_type = {
     .print = mp_lv_event_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_event_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_event_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_event_t_type()
@@ -10297,17 +10708,17 @@ STATIC void lv_obj_class_t_event_cb_callback(const struct _lv_obj_class_t *class
 
 STATIC inline const mp_obj_type_t *get_mp_lv_obj_class_t_type();
 
-STATIC inline lv_obj_class_t* mp_write_ptr_lv_obj_class_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_obj_class_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_obj_class_t_type()));
     return (lv_obj_class_t*)self->data;
 }
 
-#define mp_write_lv_obj_class_t(struct_obj) *mp_write_ptr_lv_obj_class_t(struct_obj)
+#define mp_write_lv_obj_class_t(struct_obj) *((lv_obj_class_t*)mp_write_ptr_lv_obj_class_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_obj_class_t(lv_obj_class_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_obj_class_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_obj_class_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_obj_class_t_type(), field);
 }
 
 #define mp_read_lv_obj_class_t(field) mp_read_ptr_lv_obj_class_t(copy_buffer(&field, sizeof(lv_obj_class_t)))
@@ -10373,9 +10784,11 @@ STATIC const mp_obj_type_t mp_lv_obj_class_t_type = {
     .print = mp_lv_obj_class_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_obj_class_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_obj_class_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_obj_class_t_type()
@@ -10390,17 +10803,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_obj_class_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_obj_draw_part_dsc_t_type();
 
-STATIC inline lv_obj_draw_part_dsc_t* mp_write_ptr_lv_obj_draw_part_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_obj_draw_part_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_obj_draw_part_dsc_t_type()));
     return (lv_obj_draw_part_dsc_t*)self->data;
 }
 
-#define mp_write_lv_obj_draw_part_dsc_t(struct_obj) *mp_write_ptr_lv_obj_draw_part_dsc_t(struct_obj)
+#define mp_write_lv_obj_draw_part_dsc_t(struct_obj) *((lv_obj_draw_part_dsc_t*)mp_write_ptr_lv_obj_draw_part_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_obj_draw_part_dsc_t(lv_obj_draw_part_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_obj_draw_part_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_obj_draw_part_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_obj_draw_part_dsc_t_type(), field);
 }
 
 #define mp_read_lv_obj_draw_part_dsc_t(field) mp_read_ptr_lv_obj_draw_part_dsc_t(copy_buffer(&field, sizeof(lv_obj_draw_part_dsc_t)))
@@ -10427,6 +10840,7 @@ STATIC void mp_lv_obj_draw_part_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t
             case MP_QSTR_p1: dest[0] = mp_read_ptr_lv_point_t((void*)data->p1); break; // converting from lv_point_t *;
             case MP_QSTR_p2: dest[0] = mp_read_ptr_lv_point_t((void*)data->p2); break; // converting from lv_point_t *;
             case MP_QSTR_text: dest[0] = convert_to_str((void*)data->text); break; // converting from char *;
+            case MP_QSTR_text_length: dest[0] = mp_obj_new_int_from_uint(data->text_length); break; // converting from uint32_t;
             case MP_QSTR_part: dest[0] = mp_obj_new_int_from_uint(data->part); break; // converting from uint32_t;
             case MP_QSTR_id: dest[0] = mp_obj_new_int_from_uint(data->id); break; // converting from uint32_t;
             case MP_QSTR_radius: dest[0] = mp_obj_new_int(data->radius); break; // converting from lv_coord_t;
@@ -10452,6 +10866,7 @@ STATIC void mp_lv_obj_draw_part_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t
                 case MP_QSTR_p1: data->p1 = (void*)mp_write_ptr_lv_point_t(dest[1]); break; // converting to lv_point_t *;
                 case MP_QSTR_p2: data->p2 = (void*)mp_write_ptr_lv_point_t(dest[1]); break; // converting to lv_point_t *;
                 case MP_QSTR_text: data->text = (void*)(char*)convert_from_str(dest[1]); break; // converting to char *;
+                case MP_QSTR_text_length: data->text_length = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_part: data->part = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_id: data->id = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_radius: data->radius = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
@@ -10480,9 +10895,11 @@ STATIC const mp_obj_type_t mp_lv_obj_draw_part_dsc_t_type = {
     .print = mp_lv_obj_draw_part_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_obj_draw_part_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_obj_draw_part_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_obj_draw_part_dsc_t_type()
@@ -10585,7 +11002,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_event_base_obj, 2, mp_lv_obj_eve
  * void lv_event_cb_t(lv_event_t *e)
  */
 
-STATIC void lv_obj_add_event_cb_event_cb_callback(lv_event_t * arg0)
+GENMPY_UNUSED STATIC void lv_obj_add_event_cb_event_cb_callback(lv_event_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_event_t((void*)arg0);
@@ -10620,7 +11037,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_add_event_cb_obj, 4, mp_lv_obj_a
  * void lv_event_cb_t(lv_event_t *e)
  */
 
-STATIC void lv_obj_t_event_cb_callback(lv_event_t * arg0)
+GENMPY_UNUSED STATIC void lv_obj_t_event_cb_callback(lv_event_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_event_t((void*)arg0);
@@ -10646,6 +11063,25 @@ STATIC mp_obj_t mp_lv_obj_remove_event_cb(size_t mp_n_args, const mp_obj_t *mp_a
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_remove_event_cb_obj, 2, mp_lv_obj_remove_event_cb, lv_obj_remove_event_cb);
+    
+
+/*
+ * lvgl extension definition for:
+ * bool lv_obj_remove_event_cb_with_user_data(struct _lv_obj_t *obj, lv_event_cb_t event_cb, const void *event_user_data)
+ */
+ 
+STATIC mp_obj_t mp_lv_obj_remove_event_cb_with_user_data(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    void *event_cb = mp_lv_callback(mp_args[1], &lv_obj_t_event_cb_callback, MP_QSTR_lv_obj_t_event_cb, &obj->user_data);
+    const void *event_user_data = (const void *)mp_to_ptr(mp_args[2]);
+    bool _res = ((bool (*)(struct _lv_obj_t *, lv_event_cb_t, const void *))lv_func_ptr)(obj, event_cb, event_user_data);
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_remove_event_cb_with_user_data_obj, 3, mp_lv_obj_remove_event_cb_with_user_data, lv_obj_remove_event_cb_with_user_data);
     
 
 /*
@@ -10783,22 +11219,9 @@ STATIC mp_obj_t mp_lv_obj_get_group(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_group_obj, 1, mp_lv_obj_get_group, lv_obj_get_group);
     
+/* Reusing lv_obj_move_foreground for lv_obj_allocate_spec_attr */
 
-/*
- * lvgl extension definition for:
- * void lv_obj_allocate_spec_attr(lv_obj_t *obj)
- */
- 
-STATIC mp_obj_t mp_lv_obj_allocate_spec_attr(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    ((void (*)(lv_obj_t *))lv_func_ptr)(obj);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_allocate_spec_attr_obj, 1, mp_lv_obj_allocate_spec_attr, lv_obj_allocate_spec_attr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_allocate_spec_attr_obj, 1, mp_lv_obj_move_foreground, lv_obj_allocate_spec_attr);
     
 
 /*
@@ -11021,7 +11444,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_set_tile_id_obj, 4, mp_lv_obj_se
  * Array convertors for lv_coord_t []
  */
 
-STATIC lv_coord_t *mp_arr_to_lv_coord_t_____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_coord_t *mp_arr_to_lv_coord_t_____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -11036,16 +11459,12 @@ STATIC lv_coord_t *mp_arr_to_lv_coord_t_____(mp_obj_t mp_arr)
     }
     return (lv_coord_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_coord_t_____(const lv_coord_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_coord_t_____(const lv_coord_t *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_obj_new_int(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return mp_array_from_i16ptr((void*)arr);
 }
-    
+
 
 /*
  * lvgl extension definition for:
@@ -11239,17 +11658,6 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_style_pad_right), MP_ROM_PTR(&mp_lv_obj_get_style_pad_right_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_pad_row), MP_ROM_PTR(&mp_lv_obj_get_style_pad_row_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_pad_column), MP_ROM_PTR(&mp_lv_obj_get_style_pad_column_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_radius), MP_ROM_PTR(&mp_lv_obj_get_style_radius_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_clip_corner), MP_ROM_PTR(&mp_lv_obj_get_style_clip_corner_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_opa), MP_ROM_PTR(&mp_lv_obj_get_style_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_color_filter_dsc), MP_ROM_PTR(&mp_lv_obj_get_style_color_filter_dsc_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_color_filter_opa), MP_ROM_PTR(&mp_lv_obj_get_style_color_filter_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_anim_time), MP_ROM_PTR(&mp_lv_obj_get_style_anim_time_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_anim_speed), MP_ROM_PTR(&mp_lv_obj_get_style_anim_speed_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_transition), MP_ROM_PTR(&mp_lv_obj_get_style_transition_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_blend_mode), MP_ROM_PTR(&mp_lv_obj_get_style_blend_mode_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_layout), MP_ROM_PTR(&mp_lv_obj_get_style_layout_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_base_dir), MP_ROM_PTR(&mp_lv_obj_get_style_base_dir_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_bg_color), MP_ROM_PTR(&mp_lv_obj_get_style_bg_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_bg_color_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_bg_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_bg_opa), MP_ROM_PTR(&mp_lv_obj_get_style_bg_opa_obj) },
@@ -11270,18 +11678,6 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_style_border_width), MP_ROM_PTR(&mp_lv_obj_get_style_border_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_border_side), MP_ROM_PTR(&mp_lv_obj_get_style_border_side_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_border_post), MP_ROM_PTR(&mp_lv_obj_get_style_border_post_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_color), MP_ROM_PTR(&mp_lv_obj_get_style_text_color_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_color_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_text_color_filtered_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_opa), MP_ROM_PTR(&mp_lv_obj_get_style_text_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_font), MP_ROM_PTR(&mp_lv_obj_get_style_text_font_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_letter_space), MP_ROM_PTR(&mp_lv_obj_get_style_text_letter_space_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_line_space), MP_ROM_PTR(&mp_lv_obj_get_style_text_line_space_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_decor), MP_ROM_PTR(&mp_lv_obj_get_style_text_decor_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_text_align), MP_ROM_PTR(&mp_lv_obj_get_style_text_align_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_img_opa), MP_ROM_PTR(&mp_lv_obj_get_style_img_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_img_recolor), MP_ROM_PTR(&mp_lv_obj_get_style_img_recolor_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_img_recolor_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_img_recolor_filtered_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_img_recolor_opa), MP_ROM_PTR(&mp_lv_obj_get_style_img_recolor_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_outline_width), MP_ROM_PTR(&mp_lv_obj_get_style_outline_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_outline_color), MP_ROM_PTR(&mp_lv_obj_get_style_outline_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_outline_color_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_outline_color_filtered_obj) },
@@ -11294,6 +11690,10 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_style_shadow_color), MP_ROM_PTR(&mp_lv_obj_get_style_shadow_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_shadow_color_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_shadow_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_shadow_opa), MP_ROM_PTR(&mp_lv_obj_get_style_shadow_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_img_opa), MP_ROM_PTR(&mp_lv_obj_get_style_img_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_img_recolor), MP_ROM_PTR(&mp_lv_obj_get_style_img_recolor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_img_recolor_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_img_recolor_filtered_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_img_recolor_opa), MP_ROM_PTR(&mp_lv_obj_get_style_img_recolor_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_line_width), MP_ROM_PTR(&mp_lv_obj_get_style_line_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_line_dash_width), MP_ROM_PTR(&mp_lv_obj_get_style_line_dash_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_line_dash_gap), MP_ROM_PTR(&mp_lv_obj_get_style_line_dash_gap_obj) },
@@ -11307,6 +11707,25 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_style_arc_color_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_arc_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_arc_opa), MP_ROM_PTR(&mp_lv_obj_get_style_arc_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_arc_img_src), MP_ROM_PTR(&mp_lv_obj_get_style_arc_img_src_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_color), MP_ROM_PTR(&mp_lv_obj_get_style_text_color_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_color_filtered), MP_ROM_PTR(&mp_lv_obj_get_style_text_color_filtered_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_opa), MP_ROM_PTR(&mp_lv_obj_get_style_text_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_font), MP_ROM_PTR(&mp_lv_obj_get_style_text_font_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_letter_space), MP_ROM_PTR(&mp_lv_obj_get_style_text_letter_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_line_space), MP_ROM_PTR(&mp_lv_obj_get_style_text_line_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_decor), MP_ROM_PTR(&mp_lv_obj_get_style_text_decor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_text_align), MP_ROM_PTR(&mp_lv_obj_get_style_text_align_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_radius), MP_ROM_PTR(&mp_lv_obj_get_style_radius_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_clip_corner), MP_ROM_PTR(&mp_lv_obj_get_style_clip_corner_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_opa), MP_ROM_PTR(&mp_lv_obj_get_style_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_color_filter_dsc), MP_ROM_PTR(&mp_lv_obj_get_style_color_filter_dsc_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_color_filter_opa), MP_ROM_PTR(&mp_lv_obj_get_style_color_filter_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_anim_time), MP_ROM_PTR(&mp_lv_obj_get_style_anim_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_anim_speed), MP_ROM_PTR(&mp_lv_obj_get_style_anim_speed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_transition), MP_ROM_PTR(&mp_lv_obj_get_style_transition_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_blend_mode), MP_ROM_PTR(&mp_lv_obj_get_style_blend_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_layout), MP_ROM_PTR(&mp_lv_obj_get_style_layout_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_style_base_dir), MP_ROM_PTR(&mp_lv_obj_get_style_base_dir_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_pad_all), MP_ROM_PTR(&mp_lv_obj_set_style_pad_all_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_pad_hor), MP_ROM_PTR(&mp_lv_obj_set_style_pad_hor_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_pad_ver), MP_ROM_PTR(&mp_lv_obj_set_style_pad_ver_obj) },
@@ -11315,13 +11734,14 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_user_data), MP_ROM_PTR(&mp_lv_obj_set_user_data_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_user_data), MP_ROM_PTR(&mp_lv_obj_get_user_data_obj) },
     { MP_ROM_QSTR(MP_QSTR_dpx), MP_ROM_PTR(&mp_lv_obj_dpx_obj) },
+    { MP_ROM_QSTR(MP_QSTR_move_foreground), MP_ROM_PTR(&mp_lv_obj_move_foreground_obj) },
+    { MP_ROM_QSTR(MP_QSTR_move_background), MP_ROM_PTR(&mp_lv_obj_move_background_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_child_id), MP_ROM_PTR(&mp_lv_obj_get_child_id_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_flex_flow), MP_ROM_PTR(&mp_lv_obj_get_style_flex_flow_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_flex_main_place), MP_ROM_PTR(&mp_lv_obj_get_style_flex_main_place_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_flex_cross_place), MP_ROM_PTR(&mp_lv_obj_get_style_flex_cross_place_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_flex_track_place), MP_ROM_PTR(&mp_lv_obj_get_style_flex_track_place_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_flex_grow), MP_ROM_PTR(&mp_lv_obj_get_style_flex_grow_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_grid_row_dsc_array), MP_ROM_PTR(&mp_lv_obj_get_style_grid_row_dsc_array_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_style_grid_column_dsc_array), MP_ROM_PTR(&mp_lv_obj_get_style_grid_column_dsc_array_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_grid_row_align), MP_ROM_PTR(&mp_lv_obj_get_style_grid_row_align_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_grid_column_align), MP_ROM_PTR(&mp_lv_obj_get_style_grid_column_align_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_style_grid_cell_column_pos), MP_ROM_PTR(&mp_lv_obj_get_style_grid_cell_column_pos_obj) },
@@ -11336,14 +11756,14 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_del_anim_ready_cb), MP_ROM_PTR(&mp_lv_obj_del_anim_ready_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_del_async), MP_ROM_PTR(&mp_lv_obj_del_async_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_obj_set_parent_obj) },
-    { MP_ROM_QSTR(MP_QSTR_move_foreground), MP_ROM_PTR(&mp_lv_obj_move_foreground_obj) },
-    { MP_ROM_QSTR(MP_QSTR_move_background), MP_ROM_PTR(&mp_lv_obj_move_background_obj) },
+    { MP_ROM_QSTR(MP_QSTR_swap), MP_ROM_PTR(&mp_lv_obj_swap_obj) },
+    { MP_ROM_QSTR(MP_QSTR_move_to_index), MP_ROM_PTR(&mp_lv_obj_move_to_index_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_screen), MP_ROM_PTR(&mp_lv_obj_get_screen_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_disp), MP_ROM_PTR(&mp_lv_obj_get_disp_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_parent), MP_ROM_PTR(&mp_lv_obj_get_parent_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child), MP_ROM_PTR(&mp_lv_obj_get_child_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_child_cnt), MP_ROM_PTR(&mp_lv_obj_get_child_cnt_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_child_id), MP_ROM_PTR(&mp_lv_obj_get_child_id_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_index), MP_ROM_PTR(&mp_lv_obj_get_index_obj) },
     { MP_ROM_QSTR(MP_QSTR_tree_walk), MP_ROM_PTR(&mp_lv_obj_tree_walk_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_obj_set_pos_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_x), MP_ROM_PTR(&mp_lv_obj_set_x_obj) },
@@ -11366,6 +11786,8 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_x2), MP_ROM_PTR(&mp_lv_obj_get_x2_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y), MP_ROM_PTR(&mp_lv_obj_get_y_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_y2), MP_ROM_PTR(&mp_lv_obj_get_y2_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_x_aligned), MP_ROM_PTR(&mp_lv_obj_get_x_aligned_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_y_aligned), MP_ROM_PTR(&mp_lv_obj_get_y_aligned_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_obj_get_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_obj_get_height_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_content_width), MP_ROM_PTR(&mp_lv_obj_get_content_width_obj) },
@@ -11444,17 +11866,6 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_style_pad_right), MP_ROM_PTR(&mp_lv_obj_set_style_pad_right_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_pad_row), MP_ROM_PTR(&mp_lv_obj_set_style_pad_row_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_pad_column), MP_ROM_PTR(&mp_lv_obj_set_style_pad_column_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_radius), MP_ROM_PTR(&mp_lv_obj_set_style_radius_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_clip_corner), MP_ROM_PTR(&mp_lv_obj_set_style_clip_corner_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_opa), MP_ROM_PTR(&mp_lv_obj_set_style_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_color_filter_dsc), MP_ROM_PTR(&mp_lv_obj_set_style_color_filter_dsc_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_color_filter_opa), MP_ROM_PTR(&mp_lv_obj_set_style_color_filter_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_anim_time), MP_ROM_PTR(&mp_lv_obj_set_style_anim_time_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_anim_speed), MP_ROM_PTR(&mp_lv_obj_set_style_anim_speed_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_transition), MP_ROM_PTR(&mp_lv_obj_set_style_transition_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_blend_mode), MP_ROM_PTR(&mp_lv_obj_set_style_blend_mode_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_layout), MP_ROM_PTR(&mp_lv_obj_set_style_layout_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_base_dir), MP_ROM_PTR(&mp_lv_obj_set_style_base_dir_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_bg_color), MP_ROM_PTR(&mp_lv_obj_set_style_bg_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_bg_color_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_bg_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_bg_opa), MP_ROM_PTR(&mp_lv_obj_set_style_bg_opa_obj) },
@@ -11475,18 +11886,6 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_style_border_width), MP_ROM_PTR(&mp_lv_obj_set_style_border_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_border_side), MP_ROM_PTR(&mp_lv_obj_set_style_border_side_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_border_post), MP_ROM_PTR(&mp_lv_obj_set_style_border_post_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_color), MP_ROM_PTR(&mp_lv_obj_set_style_text_color_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_color_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_text_color_filtered_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_opa), MP_ROM_PTR(&mp_lv_obj_set_style_text_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_font), MP_ROM_PTR(&mp_lv_obj_set_style_text_font_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_letter_space), MP_ROM_PTR(&mp_lv_obj_set_style_text_letter_space_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_line_space), MP_ROM_PTR(&mp_lv_obj_set_style_text_line_space_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_decor), MP_ROM_PTR(&mp_lv_obj_set_style_text_decor_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_text_align), MP_ROM_PTR(&mp_lv_obj_set_style_text_align_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_img_opa), MP_ROM_PTR(&mp_lv_obj_set_style_img_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_img_recolor), MP_ROM_PTR(&mp_lv_obj_set_style_img_recolor_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_img_recolor_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_img_recolor_filtered_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_style_img_recolor_opa), MP_ROM_PTR(&mp_lv_obj_set_style_img_recolor_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_outline_width), MP_ROM_PTR(&mp_lv_obj_set_style_outline_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_outline_color), MP_ROM_PTR(&mp_lv_obj_set_style_outline_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_outline_color_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_outline_color_filtered_obj) },
@@ -11499,6 +11898,10 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_style_shadow_color), MP_ROM_PTR(&mp_lv_obj_set_style_shadow_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_shadow_color_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_shadow_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_shadow_opa), MP_ROM_PTR(&mp_lv_obj_set_style_shadow_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_img_opa), MP_ROM_PTR(&mp_lv_obj_set_style_img_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_img_recolor), MP_ROM_PTR(&mp_lv_obj_set_style_img_recolor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_img_recolor_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_img_recolor_filtered_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_img_recolor_opa), MP_ROM_PTR(&mp_lv_obj_set_style_img_recolor_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_line_width), MP_ROM_PTR(&mp_lv_obj_set_style_line_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_line_dash_width), MP_ROM_PTR(&mp_lv_obj_set_style_line_dash_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_line_dash_gap), MP_ROM_PTR(&mp_lv_obj_set_style_line_dash_gap_obj) },
@@ -11512,6 +11915,26 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_style_arc_color_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_arc_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_arc_opa), MP_ROM_PTR(&mp_lv_obj_set_style_arc_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_style_arc_img_src), MP_ROM_PTR(&mp_lv_obj_set_style_arc_img_src_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_color), MP_ROM_PTR(&mp_lv_obj_set_style_text_color_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_color_filtered), MP_ROM_PTR(&mp_lv_obj_set_style_text_color_filtered_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_opa), MP_ROM_PTR(&mp_lv_obj_set_style_text_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_font), MP_ROM_PTR(&mp_lv_obj_set_style_text_font_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_letter_space), MP_ROM_PTR(&mp_lv_obj_set_style_text_letter_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_line_space), MP_ROM_PTR(&mp_lv_obj_set_style_text_line_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_decor), MP_ROM_PTR(&mp_lv_obj_set_style_text_decor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_text_align), MP_ROM_PTR(&mp_lv_obj_set_style_text_align_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_radius), MP_ROM_PTR(&mp_lv_obj_set_style_radius_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_clip_corner), MP_ROM_PTR(&mp_lv_obj_set_style_clip_corner_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_opa), MP_ROM_PTR(&mp_lv_obj_set_style_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_color_filter_dsc), MP_ROM_PTR(&mp_lv_obj_set_style_color_filter_dsc_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_color_filter_opa), MP_ROM_PTR(&mp_lv_obj_set_style_color_filter_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_anim_time), MP_ROM_PTR(&mp_lv_obj_set_style_anim_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_anim_speed), MP_ROM_PTR(&mp_lv_obj_set_style_anim_speed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_transition), MP_ROM_PTR(&mp_lv_obj_set_style_transition_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_blend_mode), MP_ROM_PTR(&mp_lv_obj_set_style_blend_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_layout), MP_ROM_PTR(&mp_lv_obj_set_style_layout_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_style_base_dir), MP_ROM_PTR(&mp_lv_obj_set_style_base_dir_obj) },
+    { MP_ROM_QSTR(MP_QSTR_calculate_style_text_align), MP_ROM_PTR(&mp_lv_obj_calculate_style_text_align_obj) },
     { MP_ROM_QSTR(MP_QSTR_init_draw_rect_dsc), MP_ROM_PTR(&mp_lv_obj_init_draw_rect_dsc_obj) },
     { MP_ROM_QSTR(MP_QSTR_init_draw_label_dsc), MP_ROM_PTR(&mp_lv_obj_init_draw_label_dsc_obj) },
     { MP_ROM_QSTR(MP_QSTR_init_draw_img_dsc), MP_ROM_PTR(&mp_lv_obj_init_draw_img_dsc_obj) },
@@ -11528,6 +11951,7 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_event_base), MP_ROM_PTR(&mp_lv_obj_event_base_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_event_cb), MP_ROM_PTR(&mp_lv_obj_add_event_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_remove_event_cb), MP_ROM_PTR(&mp_lv_obj_remove_event_cb_obj) },
+    { MP_ROM_QSTR(MP_QSTR_remove_event_cb_with_user_data), MP_ROM_PTR(&mp_lv_obj_remove_event_cb_with_user_data_obj) },
     { MP_ROM_QSTR(MP_QSTR_remove_event_dsc), MP_ROM_PTR(&mp_lv_obj_remove_event_dsc_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_flag), MP_ROM_PTR(&mp_lv_obj_add_flag_obj) },
     { MP_ROM_QSTR(MP_QSTR_clear_flag), MP_ROM_PTR(&mp_lv_obj_clear_flag_obj) },
@@ -11927,17 +12351,17 @@ STATIC const mp_lv_obj_type_t mp_lv_btn_type = {
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_header_t_type();
 
-STATIC inline lv_img_header_t* mp_write_ptr_lv_img_header_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_img_header_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_img_header_t_type()));
     return (lv_img_header_t*)self->data;
 }
 
-#define mp_write_lv_img_header_t(struct_obj) *mp_write_ptr_lv_img_header_t(struct_obj)
+#define mp_write_lv_img_header_t(struct_obj) *((lv_img_header_t*)mp_write_ptr_lv_img_header_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_img_header_t(lv_img_header_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_img_header_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_img_header_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_img_header_t_type(), field);
 }
 
 #define mp_read_lv_img_header_t(field) mp_read_ptr_lv_img_header_t(copy_buffer(&field, sizeof(lv_img_header_t)))
@@ -11993,9 +12417,11 @@ STATIC const mp_obj_type_t mp_lv_img_header_t_type = {
     .print = mp_lv_img_header_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_img_header_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_img_header_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_header_t_type()
@@ -12010,17 +12436,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_img_header_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_dsc_t_type();
 
-STATIC inline lv_img_dsc_t* mp_write_ptr_lv_img_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_img_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_img_dsc_t_type()));
     return (lv_img_dsc_t*)self->data;
 }
 
-#define mp_write_lv_img_dsc_t(struct_obj) *mp_write_ptr_lv_img_dsc_t(struct_obj)
+#define mp_write_lv_img_dsc_t(struct_obj) *((lv_img_dsc_t*)mp_write_ptr_lv_img_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_img_dsc_t(lv_img_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_img_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_img_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_img_dsc_t_type(), field);
 }
 
 #define mp_read_lv_img_dsc_t(field) mp_read_ptr_lv_img_dsc_t(copy_buffer(&field, sizeof(lv_img_dsc_t)))
@@ -12037,7 +12463,7 @@ STATIC void mp_lv_img_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         {
             case MP_QSTR_header: dest[0] = mp_read_byref_lv_img_header_t(data->header); break; // converting from lv_img_header_t;
             case MP_QSTR_data_size: dest[0] = mp_obj_new_int_from_uint(data->data_size); break; // converting from uint32_t;
-            case MP_QSTR_data: dest[0] = ptr_to_mp((void*)data->data); break; // converting from uint8_t *;
+            case MP_QSTR_data: dest[0] = mp_array_from_u8ptr((void*)data->data); break; // converting from uint8_t *;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
@@ -12048,7 +12474,7 @@ STATIC void mp_lv_img_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             {
                 case MP_QSTR_header: data->header = mp_write_lv_img_header_t(dest[1]); break; // converting to lv_img_header_t;
                 case MP_QSTR_data_size: data->data_size = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_data: data->data = (void*)mp_to_ptr(dest[1]); break; // converting to uint8_t *;
+                case MP_QSTR_data: data->data = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to uint8_t *;
                 default: return;
             }
 
@@ -12072,9 +12498,11 @@ STATIC const mp_obj_type_t mp_lv_img_dsc_t_type = {
     .print = mp_lv_img_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_img_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_img_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_dsc_t_type()
@@ -12315,7 +12743,7 @@ STATIC mp_obj_t mp_funcptr_lv_img_decoder_read_line_f_t(size_t mp_n_args, const 
     lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[2]);
     lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[3]);
     lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[4]);
-    uint8_t *buf = mp_to_ptr(mp_args[5]);
+    uint8_t *buf = mp_array_to_u8ptr(mp_args[5]);
     lv_res_t _res = ((lv_res_t (*)(struct _lv_img_decoder_t *, struct _lv_img_decoder_dsc_t *, lv_coord_t, lv_coord_t, lv_coord_t, uint8_t *))lv_func_ptr)(decoder, dsc, x, y, len, buf);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -12357,17 +12785,17 @@ STATIC void lv_img_decoder_t_close_cb_callback(struct _lv_img_decoder_t *decoder
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_decoder_t_type();
 
-STATIC inline lv_img_decoder_t* mp_write_ptr_lv_img_decoder_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_img_decoder_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_img_decoder_t_type()));
     return (lv_img_decoder_t*)self->data;
 }
 
-#define mp_write_lv_img_decoder_t(struct_obj) *mp_write_ptr_lv_img_decoder_t(struct_obj)
+#define mp_write_lv_img_decoder_t(struct_obj) *((lv_img_decoder_t*)mp_write_ptr_lv_img_decoder_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_img_decoder_t(lv_img_decoder_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_img_decoder_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_img_decoder_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_img_decoder_t_type(), field);
 }
 
 #define mp_read_lv_img_decoder_t(field) mp_read_ptr_lv_img_decoder_t(copy_buffer(&field, sizeof(lv_img_decoder_t)))
@@ -12423,9 +12851,11 @@ STATIC const mp_obj_type_t mp_lv_img_decoder_t_type = {
     .print = mp_lv_img_decoder_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_img_decoder_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_img_decoder_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_decoder_t_type()
@@ -12440,17 +12870,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_img_decoder_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_decoder_dsc_t_type();
 
-STATIC inline lv_img_decoder_dsc_t* mp_write_ptr_lv_img_decoder_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_img_decoder_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_img_decoder_dsc_t_type()));
     return (lv_img_decoder_dsc_t*)self->data;
 }
 
-#define mp_write_lv_img_decoder_dsc_t(struct_obj) *mp_write_ptr_lv_img_decoder_dsc_t(struct_obj)
+#define mp_write_lv_img_decoder_dsc_t(struct_obj) *((lv_img_decoder_dsc_t*)mp_write_ptr_lv_img_decoder_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_img_decoder_dsc_t(lv_img_decoder_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_img_decoder_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_img_decoder_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_img_decoder_dsc_t_type(), field);
 }
 
 #define mp_read_lv_img_decoder_dsc_t(field) mp_read_ptr_lv_img_decoder_dsc_t(copy_buffer(&field, sizeof(lv_img_decoder_dsc_t)))
@@ -12471,7 +12901,7 @@ STATIC void mp_lv_img_decoder_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
             case MP_QSTR_frame_id: dest[0] = mp_obj_new_int(data->frame_id); break; // converting from int32_t;
             case MP_QSTR_src_type: dest[0] = mp_obj_new_int_from_uint(data->src_type); break; // converting from lv_img_src_t;
             case MP_QSTR_header: dest[0] = mp_read_byref_lv_img_header_t(data->header); break; // converting from lv_img_header_t;
-            case MP_QSTR_img_data: dest[0] = ptr_to_mp((void*)data->img_data); break; // converting from uint8_t *;
+            case MP_QSTR_img_data: dest[0] = mp_array_from_u8ptr((void*)data->img_data); break; // converting from uint8_t *;
             case MP_QSTR_time_to_open: dest[0] = mp_obj_new_int_from_uint(data->time_to_open); break; // converting from uint32_t;
             case MP_QSTR_error_msg: dest[0] = convert_to_str((void*)data->error_msg); break; // converting from char *;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
@@ -12489,7 +12919,7 @@ STATIC void mp_lv_img_decoder_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
                 case MP_QSTR_frame_id: data->frame_id = (int32_t)mp_obj_get_int(dest[1]); break; // converting to int32_t;
                 case MP_QSTR_src_type: data->src_type = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_img_src_t;
                 case MP_QSTR_header: data->header = mp_write_lv_img_header_t(dest[1]); break; // converting to lv_img_header_t;
-                case MP_QSTR_img_data: data->img_data = (void*)mp_to_ptr(dest[1]); break; // converting to uint8_t *;
+                case MP_QSTR_img_data: data->img_data = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to uint8_t *;
                 case MP_QSTR_time_to_open: data->time_to_open = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_error_msg: data->error_msg = (void*)(char*)convert_from_str(dest[1]); break; // converting to char *;
                 case MP_QSTR_user_data: data->user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
@@ -12516,9 +12946,11 @@ STATIC const mp_obj_type_t mp_lv_img_decoder_dsc_t_type = {
     .print = mp_lv_img_decoder_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_img_decoder_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_img_decoder_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_img_decoder_dsc_t_type()
@@ -12558,7 +12990,7 @@ STATIC mp_obj_t mp_lv_img_decoder_read_line(size_t mp_n_args, const mp_obj_t *mp
     lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[1]);
     lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[2]);
     lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[3]);
-    uint8_t *buf = mp_to_ptr(mp_args[4]);
+    uint8_t *buf = mp_array_to_u8ptr(mp_args[4]);
     lv_res_t _res = ((lv_res_t (*)(lv_img_decoder_dsc_t *, lv_coord_t, lv_coord_t, lv_coord_t, uint8_t *))lv_func_ptr)(dsc, x, y, len, buf);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -12624,7 +13056,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_delete_obj, 1, mp_lv_img
  * lv_res_t lv_img_decoder_info_f_t(struct _lv_img_decoder_t *decoder, const void *src, lv_img_header_t *header)
  */
 
-STATIC lv_res_t lv_img_decoder_t_info_cb_callback(struct _lv_img_decoder_t * arg0, const void * arg1, lv_img_header_t * arg2)
+GENMPY_UNUSED STATIC lv_res_t lv_img_decoder_t_info_cb_callback(struct _lv_img_decoder_t * arg0, const void * arg1, lv_img_header_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -12659,7 +13091,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_info_cb_obj, 2, mp_l
  * lv_res_t lv_img_decoder_open_f_t(struct _lv_img_decoder_t *decoder, struct _lv_img_decoder_dsc_t *dsc)
  */
 
-STATIC lv_res_t lv_img_decoder_t_open_cb_callback(struct _lv_img_decoder_t * arg0, struct _lv_img_decoder_dsc_t * arg1)
+GENMPY_UNUSED STATIC lv_res_t lv_img_decoder_t_open_cb_callback(struct _lv_img_decoder_t * arg0, struct _lv_img_decoder_dsc_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -12693,7 +13125,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_open_cb_obj, 2, mp_l
  * lv_res_t lv_img_decoder_read_line_f_t(struct _lv_img_decoder_t *decoder, struct _lv_img_decoder_dsc_t *dsc, lv_coord_t x, lv_coord_t y, lv_coord_t len, uint8_t *buf)
  */
 
-STATIC lv_res_t lv_img_decoder_t_read_line_cb_callback(struct _lv_img_decoder_t * arg0, struct _lv_img_decoder_dsc_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, uint8_t * arg5)
+GENMPY_UNUSED STATIC lv_res_t lv_img_decoder_t_read_line_cb_callback(struct _lv_img_decoder_t * arg0, struct _lv_img_decoder_dsc_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, uint8_t * arg5)
 {
     mp_obj_t mp_args[6];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -12701,7 +13133,7 @@ STATIC lv_res_t lv_img_decoder_t_read_line_cb_callback(struct _lv_img_decoder_t 
     mp_args[2] = mp_obj_new_int(arg2);
     mp_args[3] = mp_obj_new_int(arg3);
     mp_args[4] = mp_obj_new_int(arg4);
-    mp_args[5] = ptr_to_mp((void*)arg5);
+    mp_args[5] = mp_array_from_u8ptr((void*)arg5);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
     mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_img_decoder_t_read_line_cb)) , 6, 0, mp_args);
     return (uint8_t)mp_obj_get_int(callback_result);
@@ -12731,7 +13163,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_img_decoder_set_read_line_cb_obj, 2,
  * void lv_img_decoder_close_f_t(struct _lv_img_decoder_t *decoder, struct _lv_img_decoder_dsc_t *dsc)
  */
 
-STATIC void lv_img_decoder_t_close_cb_callback(struct _lv_img_decoder_t * arg0, struct _lv_img_decoder_dsc_t * arg1)
+GENMPY_UNUSED STATIC void lv_img_decoder_t_close_cb_callback(struct _lv_img_decoder_t * arg0, struct _lv_img_decoder_dsc_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_img_decoder_t((void*)arg0);
@@ -12809,7 +13241,7 @@ STATIC mp_obj_t mp_lv_img_decoder_built_in_read_line(size_t mp_n_args, const mp_
     lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[2]);
     lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[3]);
     lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[4]);
-    uint8_t *buf = mp_to_ptr(mp_args[5]);
+    uint8_t *buf = mp_array_to_u8ptr(mp_args[5]);
     lv_res_t _res = ((lv_res_t (*)(lv_img_decoder_t *, lv_img_decoder_dsc_t *, lv_coord_t, lv_coord_t, lv_coord_t, uint8_t *))lv_func_ptr)(decoder, dsc, x, y, len, buf);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -13520,7 +13952,7 @@ STATIC const mp_lv_obj_type_t mp_lv_label_type = {
  * Array convertors for lv_point_t []
  */
 
-STATIC lv_point_t *mp_arr_to_lv_point_t_____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_point_t *mp_arr_to_lv_point_t_____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -13535,16 +13967,12 @@ STATIC lv_point_t *mp_arr_to_lv_point_t_____(mp_obj_t mp_arr)
     }
     return (lv_point_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_point_t_____(const lv_point_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_point_t_____(const lv_point_t *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_read_lv_point_t(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return mp_read_ptr_lv_point_t((void*)arr);
 }
-    
+
 
 /*
  * lvgl extension definition for:
@@ -13777,8 +14205,8 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_table_has_cell_ctrl_obj, 4, mp_lv_ta
 STATIC mp_obj_t mp_lv_table_get_selected_cell(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    uint16_t *row = mp_to_ptr(mp_args[1]);
-    uint16_t *col = mp_to_ptr(mp_args[2]);
+    uint16_t *row = mp_array_to_u16ptr(mp_args[1]);
+    uint16_t *col = mp_array_to_u16ptr(mp_args[2]);
     ((void (*)(lv_obj_t *, uint16_t *, uint16_t *))lv_func_ptr)(obj, row, col);
     return mp_const_none;
 }
@@ -14231,7 +14659,7 @@ STATIC const mp_lv_obj_type_t mp_lv_slider_type = {
  * Array convertors for char *[]
  */
 
-STATIC char * *mp_arr_to_char_ptr____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC char * *mp_arr_to_char_ptr____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -14246,16 +14674,12 @@ STATIC char * *mp_arr_to_char_ptr____(mp_obj_t mp_arr)
     }
     return (char * *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_char_ptr____(const char * *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_char_ptr____(const char * *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = convert_to_str(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return mp_read_ptr_C_Pointer((void*)arr);
 }
-    
+
 
 /*
  * lvgl extension definition for:
@@ -14279,7 +14703,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_set_map_obj, 2, mp_lv_btnm
  * Array convertors for lv_btnmatrix_ctrl_t []
  */
 
-STATIC lv_btnmatrix_ctrl_t *mp_arr_to_lv_btnmatrix_ctrl_t_____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_btnmatrix_ctrl_t *mp_arr_to_lv_btnmatrix_ctrl_t_____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -14294,16 +14718,12 @@ STATIC lv_btnmatrix_ctrl_t *mp_arr_to_lv_btnmatrix_ctrl_t_____(mp_obj_t mp_arr)
     }
     return (lv_btnmatrix_ctrl_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_btnmatrix_ctrl_t_____(const lv_btnmatrix_ctrl_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_btnmatrix_ctrl_t_____(const lv_btnmatrix_ctrl_t *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return mp_array_from_u16ptr((void*)arr);
 }
-    
+
 
 /*
  * lvgl extension definition for:
@@ -14345,24 +14765,9 @@ STATIC mp_obj_t mp_lv_btnmatrix_set_btn_ctrl(size_t mp_n_args, const mp_obj_t *m
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_set_btn_ctrl_obj, 3, mp_lv_btnmatrix_set_btn_ctrl, lv_btnmatrix_set_btn_ctrl);
     
+/* Reusing lv_btnmatrix_set_btn_ctrl for lv_btnmatrix_clear_btn_ctrl */
 
-/*
- * lvgl extension definition for:
- * void lv_btnmatrix_clear_btn_ctrl(const lv_obj_t *obj, uint16_t btn_id, lv_btnmatrix_ctrl_t ctrl)
- */
- 
-STATIC mp_obj_t mp_lv_btnmatrix_clear_btn_ctrl(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_obj_t *obj = (const lv_obj_t *)mp_to_lv(mp_args[0]);
-    uint16_t btn_id = (uint16_t)mp_obj_get_int(mp_args[1]);
-    lv_btnmatrix_ctrl_t ctrl = (uint16_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(const lv_obj_t *, uint16_t, lv_btnmatrix_ctrl_t))lv_func_ptr)(obj, btn_id, ctrl);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_clear_btn_ctrl_obj, 3, mp_lv_btnmatrix_clear_btn_ctrl, lv_btnmatrix_clear_btn_ctrl);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_clear_btn_ctrl_obj, 3, mp_lv_btnmatrix_set_btn_ctrl, lv_btnmatrix_clear_btn_ctrl);
     
 
 /*
@@ -14419,7 +14824,7 @@ STATIC mp_obj_t mp_lv_btnmatrix_get_map(size_t mp_n_args, const mp_obj_t *mp_arg
 {
     const lv_obj_t *obj = (const lv_obj_t *)mp_to_lv(mp_args[0]);
     const char ** _res = ((const char **(*)(const lv_obj_t *))lv_func_ptr)(obj);
-    return ptr_to_mp((void*)_res);
+    return mp_read_ptr_C_Pointer((void*)_res);
 }
 
  
@@ -14484,6 +14889,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_has_btn_ctrl_obj, 3, mp_lv
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_get_one_checked_obj, 1, mp_lv_obj_is_valid, lv_btnmatrix_get_one_checked);
     
+/* Reusing lv_obj_is_valid for lv_btnmatrix_get_popovers */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_get_popovers_obj, 1, mp_lv_obj_is_valid, lv_btnmatrix_get_popovers);
+    
 /* Reusing lv_obj_create for lv_btnmatrix_create */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_btnmatrix_create_obj, 1, mp_lv_obj_create, lv_btnmatrix_create);
@@ -14509,6 +14918,7 @@ STATIC const mp_rom_map_elem_t btnmatrix_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_btn_text), MP_ROM_PTR(&mp_lv_btnmatrix_get_btn_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_has_btn_ctrl), MP_ROM_PTR(&mp_lv_btnmatrix_has_btn_ctrl_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_one_checked), MP_ROM_PTR(&mp_lv_btnmatrix_get_one_checked_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_popovers), MP_ROM_PTR(&mp_lv_btnmatrix_get_popovers_obj) },
     { MP_ROM_QSTR(MP_QSTR_CTRL), MP_ROM_PTR(&mp_lv_LV_BTNMATRIX_CTRL_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_DRAW_PART), MP_ROM_PTR(&mp_lv_LV_BTNMATRIX_DRAW_PART_type.mp_obj_type) }
 };
@@ -14581,9 +14991,9 @@ STATIC mp_obj_t mp_lv_dropdown_add_option(size_t mp_n_args, const mp_obj_t *mp_a
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_add_option_obj, 3, mp_lv_dropdown_add_option, lv_dropdown_add_option);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_dropdown_clear_options */
+/* Reusing lv_obj_move_foreground for lv_dropdown_clear_options */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_clear_options_obj, 1, mp_lv_obj_allocate_spec_attr, lv_dropdown_clear_options);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_clear_options_obj, 1, mp_lv_obj_move_foreground, lv_dropdown_clear_options);
     
 /* Reusing lv_arc_set_start_angle for lv_dropdown_set_selected */
 
@@ -14692,13 +15102,17 @@ STATIC mp_obj_t mp_lv_dropdown_get_dir(size_t mp_n_args, const mp_obj_t *mp_args
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_get_dir_obj, 1, mp_lv_dropdown_get_dir, lv_dropdown_get_dir);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_dropdown_open */
+/* Reusing lv_obj_move_foreground for lv_dropdown_open */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_open_obj, 1, mp_lv_obj_allocate_spec_attr, lv_dropdown_open);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_open_obj, 1, mp_lv_obj_move_foreground, lv_dropdown_open);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_dropdown_close */
+/* Reusing lv_obj_move_foreground for lv_dropdown_close */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_close_obj, 1, mp_lv_obj_allocate_spec_attr, lv_dropdown_close);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_close_obj, 1, mp_lv_obj_move_foreground, lv_dropdown_close);
+    
+/* Reusing lv_img_get_antialias for lv_dropdown_is_open */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_dropdown_is_open_obj, 1, mp_lv_img_get_antialias, lv_dropdown_is_open);
     
 /* Reusing lv_obj_create for lv_dropdown_create */
 
@@ -14730,7 +15144,8 @@ STATIC const mp_rom_map_elem_t dropdown_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_selected_highlight), MP_ROM_PTR(&mp_lv_dropdown_get_selected_highlight_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_dir), MP_ROM_PTR(&mp_lv_dropdown_get_dir_obj) },
     { MP_ROM_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_lv_dropdown_open_obj) },
-    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_dropdown_close_obj) }
+    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_dropdown_close_obj) },
+    { MP_ROM_QSTR(MP_QSTR_is_open), MP_ROM_PTR(&mp_lv_dropdown_is_open_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(dropdown_locals_dict, dropdown_locals_dict_table);
@@ -14894,13 +15309,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_add_char_obj, 2, mp_lv_labe
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_add_text_obj, 2, mp_lv_label_set_text, lv_textarea_add_text);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_del_char */
+/* Reusing lv_obj_move_foreground for lv_textarea_del_char */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_del_char_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_del_char);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_del_char_obj, 1, mp_lv_obj_move_foreground, lv_textarea_del_char);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_del_char_forward */
+/* Reusing lv_obj_move_foreground for lv_textarea_del_char_forward */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_del_char_forward_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_del_char_forward);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_del_char_forward_obj, 1, mp_lv_obj_move_foreground, lv_textarea_del_char_forward);
     
 /* Reusing lv_label_set_text for lv_textarea_set_text */
 
@@ -15052,25 +15467,25 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_get_text_selection_obj, 1, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_get_password_show_time_obj, 1, mp_lv_arc_get_angle_start, lv_textarea_get_password_show_time);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_clear_selection */
+/* Reusing lv_obj_move_foreground for lv_textarea_clear_selection */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_clear_selection_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_clear_selection);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_clear_selection_obj, 1, mp_lv_obj_move_foreground, lv_textarea_clear_selection);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_cursor_right */
+/* Reusing lv_obj_move_foreground for lv_textarea_cursor_right */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_right_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_cursor_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_right_obj, 1, mp_lv_obj_move_foreground, lv_textarea_cursor_right);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_cursor_left */
+/* Reusing lv_obj_move_foreground for lv_textarea_cursor_left */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_left_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_cursor_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_left_obj, 1, mp_lv_obj_move_foreground, lv_textarea_cursor_left);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_cursor_down */
+/* Reusing lv_obj_move_foreground for lv_textarea_cursor_down */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_down_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_cursor_down);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_down_obj, 1, mp_lv_obj_move_foreground, lv_textarea_cursor_down);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_textarea_cursor_up */
+/* Reusing lv_obj_move_foreground for lv_textarea_cursor_up */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_up_obj, 1, mp_lv_obj_allocate_spec_attr, lv_textarea_cursor_up);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_textarea_cursor_up_obj, 1, mp_lv_obj_move_foreground, lv_textarea_cursor_up);
     
 /* Reusing lv_obj_create for lv_textarea_create */
 
@@ -15158,6 +15573,26 @@ STATIC const mp_lv_obj_type_t mp_lv_textarea_type = {
 
 /*
  * lvgl extension definition for:
+ * inline static void lv_canvas_set_px(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, lv_color_t c)
+ */
+ 
+STATIC mp_obj_t mp_lv_canvas_set_px(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *canvas = mp_to_lv(mp_args[0]);
+    lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[1]);
+    lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[2]);
+    lv_color_t c = mp_write_lv_color32_t(mp_args[3]);
+    ((void (*)(lv_obj_t *, lv_coord_t, lv_coord_t, lv_color_t))lv_func_ptr)(canvas, x, y, c);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_px_obj, 4, mp_lv_canvas_set_px, lv_canvas_set_px);
+    
+
+/*
+ * lvgl extension definition for:
  * void lv_canvas_set_buffer(lv_obj_t *canvas, void *buf, lv_coord_t w, lv_coord_t h, lv_img_cf_t cf)
  */
  
@@ -15176,25 +15611,29 @@ STATIC mp_obj_t mp_lv_canvas_set_buffer(size_t mp_n_args, const mp_obj_t *mp_arg
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_buffer_obj, 5, mp_lv_canvas_set_buffer, lv_canvas_set_buffer);
     
+/* Reusing lv_canvas_set_px for lv_canvas_set_px_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_px_color_obj, 4, mp_lv_canvas_set_px, lv_canvas_set_px_color);
+    
 
 /*
  * lvgl extension definition for:
- * void lv_canvas_set_px(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, lv_color_t c)
+ * void lv_canvas_set_px_opa(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, lv_opa_t opa)
  */
  
-STATIC mp_obj_t mp_lv_canvas_set_px(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_canvas_set_px_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_obj_t *canvas = mp_to_lv(mp_args[0]);
     lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[1]);
     lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[2]);
-    lv_color_t c = mp_write_lv_color32_t(mp_args[3]);
-    ((void (*)(lv_obj_t *, lv_coord_t, lv_coord_t, lv_color_t))lv_func_ptr)(canvas, x, y, c);
+    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[3]);
+    ((void (*)(lv_obj_t *, lv_coord_t, lv_coord_t, lv_opa_t))lv_func_ptr)(canvas, x, y, opa);
     return mp_const_none;
 }
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_px_obj, 4, mp_lv_canvas_set_px, lv_canvas_set_px);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_px_opa_obj, 4, mp_lv_canvas_set_px_opa, lv_canvas_set_px_opa);
     
 
 /*
@@ -15479,8 +15918,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_create_obj, 1, mp_lv_obj_crea
     
 
 STATIC const mp_rom_map_elem_t canvas_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_set_buffer), MP_ROM_PTR(&mp_lv_canvas_set_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_px), MP_ROM_PTR(&mp_lv_canvas_set_px_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_buffer), MP_ROM_PTR(&mp_lv_canvas_set_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_px_color), MP_ROM_PTR(&mp_lv_canvas_set_px_color_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_px_opa), MP_ROM_PTR(&mp_lv_canvas_set_px_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_palette), MP_ROM_PTR(&mp_lv_canvas_set_palette_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_px), MP_ROM_PTR(&mp_lv_canvas_get_px_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_img), MP_ROM_PTR(&mp_lv_canvas_get_img_obj) },
@@ -15590,7 +16031,7 @@ STATIC const mp_lv_obj_type_t mp_lv_switch_type = {
  * Array convertors for lv_img_dsc_t *[]
  */
 
-STATIC lv_img_dsc_t * *mp_arr_to_lv_img_dsc_t_ptr____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_img_dsc_t * *mp_arr_to_lv_img_dsc_t_ptr____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -15605,16 +16046,12 @@ STATIC lv_img_dsc_t * *mp_arr_to_lv_img_dsc_t_ptr____(mp_obj_t mp_arr)
     }
     return (lv_img_dsc_t * *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_img_dsc_t_ptr____(lv_img_dsc_t * *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_img_dsc_t_ptr____(lv_img_dsc_t * *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_read_ptr_lv_img_dsc_t(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return ptr_to_mp((void*)arr);
 }
-    
+
 
 /*
  * lvgl extension definition for:
@@ -15634,9 +16071,9 @@ STATIC mp_obj_t mp_lv_animimg_set_src(size_t mp_n_args, const mp_obj_t *mp_args,
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_animimg_set_src_obj, 3, mp_lv_animimg_set_src, lv_animimg_set_src);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_animimg_start */
+/* Reusing lv_obj_move_foreground for lv_animimg_start */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_animimg_start_obj, 1, mp_lv_obj_allocate_spec_attr, lv_animimg_start);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_animimg_start_obj, 1, mp_lv_obj_move_foreground, lv_animimg_start);
     
 /* Reusing lv_label_set_text_sel_start for lv_animimg_set_duration */
 
@@ -15731,17 +16168,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_showed_date_obj, 3, mp_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_calendar_date_t_type();
 
-STATIC inline lv_calendar_date_t* mp_write_ptr_lv_calendar_date_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_calendar_date_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_calendar_date_t_type()));
     return (lv_calendar_date_t*)self->data;
 }
 
-#define mp_write_lv_calendar_date_t(struct_obj) *mp_write_ptr_lv_calendar_date_t(struct_obj)
+#define mp_write_lv_calendar_date_t(struct_obj) *((lv_calendar_date_t*)mp_write_ptr_lv_calendar_date_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_calendar_date_t(lv_calendar_date_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_calendar_date_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_calendar_date_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_calendar_date_t_type(), field);
 }
 
 #define mp_read_lv_calendar_date_t(field) mp_read_ptr_lv_calendar_date_t(copy_buffer(&field, sizeof(lv_calendar_date_t)))
@@ -15793,9 +16230,11 @@ STATIC const mp_obj_type_t mp_lv_calendar_date_t_type = {
     .print = mp_lv_calendar_date_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_calendar_date_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_calendar_date_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_calendar_date_t_type()
@@ -15808,7 +16247,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_calendar_date_t_type()
  * Array convertors for lv_calendar_date_t []
  */
 
-STATIC lv_calendar_date_t *mp_arr_to_lv_calendar_date_t_____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_calendar_date_t *mp_arr_to_lv_calendar_date_t_____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -15823,16 +16262,12 @@ STATIC lv_calendar_date_t *mp_arr_to_lv_calendar_date_t_____(mp_obj_t mp_arr)
     }
     return (lv_calendar_date_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_calendar_date_t_____(lv_calendar_date_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_calendar_date_t_____(lv_calendar_date_t *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_read_lv_calendar_date_t(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return mp_read_ptr_lv_calendar_date_t((void*)arr);
 }
-    
+
 
 /*
  * lvgl extension definition for:
@@ -15861,7 +16296,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_highlighted_dates_obj, 
 STATIC mp_obj_t mp_lv_calendar_set_day_names(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    const char **day_names = (const char **)mp_to_ptr(mp_args[1]);
+    const char **day_names = (const char **)mp_write_ptr_C_Pointer(mp_args[1]);
     ((void (*)(lv_obj_t *, const char **))lv_func_ptr)(obj, day_names);
     return mp_const_none;
 }
@@ -15869,6 +16304,10 @@ STATIC mp_obj_t mp_lv_calendar_set_day_names(size_t mp_n_args, const mp_obj_t *m
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_set_day_names_obj, 2, mp_lv_calendar_set_day_names, lv_calendar_set_day_names);
+    
+/* Reusing lv_textarea_get_label for lv_calendar_get_btnmatrix */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_get_btnmatrix_obj, 1, mp_lv_textarea_get_label, lv_calendar_get_btnmatrix);
     
 
 /*
@@ -15945,6 +16384,7 @@ STATIC const mp_rom_map_elem_t calendar_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_showed_date), MP_ROM_PTR(&mp_lv_calendar_set_showed_date_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_highlighted_dates), MP_ROM_PTR(&mp_lv_calendar_set_highlighted_dates_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_day_names), MP_ROM_PTR(&mp_lv_calendar_set_day_names_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_btnmatrix), MP_ROM_PTR(&mp_lv_calendar_get_btnmatrix_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_today_date), MP_ROM_PTR(&mp_lv_calendar_get_today_date_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_showed_date), MP_ROM_PTR(&mp_lv_calendar_get_showed_date_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_highlighted_dates), MP_ROM_PTR(&mp_lv_calendar_get_highlighted_dates_obj) },
@@ -15989,24 +16429,9 @@ STATIC const mp_lv_obj_type_t mp_lv_calendar_type = {
 #endif
 };
     
+/* Reusing lv_obj_create for lv_calendar_header_arrow_create */
 
-/*
- * lvgl extension definition for:
- * lv_obj_t *lv_calendar_header_arrow_create(lv_obj_t *parent, lv_obj_t *calendar, lv_coord_t btn_size)
- */
- 
-STATIC mp_obj_t mp_lv_calendar_header_arrow_create(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *parent = mp_to_lv(mp_args[0]);
-    lv_obj_t *calendar = mp_to_lv(mp_args[1]);
-    lv_coord_t btn_size = (int16_t)mp_obj_get_int(mp_args[2]);
-    lv_obj_t * _res = ((lv_obj_t *(*)(lv_obj_t *, lv_obj_t *, lv_coord_t))lv_func_ptr)(parent, calendar, btn_size);
-    return lv_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_header_arrow_create_obj, 3, mp_lv_calendar_header_arrow_create, lv_calendar_header_arrow_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_header_arrow_create_obj, 1, mp_lv_obj_create, lv_calendar_header_arrow_create);
     
 
 /*
@@ -16055,23 +16480,9 @@ STATIC const mp_lv_obj_type_t mp_lv_calendar_header_arrow_type = {
 #endif
 };
     
+/* Reusing lv_obj_create for lv_calendar_header_dropdown_create */
 
-/*
- * lvgl extension definition for:
- * lv_obj_t *lv_calendar_header_dropdown_create(lv_obj_t *parent, lv_obj_t *calendar)
- */
- 
-STATIC mp_obj_t mp_lv_calendar_header_dropdown_create(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *parent = mp_to_lv(mp_args[0]);
-    lv_obj_t *calendar = mp_to_lv(mp_args[1]);
-    lv_obj_t * _res = ((lv_obj_t *(*)(lv_obj_t *, lv_obj_t *))lv_func_ptr)(parent, calendar);
-    return lv_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_header_dropdown_create_obj, 2, mp_lv_calendar_header_dropdown_create, lv_calendar_header_dropdown_create);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_calendar_header_dropdown_create_obj, 1, mp_lv_obj_create, lv_calendar_header_dropdown_create);
     
 
 /*
@@ -16267,17 +16678,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_point_count_obj, 1, mp_lv_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_chart_series_t_type();
 
-STATIC inline lv_chart_series_t* mp_write_ptr_lv_chart_series_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_chart_series_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_chart_series_t_type()));
     return (lv_chart_series_t*)self->data;
 }
 
-#define mp_write_lv_chart_series_t(struct_obj) *mp_write_ptr_lv_chart_series_t(struct_obj)
+#define mp_write_lv_chart_series_t(struct_obj) *((lv_chart_series_t*)mp_write_ptr_lv_chart_series_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_chart_series_t(lv_chart_series_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_chart_series_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_chart_series_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_chart_series_t_type(), field);
 }
 
 #define mp_read_lv_chart_series_t(field) mp_read_ptr_lv_chart_series_t(copy_buffer(&field, sizeof(lv_chart_series_t)))
@@ -16292,8 +16703,8 @@ STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_x_points: dest[0] = mp_arr_from_lv_coord_t_ptr((void*)data->x_points); break; // converting from lv_coord_t *;
-            case MP_QSTR_y_points: dest[0] = mp_arr_from_lv_coord_t_ptr((void*)data->y_points); break; // converting from lv_coord_t *;
+            case MP_QSTR_x_points: dest[0] = mp_array_from_i16ptr((void*)data->x_points); break; // converting from lv_coord_t *;
+            case MP_QSTR_y_points: dest[0] = mp_array_from_i16ptr((void*)data->y_points); break; // converting from lv_coord_t *;
             case MP_QSTR_color: dest[0] = mp_read_byref_lv_color32_t(data->color); break; // converting from lv_color_t;
             case MP_QSTR_start_point: dest[0] = mp_obj_new_int_from_uint(data->start_point); break; // converting from uint16_t;
             case MP_QSTR_hidden: dest[0] = mp_obj_new_int_from_uint(data->hidden); break; // converting from uint8_t;
@@ -16309,8 +16720,8 @@ STATIC void mp_lv_chart_series_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_x_points: data->x_points = (void*)mp_arr_to_lv_coord_t_ptr(dest[1]); break; // converting to lv_coord_t *;
-                case MP_QSTR_y_points: data->y_points = (void*)mp_arr_to_lv_coord_t_ptr(dest[1]); break; // converting to lv_coord_t *;
+                case MP_QSTR_x_points: data->x_points = (void*)mp_array_to_i16ptr(dest[1]); break; // converting to lv_coord_t *;
+                case MP_QSTR_y_points: data->y_points = (void*)mp_array_to_i16ptr(dest[1]); break; // converting to lv_coord_t *;
                 case MP_QSTR_color: data->color = mp_write_lv_color32_t(dest[1]); break; // converting to lv_color_t;
                 case MP_QSTR_start_point: data->start_point = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
                 case MP_QSTR_hidden: data->hidden = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
@@ -16341,9 +16752,11 @@ STATIC const mp_obj_type_t mp_lv_chart_series_t_type = {
     .print = mp_lv_chart_series_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_chart_series_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_chart_series_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_chart_series_t_type()
@@ -16389,9 +16802,9 @@ STATIC mp_obj_t mp_lv_chart_get_point_pos_by_id(size_t mp_n_args, const mp_obj_t
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_point_pos_by_id_obj, 4, mp_lv_chart_get_point_pos_by_id, lv_chart_get_point_pos_by_id);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_chart_refresh */
+/* Reusing lv_obj_move_foreground for lv_chart_refresh */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_refresh_obj, 1, mp_lv_obj_allocate_spec_attr, lv_chart_refresh);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_refresh_obj, 1, mp_lv_obj_move_foreground, lv_chart_refresh);
     
 
 /*
@@ -16512,17 +16925,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_chart_get_series_next_obj, 2, mp_lv_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_chart_cursor_t_type();
 
-STATIC inline lv_chart_cursor_t* mp_write_ptr_lv_chart_cursor_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_chart_cursor_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_chart_cursor_t_type()));
     return (lv_chart_cursor_t*)self->data;
 }
 
-#define mp_write_lv_chart_cursor_t(struct_obj) *mp_write_ptr_lv_chart_cursor_t(struct_obj)
+#define mp_write_lv_chart_cursor_t(struct_obj) *((lv_chart_cursor_t*)mp_write_ptr_lv_chart_cursor_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_chart_cursor_t(lv_chart_cursor_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_chart_cursor_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_chart_cursor_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_chart_cursor_t_type(), field);
 }
 
 #define mp_read_lv_chart_cursor_t(field) mp_read_ptr_lv_chart_cursor_t(copy_buffer(&field, sizeof(lv_chart_cursor_t)))
@@ -16580,9 +16993,11 @@ STATIC const mp_obj_type_t mp_lv_chart_cursor_t_type = {
     .print = mp_lv_chart_cursor_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_chart_cursor_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_chart_cursor_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_chart_cursor_t_type()
@@ -16784,7 +17199,7 @@ STATIC mp_obj_t mp_lv_chart_get_y_array(size_t mp_n_args, const mp_obj_t *mp_arg
     const lv_obj_t *obj = (const lv_obj_t *)mp_to_lv(mp_args[0]);
     lv_chart_series_t *ser = mp_write_ptr_lv_chart_series_t(mp_args[1]);
     lv_coord_t * _res = ((lv_coord_t *(*)(const lv_obj_t *, lv_chart_series_t *))lv_func_ptr)(obj, ser);
-    return mp_arr_from_lv_coord_t_ptr((void*)_res);
+    return mp_array_from_i16ptr((void*)_res);
 }
 
  
@@ -16892,6 +17307,14 @@ STATIC const mp_lv_obj_type_t mp_lv_chart_type = {
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_keyboard_get_map_array_obj, 1, mp_lv_btnmatrix_get_map, lv_keyboard_get_map_array);
     
+/* Reusing lv_btnmatrix_get_selected_btn for lv_keyboard_get_selected_btn */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_keyboard_get_selected_btn_obj, 1, mp_lv_btnmatrix_get_selected_btn, lv_keyboard_get_selected_btn);
+    
+/* Reusing lv_btnmatrix_get_btn_text for lv_keyboard_get_btn_text */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_keyboard_get_btn_text_obj, 2, mp_lv_btnmatrix_get_btn_text, lv_keyboard_get_btn_text);
+    
 
 /*
  * lvgl extension definition for:
@@ -16927,6 +17350,10 @@ STATIC mp_obj_t mp_lv_keyboard_set_mode(size_t mp_n_args, const mp_obj_t *mp_arg
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_keyboard_set_mode_obj, 2, mp_lv_keyboard_set_mode, lv_keyboard_set_mode);
+    
+/* Reusing lv_img_set_antialias for lv_keyboard_set_popovers */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_keyboard_set_popovers_obj, 2, mp_lv_img_set_antialias, lv_keyboard_set_popovers);
     
 
 /*
@@ -16998,8 +17425,11 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_keyboard_create_obj, 1, mp_lv_obj_cr
 
 STATIC const mp_rom_map_elem_t keyboard_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_map_array), MP_ROM_PTR(&mp_lv_keyboard_get_map_array_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_selected_btn), MP_ROM_PTR(&mp_lv_keyboard_get_selected_btn_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_btn_text), MP_ROM_PTR(&mp_lv_keyboard_get_btn_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_textarea), MP_ROM_PTR(&mp_lv_keyboard_set_textarea_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_mode), MP_ROM_PTR(&mp_lv_keyboard_set_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_popovers), MP_ROM_PTR(&mp_lv_keyboard_set_popovers_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_map), MP_ROM_PTR(&mp_lv_keyboard_set_map_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_textarea), MP_ROM_PTR(&mp_lv_keyboard_get_textarea_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_mode), MP_ROM_PTR(&mp_lv_keyboard_get_mode_obj) },
@@ -17152,6 +17582,398 @@ STATIC const mp_lv_obj_type_t mp_lv_list_type = {
 #endif
 };
     
+/* Reusing lv_keyboard_set_textarea for lv_menu_set_page */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_set_page_obj, 2, mp_lv_keyboard_set_textarea, lv_menu_set_page);
+    
+/* Reusing lv_keyboard_set_textarea for lv_menu_set_sidebar_page */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_set_sidebar_page_obj, 2, mp_lv_keyboard_set_textarea, lv_menu_set_sidebar_page);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_menu_set_mode_header(lv_obj_t *obj, lv_menu_mode_header_t mode_header)
+ */
+ 
+STATIC mp_obj_t mp_lv_menu_set_mode_header(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_menu_mode_header_t mode_header = (uint8_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_obj_t *, lv_menu_mode_header_t))lv_func_ptr)(obj, mode_header);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_set_mode_header_obj, 2, mp_lv_menu_set_mode_header, lv_menu_set_mode_header);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_menu_set_mode_root_back_btn(lv_obj_t *obj, lv_menu_mode_root_back_btn_t mode_root_back_btn)
+ */
+ 
+STATIC mp_obj_t mp_lv_menu_set_mode_root_back_btn(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_menu_mode_root_back_btn_t mode_root_back_btn = (uint8_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_obj_t *, lv_menu_mode_root_back_btn_t))lv_func_ptr)(obj, mode_root_back_btn);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_set_mode_root_back_btn_obj, 2, mp_lv_menu_set_mode_root_back_btn, lv_menu_set_mode_root_back_btn);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_menu_set_load_page_event(lv_obj_t *menu, lv_obj_t *obj, lv_obj_t *page)
+ */
+ 
+STATIC mp_obj_t mp_lv_menu_set_load_page_event(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *menu = mp_to_lv(mp_args[0]);
+    lv_obj_t *obj = mp_to_lv(mp_args[1]);
+    lv_obj_t *page = mp_to_lv(mp_args[2]);
+    ((void (*)(lv_obj_t *, lv_obj_t *, lv_obj_t *))lv_func_ptr)(menu, obj, page);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_set_load_page_event_obj, 3, mp_lv_menu_set_load_page_event, lv_menu_set_load_page_event);
+    
+/* Reusing lv_obj_create for lv_menu_get_cur_main_page */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_get_cur_main_page_obj, 1, mp_lv_obj_create, lv_menu_get_cur_main_page);
+    
+/* Reusing lv_obj_create for lv_menu_get_cur_sidebar_page */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_get_cur_sidebar_page_obj, 1, mp_lv_obj_create, lv_menu_get_cur_sidebar_page);
+    
+/* Reusing lv_obj_create for lv_menu_get_main_header */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_get_main_header_obj, 1, mp_lv_obj_create, lv_menu_get_main_header);
+    
+/* Reusing lv_obj_create for lv_menu_get_main_header_back_btn */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_get_main_header_back_btn_obj, 1, mp_lv_obj_create, lv_menu_get_main_header_back_btn);
+    
+/* Reusing lv_obj_create for lv_menu_get_sidebar_header */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_get_sidebar_header_obj, 1, mp_lv_obj_create, lv_menu_get_sidebar_header);
+    
+/* Reusing lv_obj_create for lv_menu_get_sidebar_header_back_btn */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_get_sidebar_header_back_btn_obj, 1, mp_lv_obj_create, lv_menu_get_sidebar_header_back_btn);
+    
+
+/*
+ * lvgl extension definition for:
+ * bool lv_menu_back_btn_is_root(lv_obj_t *menu, lv_obj_t *obj)
+ */
+ 
+STATIC mp_obj_t mp_lv_menu_back_btn_is_root(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *menu = mp_to_lv(mp_args[0]);
+    lv_obj_t *obj = mp_to_lv(mp_args[1]);
+    bool _res = ((bool (*)(lv_obj_t *, lv_obj_t *))lv_func_ptr)(menu, obj);
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_back_btn_is_root_obj, 2, mp_lv_menu_back_btn_is_root, lv_menu_back_btn_is_root);
+    
+/* Reusing lv_obj_move_foreground for lv_menu_clear_history */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_clear_history_obj, 1, mp_lv_obj_move_foreground, lv_menu_clear_history);
+    
+/* Reusing lv_obj_create for lv_menu_create */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_create_obj, 1, mp_lv_obj_create, lv_menu_create);
+    
+
+/*
+ * lvgl menu object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t menu_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_set_page), MP_ROM_PTR(&mp_lv_menu_set_page_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_sidebar_page), MP_ROM_PTR(&mp_lv_menu_set_sidebar_page_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_mode_header), MP_ROM_PTR(&mp_lv_menu_set_mode_header_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_mode_root_back_btn), MP_ROM_PTR(&mp_lv_menu_set_mode_root_back_btn_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_load_page_event), MP_ROM_PTR(&mp_lv_menu_set_load_page_event_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_cur_main_page), MP_ROM_PTR(&mp_lv_menu_get_cur_main_page_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_cur_sidebar_page), MP_ROM_PTR(&mp_lv_menu_get_cur_sidebar_page_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_main_header), MP_ROM_PTR(&mp_lv_menu_get_main_header_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_main_header_back_btn), MP_ROM_PTR(&mp_lv_menu_get_main_header_back_btn_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_sidebar_header), MP_ROM_PTR(&mp_lv_menu_get_sidebar_header_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_sidebar_header_back_btn), MP_ROM_PTR(&mp_lv_menu_get_sidebar_header_back_btn_obj) },
+    { MP_ROM_QSTR(MP_QSTR_back_btn_is_root), MP_ROM_PTR(&mp_lv_menu_back_btn_is_root_obj) },
+    { MP_ROM_QSTR(MP_QSTR_clear_history), MP_ROM_PTR(&mp_lv_menu_clear_history_obj) },
+    { MP_ROM_QSTR(MP_QSTR_HEADER), MP_ROM_PTR(&mp_lv_LV_MENU_HEADER_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_ROOT_BACK_BTN), MP_ROM_PTR(&mp_lv_LV_MENU_ROOT_BACK_BTN_type.mp_obj_type) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(menu_locals_dict, menu_locals_dict_table);
+
+STATIC void menu_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl menu");
+}
+
+
+STATIC mp_obj_t menu_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_menu_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_menu_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_menu,
+        .print = menu_print,
+        .make_new = menu_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&menu_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_menu_class
+#endif
+};
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_obj_t *lv_menu_page_create(lv_obj_t *parent, char *title)
+ */
+ 
+STATIC mp_obj_t mp_lv_menu_page_create(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *parent = mp_to_lv(mp_args[0]);
+    char *title = (char*)convert_from_str(mp_args[1]);
+    lv_obj_t * _res = ((lv_obj_t *(*)(lv_obj_t *, char *))lv_func_ptr)(parent, title);
+    return lv_to_mp((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_page_create_obj, 2, mp_lv_menu_page_create, lv_menu_page_create);
+    
+
+/*
+ * lvgl menu_page object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t menu_page_locals_dict_table[] = {
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(menu_page_locals_dict, menu_page_locals_dict_table);
+
+STATIC void menu_page_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl menu_page");
+}
+
+
+STATIC mp_obj_t menu_page_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_menu_page_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_menu_page_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_menu_page,
+        .print = menu_page_print,
+        .make_new = menu_page_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&menu_page_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_menu_page_class
+#endif
+};
+    
+/* Reusing lv_obj_create for lv_menu_cont_create */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_cont_create_obj, 1, mp_lv_obj_create, lv_menu_cont_create);
+    
+
+/*
+ * lvgl menu_cont object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t menu_cont_locals_dict_table[] = {
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(menu_cont_locals_dict, menu_cont_locals_dict_table);
+
+STATIC void menu_cont_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl menu_cont");
+}
+
+
+STATIC mp_obj_t menu_cont_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_menu_cont_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_menu_cont_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_menu_cont,
+        .print = menu_cont_print,
+        .make_new = menu_cont_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&menu_cont_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_menu_cont_class
+#endif
+};
+    
+/* Reusing lv_obj_create for lv_menu_section_create */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_section_create_obj, 1, mp_lv_obj_create, lv_menu_section_create);
+    
+
+/*
+ * lvgl menu_section object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t menu_section_locals_dict_table[] = {
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(menu_section_locals_dict, menu_section_locals_dict_table);
+
+STATIC void menu_section_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl menu_section");
+}
+
+
+STATIC mp_obj_t menu_section_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_menu_section_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_menu_section_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_menu_section,
+        .print = menu_section_print,
+        .make_new = menu_section_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&menu_section_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_menu_section_class
+#endif
+};
+    
+/* Reusing lv_obj_create for lv_menu_separator_create */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_menu_separator_create_obj, 1, mp_lv_obj_create, lv_menu_separator_create);
+    
+
+/*
+ * lvgl menu_separator object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t menu_separator_locals_dict_table[] = {
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(menu_separator_locals_dict, menu_separator_locals_dict_table);
+
+STATIC void menu_separator_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl menu_separator");
+}
+
+
+STATIC mp_obj_t menu_separator_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_menu_separator_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_menu_separator_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_menu_separator,
+        .print = menu_separator_print,
+        .make_new = menu_separator_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&menu_separator_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_menu_separator_class
+#endif
+};
+    
 /* Reusing lv_obj_create for lv_msgbox_get_title */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_title_obj, 1, mp_lv_obj_create, lv_msgbox_get_title);
@@ -17164,17 +17986,29 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_close_btn_obj, 1, mp_lv_o
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_text_obj, 1, mp_lv_obj_create, lv_msgbox_get_text);
     
+/* Reusing lv_obj_create for lv_msgbox_get_content */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_content_obj, 1, mp_lv_obj_create, lv_msgbox_get_content);
+    
 /* Reusing lv_obj_create for lv_msgbox_get_btns */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_btns_obj, 1, mp_lv_obj_create, lv_msgbox_get_btns);
+    
+/* Reusing lv_arc_get_angle_start for lv_msgbox_get_active_btn */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_active_btn_obj, 1, mp_lv_arc_get_angle_start, lv_msgbox_get_active_btn);
     
 /* Reusing lv_dropdown_get_text for lv_msgbox_get_active_btn_text */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_get_active_btn_text_obj, 1, mp_lv_dropdown_get_text, lv_msgbox_get_active_btn_text);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_msgbox_close */
+/* Reusing lv_obj_move_foreground for lv_msgbox_close */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_close_obj, 1, mp_lv_obj_allocate_spec_attr, lv_msgbox_close);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_close_obj, 1, mp_lv_obj_move_foreground, lv_msgbox_close);
+    
+/* Reusing lv_obj_move_foreground for lv_msgbox_close_async */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_msgbox_close_async_obj, 1, mp_lv_obj_move_foreground, lv_msgbox_close_async);
     
 
 /*
@@ -17207,9 +18041,12 @@ STATIC const mp_rom_map_elem_t msgbox_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_title), MP_ROM_PTR(&mp_lv_msgbox_get_title_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_close_btn), MP_ROM_PTR(&mp_lv_msgbox_get_close_btn_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_text), MP_ROM_PTR(&mp_lv_msgbox_get_text_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_content), MP_ROM_PTR(&mp_lv_msgbox_get_content_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_btns), MP_ROM_PTR(&mp_lv_msgbox_get_btns_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_active_btn), MP_ROM_PTR(&mp_lv_msgbox_get_active_btn_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_active_btn_text), MP_ROM_PTR(&mp_lv_msgbox_get_active_btn_text_obj) },
-    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_msgbox_close_obj) }
+    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_msgbox_close_obj) },
+    { MP_ROM_QSTR(MP_QSTR_close_async), MP_ROM_PTR(&mp_lv_msgbox_close_async_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(msgbox_locals_dict, msgbox_locals_dict_table);
@@ -17256,17 +18093,17 @@ STATIC const mp_lv_obj_type_t mp_lv_msgbox_type = {
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_scale_t_type();
 
-STATIC inline lv_meter_scale_t* mp_write_ptr_lv_meter_scale_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_scale_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_scale_t_type()));
     return (lv_meter_scale_t*)self->data;
 }
 
-#define mp_write_lv_meter_scale_t(struct_obj) *mp_write_ptr_lv_meter_scale_t(struct_obj)
+#define mp_write_lv_meter_scale_t(struct_obj) *((lv_meter_scale_t*)mp_write_ptr_lv_meter_scale_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_scale_t(lv_meter_scale_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_scale_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_scale_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_scale_t_type(), field);
 }
 
 #define mp_read_lv_meter_scale_t(field) mp_read_ptr_lv_meter_scale_t(copy_buffer(&field, sizeof(lv_meter_scale_t)))
@@ -17342,9 +18179,11 @@ STATIC const mp_obj_type_t mp_lv_meter_scale_t_type = {
     .print = mp_lv_meter_scale_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_scale_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_scale_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_scale_t_type()
@@ -17445,17 +18284,17 @@ typedef __typeof__( ((lv_meter_indicator_type_data_t*)(0))->needle_img ) lv_mete
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_needle_img_t_type();
 
-STATIC inline lv_meter_indicator_type_data_needle_img_t* mp_write_ptr_lv_meter_indicator_type_data_needle_img_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_indicator_type_data_needle_img_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_indicator_type_data_needle_img_t_type()));
     return (lv_meter_indicator_type_data_needle_img_t*)self->data;
 }
 
-#define mp_write_lv_meter_indicator_type_data_needle_img_t(struct_obj) *mp_write_ptr_lv_meter_indicator_type_data_needle_img_t(struct_obj)
+#define mp_write_lv_meter_indicator_type_data_needle_img_t(struct_obj) *((lv_meter_indicator_type_data_needle_img_t*)mp_write_ptr_lv_meter_indicator_type_data_needle_img_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_needle_img_t(lv_meter_indicator_type_data_needle_img_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_needle_img_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_needle_img_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_needle_img_t_type(), field);
 }
 
 #define mp_read_lv_meter_indicator_type_data_needle_img_t(field) mp_read_ptr_lv_meter_indicator_type_data_needle_img_t(copy_buffer(&field, sizeof(lv_meter_indicator_type_data_needle_img_t)))
@@ -17505,9 +18344,11 @@ STATIC const mp_obj_type_t mp_lv_meter_indicator_type_data_needle_img_t_type = {
     .print = mp_lv_meter_indicator_type_data_needle_img_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_indicator_type_data_needle_img_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_indicator_type_data_needle_img_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_needle_img_t_type()
@@ -17523,17 +18364,17 @@ typedef __typeof__( ((lv_meter_indicator_type_data_t*)(0))->needle_line ) lv_met
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_needle_line_t_type();
 
-STATIC inline lv_meter_indicator_type_data_needle_line_t* mp_write_ptr_lv_meter_indicator_type_data_needle_line_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_indicator_type_data_needle_line_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_indicator_type_data_needle_line_t_type()));
     return (lv_meter_indicator_type_data_needle_line_t*)self->data;
 }
 
-#define mp_write_lv_meter_indicator_type_data_needle_line_t(struct_obj) *mp_write_ptr_lv_meter_indicator_type_data_needle_line_t(struct_obj)
+#define mp_write_lv_meter_indicator_type_data_needle_line_t(struct_obj) *((lv_meter_indicator_type_data_needle_line_t*)mp_write_ptr_lv_meter_indicator_type_data_needle_line_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_needle_line_t(lv_meter_indicator_type_data_needle_line_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_needle_line_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_needle_line_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_needle_line_t_type(), field);
 }
 
 #define mp_read_lv_meter_indicator_type_data_needle_line_t(field) mp_read_ptr_lv_meter_indicator_type_data_needle_line_t(copy_buffer(&field, sizeof(lv_meter_indicator_type_data_needle_line_t)))
@@ -17585,9 +18426,11 @@ STATIC const mp_obj_type_t mp_lv_meter_indicator_type_data_needle_line_t_type = 
     .print = mp_lv_meter_indicator_type_data_needle_line_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_indicator_type_data_needle_line_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_indicator_type_data_needle_line_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_needle_line_t_type()
@@ -17603,17 +18446,17 @@ typedef __typeof__( ((lv_meter_indicator_type_data_t*)(0))->arc ) lv_meter_indic
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_arc_t_type();
 
-STATIC inline lv_meter_indicator_type_data_arc_t* mp_write_ptr_lv_meter_indicator_type_data_arc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_indicator_type_data_arc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_indicator_type_data_arc_t_type()));
     return (lv_meter_indicator_type_data_arc_t*)self->data;
 }
 
-#define mp_write_lv_meter_indicator_type_data_arc_t(struct_obj) *mp_write_ptr_lv_meter_indicator_type_data_arc_t(struct_obj)
+#define mp_write_lv_meter_indicator_type_data_arc_t(struct_obj) *((lv_meter_indicator_type_data_arc_t*)mp_write_ptr_lv_meter_indicator_type_data_arc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_arc_t(lv_meter_indicator_type_data_arc_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_arc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_arc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_arc_t_type(), field);
 }
 
 #define mp_read_lv_meter_indicator_type_data_arc_t(field) mp_read_ptr_lv_meter_indicator_type_data_arc_t(copy_buffer(&field, sizeof(lv_meter_indicator_type_data_arc_t)))
@@ -17667,9 +18510,11 @@ STATIC const mp_obj_type_t mp_lv_meter_indicator_type_data_arc_t_type = {
     .print = mp_lv_meter_indicator_type_data_arc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_indicator_type_data_arc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_indicator_type_data_arc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_arc_t_type()
@@ -17685,17 +18530,17 @@ typedef __typeof__( ((lv_meter_indicator_type_data_t*)(0))->scale_lines ) lv_met
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_scale_lines_t_type();
 
-STATIC inline lv_meter_indicator_type_data_scale_lines_t* mp_write_ptr_lv_meter_indicator_type_data_scale_lines_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_indicator_type_data_scale_lines_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_indicator_type_data_scale_lines_t_type()));
     return (lv_meter_indicator_type_data_scale_lines_t*)self->data;
 }
 
-#define mp_write_lv_meter_indicator_type_data_scale_lines_t(struct_obj) *mp_write_ptr_lv_meter_indicator_type_data_scale_lines_t(struct_obj)
+#define mp_write_lv_meter_indicator_type_data_scale_lines_t(struct_obj) *((lv_meter_indicator_type_data_scale_lines_t*)mp_write_ptr_lv_meter_indicator_type_data_scale_lines_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_scale_lines_t(lv_meter_indicator_type_data_scale_lines_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_scale_lines_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_scale_lines_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_scale_lines_t_type(), field);
 }
 
 #define mp_read_lv_meter_indicator_type_data_scale_lines_t(field) mp_read_ptr_lv_meter_indicator_type_data_scale_lines_t(copy_buffer(&field, sizeof(lv_meter_indicator_type_data_scale_lines_t)))
@@ -17749,9 +18594,11 @@ STATIC const mp_obj_type_t mp_lv_meter_indicator_type_data_scale_lines_t_type = 
     .print = mp_lv_meter_indicator_type_data_scale_lines_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_indicator_type_data_scale_lines_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_indicator_type_data_scale_lines_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_scale_lines_t_type()
@@ -17766,17 +18613,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_scale_lin
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_t_type();
 
-STATIC inline lv_meter_indicator_type_data_t* mp_write_ptr_lv_meter_indicator_type_data_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_indicator_type_data_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_indicator_type_data_t_type()));
     return (lv_meter_indicator_type_data_t*)self->data;
 }
 
-#define mp_write_lv_meter_indicator_type_data_t(struct_obj) *mp_write_ptr_lv_meter_indicator_type_data_t(struct_obj)
+#define mp_write_lv_meter_indicator_type_data_t(struct_obj) *((lv_meter_indicator_type_data_t*)mp_write_ptr_lv_meter_indicator_type_data_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_t(lv_meter_indicator_type_data_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_type_data_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_indicator_type_data_t_type(), field);
 }
 
 #define mp_read_lv_meter_indicator_type_data_t(field) mp_read_ptr_lv_meter_indicator_type_data_t(copy_buffer(&field, sizeof(lv_meter_indicator_type_data_t)))
@@ -17830,9 +18677,11 @@ STATIC const mp_obj_type_t mp_lv_meter_indicator_type_data_t_type = {
     .print = mp_lv_meter_indicator_type_data_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_indicator_type_data_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_indicator_type_data_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_t_type()
@@ -17847,17 +18696,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_type_data_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_t_type();
 
-STATIC inline lv_meter_indicator_t* mp_write_ptr_lv_meter_indicator_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_meter_indicator_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_meter_indicator_t_type()));
     return (lv_meter_indicator_t*)self->data;
 }
 
-#define mp_write_lv_meter_indicator_t(struct_obj) *mp_write_ptr_lv_meter_indicator_t(struct_obj)
+#define mp_write_lv_meter_indicator_t(struct_obj) *((lv_meter_indicator_t*)mp_write_ptr_lv_meter_indicator_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_t(lv_meter_indicator_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_meter_indicator_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_meter_indicator_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_meter_indicator_t_type(), field);
 }
 
 #define mp_read_lv_meter_indicator_t(field) mp_read_ptr_lv_meter_indicator_t(copy_buffer(&field, sizeof(lv_meter_indicator_t)))
@@ -17873,7 +18722,7 @@ STATIC void mp_lv_meter_indicator_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
         switch(attr)
         {
             case MP_QSTR_scale: dest[0] = mp_read_ptr_lv_meter_scale_t((void*)data->scale); break; // converting from lv_meter_scale_t *;
-            case MP_QSTR_type: dest[0] = mp_obj_new_int(data->type); break; // converting from lv_meter_indicator_type_t;
+            case MP_QSTR_type: dest[0] = mp_obj_new_int_from_uint(data->type); break; // converting from lv_meter_indicator_type_t;
             case MP_QSTR_opa: dest[0] = mp_obj_new_int_from_uint(data->opa); break; // converting from lv_opa_t;
             case MP_QSTR_start_value: dest[0] = mp_obj_new_int(data->start_value); break; // converting from int32_t;
             case MP_QSTR_end_value: dest[0] = mp_obj_new_int(data->end_value); break; // converting from int32_t;
@@ -17887,7 +18736,7 @@ STATIC void mp_lv_meter_indicator_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *
             switch(attr)
             {
                 case MP_QSTR_scale: data->scale = (void*)mp_write_ptr_lv_meter_scale_t(dest[1]); break; // converting to lv_meter_scale_t *;
-                case MP_QSTR_type: data->type = (int)mp_obj_get_int(dest[1]); break; // converting to lv_meter_indicator_type_t;
+                case MP_QSTR_type: data->type = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_meter_indicator_type_t;
                 case MP_QSTR_opa: data->opa = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to lv_opa_t;
                 case MP_QSTR_start_value: data->start_value = (int32_t)mp_obj_get_int(dest[1]); break; // converting to int32_t;
                 case MP_QSTR_end_value: data->end_value = (int32_t)mp_obj_get_int(dest[1]); break; // converting to int32_t;
@@ -17915,9 +18764,11 @@ STATIC const mp_obj_type_t mp_lv_meter_indicator_t_type = {
     .print = mp_lv_meter_indicator_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_meter_indicator_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_meter_indicator_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_meter_indicator_t_type()
@@ -18107,6 +18958,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_range_obj, 3, mp_lv_bar_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_pos_obj, 2, mp_lv_obj_set_flex_grow, lv_spinbox_set_pos);
     
+/* Reusing lv_dropdown_set_dir for lv_spinbox_set_digit_step_direction */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_set_digit_step_direction_obj, 2, mp_lv_dropdown_set_dir, lv_spinbox_set_digit_step_direction);
+    
 /* Reusing lv_img_get_antialias for lv_spinbox_get_rollover */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_get_rollover_obj, 1, mp_lv_img_get_antialias, lv_spinbox_get_rollover);
@@ -18132,21 +18987,21 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_get_value_obj, 1, mp_lv_spin
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_get_step_obj, 1, mp_lv_spinbox_get_value, lv_spinbox_get_step);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_spinbox_step_next */
+/* Reusing lv_obj_move_foreground for lv_spinbox_step_next */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_step_next_obj, 1, mp_lv_obj_allocate_spec_attr, lv_spinbox_step_next);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_step_next_obj, 1, mp_lv_obj_move_foreground, lv_spinbox_step_next);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_spinbox_step_prev */
+/* Reusing lv_obj_move_foreground for lv_spinbox_step_prev */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_step_prev_obj, 1, mp_lv_obj_allocate_spec_attr, lv_spinbox_step_prev);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_step_prev_obj, 1, mp_lv_obj_move_foreground, lv_spinbox_step_prev);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_spinbox_increment */
+/* Reusing lv_obj_move_foreground for lv_spinbox_increment */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_increment_obj, 1, mp_lv_obj_allocate_spec_attr, lv_spinbox_increment);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_increment_obj, 1, mp_lv_obj_move_foreground, lv_spinbox_increment);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_spinbox_decrement */
+/* Reusing lv_obj_move_foreground for lv_spinbox_decrement */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_decrement_obj, 1, mp_lv_obj_allocate_spec_attr, lv_spinbox_decrement);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spinbox_decrement_obj, 1, mp_lv_obj_move_foreground, lv_spinbox_decrement);
     
 /* Reusing lv_obj_create for lv_spinbox_create */
 
@@ -18165,6 +19020,7 @@ STATIC const mp_rom_map_elem_t spinbox_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_step), MP_ROM_PTR(&mp_lv_spinbox_set_step_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_range), MP_ROM_PTR(&mp_lv_spinbox_set_range_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pos), MP_ROM_PTR(&mp_lv_spinbox_set_pos_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_digit_step_direction), MP_ROM_PTR(&mp_lv_spinbox_set_digit_step_direction_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_rollover), MP_ROM_PTR(&mp_lv_spinbox_get_rollover_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_value), MP_ROM_PTR(&mp_lv_spinbox_get_value_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_step), MP_ROM_PTR(&mp_lv_spinbox_get_step_obj) },
@@ -18564,17 +19420,17 @@ STATIC const mp_lv_obj_type_t mp_lv_win_type = {
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color_hsv_t_type();
 
-STATIC inline lv_color_hsv_t* mp_write_ptr_lv_color_hsv_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_color_hsv_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_color_hsv_t_type()));
     return (lv_color_hsv_t*)self->data;
 }
 
-#define mp_write_lv_color_hsv_t(struct_obj) *mp_write_ptr_lv_color_hsv_t(struct_obj)
+#define mp_write_lv_color_hsv_t(struct_obj) *((lv_color_hsv_t*)mp_write_ptr_lv_color_hsv_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_color_hsv_t(lv_color_hsv_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_color_hsv_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_color_hsv_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_color_hsv_t_type(), field);
 }
 
 #define mp_read_lv_color_hsv_t(field) mp_read_ptr_lv_color_hsv_t(copy_buffer(&field, sizeof(lv_color_hsv_t)))
@@ -18626,9 +19482,11 @@ STATIC const mp_obj_type_t mp_lv_color_hsv_t_type = {
     .print = mp_lv_color_hsv_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_color_hsv_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_color_hsv_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_color_hsv_t_type()
@@ -18844,17 +19702,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_set_color_obj, 2, mp_lv_led_set_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_set_brightness_obj, 2, mp_lv_obj_set_flex_grow, lv_led_set_brightness);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_led_on */
+/* Reusing lv_obj_move_foreground for lv_led_on */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_on_obj, 1, mp_lv_obj_allocate_spec_attr, lv_led_on);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_on_obj, 1, mp_lv_obj_move_foreground, lv_led_on);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_led_off */
+/* Reusing lv_obj_move_foreground for lv_led_off */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_off_obj, 1, mp_lv_obj_allocate_spec_attr, lv_led_off);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_off_obj, 1, mp_lv_obj_move_foreground, lv_led_off);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_led_toggle */
+/* Reusing lv_obj_move_foreground for lv_led_toggle */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_toggle_obj, 1, mp_lv_obj_allocate_spec_attr, lv_led_toggle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_led_toggle_obj, 1, mp_lv_obj_move_foreground, lv_led_toggle);
     
 
 /*
@@ -18954,6 +19812,24 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_set_src_obj, 5, mp_lv_imgbtn_
 
 /*
  * lvgl extension definition for:
+ * void lv_imgbtn_set_state(lv_obj_t *imgbtn, lv_imgbtn_state_t state)
+ */
+ 
+STATIC mp_obj_t mp_lv_imgbtn_set_state(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *imgbtn = mp_to_lv(mp_args[0]);
+    lv_imgbtn_state_t state = (int)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_obj_t *, lv_imgbtn_state_t))lv_func_ptr)(imgbtn, state);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_set_state_obj, 2, mp_lv_imgbtn_set_state, lv_imgbtn_set_state);
+    
+
+/*
+ * lvgl extension definition for:
  * const void *lv_imgbtn_get_src_left(lv_obj_t *imgbtn, lv_imgbtn_state_t state)
  */
  
@@ -18989,6 +19865,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_imgbtn_create_obj, 1, mp_lv_obj_crea
 
 STATIC const mp_rom_map_elem_t imgbtn_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_src), MP_ROM_PTR(&mp_lv_imgbtn_set_src_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_state), MP_ROM_PTR(&mp_lv_imgbtn_set_state_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_src_left), MP_ROM_PTR(&mp_lv_imgbtn_get_src_left_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_src_middle), MP_ROM_PTR(&mp_lv_imgbtn_get_src_middle_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_src_right), MP_ROM_PTR(&mp_lv_imgbtn_get_src_right_obj) },
@@ -19039,17 +19916,17 @@ STATIC const mp_lv_obj_type_t mp_lv_imgbtn_type = {
 
 STATIC inline const mp_obj_type_t *get_mp_lv_span_t_type();
 
-STATIC inline lv_span_t* mp_write_ptr_lv_span_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_span_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_span_t_type()));
     return (lv_span_t*)self->data;
 }
 
-#define mp_write_lv_span_t(struct_obj) *mp_write_ptr_lv_span_t(struct_obj)
+#define mp_write_lv_span_t(struct_obj) *((lv_span_t*)mp_write_ptr_lv_span_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_span_t(lv_span_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_span_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_span_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_span_t_type(), field);
 }
 
 #define mp_read_lv_span_t(field) mp_read_ptr_lv_span_t(copy_buffer(&field, sizeof(lv_span_t)))
@@ -19103,9 +19980,11 @@ STATIC const mp_obj_type_t mp_lv_span_t_type = {
     .print = mp_lv_span_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_span_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_span_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_span_t_type()
@@ -19295,9 +20174,9 @@ STATIC mp_obj_t mp_lv_spangroup_get_expand_height(size_t mp_n_args, const mp_obj
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spangroup_get_expand_height_obj, 2, mp_lv_spangroup_get_expand_height, lv_spangroup_get_expand_height);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_spangroup_refr_mode */
+/* Reusing lv_obj_move_foreground for lv_spangroup_refr_mode */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spangroup_refr_mode_obj, 1, mp_lv_obj_allocate_spec_attr, lv_spangroup_refr_mode);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_spangroup_refr_mode_obj, 1, mp_lv_obj_move_foreground, lv_spangroup_refr_mode);
     
 /* Reusing lv_obj_create for lv_spangroup_create */
 
@@ -19362,6 +20241,157 @@ STATIC const mp_lv_obj_type_t mp_lv_spangroup_type = {
     },
 #ifdef LV_OBJ_T
     &lv_spangroup_class
+#endif
+};
+    
+/* Reusing lv_img_set_src for lv_gif_set_src */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gif_set_src_obj, 2, mp_lv_img_set_src, lv_gif_set_src);
+    
+/* Reusing lv_obj_move_foreground for lv_gif_restart */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gif_restart_obj, 1, mp_lv_obj_move_foreground, lv_gif_restart);
+    
+/* Reusing lv_obj_create for lv_gif_create */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_gif_create_obj, 1, mp_lv_obj_create, lv_gif_create);
+    
+
+/*
+ * lvgl gif object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t gif_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_set_src), MP_ROM_PTR(&mp_lv_gif_set_src_obj) },
+    { MP_ROM_QSTR(MP_QSTR_restart), MP_ROM_PTR(&mp_lv_gif_restart_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(gif_locals_dict, gif_locals_dict_table);
+
+STATIC void gif_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl gif");
+}
+
+
+STATIC mp_obj_t gif_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_gif_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_gif_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_gif,
+        .print = gif_print,
+        .make_new = gif_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&gif_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_gif_class
+#endif
+};
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_res_t lv_qrcode_update(lv_obj_t *qrcode, const void *data, uint32_t data_len)
+ */
+ 
+STATIC mp_obj_t mp_lv_qrcode_update(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *qrcode = mp_to_lv(mp_args[0]);
+    const void *data = (const void *)mp_to_ptr(mp_args[1]);
+    uint32_t data_len = (uint32_t)mp_obj_get_int(mp_args[2]);
+    lv_res_t _res = ((lv_res_t (*)(lv_obj_t *, const void *, uint32_t))lv_func_ptr)(qrcode, data, data_len);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_qrcode_update_obj, 3, mp_lv_qrcode_update, lv_qrcode_update);
+    
+/* Reusing lv_obj_move_foreground for lv_qrcode_delete */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_qrcode_delete_obj, 1, mp_lv_obj_move_foreground, lv_qrcode_delete);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_obj_t *lv_qrcode_create(lv_obj_t *parent, lv_coord_t size, lv_color_t dark_color, lv_color_t light_color)
+ */
+ 
+STATIC mp_obj_t mp_lv_qrcode_create(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *parent = mp_to_lv(mp_args[0]);
+    lv_coord_t size = (int16_t)mp_obj_get_int(mp_args[1]);
+    lv_color_t dark_color = mp_write_lv_color32_t(mp_args[2]);
+    lv_color_t light_color = mp_write_lv_color32_t(mp_args[3]);
+    lv_obj_t * _res = ((lv_obj_t *(*)(lv_obj_t *, lv_coord_t, lv_color_t, lv_color_t))lv_func_ptr)(parent, size, dark_color, light_color);
+    return lv_to_mp((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_qrcode_create_obj, 4, mp_lv_qrcode_create, lv_qrcode_create);
+    
+
+/*
+ * lvgl qrcode object definitions
+ */
+    
+
+STATIC const mp_rom_map_elem_t qrcode_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_update), MP_ROM_PTR(&mp_lv_qrcode_update_obj) },
+    { MP_ROM_QSTR(MP_QSTR_delete), MP_ROM_PTR(&mp_lv_qrcode_delete_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(qrcode_locals_dict, qrcode_locals_dict_table);
+
+STATIC void qrcode_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl qrcode");
+}
+
+
+STATIC mp_obj_t qrcode_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_qrcode_create_obj, type, n_args, n_kw, args);
+}
+
+
+STATIC const mp_lv_obj_type_t mp_lv_qrcode_type = {
+    {
+        { &mp_type_type },
+        .name = MP_QSTR_qrcode,
+        .print = qrcode_print,
+        .make_new = qrcode_make_new,
+        .binary_op = mp_lv_obj_binary_op,
+        .attr = call_parent_methods,
+        .locals_dict = (mp_obj_dict_t*)&qrcode_locals_dict,
+        .buffer_p = { .get_buffer = mp_lv_obj_get_buffer },
+        .parent = &mp_lv_obj_type.mp_obj_type
+    },
+#ifdef LV_OBJ_T
+    &lv_qrcode_class
 #endif
 };
     
@@ -19638,17 +20668,17 @@ typedef struct {
 
 STATIC inline const mp_obj_type_t *get_mp__lv_mp_int_wrapper_type();
 
-STATIC inline _lv_mp_int_wrapper* mp_write_ptr__lv_mp_int_wrapper(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_mp_int_wrapper(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_mp_int_wrapper_type()));
     return (_lv_mp_int_wrapper*)self->data;
 }
 
-#define mp_write__lv_mp_int_wrapper(struct_obj) *mp_write_ptr__lv_mp_int_wrapper(struct_obj)
+#define mp_write__lv_mp_int_wrapper(struct_obj) *((_lv_mp_int_wrapper*)mp_write_ptr__lv_mp_int_wrapper(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr__lv_mp_int_wrapper(_lv_mp_int_wrapper *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_mp_int_wrapper(void *field)
 {
-    return lv_to_mp_struct(get_mp__lv_mp_int_wrapper_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_mp_int_wrapper_type(), field);
 }
 
 #define mp_read__lv_mp_int_wrapper(field) mp_read_ptr__lv_mp_int_wrapper(copy_buffer(&field, sizeof(_lv_mp_int_wrapper)))
@@ -19696,9 +20726,11 @@ STATIC const mp_obj_type_t mp__lv_mp_int_wrapper_type = {
     .print = mp__lv_mp_int_wrapper_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp__lv_mp_int_wrapper_attr,
     .locals_dict = (mp_obj_dict_t*)&mp__lv_mp_int_wrapper_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp__lv_mp_int_wrapper_type()
@@ -19798,12 +20830,122 @@ STATIC const mp_lv_struct_t mp_lv_list_btn_class = {
     
 
 /*
+ * lvgl lv_menu_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_class
+};
+    
+
+/*
+ * lvgl lv_menu_page_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_page_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_page_class
+};
+    
+
+/*
+ * lvgl lv_menu_cont_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_cont_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_cont_class
+};
+    
+
+/*
+ * lvgl lv_menu_section_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_section_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_section_class
+};
+    
+
+/*
+ * lvgl lv_menu_separator_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_separator_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_separator_class
+};
+    
+
+/*
+ * lvgl lv_menu_sidebar_cont_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_sidebar_cont_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_sidebar_cont_class
+};
+    
+
+/*
+ * lvgl lv_menu_main_cont_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_main_cont_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_main_cont_class
+};
+    
+
+/*
+ * lvgl lv_menu_sidebar_header_cont_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_sidebar_header_cont_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_sidebar_header_cont_class
+};
+    
+
+/*
+ * lvgl lv_menu_main_header_cont_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_menu_main_header_cont_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_menu_main_header_cont_class
+};
+    
+
+/*
  * lvgl lv_msgbox_class global definitions
  */
 
 STATIC const mp_lv_struct_t mp_lv_msgbox_class = {
     { &mp_lv_obj_class_t_type },
     (lv_obj_class_t*)&lv_msgbox_class
+};
+    
+
+/*
+ * lvgl lv_msgbox_content_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_msgbox_content_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_msgbox_content_class
+};
+    
+
+/*
+ * lvgl lv_msgbox_backdrop_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_msgbox_backdrop_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_msgbox_backdrop_class
 };
     
 
@@ -20026,6 +21168,26 @@ STATIC const mp_lv_struct_t mp_LV_STYLE_GRID_CELL_Y_ALIGN = {
     (lv_style_prop_t*)&LV_STYLE_GRID_CELL_Y_ALIGN
 };
     
+
+/*
+ * lvgl lv_gif_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_gif_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_gif_class
+};
+    
+
+/*
+ * lvgl lv_qrcode_class global definitions
+ */
+
+STATIC const mp_lv_struct_t mp_lv_qrcode_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_qrcode_class
+};
+    
 #define funcptr_lv_log_print_g_cb_t NULL
 
 
@@ -20054,17 +21216,17 @@ STATIC inline mp_obj_t mp_lv_funcptr_lv_log_print_g_cb_t(void *func){ return mp_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_mem_monitor_t_type();
 
-STATIC inline lv_mem_monitor_t* mp_write_ptr_lv_mem_monitor_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_mem_monitor_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_mem_monitor_t_type()));
     return (lv_mem_monitor_t*)self->data;
 }
 
-#define mp_write_lv_mem_monitor_t(struct_obj) *mp_write_ptr_lv_mem_monitor_t(struct_obj)
+#define mp_write_lv_mem_monitor_t(struct_obj) *((lv_mem_monitor_t*)mp_write_ptr_lv_mem_monitor_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_mem_monitor_t(lv_mem_monitor_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_mem_monitor_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_mem_monitor_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_mem_monitor_t_type(), field);
 }
 
 #define mp_read_lv_mem_monitor_t(field) mp_read_ptr_lv_mem_monitor_t(copy_buffer(&field, sizeof(lv_mem_monitor_t)))
@@ -20126,9 +21288,11 @@ STATIC const mp_obj_type_t mp_lv_mem_monitor_t_type = {
     .print = mp_lv_mem_monitor_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_mem_monitor_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_mem_monitor_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_mem_monitor_t_type()
@@ -20166,17 +21330,17 @@ STATIC inline mp_obj_t mp_lv_funcptr_lv_async_cb_t(void *func){ return mp_lv_fun
 
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_data_t_type();
 
-STATIC inline lv_indev_data_t* mp_write_ptr_lv_indev_data_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_indev_data_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_indev_data_t_type()));
     return (lv_indev_data_t*)self->data;
 }
 
-#define mp_write_lv_indev_data_t(struct_obj) *mp_write_ptr_lv_indev_data_t(struct_obj)
+#define mp_write_lv_indev_data_t(struct_obj) *((lv_indev_data_t*)mp_write_ptr_lv_indev_data_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_indev_data_t(lv_indev_data_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_indev_data_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_indev_data_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_indev_data_t_type(), field);
 }
 
 #define mp_read_lv_indev_data_t(field) mp_read_ptr_lv_indev_data_t(copy_buffer(&field, sizeof(lv_indev_data_t)))
@@ -20234,9 +21398,11 @@ STATIC const mp_obj_type_t mp_lv_indev_data_t_type = {
     .print = mp_lv_indev_data_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_indev_data_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_indev_data_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_data_t_type()
@@ -20295,17 +21461,17 @@ STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t *, uint8_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_drv_t_type();
 
-STATIC inline lv_indev_drv_t* mp_write_ptr_lv_indev_drv_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_indev_drv_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_indev_drv_t_type()));
     return (lv_indev_drv_t*)self->data;
 }
 
-#define mp_write_lv_indev_drv_t(struct_obj) *mp_write_ptr_lv_indev_drv_t(struct_obj)
+#define mp_write_lv_indev_drv_t(struct_obj) *((lv_indev_drv_t*)mp_write_ptr_lv_indev_drv_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_indev_drv_t(lv_indev_drv_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_indev_drv_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_indev_drv_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_indev_drv_t_type(), field);
 }
 
 #define mp_read_lv_indev_drv_t(field) mp_read_ptr_lv_indev_drv_t(copy_buffer(&field, sizeof(lv_indev_drv_t)))
@@ -20375,9 +21541,11 @@ STATIC const mp_obj_type_t mp_lv_indev_drv_t_type = {
     .print = mp_lv_indev_drv_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_indev_drv_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_indev_drv_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_drv_t_type()
@@ -20394,17 +21562,17 @@ typedef __typeof__( ((_lv_indev_proc_types_t*)(0))->pointer ) _lv_indev_proc_typ
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_pointer_t_type();
 
-STATIC inline _lv_indev_proc_types_pointer_t* mp_write_ptr__lv_indev_proc_types_pointer_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_indev_proc_types_pointer_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_indev_proc_types_pointer_t_type()));
     return (_lv_indev_proc_types_pointer_t*)self->data;
 }
 
-#define mp_write__lv_indev_proc_types_pointer_t(struct_obj) *mp_write_ptr__lv_indev_proc_types_pointer_t(struct_obj)
+#define mp_write__lv_indev_proc_types_pointer_t(struct_obj) *((_lv_indev_proc_types_pointer_t*)mp_write_ptr__lv_indev_proc_types_pointer_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_types_pointer_t(_lv_indev_proc_types_pointer_t *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_types_pointer_t(void *field)
 {
-    return lv_to_mp_struct(get_mp__lv_indev_proc_types_pointer_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_indev_proc_types_pointer_t_type(), field);
 }
 
 #define mp_read__lv_indev_proc_types_pointer_t(field) mp_read_ptr__lv_indev_proc_types_pointer_t(copy_buffer(&field, sizeof(_lv_indev_proc_types_pointer_t)))
@@ -20482,9 +21650,11 @@ STATIC const mp_obj_type_t mp__lv_indev_proc_types_pointer_t_type = {
     .print = mp__lv_indev_proc_types_pointer_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp__lv_indev_proc_types_pointer_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp__lv_indev_proc_types_pointer_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_pointer_t_type()
@@ -20500,17 +21670,17 @@ typedef __typeof__( ((_lv_indev_proc_types_t*)(0))->keypad ) _lv_indev_proc_type
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_keypad_t_type();
 
-STATIC inline _lv_indev_proc_types_keypad_t* mp_write_ptr__lv_indev_proc_types_keypad_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_indev_proc_types_keypad_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_indev_proc_types_keypad_t_type()));
     return (_lv_indev_proc_types_keypad_t*)self->data;
 }
 
-#define mp_write__lv_indev_proc_types_keypad_t(struct_obj) *mp_write_ptr__lv_indev_proc_types_keypad_t(struct_obj)
+#define mp_write__lv_indev_proc_types_keypad_t(struct_obj) *((_lv_indev_proc_types_keypad_t*)mp_write_ptr__lv_indev_proc_types_keypad_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_types_keypad_t(_lv_indev_proc_types_keypad_t *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_types_keypad_t(void *field)
 {
-    return lv_to_mp_struct(get_mp__lv_indev_proc_types_keypad_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_indev_proc_types_keypad_t_type(), field);
 }
 
 #define mp_read__lv_indev_proc_types_keypad_t(field) mp_read_ptr__lv_indev_proc_types_keypad_t(copy_buffer(&field, sizeof(_lv_indev_proc_types_keypad_t)))
@@ -20560,9 +21730,11 @@ STATIC const mp_obj_type_t mp__lv_indev_proc_types_keypad_t_type = {
     .print = mp__lv_indev_proc_types_keypad_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp__lv_indev_proc_types_keypad_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp__lv_indev_proc_types_keypad_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_keypad_t_type()
@@ -20577,17 +21749,17 @@ STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_keypad_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_t_type();
 
-STATIC inline _lv_indev_proc_types_t* mp_write_ptr__lv_indev_proc_types_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_indev_proc_types_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_indev_proc_types_t_type()));
     return (_lv_indev_proc_types_t*)self->data;
 }
 
-#define mp_write__lv_indev_proc_types_t(struct_obj) *mp_write_ptr__lv_indev_proc_types_t(struct_obj)
+#define mp_write__lv_indev_proc_types_t(struct_obj) *((_lv_indev_proc_types_t*)mp_write_ptr__lv_indev_proc_types_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_types_t(_lv_indev_proc_types_t *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_types_t(void *field)
 {
-    return lv_to_mp_struct(get_mp__lv_indev_proc_types_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_indev_proc_types_t_type(), field);
 }
 
 #define mp_read__lv_indev_proc_types_t(field) mp_read_ptr__lv_indev_proc_types_t(copy_buffer(&field, sizeof(_lv_indev_proc_types_t)))
@@ -20637,9 +21809,11 @@ STATIC const mp_obj_type_t mp__lv_indev_proc_types_t_type = {
     .print = mp__lv_indev_proc_types_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp__lv_indev_proc_types_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp__lv_indev_proc_types_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_t_type()
@@ -20654,17 +21828,17 @@ STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_types_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_t_type();
 
-STATIC inline _lv_indev_proc_t* mp_write_ptr__lv_indev_proc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_indev_proc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_indev_proc_t_type()));
     return (_lv_indev_proc_t*)self->data;
 }
 
-#define mp_write__lv_indev_proc_t(struct_obj) *mp_write_ptr__lv_indev_proc_t(struct_obj)
+#define mp_write__lv_indev_proc_t(struct_obj) *((_lv_indev_proc_t*)mp_write_ptr__lv_indev_proc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_t(_lv_indev_proc_t *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_indev_proc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp__lv_indev_proc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_indev_proc_t_type(), field);
 }
 
 #define mp_read__lv_indev_proc_t(field) mp_read_ptr__lv_indev_proc_t(copy_buffer(&field, sizeof(_lv_indev_proc_t)))
@@ -20726,9 +21900,11 @@ STATIC const mp_obj_type_t mp__lv_indev_proc_t_type = {
     .print = mp__lv_indev_proc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp__lv_indev_proc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp__lv_indev_proc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_t_type()
@@ -20743,17 +21919,17 @@ STATIC inline const mp_obj_type_t *get_mp__lv_indev_proc_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_ll_t_type();
 
-STATIC inline lv_ll_t* mp_write_ptr_lv_ll_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_ll_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_ll_t_type()));
     return (lv_ll_t*)self->data;
 }
 
-#define mp_write_lv_ll_t(struct_obj) *mp_write_ptr_lv_ll_t(struct_obj)
+#define mp_write_lv_ll_t(struct_obj) *((lv_ll_t*)mp_write_ptr_lv_ll_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_ll_t(lv_ll_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_ll_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_ll_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_ll_t_type(), field);
 }
 
 #define mp_read_lv_ll_t(field) mp_read_ptr_lv_ll_t(copy_buffer(&field, sizeof(lv_ll_t)))
@@ -20805,9 +21981,11 @@ STATIC const mp_obj_type_t mp_lv_ll_t_type = {
     .print = mp_lv_ll_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_ll_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_ll_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_ll_t_type()
@@ -20844,17 +22022,17 @@ STATIC void lv_group_t_focus_cb_callback(struct _lv_group_t *);
 
 STATIC inline const mp_obj_type_t *get_mp_lv_group_t_type();
 
-STATIC inline lv_group_t* mp_write_ptr_lv_group_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_group_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_group_t_type()));
     return (lv_group_t*)self->data;
 }
 
-#define mp_write_lv_group_t(struct_obj) *mp_write_ptr_lv_group_t(struct_obj)
+#define mp_write_lv_group_t(struct_obj) *((lv_group_t*)mp_write_ptr_lv_group_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_group_t(lv_group_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_group_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_group_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_group_t_type(), field);
 }
 
 #define mp_read_lv_group_t(field) mp_read_ptr_lv_group_t(copy_buffer(&field, sizeof(lv_group_t)))
@@ -20916,9 +22094,11 @@ STATIC const mp_obj_type_t mp_lv_group_t_type = {
     .print = mp_lv_group_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_group_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_group_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_group_t_type()
@@ -20933,17 +22113,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_group_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_t_type();
 
-STATIC inline lv_indev_t* mp_write_ptr_lv_indev_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_indev_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_indev_t_type()));
     return (lv_indev_t*)self->data;
 }
 
-#define mp_write_lv_indev_t(struct_obj) *mp_write_ptr_lv_indev_t(struct_obj)
+#define mp_write_lv_indev_t(struct_obj) *((lv_indev_t*)mp_write_ptr_lv_indev_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_indev_t(lv_indev_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_indev_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_indev_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_indev_t_type(), field);
 }
 
 #define mp_read_lv_indev_t(field) mp_read_ptr_lv_indev_t(copy_buffer(&field, sizeof(lv_indev_t)))
@@ -20999,9 +22179,11 @@ STATIC const mp_obj_type_t mp_lv_indev_t_type = {
     .print = mp_lv_indev_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_indev_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_indev_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_indev_t_type()
@@ -21114,7 +22296,7 @@ STATIC mp_obj_t mp_funcptr_read_cb_1(size_t mp_n_args, const mp_obj_t *mp_args, 
     void *file_p = mp_to_ptr(mp_args[1]);
     void *buf = mp_to_ptr(mp_args[2]);
     uint32_t btr = (uint32_t)mp_obj_get_int(mp_args[3]);
-    uint32_t *br = mp_to_ptr(mp_args[4]);
+    uint32_t *br = mp_array_to_u32ptr(mp_args[4]);
     lv_fs_res_t _res = ((lv_fs_res_t (*)(struct _lv_fs_drv_t *, void *, void *, uint32_t, uint32_t *))lv_func_ptr)(drv, file_p, buf, btr, br);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -21140,7 +22322,7 @@ STATIC mp_obj_t mp_funcptr_write_cb(size_t mp_n_args, const mp_obj_t *mp_args, v
     void *file_p = mp_to_ptr(mp_args[1]);
     const void *buf = (const void *)mp_to_ptr(mp_args[2]);
     uint32_t btw = (uint32_t)mp_obj_get_int(mp_args[3]);
-    uint32_t *bw = mp_to_ptr(mp_args[4]);
+    uint32_t *bw = mp_array_to_u32ptr(mp_args[4]);
     lv_fs_res_t _res = ((lv_fs_res_t (*)(struct _lv_fs_drv_t *, void *, const void *, uint32_t, uint32_t *))lv_func_ptr)(drv, file_p, buf, btw, bw);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -21189,7 +22371,7 @@ STATIC mp_obj_t mp_funcptr_tell_cb(size_t mp_n_args, const mp_obj_t *mp_args, vo
 {
     struct _lv_fs_drv_t *drv = mp_to_ptr(mp_args[0]);
     void *file_p = mp_to_ptr(mp_args[1]);
-    uint32_t *pos_p = mp_to_ptr(mp_args[2]);
+    uint32_t *pos_p = mp_array_to_u32ptr(mp_args[2]);
     lv_fs_res_t _res = ((lv_fs_res_t (*)(struct _lv_fs_drv_t *, void *, uint32_t *))lv_func_ptr)(drv, file_p, pos_p);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -21264,17 +22446,17 @@ STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs_drv_t *drv, v
 
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_drv_t_type();
 
-STATIC inline lv_fs_drv_t* mp_write_ptr_lv_fs_drv_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_fs_drv_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_fs_drv_t_type()));
     return (lv_fs_drv_t*)self->data;
 }
 
-#define mp_write_lv_fs_drv_t(struct_obj) *mp_write_ptr_lv_fs_drv_t(struct_obj)
+#define mp_write_lv_fs_drv_t(struct_obj) *((lv_fs_drv_t*)mp_write_ptr_lv_fs_drv_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_fs_drv_t(lv_fs_drv_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_fs_drv_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_fs_drv_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_fs_drv_t_type(), field);
 }
 
 #define mp_read_lv_fs_drv_t(field) mp_read_ptr_lv_fs_drv_t(copy_buffer(&field, sizeof(lv_fs_drv_t)))
@@ -21344,9 +22526,11 @@ STATIC const mp_obj_type_t mp_lv_fs_drv_t_type = {
     .print = mp_lv_fs_drv_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_fs_drv_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_fs_drv_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_drv_t_type()
@@ -21361,17 +22545,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_fs_drv_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_file_t_type();
 
-STATIC inline lv_fs_file_t* mp_write_ptr_lv_fs_file_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_fs_file_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_fs_file_t_type()));
     return (lv_fs_file_t*)self->data;
 }
 
-#define mp_write_lv_fs_file_t(struct_obj) *mp_write_ptr_lv_fs_file_t(struct_obj)
+#define mp_write_lv_fs_file_t(struct_obj) *((lv_fs_file_t*)mp_write_ptr_lv_fs_file_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_fs_file_t(lv_fs_file_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_fs_file_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_fs_file_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_fs_file_t_type(), field);
 }
 
 #define mp_read_lv_fs_file_t(field) mp_read_ptr_lv_fs_file_t(copy_buffer(&field, sizeof(lv_fs_file_t)))
@@ -21421,9 +22605,11 @@ STATIC const mp_obj_type_t mp_lv_fs_file_t_type = {
     .print = mp_lv_fs_file_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_fs_file_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_fs_file_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_file_t_type()
@@ -21438,17 +22624,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_fs_file_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_dir_t_type();
 
-STATIC inline lv_fs_dir_t* mp_write_ptr_lv_fs_dir_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_fs_dir_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_fs_dir_t_type()));
     return (lv_fs_dir_t*)self->data;
 }
 
-#define mp_write_lv_fs_dir_t(struct_obj) *mp_write_ptr_lv_fs_dir_t(struct_obj)
+#define mp_write_lv_fs_dir_t(struct_obj) *((lv_fs_dir_t*)mp_write_ptr_lv_fs_dir_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_fs_dir_t(lv_fs_dir_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_fs_dir_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_fs_dir_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_fs_dir_t_type(), field);
 }
 
 #define mp_read_lv_fs_dir_t(field) mp_read_ptr_lv_fs_dir_t(copy_buffer(&field, sizeof(lv_fs_dir_t)))
@@ -21498,9 +22684,11 @@ STATIC const mp_obj_type_t mp_lv_fs_dir_t_type = {
     .print = mp_lv_fs_dir_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_fs_dir_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_fs_dir_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_fs_dir_t_type()
@@ -21518,7 +22706,7 @@ STATIC inline const mp_obj_type_t *get_mp_lv_fs_dir_t_type()
  
 STATIC mp_obj_t mp_funcptr_lv_draw_mask_xcb_t(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    lv_opa_t *mask_buf = mp_to_ptr(mp_args[0]);
+    lv_opa_t *mask_buf = mp_array_to_u8ptr(mp_args[0]);
     lv_coord_t abs_x = (int16_t)mp_obj_get_int(mp_args[1]);
     lv_coord_t abs_y = (int16_t)mp_obj_get_int(mp_args[2]);
     lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[3]);
@@ -21547,17 +22735,17 @@ STATIC inline mp_obj_t mp_lv_funcptr_lv_draw_mask_xcb_t(void *func){ return mp_l
 
 STATIC inline const mp_obj_type_t *get_mp__lv_draw_mask_common_dsc_t_type();
 
-STATIC inline _lv_draw_mask_common_dsc_t* mp_write_ptr__lv_draw_mask_common_dsc_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_draw_mask_common_dsc_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_draw_mask_common_dsc_t_type()));
     return (_lv_draw_mask_common_dsc_t*)self->data;
 }
 
-#define mp_write__lv_draw_mask_common_dsc_t(struct_obj) *mp_write_ptr__lv_draw_mask_common_dsc_t(struct_obj)
+#define mp_write__lv_draw_mask_common_dsc_t(struct_obj) *((_lv_draw_mask_common_dsc_t*)mp_write_ptr__lv_draw_mask_common_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr__lv_draw_mask_common_dsc_t(_lv_draw_mask_common_dsc_t *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_draw_mask_common_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp__lv_draw_mask_common_dsc_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_draw_mask_common_dsc_t_type(), field);
 }
 
 #define mp_read__lv_draw_mask_common_dsc_t(field) mp_read_ptr__lv_draw_mask_common_dsc_t(copy_buffer(&field, sizeof(_lv_draw_mask_common_dsc_t)))
@@ -21607,9 +22795,11 @@ STATIC const mp_obj_type_t mp__lv_draw_mask_common_dsc_t_type = {
     .print = mp__lv_draw_mask_common_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp__lv_draw_mask_common_dsc_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp__lv_draw_mask_common_dsc_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp__lv_draw_mask_common_dsc_t_type()
@@ -21625,17 +22815,17 @@ typedef __typeof__( ((lv_draw_mask_line_param_t*)(0))->cfg ) lv_draw_mask_line_p
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_line_param_cfg_t_type();
 
-STATIC inline lv_draw_mask_line_param_cfg_t* mp_write_ptr_lv_draw_mask_line_param_cfg_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_line_param_cfg_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_line_param_cfg_t_type()));
     return (lv_draw_mask_line_param_cfg_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_line_param_cfg_t(struct_obj) *mp_write_ptr_lv_draw_mask_line_param_cfg_t(struct_obj)
+#define mp_write_lv_draw_mask_line_param_cfg_t(struct_obj) *((lv_draw_mask_line_param_cfg_t*)mp_write_ptr_lv_draw_mask_line_param_cfg_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_line_param_cfg_t(lv_draw_mask_line_param_cfg_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_line_param_cfg_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_line_param_cfg_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_line_param_cfg_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_line_param_cfg_t(field) mp_read_ptr_lv_draw_mask_line_param_cfg_t(copy_buffer(&field, sizeof(lv_draw_mask_line_param_cfg_t)))
@@ -21687,9 +22877,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_line_param_cfg_t_type = {
     .print = mp_lv_draw_mask_line_param_cfg_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_line_param_cfg_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_line_param_cfg_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_line_param_cfg_t_type()
@@ -21704,17 +22896,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_line_param_cfg_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_line_param_t_type();
 
-STATIC inline lv_draw_mask_line_param_t* mp_write_ptr_lv_draw_mask_line_param_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_line_param_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_line_param_t_type()));
     return (lv_draw_mask_line_param_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_line_param_t(struct_obj) *mp_write_ptr_lv_draw_mask_line_param_t(struct_obj)
+#define mp_write_lv_draw_mask_line_param_t(struct_obj) *((lv_draw_mask_line_param_t*)mp_write_ptr_lv_draw_mask_line_param_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_line_param_t(lv_draw_mask_line_param_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_line_param_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_line_param_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_line_param_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_line_param_t(field) mp_read_ptr_lv_draw_mask_line_param_t(copy_buffer(&field, sizeof(lv_draw_mask_line_param_t)))
@@ -21778,9 +22970,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_line_param_t_type = {
     .print = mp_lv_draw_mask_line_param_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_line_param_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_line_param_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_line_param_t_type()
@@ -21796,17 +22990,17 @@ typedef __typeof__( ((lv_draw_mask_angle_param_t*)(0))->cfg ) lv_draw_mask_angle
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_angle_param_cfg_t_type();
 
-STATIC inline lv_draw_mask_angle_param_cfg_t* mp_write_ptr_lv_draw_mask_angle_param_cfg_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_angle_param_cfg_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_angle_param_cfg_t_type()));
     return (lv_draw_mask_angle_param_cfg_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_angle_param_cfg_t(struct_obj) *mp_write_ptr_lv_draw_mask_angle_param_cfg_t(struct_obj)
+#define mp_write_lv_draw_mask_angle_param_cfg_t(struct_obj) *((lv_draw_mask_angle_param_cfg_t*)mp_write_ptr_lv_draw_mask_angle_param_cfg_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_angle_param_cfg_t(lv_draw_mask_angle_param_cfg_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_angle_param_cfg_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_angle_param_cfg_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_angle_param_cfg_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_angle_param_cfg_t(field) mp_read_ptr_lv_draw_mask_angle_param_cfg_t(copy_buffer(&field, sizeof(lv_draw_mask_angle_param_cfg_t)))
@@ -21858,9 +23052,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_angle_param_cfg_t_type = {
     .print = mp_lv_draw_mask_angle_param_cfg_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_angle_param_cfg_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_angle_param_cfg_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_angle_param_cfg_t_type()
@@ -21875,17 +23071,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_angle_param_cfg_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_angle_param_t_type();
 
-STATIC inline lv_draw_mask_angle_param_t* mp_write_ptr_lv_draw_mask_angle_param_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_angle_param_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_angle_param_t_type()));
     return (lv_draw_mask_angle_param_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_angle_param_t(struct_obj) *mp_write_ptr_lv_draw_mask_angle_param_t(struct_obj)
+#define mp_write_lv_draw_mask_angle_param_t(struct_obj) *((lv_draw_mask_angle_param_t*)mp_write_ptr_lv_draw_mask_angle_param_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_angle_param_t(lv_draw_mask_angle_param_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_angle_param_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_angle_param_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_angle_param_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_angle_param_t(field) mp_read_ptr_lv_draw_mask_angle_param_t(copy_buffer(&field, sizeof(lv_draw_mask_angle_param_t)))
@@ -21941,9 +23137,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_angle_param_t_type = {
     .print = mp_lv_draw_mask_angle_param_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_angle_param_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_angle_param_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_angle_param_t_type()
@@ -21959,17 +23157,17 @@ typedef __typeof__( ((lv_draw_mask_radius_param_t*)(0))->cfg ) lv_draw_mask_radi
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_radius_param_cfg_t_type();
 
-STATIC inline lv_draw_mask_radius_param_cfg_t* mp_write_ptr_lv_draw_mask_radius_param_cfg_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_radius_param_cfg_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_radius_param_cfg_t_type()));
     return (lv_draw_mask_radius_param_cfg_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_radius_param_cfg_t(struct_obj) *mp_write_ptr_lv_draw_mask_radius_param_cfg_t(struct_obj)
+#define mp_write_lv_draw_mask_radius_param_cfg_t(struct_obj) *((lv_draw_mask_radius_param_cfg_t*)mp_write_ptr_lv_draw_mask_radius_param_cfg_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_radius_param_cfg_t(lv_draw_mask_radius_param_cfg_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_radius_param_cfg_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_radius_param_cfg_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_radius_param_cfg_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_radius_param_cfg_t(field) mp_read_ptr_lv_draw_mask_radius_param_cfg_t(copy_buffer(&field, sizeof(lv_draw_mask_radius_param_cfg_t)))
@@ -22021,9 +23219,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_radius_param_cfg_t_type = {
     .print = mp_lv_draw_mask_radius_param_cfg_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_radius_param_cfg_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_radius_param_cfg_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_radius_param_cfg_t_type()
@@ -22033,38 +23233,43 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_radius_param_cfg_t_type()
     
 
 /*
- * Struct lv_sqrt_res_t
+ * Struct _lv_draw_mask_radius_circle_dsc_t
  */
 
-STATIC inline const mp_obj_type_t *get_mp_lv_sqrt_res_t_type();
+STATIC inline const mp_obj_type_t *get_mp__lv_draw_mask_radius_circle_dsc_t_type();
 
-STATIC inline lv_sqrt_res_t* mp_write_ptr_lv_sqrt_res_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr__lv_draw_mask_radius_circle_dsc_t(mp_obj_t self_in)
 {
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_sqrt_res_t_type()));
-    return (lv_sqrt_res_t*)self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp__lv_draw_mask_radius_circle_dsc_t_type()));
+    return (_lv_draw_mask_radius_circle_dsc_t*)self->data;
 }
 
-#define mp_write_lv_sqrt_res_t(struct_obj) *mp_write_ptr_lv_sqrt_res_t(struct_obj)
+#define mp_write__lv_draw_mask_radius_circle_dsc_t(struct_obj) *((_lv_draw_mask_radius_circle_dsc_t*)mp_write_ptr__lv_draw_mask_radius_circle_dsc_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_sqrt_res_t(lv_sqrt_res_t *field)
+STATIC inline mp_obj_t mp_read_ptr__lv_draw_mask_radius_circle_dsc_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_sqrt_res_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp__lv_draw_mask_radius_circle_dsc_t_type(), field);
 }
 
-#define mp_read_lv_sqrt_res_t(field) mp_read_ptr_lv_sqrt_res_t(copy_buffer(&field, sizeof(lv_sqrt_res_t)))
-#define mp_read_byref_lv_sqrt_res_t(field) mp_read_ptr_lv_sqrt_res_t(&field)
+#define mp_read__lv_draw_mask_radius_circle_dsc_t(field) mp_read_ptr__lv_draw_mask_radius_circle_dsc_t(copy_buffer(&field, sizeof(_lv_draw_mask_radius_circle_dsc_t)))
+#define mp_read_byref__lv_draw_mask_radius_circle_dsc_t(field) mp_read_ptr__lv_draw_mask_radius_circle_dsc_t(&field)
 
-STATIC void mp_lv_sqrt_res_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+STATIC void mp__lv_draw_mask_radius_circle_dsc_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    lv_sqrt_res_t *data = (lv_sqrt_res_t*)self->data;
+    _lv_draw_mask_radius_circle_dsc_t *data = (_lv_draw_mask_radius_circle_dsc_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_i: dest[0] = mp_obj_new_int_from_uint(data->i); break; // converting from uint16_t;
-            case MP_QSTR_f: dest[0] = mp_obj_new_int_from_uint(data->f); break; // converting from uint16_t;
+            case MP_QSTR_buf: dest[0] = mp_array_from_u8ptr((void*)data->buf); break; // converting from uint8_t *;
+            case MP_QSTR_cir_opa: dest[0] = mp_array_from_u8ptr((void*)data->cir_opa); break; // converting from lv_opa_t *;
+            case MP_QSTR_x_start_on_y: dest[0] = mp_array_from_u16ptr((void*)data->x_start_on_y); break; // converting from uint16_t *;
+            case MP_QSTR_opa_start_on_y: dest[0] = mp_array_from_u16ptr((void*)data->opa_start_on_y); break; // converting from uint16_t *;
+            case MP_QSTR_life: dest[0] = mp_obj_new_int(data->life); break; // converting from int32_t;
+            case MP_QSTR_used_cnt: dest[0] = mp_obj_new_int_from_uint(data->used_cnt); break; // converting from uint32_t;
+            case MP_QSTR_radius: dest[0] = mp_obj_new_int(data->radius); break; // converting from lv_coord_t;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
@@ -22073,8 +23278,13 @@ STATIC void mp_lv_sqrt_res_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_i: data->i = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
-                case MP_QSTR_f: data->f = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_buf: data->buf = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to uint8_t *;
+                case MP_QSTR_cir_opa: data->cir_opa = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to lv_opa_t *;
+                case MP_QSTR_x_start_on_y: data->x_start_on_y = (void*)mp_array_to_u16ptr(dest[1]); break; // converting to uint16_t *;
+                case MP_QSTR_opa_start_on_y: data->opa_start_on_y = (void*)mp_array_to_u16ptr(dest[1]); break; // converting to uint16_t *;
+                case MP_QSTR_life: data->life = (int32_t)mp_obj_get_int(dest[1]); break; // converting to int32_t;
+                case MP_QSTR_used_cnt: data->used_cnt = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_radius: data->radius = (int16_t)mp_obj_get_int(dest[1]); break; // converting to lv_coord_t;
                 default: return;
             }
 
@@ -22083,29 +23293,31 @@ STATIC void mp_lv_sqrt_res_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
     }
 }
 
-STATIC void mp_lv_sqrt_res_t_print(const mp_print_t *print,
+STATIC void mp__lv_draw_mask_radius_circle_dsc_t_print(const mp_print_t *print,
     mp_obj_t self_in,
     mp_print_kind_t kind)
 {
-    mp_printf(print, "struct lv_sqrt_res_t");
+    mp_printf(print, "struct _lv_draw_mask_radius_circle_dsc_t");
 }
 
-STATIC const mp_obj_dict_t mp_lv_sqrt_res_t_locals_dict;
+STATIC const mp_obj_dict_t mp__lv_draw_mask_radius_circle_dsc_t_locals_dict;
 
-STATIC const mp_obj_type_t mp_lv_sqrt_res_t_type = {
+STATIC const mp_obj_type_t mp__lv_draw_mask_radius_circle_dsc_t_type = {
     { &mp_type_type },
-    .name = MP_QSTR_lv_sqrt_res_t,
-    .print = mp_lv_sqrt_res_t_print,
+    .name = MP_QSTR__lv_draw_mask_radius_circle_dsc_t,
+    .print = mp__lv_draw_mask_radius_circle_dsc_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
-    .attr = mp_lv_sqrt_res_t_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_lv_sqrt_res_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .subscr = lv_struct_subscr,
+    .attr = mp__lv_draw_mask_radius_circle_dsc_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp__lv_draw_mask_radius_circle_dsc_t_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
-STATIC inline const mp_obj_type_t *get_mp_lv_sqrt_res_t_type()
+STATIC inline const mp_obj_type_t *get_mp__lv_draw_mask_radius_circle_dsc_t_type()
 {
-    return &mp_lv_sqrt_res_t_type;
+    return &mp__lv_draw_mask_radius_circle_dsc_t_type;
 }
     
 
@@ -22115,17 +23327,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_sqrt_res_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_radius_param_t_type();
 
-STATIC inline lv_draw_mask_radius_param_t* mp_write_ptr_lv_draw_mask_radius_param_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_radius_param_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_radius_param_t_type()));
     return (lv_draw_mask_radius_param_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_radius_param_t(struct_obj) *mp_write_ptr_lv_draw_mask_radius_param_t(struct_obj)
+#define mp_write_lv_draw_mask_radius_param_t(struct_obj) *((lv_draw_mask_radius_param_t*)mp_write_ptr_lv_draw_mask_radius_param_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_radius_param_t(lv_draw_mask_radius_param_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_radius_param_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_radius_param_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_radius_param_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_radius_param_t(field) mp_read_ptr_lv_draw_mask_radius_param_t(copy_buffer(&field, sizeof(lv_draw_mask_radius_param_t)))
@@ -22142,8 +23354,7 @@ STATIC void mp_lv_draw_mask_radius_param_t_attr(mp_obj_t self_in, qstr attr, mp_
         {
             case MP_QSTR_dsc: dest[0] = mp_read_byref__lv_draw_mask_common_dsc_t(data->dsc); break; // converting from _lv_draw_mask_common_dsc_t;
             case MP_QSTR_cfg: dest[0] = mp_read_byref_lv_draw_mask_radius_param_cfg_t(data->cfg); break; // converting from lv_draw_mask_radius_param_cfg_t;
-            case MP_QSTR_y_prev: dest[0] = mp_obj_new_int(data->y_prev); break; // converting from int32_t;
-            case MP_QSTR_y_prev_x: dest[0] = mp_read_byref_lv_sqrt_res_t(data->y_prev_x); break; // converting from lv_sqrt_res_t;
+            case MP_QSTR_circle: dest[0] = mp_read_ptr__lv_draw_mask_radius_circle_dsc_t((void*)data->circle); break; // converting from _lv_draw_mask_radius_circle_dsc_t *;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
@@ -22154,8 +23365,7 @@ STATIC void mp_lv_draw_mask_radius_param_t_attr(mp_obj_t self_in, qstr attr, mp_
             {
                 case MP_QSTR_dsc: data->dsc = mp_write__lv_draw_mask_common_dsc_t(dest[1]); break; // converting to _lv_draw_mask_common_dsc_t;
                 case MP_QSTR_cfg: data->cfg = mp_write_lv_draw_mask_radius_param_cfg_t(dest[1]); break; // converting to lv_draw_mask_radius_param_cfg_t;
-                case MP_QSTR_y_prev: data->y_prev = (int32_t)mp_obj_get_int(dest[1]); break; // converting to int32_t;
-                case MP_QSTR_y_prev_x: data->y_prev_x = mp_write_lv_sqrt_res_t(dest[1]); break; // converting to lv_sqrt_res_t;
+                case MP_QSTR_circle: data->circle = (void*)mp_write_ptr__lv_draw_mask_radius_circle_dsc_t(dest[1]); break; // converting to _lv_draw_mask_radius_circle_dsc_t *;
                 default: return;
             }
 
@@ -22179,9 +23389,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_radius_param_t_type = {
     .print = mp_lv_draw_mask_radius_param_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_radius_param_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_radius_param_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_radius_param_t_type()
@@ -22197,17 +23409,17 @@ typedef __typeof__( ((lv_draw_mask_fade_param_t*)(0))->cfg ) lv_draw_mask_fade_p
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_fade_param_cfg_t_type();
 
-STATIC inline lv_draw_mask_fade_param_cfg_t* mp_write_ptr_lv_draw_mask_fade_param_cfg_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_fade_param_cfg_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_fade_param_cfg_t_type()));
     return (lv_draw_mask_fade_param_cfg_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_fade_param_cfg_t(struct_obj) *mp_write_ptr_lv_draw_mask_fade_param_cfg_t(struct_obj)
+#define mp_write_lv_draw_mask_fade_param_cfg_t(struct_obj) *((lv_draw_mask_fade_param_cfg_t*)mp_write_ptr_lv_draw_mask_fade_param_cfg_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_fade_param_cfg_t(lv_draw_mask_fade_param_cfg_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_fade_param_cfg_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_fade_param_cfg_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_fade_param_cfg_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_fade_param_cfg_t(field) mp_read_ptr_lv_draw_mask_fade_param_cfg_t(copy_buffer(&field, sizeof(lv_draw_mask_fade_param_cfg_t)))
@@ -22263,9 +23475,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_fade_param_cfg_t_type = {
     .print = mp_lv_draw_mask_fade_param_cfg_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_fade_param_cfg_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_fade_param_cfg_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_fade_param_cfg_t_type()
@@ -22280,17 +23494,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_fade_param_cfg_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_fade_param_t_type();
 
-STATIC inline lv_draw_mask_fade_param_t* mp_write_ptr_lv_draw_mask_fade_param_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_fade_param_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_fade_param_t_type()));
     return (lv_draw_mask_fade_param_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_fade_param_t(struct_obj) *mp_write_ptr_lv_draw_mask_fade_param_t(struct_obj)
+#define mp_write_lv_draw_mask_fade_param_t(struct_obj) *((lv_draw_mask_fade_param_t*)mp_write_ptr_lv_draw_mask_fade_param_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_fade_param_t(lv_draw_mask_fade_param_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_fade_param_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_fade_param_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_fade_param_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_fade_param_t(field) mp_read_ptr_lv_draw_mask_fade_param_t(copy_buffer(&field, sizeof(lv_draw_mask_fade_param_t)))
@@ -22340,9 +23554,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_fade_param_t_type = {
     .print = mp_lv_draw_mask_fade_param_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_fade_param_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_fade_param_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_fade_param_t_type()
@@ -22358,17 +23574,17 @@ typedef __typeof__( ((lv_draw_mask_map_param_t*)(0))->cfg ) lv_draw_mask_map_par
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_map_param_cfg_t_type();
 
-STATIC inline lv_draw_mask_map_param_cfg_t* mp_write_ptr_lv_draw_mask_map_param_cfg_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_map_param_cfg_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_map_param_cfg_t_type()));
     return (lv_draw_mask_map_param_cfg_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_map_param_cfg_t(struct_obj) *mp_write_ptr_lv_draw_mask_map_param_cfg_t(struct_obj)
+#define mp_write_lv_draw_mask_map_param_cfg_t(struct_obj) *((lv_draw_mask_map_param_cfg_t*)mp_write_ptr_lv_draw_mask_map_param_cfg_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_map_param_cfg_t(lv_draw_mask_map_param_cfg_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_map_param_cfg_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_map_param_cfg_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_map_param_cfg_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_map_param_cfg_t(field) mp_read_ptr_lv_draw_mask_map_param_cfg_t(copy_buffer(&field, sizeof(lv_draw_mask_map_param_cfg_t)))
@@ -22384,7 +23600,7 @@ STATIC void mp_lv_draw_mask_map_param_cfg_t_attr(mp_obj_t self_in, qstr attr, mp
         switch(attr)
         {
             case MP_QSTR_coords: dest[0] = mp_read_byref_lv_area_t(data->coords); break; // converting from lv_area_t;
-            case MP_QSTR_map: dest[0] = ptr_to_mp((void*)data->map); break; // converting from lv_opa_t *;
+            case MP_QSTR_map: dest[0] = mp_array_from_u8ptr((void*)data->map); break; // converting from lv_opa_t *;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
         }
     } else {
@@ -22394,7 +23610,7 @@ STATIC void mp_lv_draw_mask_map_param_cfg_t_attr(mp_obj_t self_in, qstr attr, mp
             switch(attr)
             {
                 case MP_QSTR_coords: data->coords = mp_write_lv_area_t(dest[1]); break; // converting to lv_area_t;
-                case MP_QSTR_map: data->map = (void*)mp_to_ptr(dest[1]); break; // converting to lv_opa_t *;
+                case MP_QSTR_map: data->map = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to lv_opa_t *;
                 default: return;
             }
 
@@ -22418,9 +23634,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_map_param_cfg_t_type = {
     .print = mp_lv_draw_mask_map_param_cfg_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_map_param_cfg_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_map_param_cfg_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_map_param_cfg_t_type()
@@ -22435,17 +23653,17 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_map_param_cfg_t_type()
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_map_param_t_type();
 
-STATIC inline lv_draw_mask_map_param_t* mp_write_ptr_lv_draw_mask_map_param_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_mask_map_param_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_mask_map_param_t_type()));
     return (lv_draw_mask_map_param_t*)self->data;
 }
 
-#define mp_write_lv_draw_mask_map_param_t(struct_obj) *mp_write_ptr_lv_draw_mask_map_param_t(struct_obj)
+#define mp_write_lv_draw_mask_map_param_t(struct_obj) *((lv_draw_mask_map_param_t*)mp_write_ptr_lv_draw_mask_map_param_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_map_param_t(lv_draw_mask_map_param_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_mask_map_param_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_mask_map_param_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_mask_map_param_t_type(), field);
 }
 
 #define mp_read_lv_draw_mask_map_param_t(field) mp_read_ptr_lv_draw_mask_map_param_t(copy_buffer(&field, sizeof(lv_draw_mask_map_param_t)))
@@ -22495,9 +23713,11 @@ STATIC const mp_obj_type_t mp_lv_draw_mask_map_param_t_type = {
     .print = mp_lv_draw_mask_map_param_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_mask_map_param_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_mask_map_param_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_map_param_t_type()
@@ -22505,63 +23725,872 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_mask_map_param_t_type()
     return &mp_lv_draw_mask_map_param_t_type;
 }
     
-
-STATIC const mp_rom_map_elem_t mp_C_Pointer_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(C_Pointer))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
-    
-};
-
-STATIC MP_DEFINE_CONST_DICT(mp_C_Pointer_locals_dict, mp_C_Pointer_locals_dict_table);
-        
-
-/*
- * Callback function lv_color_filter_dsc_t_cb
- * lv_color_t lv_color_filter_cb_t(const struct _lv_color_filter_dsc_t *, lv_color_t, lv_opa_t)
- */
-
-STATIC lv_color_t lv_color_filter_dsc_t_cb_callback(const struct _lv_color_filter_dsc_t * arg0, lv_color_t arg1, lv_opa_t arg2)
-{
-    mp_obj_t mp_args[3];
-    mp_args[0] = mp_read_ptr_lv_color_filter_dsc_t((void*)arg0);
-    mp_args[1] = mp_read_lv_color32_t(arg1);
-    mp_args[2] = mp_obj_new_int_from_uint(arg2);
-    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_color_filter_dsc_t_cb)) , 3, 0, mp_args);
-    return mp_write_lv_color32_t(callback_result);
-}
+#define funcptr_draw_rect NULL
 
 
 /*
  * lvgl extension definition for:
- * inline static void lv_color_filter_dsc_init(lv_color_filter_dsc_t *dsc, lv_color_filter_cb_t cb)
+ * void draw_rect(const lv_area_t *coords, const lv_area_t *clip, const lv_draw_rect_dsc_t *dsc)
  */
  
-STATIC mp_obj_t mp_lv_color_filter_dsc_init(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_funcptr_draw_rect(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    lv_color_filter_dsc_t *dsc = mp_write_ptr_lv_color_filter_dsc_t(mp_args[0]);
-    void *cb = mp_lv_callback(mp_args[1], &lv_color_filter_dsc_t_cb_callback, MP_QSTR_lv_color_filter_dsc_t_cb, &dsc->user_data);
-    ((void (*)(lv_color_filter_dsc_t *, lv_color_filter_cb_t))lv_func_ptr)(dsc, cb);
+    const lv_area_t *coords = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[0]);
+    const lv_area_t *clip = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
+    const lv_draw_rect_dsc_t *dsc = (const lv_draw_rect_dsc_t *)mp_write_ptr_lv_draw_rect_dsc_t(mp_args[2]);
+    ((void (*)(const lv_area_t *, const lv_area_t *, const lv_draw_rect_dsc_t *))lv_func_ptr)(coords, clip, dsc);
     return mp_const_none;
 }
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_filter_dsc_init_obj, 2, mp_lv_color_filter_dsc_init, lv_color_filter_dsc_init);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_rect_obj, 3, mp_funcptr_draw_rect, funcptr_draw_rect);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_rect(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_rect_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_rect_callback'
+ * void (*draw_rect)(const lv_area_t *coords, const lv_area_t *clip, const lv_draw_rect_dsc_t *dsc)
+ */
+    
+#define funcptr_draw_arc NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void draw_arc(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, const lv_area_t *clip_area, const lv_draw_arc_dsc_t *dsc)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_draw_arc(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_coord_t center_x = (int16_t)mp_obj_get_int(mp_args[0]);
+    lv_coord_t center_y = (int16_t)mp_obj_get_int(mp_args[1]);
+    uint16_t radius = (uint16_t)mp_obj_get_int(mp_args[2]);
+    uint16_t start_angle = (uint16_t)mp_obj_get_int(mp_args[3]);
+    uint16_t end_angle = (uint16_t)mp_obj_get_int(mp_args[4]);
+    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[5]);
+    const lv_draw_arc_dsc_t *dsc = (const lv_draw_arc_dsc_t *)mp_write_ptr_lv_draw_arc_dsc_t(mp_args[6]);
+    ((void (*)(lv_coord_t, lv_coord_t, uint16_t, uint16_t, uint16_t, const lv_area_t *, const lv_draw_arc_dsc_t *))lv_func_ptr)(center_x, center_y, radius, start_angle, end_angle, clip_area, dsc);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_arc_obj, 7, mp_funcptr_draw_arc, funcptr_draw_arc);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_arc(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_arc_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_arc_callback'
+ * void (*draw_arc)(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, const lv_area_t *clip_area, const lv_draw_arc_dsc_t *dsc)
+ */
+    
+#define funcptr_draw_img NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void draw_img(const lv_area_t *map_area, const lv_area_t *clip_area, const uint8_t *map_p, const lv_draw_img_dsc_t *draw_dsc, bool chroma_key, bool alpha_byte)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_draw_img(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_area_t *map_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[0]);
+    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
+    const uint8_t *map_p = (const uint8_t *)mp_array_to_u8ptr(mp_args[2]);
+    const lv_draw_img_dsc_t *draw_dsc = (const lv_draw_img_dsc_t *)mp_write_ptr_lv_draw_img_dsc_t(mp_args[3]);
+    bool chroma_key = mp_obj_is_true(mp_args[4]);
+    bool alpha_byte = mp_obj_is_true(mp_args[5]);
+    ((void (*)(const lv_area_t *, const lv_area_t *, const uint8_t *, const lv_draw_img_dsc_t *, bool, bool))lv_func_ptr)(map_area, clip_area, map_p, draw_dsc, chroma_key, alpha_byte);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_img_obj, 6, mp_funcptr_draw_img, funcptr_draw_img);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_img(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_img_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_img_callback'
+ * void (*draw_img)(const lv_area_t *map_area, const lv_area_t *clip_area, const uint8_t *map_p, const lv_draw_img_dsc_t *draw_dsc, bool chroma_key, bool alpha_byte)
+ */
+    
+#define funcptr_draw_img_core NULL
+
+
+/*
+ * lvgl extension definition for:
+ * lv_res_t draw_img_core(const lv_area_t *coords, const lv_area_t *clip_area, const void *src, const lv_draw_img_dsc_t *draw_dsc)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_draw_img_core(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_area_t *coords = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[0]);
+    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
+    const void *src = (const void *)mp_to_ptr(mp_args[2]);
+    const lv_draw_img_dsc_t *draw_dsc = (const lv_draw_img_dsc_t *)mp_write_ptr_lv_draw_img_dsc_t(mp_args[3]);
+    lv_res_t _res = ((lv_res_t (*)(const lv_area_t *, const lv_area_t *, const void *, const lv_draw_img_dsc_t *))lv_func_ptr)(coords, clip_area, src, draw_dsc);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_img_core_obj, 4, mp_funcptr_draw_img_core, funcptr_draw_img_core);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_img_core(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_img_core_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_img_core_callback'
+ * lv_res_t (*draw_img_core)(const lv_area_t *coords, const lv_area_t *clip_area, const void *src, const lv_draw_img_dsc_t *draw_dsc)
+ */
+    
+#define funcptr_draw_letter NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void draw_letter(const lv_point_t *pos_p, const lv_area_t *clip_area, const lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_draw_letter(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_point_t *pos_p = (const lv_point_t *)mp_write_ptr_lv_point_t(mp_args[0]);
+    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
+    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[2]);
+    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[3]);
+    lv_color_t color = mp_write_lv_color32_t(mp_args[4]);
+    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[5]);
+    lv_blend_mode_t blend_mode = (uint8_t)mp_obj_get_int(mp_args[6]);
+    ((void (*)(const lv_point_t *, const lv_area_t *, const lv_font_t *, uint32_t, lv_color_t, lv_opa_t, lv_blend_mode_t))lv_func_ptr)(pos_p, clip_area, font_p, letter, color, opa, blend_mode);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_letter_obj, 7, mp_funcptr_draw_letter, funcptr_draw_letter);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_letter(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_letter_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_letter_callback'
+ * void (*draw_letter)(const lv_point_t *pos_p, const lv_area_t *clip_area, const lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+    
+#define funcptr_draw_line NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void draw_line(const lv_point_t *point1, const lv_point_t *point2, const lv_area_t *clip, const lv_draw_line_dsc_t *dsc)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_draw_line(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_point_t *point1 = (const lv_point_t *)mp_write_ptr_lv_point_t(mp_args[0]);
+    const lv_point_t *point2 = (const lv_point_t *)mp_write_ptr_lv_point_t(mp_args[1]);
+    const lv_area_t *clip = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[2]);
+    const lv_draw_line_dsc_t *dsc = (const lv_draw_line_dsc_t *)mp_write_ptr_lv_draw_line_dsc_t(mp_args[3]);
+    ((void (*)(const lv_point_t *, const lv_point_t *, const lv_area_t *, const lv_draw_line_dsc_t *))lv_func_ptr)(point1, point2, clip, dsc);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_line_obj, 4, mp_funcptr_draw_line, funcptr_draw_line);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_line(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_line_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_line_callback'
+ * void (*draw_line)(const lv_point_t *point1, const lv_point_t *point2, const lv_area_t *clip, const lv_draw_line_dsc_t *dsc)
+ */
+    
+#define funcptr_draw_polygon NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_area_t *clip_area, const lv_draw_rect_dsc_t *draw_dsc)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_draw_polygon(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_point_t *points = (const lv_point_t *)mp_arr_to_lv_point_t_____(mp_args[0]);
+    uint16_t point_cnt = (uint16_t)mp_obj_get_int(mp_args[1]);
+    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[2]);
+    const lv_draw_rect_dsc_t *draw_dsc = (const lv_draw_rect_dsc_t *)mp_write_ptr_lv_draw_rect_dsc_t(mp_args[3]);
+    ((void (*)(const lv_point_t [], uint16_t, const lv_area_t *, const lv_draw_rect_dsc_t *))lv_func_ptr)(points, point_cnt, clip_area, draw_dsc);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_polygon_obj, 4, mp_funcptr_draw_polygon, funcptr_draw_polygon);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_draw_polygon(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_polygon_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_draw_polygon_callback'
+ * void (*draw_polygon)(const lv_point_t points[], uint16_t point_cnt, const lv_area_t *clip_area, const lv_draw_rect_dsc_t *draw_dsc)
+ */
+    
+#define funcptr_blend_fill NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void blend_fill(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *fill_area, lv_color_t color, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_blend_fill(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_color_t *dest_buf = mp_write_ptr_lv_color32_t(mp_args[0]);
+    lv_coord_t dest_stride = (int16_t)mp_obj_get_int(mp_args[1]);
+    const lv_area_t *fill_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[2]);
+    lv_color_t color = mp_write_lv_color32_t(mp_args[3]);
+    lv_opa_t *mask = mp_array_to_u8ptr(mp_args[4]);
+    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[5]);
+    lv_blend_mode_t blend_mode = (uint8_t)mp_obj_get_int(mp_args[6]);
+    ((void (*)(lv_color_t *, lv_coord_t, const lv_area_t *, lv_color_t, lv_opa_t *, lv_opa_t, lv_blend_mode_t))lv_func_ptr)(dest_buf, dest_stride, fill_area, color, mask, opa, blend_mode);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_blend_fill_obj, 7, mp_funcptr_blend_fill, funcptr_blend_fill);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_blend_fill(void *func){ return mp_lv_funcptr(&mp_funcptr_blend_fill_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_blend_fill_callback'
+ * void (*blend_fill)(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *fill_area, lv_color_t color, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+    
+#define funcptr_blend_map NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void blend_map(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *clip_area, const lv_color_t *src_buf, const lv_area_t *src_area, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_blend_map(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_color_t *dest_buf = mp_write_ptr_lv_color32_t(mp_args[0]);
+    lv_coord_t dest_stride = (int16_t)mp_obj_get_int(mp_args[1]);
+    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[2]);
+    const lv_color_t *src_buf = (const lv_color_t *)mp_write_ptr_lv_color32_t(mp_args[3]);
+    const lv_area_t *src_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[4]);
+    lv_opa_t *mask = mp_array_to_u8ptr(mp_args[5]);
+    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[6]);
+    lv_blend_mode_t blend_mode = (uint8_t)mp_obj_get_int(mp_args[7]);
+    ((void (*)(lv_color_t *, lv_coord_t, const lv_area_t *, const lv_color_t *, const lv_area_t *, lv_opa_t *, lv_opa_t, lv_blend_mode_t))lv_func_ptr)(dest_buf, dest_stride, clip_area, src_buf, src_area, mask, opa, blend_mode);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_blend_map_obj, 8, mp_funcptr_blend_map, funcptr_blend_map);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_blend_map(void *func){ return mp_lv_funcptr(&mp_funcptr_blend_map_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'lv_draw_backend_t_blend_map_callback'
+ * void (*blend_map)(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *clip_area, const lv_color_t *src_buf, const lv_area_t *src_area, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
     
 
-STATIC const mp_rom_map_elem_t mp_lv_color_filter_dsc_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_color_filter_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
-    { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_color_filter_dsc_init_obj) },
+/*
+ * Struct lv_draw_backend_t
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_lv_draw_backend_t_type();
+
+STATIC inline void* mp_write_ptr_lv_draw_backend_t(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_backend_t_type()));
+    return (lv_draw_backend_t*)self->data;
+}
+
+#define mp_write_lv_draw_backend_t(struct_obj) *((lv_draw_backend_t*)mp_write_ptr_lv_draw_backend_t(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_backend_t(void *field)
+{
+    return lv_to_mp_struct(get_mp_lv_draw_backend_t_type(), field);
+}
+
+#define mp_read_lv_draw_backend_t(field) mp_read_ptr_lv_draw_backend_t(copy_buffer(&field, sizeof(lv_draw_backend_t)))
+#define mp_read_byref_lv_draw_backend_t(field) mp_read_ptr_lv_draw_backend_t(&field)
+
+STATIC void mp_lv_draw_backend_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_draw_backend_t *data = (lv_draw_backend_t*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_base: dest[0] = ptr_to_mp((void*)data->base); break; // converting from lv_draw_backend_t *;
+            case MP_QSTR_ctx: dest[0] = ptr_to_mp((void*)data->ctx); break; // converting from void *;
+            case MP_QSTR_draw_rect: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_rect_obj, (void*)data->draw_rect, NULL ,MP_QSTR_lv_draw_backend_t_draw_rect, NULL); break; // converting from callback void (*)(lv_area_t *coords, lv_area_t *clip, lv_draw_rect_dsc_t *dsc);
+            case MP_QSTR_draw_arc: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_arc_obj, (void*)data->draw_arc, NULL ,MP_QSTR_lv_draw_backend_t_draw_arc, NULL); break; // converting from callback void (*)(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, lv_area_t *clip_area, lv_draw_arc_dsc_t *dsc);
+            case MP_QSTR_draw_img: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_img_obj, (void*)data->draw_img, NULL ,MP_QSTR_lv_draw_backend_t_draw_img, NULL); break; // converting from callback void (*)(lv_area_t *map_area, lv_area_t *clip_area, uint8_t *map_p, lv_draw_img_dsc_t *draw_dsc, bool chroma_key, bool alpha_byte);
+            case MP_QSTR_draw_img_core: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_img_core_obj, (void*)data->draw_img_core, NULL ,MP_QSTR_lv_draw_backend_t_draw_img_core, NULL); break; // converting from callback lv_res_t (*)(lv_area_t *coords, lv_area_t *clip_area, void *src, lv_draw_img_dsc_t *draw_dsc);
+            case MP_QSTR_draw_letter: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_letter_obj, (void*)data->draw_letter, NULL ,MP_QSTR_lv_draw_backend_t_draw_letter, NULL); break; // converting from callback void (*)(lv_point_t *pos_p, lv_area_t *clip_area, lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
+            case MP_QSTR_draw_line: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_line_obj, (void*)data->draw_line, NULL ,MP_QSTR_lv_draw_backend_t_draw_line, NULL); break; // converting from callback void (*)(lv_point_t *point1, lv_point_t *point2, lv_area_t *clip, lv_draw_line_dsc_t *dsc);
+            case MP_QSTR_draw_polygon: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_polygon_obj, (void*)data->draw_polygon, NULL ,MP_QSTR_lv_draw_backend_t_draw_polygon, NULL); break; // converting from callback void (*)(lv_point_t points[], uint16_t point_cnt, lv_area_t *clip_area, lv_draw_rect_dsc_t *draw_dsc);
+            case MP_QSTR_blend_fill: dest[0] = mp_lv_funcptr(&mp_funcptr_blend_fill_obj, (void*)data->blend_fill, NULL ,MP_QSTR_lv_draw_backend_t_blend_fill, NULL); break; // converting from callback void (*)(lv_color_t *dest_buf, lv_coord_t dest_stride, lv_area_t *fill_area, lv_color_t color, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode);
+            case MP_QSTR_blend_map: dest[0] = mp_lv_funcptr(&mp_funcptr_blend_map_obj, (void*)data->blend_map, NULL ,MP_QSTR_lv_draw_backend_t_blend_map, NULL); break; // converting from callback void (*)(lv_color_t *dest_buf, lv_coord_t dest_stride, lv_area_t *clip_area, lv_color_t *src_buf, lv_area_t *src_area, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode);
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_base: data->base = (void*)mp_to_ptr(dest[1]); break; // converting to lv_draw_backend_t *;
+                case MP_QSTR_ctx: data->ctx = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
+                case MP_QSTR_draw_rect: data->draw_rect = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_rect, NULL); break; // converting to callback void (*)(lv_area_t *coords, lv_area_t *clip, lv_draw_rect_dsc_t *dsc);
+                case MP_QSTR_draw_arc: data->draw_arc = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_arc, NULL); break; // converting to callback void (*)(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, lv_area_t *clip_area, lv_draw_arc_dsc_t *dsc);
+                case MP_QSTR_draw_img: data->draw_img = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_img, NULL); break; // converting to callback void (*)(lv_area_t *map_area, lv_area_t *clip_area, uint8_t *map_p, lv_draw_img_dsc_t *draw_dsc, bool chroma_key, bool alpha_byte);
+                case MP_QSTR_draw_img_core: data->draw_img_core = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_img_core, NULL); break; // converting to callback lv_res_t (*)(lv_area_t *coords, lv_area_t *clip_area, void *src, lv_draw_img_dsc_t *draw_dsc);
+                case MP_QSTR_draw_letter: data->draw_letter = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_letter, NULL); break; // converting to callback void (*)(lv_point_t *pos_p, lv_area_t *clip_area, lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
+                case MP_QSTR_draw_line: data->draw_line = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_line, NULL); break; // converting to callback void (*)(lv_point_t *point1, lv_point_t *point2, lv_area_t *clip, lv_draw_line_dsc_t *dsc);
+                case MP_QSTR_draw_polygon: data->draw_polygon = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_draw_polygon, NULL); break; // converting to callback void (*)(lv_point_t points[], uint16_t point_cnt, lv_area_t *clip_area, lv_draw_rect_dsc_t *draw_dsc);
+                case MP_QSTR_blend_fill: data->blend_fill = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_blend_fill, NULL); break; // converting to callback void (*)(lv_color_t *dest_buf, lv_coord_t dest_stride, lv_area_t *fill_area, lv_color_t color, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode);
+                case MP_QSTR_blend_map: data->blend_map = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_lv_draw_backend_t_blend_map, NULL); break; // converting to callback void (*)(lv_color_t *dest_buf, lv_coord_t dest_stride, lv_area_t *clip_area, lv_color_t *src_buf, lv_area_t *src_area, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode);
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_lv_draw_backend_t_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct lv_draw_backend_t");
+}
+
+STATIC const mp_obj_dict_t mp_lv_draw_backend_t_locals_dict;
+
+STATIC const mp_obj_type_t mp_lv_draw_backend_t_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_lv_draw_backend_t,
+    .print = mp_lv_draw_backend_t_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_lv_draw_backend_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_backend_t_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_lv_draw_backend_t_type()
+{
+    return &mp_lv_draw_backend_t_type;
+}
+    
+
+/*
+ * Struct gd_GCE
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_gd_GCE_type();
+
+STATIC inline void* mp_write_ptr_gd_GCE(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_gd_GCE_type()));
+    return (gd_GCE*)self->data;
+}
+
+#define mp_write_gd_GCE(struct_obj) *((gd_GCE*)mp_write_ptr_gd_GCE(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_gd_GCE(void *field)
+{
+    return lv_to_mp_struct(get_mp_gd_GCE_type(), field);
+}
+
+#define mp_read_gd_GCE(field) mp_read_ptr_gd_GCE(copy_buffer(&field, sizeof(gd_GCE)))
+#define mp_read_byref_gd_GCE(field) mp_read_ptr_gd_GCE(&field)
+
+STATIC void mp_gd_GCE_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    gd_GCE *data = (gd_GCE*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_delay: dest[0] = mp_obj_new_int_from_uint(data->delay); break; // converting from uint16_t;
+            case MP_QSTR_tindex: dest[0] = mp_obj_new_int_from_uint(data->tindex); break; // converting from uint8_t;
+            case MP_QSTR_disposal: dest[0] = mp_obj_new_int_from_uint(data->disposal); break; // converting from uint8_t;
+            case MP_QSTR_input: dest[0] = mp_obj_new_int(data->input); break; // converting from int;
+            case MP_QSTR_transparency: dest[0] = mp_obj_new_int(data->transparency); break; // converting from int;
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_delay: data->delay = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_tindex: data->tindex = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_disposal: data->disposal = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_input: data->input = (int)mp_obj_get_int(dest[1]); break; // converting to int;
+                case MP_QSTR_transparency: data->transparency = (int)mp_obj_get_int(dest[1]); break; // converting to int;
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_gd_GCE_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct gd_GCE");
+}
+
+STATIC const mp_obj_dict_t mp_gd_GCE_locals_dict;
+
+STATIC const mp_obj_type_t mp_gd_GCE_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_gd_GCE,
+    .print = mp_gd_GCE_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_gd_GCE_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_gd_GCE_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_gd_GCE_type()
+{
+    return &mp_gd_GCE_type;
+}
+    
+
+/*
+ * Array convertors for uint8_t [0x100 * 3]
+ */
+
+GENMPY_UNUSED STATIC uint8_t *mp_arr_to_uint8_t___0x100_ptr_3__(mp_obj_t mp_arr)
+{
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    //TODO check dim!
+    uint8_t *lv_arr = (uint8_t*)m_malloc(len * sizeof(uint8_t));
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    size_t i = 0;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        lv_arr[i++] = (uint8_t)mp_obj_get_int(item);
+    }
+    return (uint8_t *)lv_arr;
+}
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_uint8_t___0x100_ptr_3__(uint8_t *arr)
+{
+    mp_obj_t obj_arr[0x100 * 3];
+    for (size_t i=0; i<0x100 * 3; i++){
+        obj_arr[i] = mp_obj_new_int_from_uint(arr[i]);
+    }
+    return mp_obj_new_list(0x100 * 3, obj_arr); // TODO: return custom iterable object!
+}
+
+
+/*
+ * Struct gd_Palette
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_gd_Palette_type();
+
+STATIC inline void* mp_write_ptr_gd_Palette(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_gd_Palette_type()));
+    return (gd_Palette*)self->data;
+}
+
+#define mp_write_gd_Palette(struct_obj) *((gd_Palette*)mp_write_ptr_gd_Palette(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_gd_Palette(void *field)
+{
+    return lv_to_mp_struct(get_mp_gd_Palette_type(), field);
+}
+
+#define mp_read_gd_Palette(field) mp_read_ptr_gd_Palette(copy_buffer(&field, sizeof(gd_Palette)))
+#define mp_read_byref_gd_Palette(field) mp_read_ptr_gd_Palette(&field)
+
+STATIC void mp_gd_Palette_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    gd_Palette *data = (gd_Palette*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_size: dest[0] = mp_obj_new_int(data->size); break; // converting from int;
+            case MP_QSTR_colors: dest[0] = mp_arr_from_uint8_t___0x100_ptr_3__(data->colors); break; // converting from uint8_t [0x100 * 3];
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_size: data->size = (int)mp_obj_get_int(dest[1]); break; // converting to int;
+                case MP_QSTR_colors: memcpy((void*)&data->colors, mp_arr_to_uint8_t___0x100_ptr_3__(dest[1]), sizeof(uint8_t)*0x100 * 3); break; // converting to uint8_t [0x100 * 3];
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_gd_Palette_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct gd_Palette");
+}
+
+STATIC const mp_obj_dict_t mp_gd_Palette_locals_dict;
+
+STATIC const mp_obj_type_t mp_gd_Palette_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_gd_Palette,
+    .print = mp_gd_Palette_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_gd_Palette_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_gd_Palette_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_gd_Palette_type()
+{
+    return &mp_gd_Palette_type;
+}
+    
+#define funcptr_plain_text NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void plain_text(struct gd_GIF *gif, uint16_t tx, uint16_t ty, uint16_t tw, uint16_t th, uint8_t cw, uint8_t ch, uint8_t fg, uint8_t bg)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_plain_text(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct gd_GIF *gif = mp_to_ptr(mp_args[0]);
+    uint16_t tx = (uint16_t)mp_obj_get_int(mp_args[1]);
+    uint16_t ty = (uint16_t)mp_obj_get_int(mp_args[2]);
+    uint16_t tw = (uint16_t)mp_obj_get_int(mp_args[3]);
+    uint16_t th = (uint16_t)mp_obj_get_int(mp_args[4]);
+    uint8_t cw = (uint8_t)mp_obj_get_int(mp_args[5]);
+    uint8_t ch = (uint8_t)mp_obj_get_int(mp_args[6]);
+    uint8_t fg = (uint8_t)mp_obj_get_int(mp_args[7]);
+    uint8_t bg = (uint8_t)mp_obj_get_int(mp_args[8]);
+    ((void (*)(struct gd_GIF *, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t, uint8_t))lv_func_ptr)(gif, tx, ty, tw, th, cw, ch, fg, bg);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_plain_text_obj, 9, mp_funcptr_plain_text, funcptr_plain_text);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_plain_text(void *func){ return mp_lv_funcptr(&mp_funcptr_plain_text_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'gd_GIF_plain_text_callback'
+ * void (*plain_text)(struct gd_GIF *gif, uint16_t tx, uint16_t ty, uint16_t tw, uint16_t th, uint8_t cw, uint8_t ch, uint8_t fg, uint8_t bg)
+ */
+    
+#define funcptr_comment NULL
+
+
+/*
+ * lvgl extension definition for:
+ * void comment(struct gd_GIF *gif)
+ */
+ 
+STATIC mp_obj_t mp_funcptr_comment(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct gd_GIF *gif = mp_to_ptr(mp_args[0]);
+    ((void (*)(struct gd_GIF *))lv_func_ptr)(gif);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_comment_obj, 1, mp_funcptr_comment, funcptr_comment);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_comment(void *func){ return mp_lv_funcptr(&mp_funcptr_comment_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'gd_GIF_comment_callback'
+ * void (*comment)(struct gd_GIF *gif)
+ */
+    
+#define funcptr_application NULL
+
+
+/*
+ * Array convertors for char [8]
+ */
+
+GENMPY_UNUSED STATIC char *mp_arr_to_char___8__(mp_obj_t mp_arr)
+{
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    //TODO check dim!
+    char *lv_arr = (char*)m_malloc(len * sizeof(char));
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    size_t i = 0;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        lv_arr[i++] = (char)mp_obj_get_int(item);
+    }
+    return (char *)lv_arr;
+}
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_char___8__(char *arr)
+{
+    mp_obj_t obj_arr[8];
+    for (size_t i=0; i<8; i++){
+        obj_arr[i] = mp_obj_new_int(arr[i]);
+    }
+    return mp_obj_new_list(8, obj_arr); // TODO: return custom iterable object!
+}
+
+
+/*
+ * Array convertors for char [3]
+ */
+
+GENMPY_UNUSED STATIC char *mp_arr_to_char___3__(mp_obj_t mp_arr)
+{
+    mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
+    if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
+    mp_int_t len = mp_obj_get_int(mp_len);
+    //TODO check dim!
+    char *lv_arr = (char*)m_malloc(len * sizeof(char));
+    mp_obj_t iter = mp_getiter(mp_arr, NULL);
+    mp_obj_t item;
+    size_t i = 0;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        lv_arr[i++] = (char)mp_obj_get_int(item);
+    }
+    return (char *)lv_arr;
+}
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_char___3__(char *arr)
+{
+    mp_obj_t obj_arr[3];
+    for (size_t i=0; i<3; i++){
+        obj_arr[i] = mp_obj_new_int(arr[i]);
+    }
+    return mp_obj_new_list(3, obj_arr); // TODO: return custom iterable object!
+}
+
+
+/*
+ * lvgl extension definition for:
+ * void application(struct gd_GIF *gif, char id[8], char auth[3])
+ */
+ 
+STATIC mp_obj_t mp_funcptr_application(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    struct gd_GIF *gif = mp_to_ptr(mp_args[0]);
+    char *id = mp_arr_to_char___8__(mp_args[1]);
+    char *auth = mp_arr_to_char___3__(mp_args[2]);
+    ((void (*)(struct gd_GIF *, char [8], char [3]))lv_func_ptr)(gif, id, auth);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_application_obj, 3, mp_funcptr_application, funcptr_application);
+    
+STATIC inline mp_obj_t mp_lv_funcptr_application(void *func){ return mp_lv_funcptr(&mp_funcptr_application_obj, func, NULL, MP_QSTR_, NULL); }
+
+
+/*
+ * Function NOT generated:
+ * Missing 'user_data' as a field of the first parameter of the callback function 'gd_GIF_application_callback'
+ * void (*application)(struct gd_GIF *gif, char id[8], char auth[3])
+ */
+    
+
+/*
+ * Struct gd_GIF
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_gd_GIF_type();
+
+STATIC inline void* mp_write_ptr_gd_GIF(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_gd_GIF_type()));
+    return (gd_GIF*)self->data;
+}
+
+#define mp_write_gd_GIF(struct_obj) *((gd_GIF*)mp_write_ptr_gd_GIF(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_gd_GIF(void *field)
+{
+    return lv_to_mp_struct(get_mp_gd_GIF_type(), field);
+}
+
+#define mp_read_gd_GIF(field) mp_read_ptr_gd_GIF(copy_buffer(&field, sizeof(gd_GIF)))
+#define mp_read_byref_gd_GIF(field) mp_read_ptr_gd_GIF(&field)
+
+STATIC void mp_gd_GIF_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    gd_GIF *data = (gd_GIF*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_fd: dest[0] = mp_read_byref_lv_fs_file_t(data->fd); break; // converting from lv_fs_file_t;
+            case MP_QSTR_data: dest[0] = convert_to_str((void*)data->data); break; // converting from char *;
+            case MP_QSTR_is_file: dest[0] = mp_obj_new_int_from_uint(data->is_file); break; // converting from uint8_t;
+            case MP_QSTR_f_rw_p: dest[0] = mp_obj_new_int_from_uint(data->f_rw_p); break; // converting from uint32_t;
+            case MP_QSTR_anim_start: dest[0] = mp_obj_new_int(data->anim_start); break; // converting from int32_t;
+            case MP_QSTR_width: dest[0] = mp_obj_new_int_from_uint(data->width); break; // converting from uint16_t;
+            case MP_QSTR_height: dest[0] = mp_obj_new_int_from_uint(data->height); break; // converting from uint16_t;
+            case MP_QSTR_depth: dest[0] = mp_obj_new_int_from_uint(data->depth); break; // converting from uint16_t;
+            case MP_QSTR_loop_count: dest[0] = mp_obj_new_int_from_uint(data->loop_count); break; // converting from uint16_t;
+            case MP_QSTR_gce: dest[0] = mp_read_byref_gd_GCE(data->gce); break; // converting from gd_GCE;
+            case MP_QSTR_palette: dest[0] = mp_read_ptr_gd_Palette((void*)data->palette); break; // converting from gd_Palette *;
+            case MP_QSTR_lct: dest[0] = mp_read_byref_gd_Palette(data->lct); break; // converting from gd_Palette;
+            case MP_QSTR_gct: dest[0] = mp_read_byref_gd_Palette(data->gct); break; // converting from gd_Palette;
+            case MP_QSTR_plain_text: dest[0] = mp_lv_funcptr(&mp_funcptr_plain_text_obj, (void*)data->plain_text, NULL ,MP_QSTR_gd_GIF_plain_text, NULL); break; // converting from callback void (*)(gd_GIF *gif, uint16_t tx, uint16_t ty, uint16_t tw, uint16_t th, uint8_t cw, uint8_t ch, uint8_t fg, uint8_t bg);
+            case MP_QSTR_comment: dest[0] = mp_lv_funcptr(&mp_funcptr_comment_obj, (void*)data->comment, NULL ,MP_QSTR_gd_GIF_comment, NULL); break; // converting from callback void (*)(gd_GIF *gif);
+            case MP_QSTR_application: dest[0] = mp_lv_funcptr(&mp_funcptr_application_obj, (void*)data->application, NULL ,MP_QSTR_gd_GIF_application, NULL); break; // converting from callback void (*)(gd_GIF *gif, char id[8], char auth[3]);
+            case MP_QSTR_fx: dest[0] = mp_obj_new_int_from_uint(data->fx); break; // converting from uint16_t;
+            case MP_QSTR_fy: dest[0] = mp_obj_new_int_from_uint(data->fy); break; // converting from uint16_t;
+            case MP_QSTR_fw: dest[0] = mp_obj_new_int_from_uint(data->fw); break; // converting from uint16_t;
+            case MP_QSTR_fh: dest[0] = mp_obj_new_int_from_uint(data->fh); break; // converting from uint16_t;
+            case MP_QSTR_bgindex: dest[0] = mp_obj_new_int_from_uint(data->bgindex); break; // converting from uint8_t;
+            case MP_QSTR_canvas: dest[0] = mp_array_from_u8ptr((void*)data->canvas); break; // converting from uint8_t *;
+            case MP_QSTR_frame: dest[0] = mp_array_from_u8ptr((void*)data->frame); break; // converting from uint8_t *;
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_fd: data->fd = mp_write_lv_fs_file_t(dest[1]); break; // converting to lv_fs_file_t;
+                case MP_QSTR_data: data->data = (void*)(char*)convert_from_str(dest[1]); break; // converting to char *;
+                case MP_QSTR_is_file: data->is_file = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_f_rw_p: data->f_rw_p = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
+                case MP_QSTR_anim_start: data->anim_start = (int32_t)mp_obj_get_int(dest[1]); break; // converting to int32_t;
+                case MP_QSTR_width: data->width = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_height: data->height = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_depth: data->depth = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_loop_count: data->loop_count = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_gce: data->gce = mp_write_gd_GCE(dest[1]); break; // converting to gd_GCE;
+                case MP_QSTR_palette: data->palette = (void*)mp_write_ptr_gd_Palette(dest[1]); break; // converting to gd_Palette *;
+                case MP_QSTR_lct: data->lct = mp_write_gd_Palette(dest[1]); break; // converting to gd_Palette;
+                case MP_QSTR_gct: data->gct = mp_write_gd_Palette(dest[1]); break; // converting to gd_Palette;
+                case MP_QSTR_plain_text: data->plain_text = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_gd_GIF_plain_text, NULL); break; // converting to callback void (*)(gd_GIF *gif, uint16_t tx, uint16_t ty, uint16_t tw, uint16_t th, uint8_t cw, uint8_t ch, uint8_t fg, uint8_t bg);
+                case MP_QSTR_comment: data->comment = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_gd_GIF_comment, NULL); break; // converting to callback void (*)(gd_GIF *gif);
+                case MP_QSTR_application: data->application = (void*)mp_lv_callback(dest[1], NULL ,MP_QSTR_gd_GIF_application, NULL); break; // converting to callback void (*)(gd_GIF *gif, char id[8], char auth[3]);
+                case MP_QSTR_fx: data->fx = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_fy: data->fy = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_fw: data->fw = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_fh: data->fh = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_bgindex: data->bgindex = (uint8_t)mp_obj_get_int(dest[1]); break; // converting to uint8_t;
+                case MP_QSTR_canvas: data->canvas = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to uint8_t *;
+                case MP_QSTR_frame: data->frame = (void*)mp_array_to_u8ptr(dest[1]); break; // converting to uint8_t *;
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_gd_GIF_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct gd_GIF");
+}
+
+STATIC const mp_obj_dict_t mp_gd_GIF_locals_dict;
+
+STATIC const mp_obj_type_t mp_gd_GIF_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_gd_GIF,
+    .print = mp_gd_GIF_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_gd_GIF_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_gd_GIF_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_gd_GIF_type()
+{
+    return &mp_gd_GIF_type;
+}
+    
+
+STATIC const mp_rom_map_elem_t mp_C_Pointer_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(C_Pointer))) },
     
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_lv_color_filter_dsc_t_locals_dict, mp_lv_color_filter_dsc_t_locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(mp_C_Pointer_locals_dict, mp_C_Pointer_locals_dict_table);
         
 
 /*
@@ -22647,7 +24676,7 @@ STATIC mp_obj_t mp_lv_color_premult(size_t mp_n_args, const mp_obj_t *mp_args, v
 {
     lv_color_t c = mp_write_lv_color32_t(mp_args[0]);
     uint8_t mix = (uint8_t)mp_obj_get_int(mp_args[1]);
-    uint16_t *out = mp_to_ptr(mp_args[2]);
+    uint16_t *out = mp_array_to_u16ptr(mp_args[2]);
     ((void (*)(lv_color_t, uint8_t, uint16_t *))lv_func_ptr)(c, mix, out);
     return mp_const_none;
 }
@@ -22669,7 +24698,7 @@ STATIC mp_obj_t mp_lv_color_mix_with_alpha(size_t mp_n_args, const mp_obj_t *mp_
     lv_color_t fg_color = mp_write_lv_color32_t(mp_args[2]);
     lv_opa_t fg_opa = (uint8_t)mp_obj_get_int(mp_args[3]);
     lv_color_t *res_color = mp_write_ptr_lv_color32_t(mp_args[4]);
-    lv_opa_t *res_opa = mp_to_ptr(mp_args[5]);
+    lv_opa_t *res_opa = mp_array_to_u8ptr(mp_args[5]);
     ((void (*)(lv_color_t, lv_opa_t, lv_color_t, lv_opa_t, lv_color_t *, lv_opa_t *))lv_func_ptr)(bg_color, bg_opa, fg_color, fg_opa, res_color, res_opa);
     return mp_const_none;
 }
@@ -22747,9 +24776,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_to_hsv_obj, 1, mp_lv_color_to_
 
 STATIC const mp_rom_map_elem_t mp_lv_color32_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_color32_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_to1), MP_ROM_PTR(&mp_lv_color_to1_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_to8), MP_ROM_PTR(&mp_lv_color_to8_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_to16), MP_ROM_PTR(&mp_lv_color_to16_obj) },
@@ -22771,9 +24797,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_color32_t_locals_dict, mp_lv_color32_t_locals_
 
 STATIC const mp_rom_map_elem_t mp_lv_color32_ch_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_color32_ch_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -22781,10 +24804,176 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_color32_ch_t_locals_dict, mp_lv_color32_ch_t_l
         
 
 /*
+ * lvgl extension definition for:
+ * inline static lv_coord_t lv_font_get_line_height(const lv_font_t *font_p)
+ */
+ 
+STATIC mp_obj_t mp_lv_font_get_line_height(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
+    lv_coord_t _res = ((lv_coord_t (*)(const lv_font_t *))lv_func_ptr)(font_p);
+    return mp_obj_new_int(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_line_height_obj, 1, mp_lv_font_get_line_height, lv_font_get_line_height);
+    
+
+/*
+ * lvgl extension definition for:
+ * const uint8_t *lv_font_get_glyph_bitmap(const lv_font_t *font_p, uint32_t letter)
+ */
+ 
+STATIC mp_obj_t mp_lv_font_get_glyph_bitmap(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
+    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[1]);
+    const uint8_t * _res = ((const uint8_t *(*)(const lv_font_t *, uint32_t))lv_func_ptr)(font_p, letter);
+    return mp_array_from_u8ptr((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_bitmap_obj, 2, mp_lv_font_get_glyph_bitmap, lv_font_get_glyph_bitmap);
+    
+
+/*
+ * lvgl extension definition for:
+ * bool lv_font_get_glyph_dsc(const lv_font_t *font_p, lv_font_glyph_dsc_t *dsc_out, uint32_t letter, uint32_t letter_next)
+ */
+ 
+STATIC mp_obj_t mp_lv_font_get_glyph_dsc(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
+    lv_font_glyph_dsc_t *dsc_out = mp_write_ptr_lv_font_glyph_dsc_t(mp_args[1]);
+    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[2]);
+    uint32_t letter_next = (uint32_t)mp_obj_get_int(mp_args[3]);
+    bool _res = ((bool (*)(const lv_font_t *, lv_font_glyph_dsc_t *, uint32_t, uint32_t))lv_func_ptr)(font_p, dsc_out, letter, letter_next);
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_dsc_obj, 4, mp_lv_font_get_glyph_dsc, lv_font_get_glyph_dsc);
+    
+
+/*
+ * lvgl extension definition for:
+ * uint16_t lv_font_get_glyph_width(const lv_font_t *font, uint32_t letter, uint32_t letter_next)
+ */
+ 
+STATIC mp_obj_t mp_lv_font_get_glyph_width(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_font_t *font = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
+    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[1]);
+    uint32_t letter_next = (uint32_t)mp_obj_get_int(mp_args[2]);
+    uint16_t _res = ((uint16_t (*)(const lv_font_t *, uint32_t, uint32_t))lv_func_ptr)(font, letter, letter_next);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_width_obj, 3, mp_lv_font_get_glyph_width, lv_font_get_glyph_width);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_font_free(lv_font_t *font)
+ */
+ 
+STATIC mp_obj_t mp_lv_font_free(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_font_t *font = mp_write_ptr_lv_font_t(mp_args[0]);
+    ((void (*)(lv_font_t *))lv_func_ptr)(font);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_free_obj, 1, mp_lv_font_free, lv_font_free);
+    
+/* Reusing lv_font_get_glyph_bitmap for lv_font_get_bitmap_fmt_txt */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_bitmap_fmt_txt_obj, 2, mp_lv_font_get_glyph_bitmap, lv_font_get_bitmap_fmt_txt);
+    
+/* Reusing lv_font_get_glyph_dsc for lv_font_get_glyph_dsc_fmt_txt */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_dsc_fmt_txt_obj, 4, mp_lv_font_get_glyph_dsc, lv_font_get_glyph_dsc_fmt_txt);
+    
+
+STATIC const mp_rom_map_elem_t mp_lv_font_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_font_t))) },
+    { MP_ROM_QSTR(MP_QSTR_get_line_height), MP_ROM_PTR(&mp_lv_font_get_line_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_glyph_bitmap), MP_ROM_PTR(&mp_lv_font_get_glyph_bitmap_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_glyph_dsc), MP_ROM_PTR(&mp_lv_font_get_glyph_dsc_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_glyph_width), MP_ROM_PTR(&mp_lv_font_get_glyph_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free), MP_ROM_PTR(&mp_lv_font_free_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_bitmap_fmt_txt), MP_ROM_PTR(&mp_lv_font_get_bitmap_fmt_txt_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_glyph_dsc_fmt_txt), MP_ROM_PTR(&mp_lv_font_get_glyph_dsc_fmt_txt_obj) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_font_t_locals_dict, mp_lv_font_t_locals_dict_table);
+        
+
+STATIC const mp_rom_map_elem_t mp_lv_font_glyph_dsc_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_font_glyph_dsc_t))) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_font_glyph_dsc_t_locals_dict, mp_lv_font_glyph_dsc_t_locals_dict_table);
+        
+
+/*
+ * Callback function lv_color_filter_dsc_t_cb
+ * lv_color_t lv_color_filter_cb_t(const struct _lv_color_filter_dsc_t *, lv_color_t, lv_opa_t)
+ */
+
+GENMPY_UNUSED STATIC lv_color_t lv_color_filter_dsc_t_cb_callback(const struct _lv_color_filter_dsc_t * arg0, lv_color_t arg1, lv_opa_t arg2)
+{
+    mp_obj_t mp_args[3];
+    mp_args[0] = mp_read_ptr_lv_color_filter_dsc_t((void*)arg0);
+    mp_args[1] = mp_read_lv_color32_t(arg1);
+    mp_args[2] = mp_obj_new_int_from_uint(arg2);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_color_filter_dsc_t_cb)) , 3, 0, mp_args);
+    return mp_write_lv_color32_t(callback_result);
+}
+
+
+/*
+ * lvgl extension definition for:
+ * inline static void lv_color_filter_dsc_init(lv_color_filter_dsc_t *dsc, lv_color_filter_cb_t cb)
+ */
+ 
+STATIC mp_obj_t mp_lv_color_filter_dsc_init(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_color_filter_dsc_t *dsc = mp_write_ptr_lv_color_filter_dsc_t(mp_args[0]);
+    void *cb = mp_lv_callback(mp_args[1], &lv_color_filter_dsc_t_cb_callback, MP_QSTR_lv_color_filter_dsc_t_cb, &dsc->user_data);
+    ((void (*)(lv_color_filter_dsc_t *, lv_color_filter_cb_t))lv_func_ptr)(dsc, cb);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_color_filter_dsc_init_obj, 2, mp_lv_color_filter_dsc_init, lv_color_filter_dsc_init);
+    
+
+STATIC const mp_rom_map_elem_t mp_lv_color_filter_dsc_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_color_filter_dsc_t))) },
+    { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_color_filter_dsc_init_obj) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_color_filter_dsc_t_locals_dict, mp_lv_color_filter_dsc_t_locals_dict_table);
+        
+
+/*
  * Array convertors for lv_style_prop_t []
  */
 
-STATIC lv_style_prop_t *mp_arr_to_lv_style_prop_t_____(mp_obj_t mp_arr)
+GENMPY_UNUSED STATIC lv_style_prop_t *mp_arr_to_lv_style_prop_t_____(mp_obj_t mp_arr)
 {
     mp_obj_t mp_len = mp_obj_len_maybe(mp_arr);
     if (mp_len == MP_OBJ_NULL) return mp_to_ptr(mp_arr);
@@ -22799,23 +24988,19 @@ STATIC lv_style_prop_t *mp_arr_to_lv_style_prop_t_____(mp_obj_t mp_arr)
     }
     return (lv_style_prop_t *)lv_arr;
 }
-    
-STATIC mp_obj_t mp_arr_from_lv_style_prop_t_____(const lv_style_prop_t *arr)
+
+GENMPY_UNUSED STATIC mp_obj_t mp_arr_from_lv_style_prop_t_____(const lv_style_prop_t *arr)
 {
-    mp_obj_t obj_arr[1];
-    for (size_t i=0; i<1; i++){
-        obj_arr[i] = mp_obj_new_int(arr[i]);
-    }
-    return mp_obj_new_list(1, obj_arr); // TODO: return custom iterable object!
+    return mp_array_from_i32ptr((void*)arr);
 }
-    
+
 
 /*
  * Callback function lv_style_transition_dsc_init_path_cb
  * int32_t lv_anim_path_cb_t(const struct _lv_anim_t *)
  */
 
-STATIC int32_t lv_style_transition_dsc_init_path_cb_callback(const struct _lv_anim_t * arg0)
+GENMPY_UNUSED STATIC int32_t lv_style_transition_dsc_init_path_cb_callback(const struct _lv_anim_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -22849,9 +25034,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_transition_dsc_init_obj, 6, mp
 
 STATIC const mp_rom_map_elem_t mp_lv_style_transition_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_style_transition_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_style_transition_dsc_init_obj) },
     
 };
@@ -22948,7 +25130,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_values_obj, 3, mp_lv_anim_s
  * void lv_anim_custom_exec_cb_t(struct _lv_anim_t *, int32_t)
  */
 
-STATIC void lv_anim_t_exec_cb_callback(struct _lv_anim_t * arg0, int32_t arg1)
+GENMPY_UNUSED STATIC void lv_anim_t_exec_cb_callback(struct _lv_anim_t * arg0, int32_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -22982,7 +25164,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_custom_exec_cb_obj, 2, mp_l
  * int32_t lv_anim_path_cb_t(const struct _lv_anim_t *)
  */
 
-STATIC int32_t lv_anim_t_path_cb_callback(const struct _lv_anim_t * arg0)
+GENMPY_UNUSED STATIC int32_t lv_anim_t_path_cb_callback(const struct _lv_anim_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -23012,10 +25194,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_path_cb_obj, 2, mp_lv_anim_
 
 /*
  * Callback function lv_anim_t_start_cb
- * void lv_anim_ready_cb_t(struct _lv_anim_t *)
+ * void lv_anim_start_cb_t(struct _lv_anim_t *)
  */
 
-STATIC void lv_anim_t_start_cb_callback(struct _lv_anim_t * arg0)
+GENMPY_UNUSED STATIC void lv_anim_t_start_cb_callback(struct _lv_anim_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -23027,14 +25209,14 @@ STATIC void lv_anim_t_start_cb_callback(struct _lv_anim_t * arg0)
 
 /*
  * lvgl extension definition for:
- * inline static void lv_anim_set_start_cb(lv_anim_t *a, lv_anim_ready_cb_t start_cb)
+ * inline static void lv_anim_set_start_cb(lv_anim_t *a, lv_anim_start_cb_t start_cb)
  */
  
 STATIC mp_obj_t mp_lv_anim_set_start_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_anim_t *a = mp_write_ptr_lv_anim_t(mp_args[0]);
     void *start_cb = mp_lv_callback(mp_args[1], &lv_anim_t_start_cb_callback, MP_QSTR_lv_anim_t_start_cb, &a->user_data);
-    ((void (*)(lv_anim_t *, lv_anim_ready_cb_t))lv_func_ptr)(a, start_cb);
+    ((void (*)(lv_anim_t *, lv_anim_start_cb_t))lv_func_ptr)(a, start_cb);
     return mp_const_none;
 }
 
@@ -23048,7 +25230,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_start_cb_obj, 2, mp_lv_anim
  * int32_t lv_anim_get_value_cb_t(struct _lv_anim_t *)
  */
 
-STATIC int32_t lv_anim_t_get_value_cb_callback(struct _lv_anim_t * arg0)
+GENMPY_UNUSED STATIC int32_t lv_anim_t_get_value_cb_callback(struct _lv_anim_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
@@ -23075,9 +25257,38 @@ STATIC mp_obj_t mp_lv_anim_set_get_value_cb(size_t mp_n_args, const mp_obj_t *mp
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_get_value_cb_obj, 2, mp_lv_anim_set_get_value_cb, lv_anim_set_get_value_cb);
     
-/* Reusing lv_anim_set_start_cb for lv_anim_set_ready_cb */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_ready_cb_obj, 2, mp_lv_anim_set_start_cb, lv_anim_set_ready_cb);
+/*
+ * Callback function lv_anim_t_ready_cb
+ * void lv_anim_ready_cb_t(struct _lv_anim_t *)
+ */
+
+GENMPY_UNUSED STATIC void lv_anim_t_ready_cb_callback(struct _lv_anim_t * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_anim_t_ready_cb)) , 1, 0, mp_args);
+    return;
+}
+
+
+/*
+ * lvgl extension definition for:
+ * inline static void lv_anim_set_ready_cb(lv_anim_t *a, lv_anim_ready_cb_t ready_cb)
+ */
+ 
+STATIC mp_obj_t mp_lv_anim_set_ready_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_anim_t *a = mp_write_ptr_lv_anim_t(mp_args[0]);
+    void *ready_cb = mp_lv_callback(mp_args[1], &lv_anim_t_ready_cb_callback, MP_QSTR_lv_anim_t_ready_cb, &a->user_data);
+    ((void (*)(lv_anim_t *, lv_anim_ready_cb_t))lv_func_ptr)(a, ready_cb);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_ready_cb_obj, 2, mp_lv_anim_set_ready_cb, lv_anim_set_ready_cb);
     
 /* Reusing lv_anim_set_time for lv_anim_set_playback_time */
 
@@ -23127,6 +25338,10 @@ STATIC mp_obj_t mp_lv_anim_set_early_apply(size_t mp_n_args, const mp_obj_t *mp_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_early_apply_obj, 2, mp_lv_anim_set_early_apply, lv_anim_set_early_apply);
     
+/* Reusing lv_anim_set_var for lv_anim_set_user_data */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_set_user_data_obj, 2, mp_lv_anim_set_var, lv_anim_set_user_data);
+    
 
 /*
  * lvgl extension definition for:
@@ -23147,6 +25362,23 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_get_delay_obj, 1, mp_lv_anim_ge
 
 /*
  * lvgl extension definition for:
+ * inline static void *lv_anim_get_user_data(lv_anim_t *a)
+ */
+ 
+STATIC mp_obj_t mp_lv_anim_get_user_data(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_anim_t *a = mp_write_ptr_lv_anim_t(mp_args[0]);
+    void * _res = ((void *(*)(lv_anim_t *))lv_func_ptr)(a);
+    return ptr_to_mp((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_get_user_data_obj, 1, mp_lv_anim_get_user_data, lv_anim_get_user_data);
+    
+
+/*
+ * lvgl extension definition for:
  * inline static bool lv_anim_custom_del(lv_anim_t *a, lv_anim_custom_exec_cb_t exec_cb)
  */
  
@@ -23161,6 +25393,24 @@ STATIC mp_obj_t mp_lv_anim_custom_del(size_t mp_n_args, const mp_obj_t *mp_args,
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_custom_del_obj, 2, mp_lv_anim_custom_del, lv_anim_custom_del);
+    
+
+/*
+ * lvgl extension definition for:
+ * inline static lv_anim_t *lv_anim_custom_get(lv_anim_t *a, lv_anim_custom_exec_cb_t exec_cb)
+ */
+ 
+STATIC mp_obj_t mp_lv_anim_custom_get(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_anim_t *a = mp_write_ptr_lv_anim_t(mp_args[0]);
+    void *exec_cb = mp_lv_callback(mp_args[1], &lv_anim_t_exec_cb_callback, MP_QSTR_lv_anim_t_exec_cb, &a->user_data);
+    lv_anim_t * _res = ((lv_anim_t *(*)(lv_anim_t *, lv_anim_custom_exec_cb_t))lv_func_ptr)(a, exec_cb);
+    return mp_read_ptr_lv_anim_t((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_custom_get_obj, 2, mp_lv_anim_custom_get, lv_anim_custom_get);
     
 /* Reusing lv_obj_del_anim_ready_cb for lv_anim_init */
 
@@ -23182,6 +25432,10 @@ STATIC mp_obj_t mp_lv_anim_start(size_t mp_n_args, const mp_obj_t *mp_args, void
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_start_obj, 1, mp_lv_anim_start, lv_anim_start);
+    
+/* Reusing lv_anim_get_delay for lv_anim_get_playtime */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_get_playtime_obj, 1, mp_lv_anim_get_delay, lv_anim_get_playtime);
     
 
 /*
@@ -23227,9 +25481,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_anim_path_step_obj, 1, mp_lv_anim_pa
 
 STATIC const mp_rom_map_elem_t mp_lv_anim_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_anim_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_var), MP_ROM_PTR(&mp_lv_anim_set_var_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_exec_cb), MP_ROM_PTR(&mp_lv_anim_set_exec_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_time), MP_ROM_PTR(&mp_lv_anim_set_time_obj) },
@@ -23245,10 +25496,14 @@ STATIC const mp_rom_map_elem_t mp_lv_anim_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_repeat_count), MP_ROM_PTR(&mp_lv_anim_set_repeat_count_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_repeat_delay), MP_ROM_PTR(&mp_lv_anim_set_repeat_delay_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_early_apply), MP_ROM_PTR(&mp_lv_anim_set_early_apply_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_user_data), MP_ROM_PTR(&mp_lv_anim_set_user_data_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_delay), MP_ROM_PTR(&mp_lv_anim_get_delay_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_user_data), MP_ROM_PTR(&mp_lv_anim_get_user_data_obj) },
     { MP_ROM_QSTR(MP_QSTR_custom_del), MP_ROM_PTR(&mp_lv_anim_custom_del_obj) },
+    { MP_ROM_QSTR(MP_QSTR_custom_get), MP_ROM_PTR(&mp_lv_anim_custom_get_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_anim_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_start), MP_ROM_PTR(&mp_lv_anim_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_playtime), MP_ROM_PTR(&mp_lv_anim_get_playtime_obj) },
     { MP_ROM_QSTR(MP_QSTR_path_linear), MP_ROM_PTR(&mp_lv_anim_path_linear_obj) },
     { MP_ROM_QSTR(MP_QSTR_path_ease_in), MP_ROM_PTR(&mp_lv_anim_path_ease_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_path_ease_out), MP_ROM_PTR(&mp_lv_anim_path_ease_out_obj) },
@@ -23260,134 +25515,6 @@ STATIC const mp_rom_map_elem_t mp_lv_anim_t_locals_dict_table[] = {
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_anim_t_locals_dict, mp_lv_anim_t_locals_dict_table);
-        
-
-/*
- * lvgl extension definition for:
- * inline static lv_coord_t lv_font_get_line_height(const lv_font_t *font_p)
- */
- 
-STATIC mp_obj_t mp_lv_font_get_line_height(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
-    lv_coord_t _res = ((lv_coord_t (*)(const lv_font_t *))lv_func_ptr)(font_p);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_line_height_obj, 1, mp_lv_font_get_line_height, lv_font_get_line_height);
-    
-
-/*
- * lvgl extension definition for:
- * const uint8_t *lv_font_get_glyph_bitmap(const lv_font_t *font_p, uint32_t letter)
- */
- 
-STATIC mp_obj_t mp_lv_font_get_glyph_bitmap(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
-    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[1]);
-    const uint8_t * _res = ((const uint8_t *(*)(const lv_font_t *, uint32_t))lv_func_ptr)(font_p, letter);
-    return ptr_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_bitmap_obj, 2, mp_lv_font_get_glyph_bitmap, lv_font_get_glyph_bitmap);
-    
-
-/*
- * lvgl extension definition for:
- * bool lv_font_get_glyph_dsc(const lv_font_t *font_p, lv_font_glyph_dsc_t *dsc_out, uint32_t letter, uint32_t letter_next)
- */
- 
-STATIC mp_obj_t mp_lv_font_get_glyph_dsc(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
-    lv_font_glyph_dsc_t *dsc_out = mp_write_ptr_lv_font_glyph_dsc_t(mp_args[1]);
-    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[2]);
-    uint32_t letter_next = (uint32_t)mp_obj_get_int(mp_args[3]);
-    bool _res = ((bool (*)(const lv_font_t *, lv_font_glyph_dsc_t *, uint32_t, uint32_t))lv_func_ptr)(font_p, dsc_out, letter, letter_next);
-    return convert_to_bool(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_dsc_obj, 4, mp_lv_font_get_glyph_dsc, lv_font_get_glyph_dsc);
-    
-
-/*
- * lvgl extension definition for:
- * uint16_t lv_font_get_glyph_width(const lv_font_t *font, uint32_t letter, uint32_t letter_next)
- */
- 
-STATIC mp_obj_t mp_lv_font_get_glyph_width(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_font_t *font = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[0]);
-    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[1]);
-    uint32_t letter_next = (uint32_t)mp_obj_get_int(mp_args[2]);
-    uint16_t _res = ((uint16_t (*)(const lv_font_t *, uint32_t, uint32_t))lv_func_ptr)(font, letter, letter_next);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_width_obj, 3, mp_lv_font_get_glyph_width, lv_font_get_glyph_width);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_font_free(lv_font_t *font)
- */
- 
-STATIC mp_obj_t mp_lv_font_free(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_font_t *font = mp_write_ptr_lv_font_t(mp_args[0]);
-    ((void (*)(lv_font_t *))lv_func_ptr)(font);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_free_obj, 1, mp_lv_font_free, lv_font_free);
-    
-/* Reusing lv_font_get_glyph_bitmap for lv_font_get_bitmap_fmt_txt */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_bitmap_fmt_txt_obj, 2, mp_lv_font_get_glyph_bitmap, lv_font_get_bitmap_fmt_txt);
-    
-/* Reusing lv_font_get_glyph_dsc for lv_font_get_glyph_dsc_fmt_txt */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_font_get_glyph_dsc_fmt_txt_obj, 4, mp_lv_font_get_glyph_dsc, lv_font_get_glyph_dsc_fmt_txt);
-    
-
-STATIC const mp_rom_map_elem_t mp_lv_font_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_font_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_line_height), MP_ROM_PTR(&mp_lv_font_get_line_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_glyph_bitmap), MP_ROM_PTR(&mp_lv_font_get_glyph_bitmap_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_glyph_dsc), MP_ROM_PTR(&mp_lv_font_get_glyph_dsc_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_glyph_width), MP_ROM_PTR(&mp_lv_font_get_glyph_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free), MP_ROM_PTR(&mp_lv_font_free_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_bitmap_fmt_txt), MP_ROM_PTR(&mp_lv_font_get_bitmap_fmt_txt_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_glyph_dsc_fmt_txt), MP_ROM_PTR(&mp_lv_font_get_glyph_dsc_fmt_txt_obj) },
-    
-};
-
-STATIC MP_DEFINE_CONST_DICT(mp_lv_font_t_locals_dict, mp_lv_font_t_locals_dict_table);
-        
-
-STATIC const mp_rom_map_elem_t mp_lv_font_glyph_dsc_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_font_glyph_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
-    
-};
-
-STATIC MP_DEFINE_CONST_DICT(mp_lv_font_glyph_dsc_t_locals_dict, mp_lv_font_glyph_dsc_t_locals_dict_table);
         
 
 /*
@@ -23466,6 +25593,22 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_hor_res_obj, 1, mp_lv_disp_
 /* Reusing lv_disp_get_hor_res for lv_disp_get_ver_res */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_ver_res_obj, 1, mp_lv_disp_get_hor_res, lv_disp_get_ver_res);
+    
+/* Reusing lv_disp_get_hor_res for lv_disp_get_physical_hor_res */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_physical_hor_res_obj, 1, mp_lv_disp_get_hor_res, lv_disp_get_physical_hor_res);
+    
+/* Reusing lv_disp_get_hor_res for lv_disp_get_physical_ver_res */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_physical_ver_res_obj, 1, mp_lv_disp_get_hor_res, lv_disp_get_physical_ver_res);
+    
+/* Reusing lv_disp_get_hor_res for lv_disp_get_offset_x */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_offset_x_obj, 1, mp_lv_disp_get_hor_res, lv_disp_get_offset_x);
+    
+/* Reusing lv_disp_get_hor_res for lv_disp_get_offset_y */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_get_offset_y_obj, 1, mp_lv_disp_get_hor_res, lv_disp_get_offset_y);
     
 
 /*
@@ -23716,15 +25859,16 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_clean_dcache_obj, 1, mp_lv_disp
 
 STATIC const mp_rom_map_elem_t mp_lv_disp_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_disp_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_dpx), MP_ROM_PTR(&mp_lv_disp_dpx_obj) },
     { MP_ROM_QSTR(MP_QSTR_drv_update), MP_ROM_PTR(&mp_lv_disp_drv_update_obj) },
     { MP_ROM_QSTR(MP_QSTR_remove), MP_ROM_PTR(&mp_lv_disp_remove_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_default), MP_ROM_PTR(&mp_lv_disp_set_default_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_hor_res), MP_ROM_PTR(&mp_lv_disp_get_hor_res_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_ver_res), MP_ROM_PTR(&mp_lv_disp_get_ver_res_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_physical_hor_res), MP_ROM_PTR(&mp_lv_disp_get_physical_hor_res_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_physical_ver_res), MP_ROM_PTR(&mp_lv_disp_get_physical_ver_res_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_offset_x), MP_ROM_PTR(&mp_lv_disp_get_offset_x_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_offset_y), MP_ROM_PTR(&mp_lv_disp_get_offset_y_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_antialiasing), MP_ROM_PTR(&mp_lv_disp_get_antialiasing_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_dpi), MP_ROM_PTR(&mp_lv_disp_get_dpi_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_rotation), MP_ROM_PTR(&mp_lv_disp_set_rotation_obj) },
@@ -23824,9 +25968,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_drv_use_generic_set_px_cb_obj, 
 
 STATIC const mp_rom_map_elem_t mp_lv_disp_drv_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_disp_drv_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_disp_drv_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_register), MP_ROM_PTR(&mp_lv_disp_drv_register_obj) },
     { MP_ROM_QSTR(MP_QSTR_flush_ready), MP_ROM_PTR(&mp_lv_disp_flush_ready_obj) },
@@ -23860,9 +26001,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_draw_buf_init_obj, 4, mp_lv_dis
 
 STATIC const mp_rom_map_elem_t mp_lv_disp_draw_buf_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_disp_draw_buf_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_disp_draw_buf_init_obj) },
     
 };
@@ -24015,9 +26153,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_area_align_obj, 5, mp_lv_area_align,
 
 STATIC const mp_rom_map_elem_t mp_lv_area_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_area_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_copy), MP_ROM_PTR(&mp_lv_area_copy_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_width), MP_ROM_PTR(&mp_lv_area_get_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_height), MP_ROM_PTR(&mp_lv_area_get_height_obj) },
@@ -24064,7 +26199,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_timer_resume_obj, 1, mp_lv_timer_del
  * void lv_timer_cb_t(struct _lv_timer_t *)
  */
 
-STATIC void lv_timer_t_timer_cb_callback(struct _lv_timer_t * arg0)
+GENMPY_UNUSED STATIC void lv_timer_t_timer_cb_callback(struct _lv_timer_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_timer_t((void*)arg0);
@@ -24155,9 +26290,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_timer_get_next_obj, 1, mp_lv_timer_g
 
 STATIC const mp_rom_map_elem_t mp_lv_timer_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_timer_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR__del), MP_ROM_PTR(&mp_lv_timer_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_pause), MP_ROM_PTR(&mp_lv_timer_pause_obj) },
     { MP_ROM_QSTR(MP_QSTR_resume), MP_ROM_PTR(&mp_lv_timer_resume_obj) },
@@ -24196,7 +26328,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_set_parent_obj, 2, mp_lv_theme
  * void lv_theme_apply_cb_t(struct _lv_theme_t *, lv_obj_t *)
  */
 
-STATIC void lv_theme_t_apply_cb_callback(struct _lv_theme_t * arg0, lv_obj_t * arg1)
+GENMPY_UNUSED STATIC void lv_theme_t_apply_cb_callback(struct _lv_theme_t * arg0, lv_obj_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_theme_t((void*)arg0);
@@ -24227,9 +26359,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_set_apply_cb_obj, 2, mp_lv_the
 
 STATIC const mp_rom_map_elem_t mp_lv_theme_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_theme_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_parent), MP_ROM_PTR(&mp_lv_theme_set_parent_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_apply_cb), MP_ROM_PTR(&mp_lv_theme_set_apply_cb_obj) },
     
@@ -24240,9 +26369,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_theme_t_locals_dict, mp_lv_theme_t_locals_dict
 
 STATIC const mp_rom_map_elem_t mp_lv_point_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_point_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -24270,10 +26396,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_get_prop_inlined_obj, 3, mp_lv
 
 /*
  * lvgl extension definition for:
- * inline static void lv_style_set_pad_all(lv_style_t *style, lv_coord_t value)
+ * inline static void lv_style_set_size(lv_style_t *style, lv_coord_t value)
  */
  
-STATIC mp_obj_t mp_lv_style_set_pad_all(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_style_set_size(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
     lv_coord_t value = (int16_t)mp_obj_get_int(mp_args[1]);
@@ -24283,23 +26409,23 @@ STATIC mp_obj_t mp_lv_style_set_pad_all(size_t mp_n_args, const mp_obj_t *mp_arg
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_all_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_all);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_size_obj, 2, mp_lv_style_set_size, lv_style_set_size);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_hor */
+/* Reusing lv_style_set_size for lv_style_set_pad_all */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_hor_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_hor);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_all_obj, 2, mp_lv_style_set_size, lv_style_set_pad_all);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_ver */
+/* Reusing lv_style_set_size for lv_style_set_pad_hor */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_ver_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_ver);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_hor_obj, 2, mp_lv_style_set_size, lv_style_set_pad_hor);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_gap */
+/* Reusing lv_style_set_size for lv_style_set_pad_ver */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_gap_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_gap);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_ver_obj, 2, mp_lv_style_set_size, lv_style_set_pad_ver);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_size */
+/* Reusing lv_style_set_size for lv_style_set_pad_gap */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_size_obj, 2, mp_lv_style_set_pad_all, lv_style_set_size);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_gap_obj, 2, mp_lv_style_set_size, lv_style_set_pad_gap);
     
 /* Reusing lv_obj_report_style_change for lv_style_init */
 
@@ -24367,37 +26493,37 @@ STATIC mp_obj_t mp_lv_style_is_empty(size_t mp_n_args, const mp_obj_t *mp_args, 
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_is_empty_obj, 1, mp_lv_style_is_empty, lv_style_is_empty);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_width */
+/* Reusing lv_style_set_size for lv_style_set_width */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_width_obj, 2, mp_lv_style_set_size, lv_style_set_width);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_min_width */
+/* Reusing lv_style_set_size for lv_style_set_min_width */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_min_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_min_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_min_width_obj, 2, mp_lv_style_set_size, lv_style_set_min_width);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_max_width */
+/* Reusing lv_style_set_size for lv_style_set_max_width */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_max_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_max_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_max_width_obj, 2, mp_lv_style_set_size, lv_style_set_max_width);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_height */
+/* Reusing lv_style_set_size for lv_style_set_height */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_height_obj, 2, mp_lv_style_set_pad_all, lv_style_set_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_height_obj, 2, mp_lv_style_set_size, lv_style_set_height);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_min_height */
+/* Reusing lv_style_set_size for lv_style_set_min_height */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_min_height_obj, 2, mp_lv_style_set_pad_all, lv_style_set_min_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_min_height_obj, 2, mp_lv_style_set_size, lv_style_set_min_height);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_max_height */
+/* Reusing lv_style_set_size for lv_style_set_max_height */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_max_height_obj, 2, mp_lv_style_set_pad_all, lv_style_set_max_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_max_height_obj, 2, mp_lv_style_set_size, lv_style_set_max_height);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_x */
+/* Reusing lv_style_set_size for lv_style_set_x */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_x_obj, 2, mp_lv_style_set_pad_all, lv_style_set_x);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_x_obj, 2, mp_lv_style_set_size, lv_style_set_x);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_y */
+/* Reusing lv_style_set_size for lv_style_set_y */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_y_obj, 2, mp_lv_style_set_pad_all, lv_style_set_y);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_y_obj, 2, mp_lv_style_set_size, lv_style_set_y);
     
 
 /*
@@ -24417,83 +26543,83 @@ STATIC mp_obj_t mp_lv_style_set_align(size_t mp_n_args, const mp_obj_t *mp_args,
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_align_obj, 2, mp_lv_style_set_align, lv_style_set_align);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_transform_width */
+/* Reusing lv_style_set_size for lv_style_set_transform_width */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_transform_width);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_width_obj, 2, mp_lv_style_set_size, lv_style_set_transform_width);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_transform_height */
+/* Reusing lv_style_set_size for lv_style_set_transform_height */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_height_obj, 2, mp_lv_style_set_pad_all, lv_style_set_transform_height);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_height_obj, 2, mp_lv_style_set_size, lv_style_set_transform_height);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_translate_x */
+/* Reusing lv_style_set_size for lv_style_set_translate_x */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_translate_x_obj, 2, mp_lv_style_set_pad_all, lv_style_set_translate_x);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_translate_x_obj, 2, mp_lv_style_set_size, lv_style_set_translate_x);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_translate_y */
+/* Reusing lv_style_set_size for lv_style_set_translate_y */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_translate_y_obj, 2, mp_lv_style_set_pad_all, lv_style_set_translate_y);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_translate_y_obj, 2, mp_lv_style_set_size, lv_style_set_translate_y);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_transform_zoom */
+/* Reusing lv_style_set_size for lv_style_set_transform_zoom */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_zoom_obj, 2, mp_lv_style_set_pad_all, lv_style_set_transform_zoom);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_zoom_obj, 2, mp_lv_style_set_size, lv_style_set_transform_zoom);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_transform_angle */
+/* Reusing lv_style_set_size for lv_style_set_transform_angle */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_angle_obj, 2, mp_lv_style_set_pad_all, lv_style_set_transform_angle);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_transform_angle_obj, 2, mp_lv_style_set_size, lv_style_set_transform_angle);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_top */
+/* Reusing lv_style_set_size for lv_style_set_pad_top */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_top_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_top);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_top_obj, 2, mp_lv_style_set_size, lv_style_set_pad_top);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_bottom */
+/* Reusing lv_style_set_size for lv_style_set_pad_bottom */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_bottom_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_bottom);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_bottom_obj, 2, mp_lv_style_set_size, lv_style_set_pad_bottom);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_left */
+/* Reusing lv_style_set_size for lv_style_set_pad_left */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_left_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_left);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_left_obj, 2, mp_lv_style_set_size, lv_style_set_pad_left);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_right */
+/* Reusing lv_style_set_size for lv_style_set_pad_right */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_right_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_right);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_right_obj, 2, mp_lv_style_set_size, lv_style_set_pad_right);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_row */
+/* Reusing lv_style_set_size for lv_style_set_pad_row */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_row_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_row);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_row_obj, 2, mp_lv_style_set_size, lv_style_set_pad_row);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_pad_column */
+/* Reusing lv_style_set_size for lv_style_set_pad_column */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_column_obj, 2, mp_lv_style_set_pad_all, lv_style_set_pad_column);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_radius */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_radius_obj, 2, mp_lv_style_set_pad_all, lv_style_set_radius);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_pad_column_obj, 2, mp_lv_style_set_size, lv_style_set_pad_column);
     
 
 /*
  * lvgl extension definition for:
- * void lv_style_set_clip_corner(lv_style_t *style, bool value)
+ * void lv_style_set_bg_color(lv_style_t *style, lv_color_t value)
  */
  
-STATIC mp_obj_t mp_lv_style_set_clip_corner(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_style_set_bg_color(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    bool value = mp_obj_is_true(mp_args[1]);
-    ((void (*)(lv_style_t *, bool))lv_func_ptr)(style, value);
+    lv_color_t value = mp_write_lv_color32_t(mp_args[1]);
+    ((void (*)(lv_style_t *, lv_color_t))lv_func_ptr)(style, value);
     return mp_const_none;
 }
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_clip_corner_obj, 2, mp_lv_style_set_clip_corner, lv_style_set_clip_corner);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_bg_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_color_filtered);
     
 
 /*
  * lvgl extension definition for:
- * void lv_style_set_opa(lv_style_t *style, lv_opa_t value)
+ * void lv_style_set_bg_opa(lv_style_t *style, lv_opa_t value)
  */
  
-STATIC mp_obj_t mp_lv_style_set_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_style_set_bg_opa(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
     lv_opa_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
@@ -24503,7 +26629,333 @@ STATIC mp_obj_t mp_lv_style_set_opa(size_t mp_n_args, const mp_obj_t *mp_args, v
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_bg_opa);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_bg_grad_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_grad_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_bg_grad_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_grad_color_filtered);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_bg_grad_dir(lv_style_t *style, lv_grad_dir_t value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_bg_grad_dir(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    lv_grad_dir_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_style_t *, lv_grad_dir_t))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_dir_obj, 2, mp_lv_style_set_bg_grad_dir, lv_style_set_bg_grad_dir);
+    
+/* Reusing lv_style_set_size for lv_style_set_bg_main_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_main_stop_obj, 2, mp_lv_style_set_size, lv_style_set_bg_main_stop);
+    
+/* Reusing lv_style_set_size for lv_style_set_bg_grad_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_stop_obj, 2, mp_lv_style_set_size, lv_style_set_bg_grad_stop);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_bg_img_src(lv_style_t *style, const void *value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_bg_img_src(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    const void *value = (const void *)mp_to_ptr(mp_args[1]);
+    ((void (*)(lv_style_t *, const void *))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_src_obj, 2, mp_lv_style_set_bg_img_src, lv_style_set_bg_img_src);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_bg_img_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_bg_img_opa);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_bg_img_recolor */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_recolor_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_img_recolor);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_bg_img_recolor_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_recolor_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_img_recolor_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_bg_img_recolor_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_recolor_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_bg_img_recolor_opa);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_bg_img_tiled(lv_style_t *style, bool value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_bg_img_tiled(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    bool value = mp_obj_is_true(mp_args[1]);
+    ((void (*)(lv_style_t *, bool))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_tiled_obj, 2, mp_lv_style_set_bg_img_tiled, lv_style_set_bg_img_tiled);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_border_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_border_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_border_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_border_color_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_border_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_border_opa);
+    
+/* Reusing lv_style_set_size for lv_style_set_border_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_width_obj, 2, mp_lv_style_set_size, lv_style_set_border_width);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_border_side(lv_style_t *style, lv_border_side_t value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_border_side(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    lv_border_side_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_style_t *, lv_border_side_t))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_side_obj, 2, mp_lv_style_set_border_side, lv_style_set_border_side);
+    
+/* Reusing lv_style_set_bg_img_tiled for lv_style_set_border_post */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_post_obj, 2, mp_lv_style_set_bg_img_tiled, lv_style_set_border_post);
+    
+/* Reusing lv_style_set_size for lv_style_set_outline_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_width_obj, 2, mp_lv_style_set_size, lv_style_set_outline_width);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_outline_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_outline_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_outline_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_outline_color_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_outline_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_outline_opa);
+    
+/* Reusing lv_style_set_size for lv_style_set_outline_pad */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_pad_obj, 2, mp_lv_style_set_size, lv_style_set_outline_pad);
+    
+/* Reusing lv_style_set_size for lv_style_set_shadow_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_width_obj, 2, mp_lv_style_set_size, lv_style_set_shadow_width);
+    
+/* Reusing lv_style_set_size for lv_style_set_shadow_ofs_x */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_ofs_x_obj, 2, mp_lv_style_set_size, lv_style_set_shadow_ofs_x);
+    
+/* Reusing lv_style_set_size for lv_style_set_shadow_ofs_y */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_ofs_y_obj, 2, mp_lv_style_set_size, lv_style_set_shadow_ofs_y);
+    
+/* Reusing lv_style_set_size for lv_style_set_shadow_spread */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_spread_obj, 2, mp_lv_style_set_size, lv_style_set_shadow_spread);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_shadow_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_shadow_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_shadow_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_shadow_color_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_shadow_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_shadow_opa);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_img_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_img_opa);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_img_recolor */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_recolor_obj, 2, mp_lv_style_set_bg_color, lv_style_set_img_recolor);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_img_recolor_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_recolor_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_img_recolor_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_img_recolor_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_recolor_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_img_recolor_opa);
+    
+/* Reusing lv_style_set_size for lv_style_set_line_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_width_obj, 2, mp_lv_style_set_size, lv_style_set_line_width);
+    
+/* Reusing lv_style_set_size for lv_style_set_line_dash_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_dash_width_obj, 2, mp_lv_style_set_size, lv_style_set_line_dash_width);
+    
+/* Reusing lv_style_set_size for lv_style_set_line_dash_gap */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_dash_gap_obj, 2, mp_lv_style_set_size, lv_style_set_line_dash_gap);
+    
+/* Reusing lv_style_set_bg_img_tiled for lv_style_set_line_rounded */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_rounded_obj, 2, mp_lv_style_set_bg_img_tiled, lv_style_set_line_rounded);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_line_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_line_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_line_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_line_color_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_line_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_line_opa);
+    
+/* Reusing lv_style_set_size for lv_style_set_arc_width */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_width_obj, 2, mp_lv_style_set_size, lv_style_set_arc_width);
+    
+/* Reusing lv_style_set_bg_img_tiled for lv_style_set_arc_rounded */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_rounded_obj, 2, mp_lv_style_set_bg_img_tiled, lv_style_set_arc_rounded);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_arc_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_arc_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_arc_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_arc_color_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_arc_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_arc_opa);
+    
+/* Reusing lv_style_set_bg_img_src for lv_style_set_arc_img_src */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_img_src_obj, 2, mp_lv_style_set_bg_img_src, lv_style_set_arc_img_src);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_text_color */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_text_color);
+    
+/* Reusing lv_style_set_bg_color for lv_style_set_text_color_filtered */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_text_color_filtered);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_text_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_text_opa);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_text_font(lv_style_t *style, const lv_font_t *value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_text_font(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    const lv_font_t *value = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[1]);
+    ((void (*)(lv_style_t *, const lv_font_t *))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_font_obj, 2, mp_lv_style_set_text_font, lv_style_set_text_font);
+    
+/* Reusing lv_style_set_size for lv_style_set_text_letter_space */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_letter_space_obj, 2, mp_lv_style_set_size, lv_style_set_text_letter_space);
+    
+/* Reusing lv_style_set_size for lv_style_set_text_line_space */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_line_space_obj, 2, mp_lv_style_set_size, lv_style_set_text_line_space);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_text_decor(lv_style_t *style, lv_text_decor_t value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_text_decor(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    lv_text_decor_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_style_t *, lv_text_decor_t))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_decor_obj, 2, mp_lv_style_set_text_decor, lv_style_set_text_decor);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_style_set_text_align(lv_style_t *style, lv_text_align_t value)
+ */
+ 
+STATIC mp_obj_t mp_lv_style_set_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
+    lv_text_align_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
+    ((void (*)(lv_style_t *, lv_text_align_t))lv_func_ptr)(style, value);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_align_obj, 2, mp_lv_style_set_text_align, lv_style_set_text_align);
+    
+/* Reusing lv_style_set_size for lv_style_set_radius */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_radius_obj, 2, mp_lv_style_set_size, lv_style_set_radius);
+    
+/* Reusing lv_style_set_bg_img_tiled for lv_style_set_clip_corner */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_clip_corner_obj, 2, mp_lv_style_set_bg_img_tiled, lv_style_set_clip_corner);
+    
+/* Reusing lv_style_set_bg_opa for lv_style_set_opa */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_opa);
     
 
 /*
@@ -24523,9 +26975,9 @@ STATIC mp_obj_t mp_lv_style_set_color_filter_dsc(size_t mp_n_args, const mp_obj_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_color_filter_dsc_obj, 2, mp_lv_style_set_color_filter_dsc, lv_style_set_color_filter_dsc);
     
-/* Reusing lv_style_set_opa for lv_style_set_color_filter_opa */
+/* Reusing lv_style_set_bg_opa for lv_style_set_color_filter_opa */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_color_filter_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_color_filter_opa);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_color_filter_opa_obj, 2, mp_lv_style_set_bg_opa, lv_style_set_color_filter_opa);
     
 
 /*
@@ -24620,332 +27072,6 @@ STATIC mp_obj_t mp_lv_style_set_base_dir(size_t mp_n_args, const mp_obj_t *mp_ar
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_base_dir_obj, 2, mp_lv_style_set_base_dir, lv_style_set_base_dir);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_bg_color(lv_style_t *style, lv_color_t value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_bg_color(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    lv_color_t value = mp_write_lv_color32_t(mp_args[1]);
-    ((void (*)(lv_style_t *, lv_color_t))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_bg_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_bg_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_bg_opa);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_bg_grad_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_grad_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_bg_grad_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_grad_color_filtered);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_bg_grad_dir(lv_style_t *style, lv_grad_dir_t value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_bg_grad_dir(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    lv_grad_dir_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    ((void (*)(lv_style_t *, lv_grad_dir_t))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_dir_obj, 2, mp_lv_style_set_bg_grad_dir, lv_style_set_bg_grad_dir);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_bg_main_stop */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_main_stop_obj, 2, mp_lv_style_set_pad_all, lv_style_set_bg_main_stop);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_bg_grad_stop */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_grad_stop_obj, 2, mp_lv_style_set_pad_all, lv_style_set_bg_grad_stop);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_bg_img_src(lv_style_t *style, const void *value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_bg_img_src(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    const void *value = (const void *)mp_to_ptr(mp_args[1]);
-    ((void (*)(lv_style_t *, const void *))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_src_obj, 2, mp_lv_style_set_bg_img_src, lv_style_set_bg_img_src);
-    
-/* Reusing lv_style_set_opa for lv_style_set_bg_img_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_bg_img_opa);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_bg_img_recolor */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_recolor_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_img_recolor);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_bg_img_recolor_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_recolor_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_bg_img_recolor_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_bg_img_recolor_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_recolor_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_bg_img_recolor_opa);
-    
-/* Reusing lv_style_set_clip_corner for lv_style_set_bg_img_tiled */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_bg_img_tiled_obj, 2, mp_lv_style_set_clip_corner, lv_style_set_bg_img_tiled);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_border_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_border_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_border_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_border_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_border_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_border_opa);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_border_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_border_width);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_border_side(lv_style_t *style, lv_border_side_t value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_border_side(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    lv_border_side_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    ((void (*)(lv_style_t *, lv_border_side_t))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_side_obj, 2, mp_lv_style_set_border_side, lv_style_set_border_side);
-    
-/* Reusing lv_style_set_clip_corner for lv_style_set_border_post */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_border_post_obj, 2, mp_lv_style_set_clip_corner, lv_style_set_border_post);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_text_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_text_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_text_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_text_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_text_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_text_opa);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_text_font(lv_style_t *style, const lv_font_t *value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_text_font(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    const lv_font_t *value = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[1]);
-    ((void (*)(lv_style_t *, const lv_font_t *))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_font_obj, 2, mp_lv_style_set_text_font, lv_style_set_text_font);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_text_letter_space */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_letter_space_obj, 2, mp_lv_style_set_pad_all, lv_style_set_text_letter_space);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_text_line_space */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_line_space_obj, 2, mp_lv_style_set_pad_all, lv_style_set_text_line_space);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_text_decor(lv_style_t *style, lv_text_decor_t value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_text_decor(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    lv_text_decor_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    ((void (*)(lv_style_t *, lv_text_decor_t))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_decor_obj, 2, mp_lv_style_set_text_decor, lv_style_set_text_decor);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_style_set_text_align(lv_style_t *style, lv_text_align_t value)
- */
- 
-STATIC mp_obj_t mp_lv_style_set_text_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_style_t *style = mp_write_ptr_lv_style_t(mp_args[0]);
-    lv_text_align_t value = (uint8_t)mp_obj_get_int(mp_args[1]);
-    ((void (*)(lv_style_t *, lv_text_align_t))lv_func_ptr)(style, value);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_text_align_obj, 2, mp_lv_style_set_text_align, lv_style_set_text_align);
-    
-/* Reusing lv_style_set_opa for lv_style_set_img_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_img_opa);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_img_recolor */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_recolor_obj, 2, mp_lv_style_set_bg_color, lv_style_set_img_recolor);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_img_recolor_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_recolor_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_img_recolor_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_img_recolor_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_img_recolor_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_img_recolor_opa);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_outline_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_outline_width);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_outline_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_outline_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_outline_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_outline_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_outline_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_outline_opa);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_outline_pad */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_outline_pad_obj, 2, mp_lv_style_set_pad_all, lv_style_set_outline_pad);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_shadow_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_shadow_width);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_shadow_ofs_x */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_ofs_x_obj, 2, mp_lv_style_set_pad_all, lv_style_set_shadow_ofs_x);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_shadow_ofs_y */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_ofs_y_obj, 2, mp_lv_style_set_pad_all, lv_style_set_shadow_ofs_y);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_shadow_spread */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_spread_obj, 2, mp_lv_style_set_pad_all, lv_style_set_shadow_spread);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_shadow_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_shadow_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_shadow_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_shadow_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_shadow_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_shadow_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_shadow_opa);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_line_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_line_width);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_line_dash_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_dash_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_line_dash_width);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_line_dash_gap */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_dash_gap_obj, 2, mp_lv_style_set_pad_all, lv_style_set_line_dash_gap);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_line_rounded */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_rounded_obj, 2, mp_lv_style_set_pad_all, lv_style_set_line_rounded);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_line_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_line_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_line_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_line_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_line_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_line_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_line_opa);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_arc_width */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_width_obj, 2, mp_lv_style_set_pad_all, lv_style_set_arc_width);
-    
-/* Reusing lv_style_set_pad_all for lv_style_set_arc_rounded */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_rounded_obj, 2, mp_lv_style_set_pad_all, lv_style_set_arc_rounded);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_arc_color */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_color_obj, 2, mp_lv_style_set_bg_color, lv_style_set_arc_color);
-    
-/* Reusing lv_style_set_bg_color for lv_style_set_arc_color_filtered */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_color_filtered_obj, 2, mp_lv_style_set_bg_color, lv_style_set_arc_color_filtered);
-    
-/* Reusing lv_style_set_opa for lv_style_set_arc_opa */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_opa_obj, 2, mp_lv_style_set_opa, lv_style_set_arc_opa);
-    
-/* Reusing lv_style_set_bg_img_src for lv_style_set_arc_img_src */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_arc_img_src_obj, 2, mp_lv_style_set_bg_img_src, lv_style_set_arc_img_src);
     
 
 /*
@@ -25053,42 +27179,39 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_row_align_obj, 2, mp_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_column_align_obj, 2, mp_lv_style_set_grid_row_align, lv_style_set_grid_column_align);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_grid_cell_column_pos */
+/* Reusing lv_style_set_size for lv_style_set_grid_cell_column_pos */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_column_pos_obj, 2, mp_lv_style_set_pad_all, lv_style_set_grid_cell_column_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_column_pos_obj, 2, mp_lv_style_set_size, lv_style_set_grid_cell_column_pos);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_grid_cell_column_span */
+/* Reusing lv_style_set_size for lv_style_set_grid_cell_column_span */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_column_span_obj, 2, mp_lv_style_set_pad_all, lv_style_set_grid_cell_column_span);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_column_span_obj, 2, mp_lv_style_set_size, lv_style_set_grid_cell_column_span);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_grid_cell_row_pos */
+/* Reusing lv_style_set_size for lv_style_set_grid_cell_row_pos */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_row_pos_obj, 2, mp_lv_style_set_pad_all, lv_style_set_grid_cell_row_pos);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_row_pos_obj, 2, mp_lv_style_set_size, lv_style_set_grid_cell_row_pos);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_grid_cell_row_span */
+/* Reusing lv_style_set_size for lv_style_set_grid_cell_row_span */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_row_span_obj, 2, mp_lv_style_set_pad_all, lv_style_set_grid_cell_row_span);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_row_span_obj, 2, mp_lv_style_set_size, lv_style_set_grid_cell_row_span);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_grid_cell_x_align */
+/* Reusing lv_style_set_size for lv_style_set_grid_cell_x_align */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_x_align_obj, 2, mp_lv_style_set_pad_all, lv_style_set_grid_cell_x_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_x_align_obj, 2, mp_lv_style_set_size, lv_style_set_grid_cell_x_align);
     
-/* Reusing lv_style_set_pad_all for lv_style_set_grid_cell_y_align */
+/* Reusing lv_style_set_size for lv_style_set_grid_cell_y_align */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_y_align_obj, 2, mp_lv_style_set_pad_all, lv_style_set_grid_cell_y_align);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_style_set_grid_cell_y_align_obj, 2, mp_lv_style_set_size, lv_style_set_grid_cell_y_align);
     
 
 STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_style_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_prop_inlined), MP_ROM_PTR(&mp_lv_style_get_prop_inlined_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_style_set_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pad_all), MP_ROM_PTR(&mp_lv_style_set_pad_all_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pad_hor), MP_ROM_PTR(&mp_lv_style_set_pad_hor_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pad_ver), MP_ROM_PTR(&mp_lv_style_set_pad_ver_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pad_gap), MP_ROM_PTR(&mp_lv_style_set_pad_gap_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_size), MP_ROM_PTR(&mp_lv_style_set_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_style_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_reset), MP_ROM_PTR(&mp_lv_style_reset_obj) },
     { MP_ROM_QSTR(MP_QSTR_remove_prop), MP_ROM_PTR(&mp_lv_style_remove_prop_obj) },
@@ -25116,17 +27239,6 @@ STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_pad_right), MP_ROM_PTR(&mp_lv_style_set_pad_right_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pad_row), MP_ROM_PTR(&mp_lv_style_set_pad_row_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pad_column), MP_ROM_PTR(&mp_lv_style_set_pad_column_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_radius), MP_ROM_PTR(&mp_lv_style_set_radius_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_clip_corner), MP_ROM_PTR(&mp_lv_style_set_clip_corner_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_opa), MP_ROM_PTR(&mp_lv_style_set_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_color_filter_dsc), MP_ROM_PTR(&mp_lv_style_set_color_filter_dsc_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_color_filter_opa), MP_ROM_PTR(&mp_lv_style_set_color_filter_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_style_set_anim_time_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_anim_speed), MP_ROM_PTR(&mp_lv_style_set_anim_speed_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_transition), MP_ROM_PTR(&mp_lv_style_set_transition_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_blend_mode), MP_ROM_PTR(&mp_lv_style_set_blend_mode_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_layout), MP_ROM_PTR(&mp_lv_style_set_layout_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_base_dir), MP_ROM_PTR(&mp_lv_style_set_base_dir_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_bg_color), MP_ROM_PTR(&mp_lv_style_set_bg_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_bg_color_filtered), MP_ROM_PTR(&mp_lv_style_set_bg_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_bg_opa), MP_ROM_PTR(&mp_lv_style_set_bg_opa_obj) },
@@ -25147,18 +27259,6 @@ STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_border_width), MP_ROM_PTR(&mp_lv_style_set_border_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_border_side), MP_ROM_PTR(&mp_lv_style_set_border_side_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_border_post), MP_ROM_PTR(&mp_lv_style_set_border_post_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_color), MP_ROM_PTR(&mp_lv_style_set_text_color_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_color_filtered), MP_ROM_PTR(&mp_lv_style_set_text_color_filtered_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_opa), MP_ROM_PTR(&mp_lv_style_set_text_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_font), MP_ROM_PTR(&mp_lv_style_set_text_font_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_letter_space), MP_ROM_PTR(&mp_lv_style_set_text_letter_space_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_line_space), MP_ROM_PTR(&mp_lv_style_set_text_line_space_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_decor), MP_ROM_PTR(&mp_lv_style_set_text_decor_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_text_align), MP_ROM_PTR(&mp_lv_style_set_text_align_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_img_opa), MP_ROM_PTR(&mp_lv_style_set_img_opa_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_img_recolor), MP_ROM_PTR(&mp_lv_style_set_img_recolor_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_img_recolor_filtered), MP_ROM_PTR(&mp_lv_style_set_img_recolor_filtered_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_img_recolor_opa), MP_ROM_PTR(&mp_lv_style_set_img_recolor_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_outline_width), MP_ROM_PTR(&mp_lv_style_set_outline_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_outline_color), MP_ROM_PTR(&mp_lv_style_set_outline_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_outline_color_filtered), MP_ROM_PTR(&mp_lv_style_set_outline_color_filtered_obj) },
@@ -25171,6 +27271,10 @@ STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_shadow_color), MP_ROM_PTR(&mp_lv_style_set_shadow_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_shadow_color_filtered), MP_ROM_PTR(&mp_lv_style_set_shadow_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_shadow_opa), MP_ROM_PTR(&mp_lv_style_set_shadow_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_img_opa), MP_ROM_PTR(&mp_lv_style_set_img_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_img_recolor), MP_ROM_PTR(&mp_lv_style_set_img_recolor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_img_recolor_filtered), MP_ROM_PTR(&mp_lv_style_set_img_recolor_filtered_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_img_recolor_opa), MP_ROM_PTR(&mp_lv_style_set_img_recolor_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_line_width), MP_ROM_PTR(&mp_lv_style_set_line_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_line_dash_width), MP_ROM_PTR(&mp_lv_style_set_line_dash_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_line_dash_gap), MP_ROM_PTR(&mp_lv_style_set_line_dash_gap_obj) },
@@ -25184,6 +27288,25 @@ STATIC const mp_rom_map_elem_t mp_lv_style_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_set_arc_color_filtered), MP_ROM_PTR(&mp_lv_style_set_arc_color_filtered_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_arc_opa), MP_ROM_PTR(&mp_lv_style_set_arc_opa_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_arc_img_src), MP_ROM_PTR(&mp_lv_style_set_arc_img_src_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_color), MP_ROM_PTR(&mp_lv_style_set_text_color_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_color_filtered), MP_ROM_PTR(&mp_lv_style_set_text_color_filtered_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_opa), MP_ROM_PTR(&mp_lv_style_set_text_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_font), MP_ROM_PTR(&mp_lv_style_set_text_font_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_letter_space), MP_ROM_PTR(&mp_lv_style_set_text_letter_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_line_space), MP_ROM_PTR(&mp_lv_style_set_text_line_space_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_decor), MP_ROM_PTR(&mp_lv_style_set_text_decor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_text_align), MP_ROM_PTR(&mp_lv_style_set_text_align_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_radius), MP_ROM_PTR(&mp_lv_style_set_radius_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_clip_corner), MP_ROM_PTR(&mp_lv_style_set_clip_corner_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_opa), MP_ROM_PTR(&mp_lv_style_set_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_color_filter_dsc), MP_ROM_PTR(&mp_lv_style_set_color_filter_dsc_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_color_filter_opa), MP_ROM_PTR(&mp_lv_style_set_color_filter_opa_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_anim_time), MP_ROM_PTR(&mp_lv_style_set_anim_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_anim_speed), MP_ROM_PTR(&mp_lv_style_set_anim_speed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_transition), MP_ROM_PTR(&mp_lv_style_set_transition_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_blend_mode), MP_ROM_PTR(&mp_lv_style_set_blend_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_layout), MP_ROM_PTR(&mp_lv_style_set_layout_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_base_dir), MP_ROM_PTR(&mp_lv_style_set_base_dir_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_flex_flow), MP_ROM_PTR(&mp_lv_style_set_flex_flow_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_flex_main_place), MP_ROM_PTR(&mp_lv_style_set_flex_main_place_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_flex_cross_place), MP_ROM_PTR(&mp_lv_style_set_flex_cross_place_obj) },
@@ -25207,9 +27330,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_style_t_locals_dict, mp_lv_style_t_locals_dict
 
 STATIC const mp_rom_map_elem_t mp_lv_style_v_p_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_style_v_p_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25218,9 +27338,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_style_v_p_t_locals_dict, mp_lv_style_v_p_t_loc
 
 STATIC const mp_rom_map_elem_t mp_lv_style_value_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_style_value_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25229,9 +27346,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_style_value_t_locals_dict, mp_lv_style_value_t
 
 STATIC const mp_rom_map_elem_t mp_lv_style_const_prop_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_style_const_prop_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25257,9 +27371,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_rect_dsc_init_obj, 1, mp_lv_dra
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_rect_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_rect_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_rect_dsc_init_obj) },
     
 };
@@ -25286,9 +27397,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_label_dsc_init_obj, 1, mp_lv_dr
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_label_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_label_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_label_dsc_init_obj) },
     
 };
@@ -25315,9 +27423,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_img_dsc_init_obj, 1, mp_lv_draw
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_img_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_img_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_img_dsc_init_obj) },
     
 };
@@ -25344,9 +27449,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_line_dsc_init_obj, 1, mp_lv_dra
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_line_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_line_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_line_dsc_init_obj) },
     
 };
@@ -25373,9 +27475,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_arc_dsc_init_obj, 1, mp_lv_draw
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_arc_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_arc_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_arc_dsc_init_obj) },
     
 };
@@ -25385,9 +27484,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_arc_dsc_t_locals_dict, mp_lv_draw_arc_dsc
 
 STATIC const mp_rom_map_elem_t mp_lv_obj_draw_part_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_obj_draw_part_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_dsc_init), MP_ROM_PTR(&mp_lv_obj_draw_dsc_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_check_type), MP_ROM_PTR(&mp_lv_obj_draw_part_check_type_obj) },
     
@@ -25398,9 +27494,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_obj_draw_part_dsc_t_locals_dict, mp_lv_obj_dra
 
 STATIC const mp_rom_map_elem_t mp_lv_obj_class_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_obj_class_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_create_obj), MP_ROM_PTR(&mp_lv_obj_class_create_obj_obj) },
     { MP_ROM_QSTR(MP_QSTR_event_base), MP_ROM_PTR(&mp_lv_obj_event_base_obj) },
     
@@ -25598,17 +27691,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_event_get_self_size_info_obj, 1, mp_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_hit_test_info_t_type();
 
-STATIC inline lv_hit_test_info_t* mp_write_ptr_lv_hit_test_info_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_hit_test_info_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_hit_test_info_t_type()));
     return (lv_hit_test_info_t*)self->data;
 }
 
-#define mp_write_lv_hit_test_info_t(struct_obj) *mp_write_ptr_lv_hit_test_info_t(struct_obj)
+#define mp_write_lv_hit_test_info_t(struct_obj) *((lv_hit_test_info_t*)mp_write_ptr_lv_hit_test_info_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_hit_test_info_t(lv_hit_test_info_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_hit_test_info_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_hit_test_info_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_hit_test_info_t_type(), field);
 }
 
 #define mp_read_lv_hit_test_info_t(field) mp_read_ptr_lv_hit_test_info_t(copy_buffer(&field, sizeof(lv_hit_test_info_t)))
@@ -25658,9 +27751,11 @@ STATIC const mp_obj_type_t mp_lv_hit_test_info_t_type = {
     .print = mp_lv_hit_test_info_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_hit_test_info_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_hit_test_info_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_hit_test_info_t_type()
@@ -25710,9 +27805,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_event_set_cover_res_obj, 2, mp_lv_ev
 
 STATIC const mp_rom_map_elem_t mp_lv_event_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_event_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_target), MP_ROM_PTR(&mp_lv_event_get_target_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_current_target), MP_ROM_PTR(&mp_lv_event_get_current_target_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_code), MP_ROM_PTR(&mp_lv_event_get_code_obj) },
@@ -25737,9 +27829,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_event_t_locals_dict, mp_lv_event_t_locals_dict
 
 STATIC const mp_rom_map_elem_t mp_lv_img_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_img_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_buf_get_px_color), MP_ROM_PTR(&mp_lv_img_buf_get_px_color_obj) },
     { MP_ROM_QSTR(MP_QSTR_buf_get_px_alpha), MP_ROM_PTR(&mp_lv_img_buf_get_px_alpha_obj) },
     { MP_ROM_QSTR(MP_QSTR_buf_set_px_color), MP_ROM_PTR(&mp_lv_img_buf_set_px_color_obj) },
@@ -25754,9 +27843,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_img_dsc_t_locals_dict, mp_lv_img_dsc_t_locals_
 
 STATIC const mp_rom_map_elem_t mp_lv_img_header_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_img_header_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25765,9 +27851,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_img_header_t_locals_dict, mp_lv_img_header_t_l
 
 STATIC const mp_rom_map_elem_t mp_lv_img_decoder_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_img_decoder_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_lv_img_decoder_open_obj) },
     { MP_ROM_QSTR(MP_QSTR_read_line), MP_ROM_PTR(&mp_lv_img_decoder_read_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_img_decoder_close_obj) },
@@ -25779,9 +27862,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_img_decoder_dsc_t_locals_dict, mp_lv_img_decod
 
 STATIC const mp_rom_map_elem_t mp_lv_img_decoder_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_img_decoder_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_delete), MP_ROM_PTR(&mp_lv_img_decoder_delete_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_info_cb), MP_ROM_PTR(&mp_lv_img_decoder_set_info_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_open_cb), MP_ROM_PTR(&mp_lv_img_decoder_set_open_cb_obj) },
@@ -25799,9 +27879,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_img_decoder_t_locals_dict, mp_lv_img_decoder_t
 
 STATIC const mp_rom_map_elem_t mp_lv_calendar_date_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_calendar_date_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25810,9 +27887,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_calendar_date_t_locals_dict, mp_lv_calendar_da
 
 STATIC const mp_rom_map_elem_t mp_lv_chart_series_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_chart_series_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25821,9 +27895,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_chart_series_t_locals_dict, mp_lv_chart_series
 
 STATIC const mp_rom_map_elem_t mp_lv_chart_cursor_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_chart_cursor_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25832,9 +27903,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_chart_cursor_t_locals_dict, mp_lv_chart_cursor
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_scale_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_scale_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25843,9 +27911,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_scale_t_locals_dict, mp_lv_meter_scale_t
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_indicator_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_indicator_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25854,9 +27919,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_indicator_t_locals_dict, mp_lv_meter_ind
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_indicator_type_data_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_indicator_type_data_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25865,9 +27927,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_indicator_type_data_t_locals_dict, mp_lv
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_indicator_type_data_needle_img_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_indicator_type_data_needle_img_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25876,9 +27935,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_indicator_type_data_needle_img_t_locals_
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_indicator_type_data_needle_line_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_indicator_type_data_needle_line_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25887,9 +27943,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_indicator_type_data_needle_line_t_locals
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_indicator_type_data_arc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_indicator_type_data_arc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25898,9 +27951,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_indicator_type_data_arc_t_locals_dict, m
 
 STATIC const mp_rom_map_elem_t mp_lv_meter_indicator_type_data_scale_lines_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_meter_indicator_type_data_scale_lines_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25909,9 +27959,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_meter_indicator_type_data_scale_lines_t_locals
 
 STATIC const mp_rom_map_elem_t mp_lv_color_hsv_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_color_hsv_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25942,9 +27989,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_span_set_text_static_obj, 2, mp_lv_s
 
 STATIC const mp_rom_map_elem_t mp_lv_span_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_span_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_text), MP_ROM_PTR(&mp_lv_span_set_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_text_static), MP_ROM_PTR(&mp_lv_span_set_text_static_obj) },
     
@@ -25955,9 +27999,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_span_t_locals_dict, mp_lv_span_t_locals_dict_t
 
 STATIC const mp_rom_map_elem_t mp__lv_mp_int_wrapper_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_mp_int_wrapper))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -25983,9 +28024,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_mem_monitor_obj, 1, mp_lv_mem_monito
 
 STATIC const mp_rom_map_elem_t mp_lv_mem_monitor_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_mem_monitor_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_monitor), MP_ROM_PTR(&mp_lv_mem_monitor_obj) },
     
 };
@@ -26029,9 +28067,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_register_obj, 1, mp_lv_ind
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_drv_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_indev_drv_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_indev_drv_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_register), MP_ROM_PTR(&mp_lv_indev_drv_register_obj) },
     
@@ -26042,9 +28077,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_drv_t_locals_dict, mp_lv_indev_drv_t_loc
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_data_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_indev_data_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26067,6 +28099,23 @@ STATIC mp_obj_t mp_lv_indev_drv_update(size_t mp_n_args, const mp_obj_t *mp_args
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_update_obj, 2, mp_lv_indev_drv_update, lv_indev_drv_update);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_indev_delete(lv_indev_t *indev)
+ */
+ 
+STATIC mp_obj_t mp_lv_indev_delete(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_indev_t *indev = mp_write_ptr_lv_indev_t(mp_args[0]);
+    ((void (*)(lv_indev_t *))lv_func_ptr)(indev);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_delete_obj, 1, mp_lv_indev_delete, lv_indev_delete);
     
 
 /*
@@ -26138,22 +28187,9 @@ STATIC mp_obj_t mp_lv_indev_reset(size_t mp_n_args, const mp_obj_t *mp_args, voi
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_reset_obj, 2, mp_lv_indev_reset, lv_indev_reset);
     
+/* Reusing lv_indev_delete for lv_indev_reset_long_press */
 
-/*
- * lvgl extension definition for:
- * void lv_indev_reset_long_press(lv_indev_t *indev)
- */
- 
-STATIC mp_obj_t mp_lv_indev_reset_long_press(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_indev_t *indev = mp_write_ptr_lv_indev_t(mp_args[0]);
-    ((void (*)(lv_indev_t *))lv_func_ptr)(indev);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_reset_long_press_obj, 1, mp_lv_indev_reset_long_press, lv_indev_reset_long_press);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_reset_long_press_obj, 1, mp_lv_indev_delete, lv_indev_reset_long_press);
     
 /* Reusing lv_indev_reset for lv_indev_set_cursor */
 
@@ -26272,17 +28308,15 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_scroll_obj_obj, 1, mp_lv_i
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_get_vect_obj, 2, mp_lv_indev_get_point, lv_indev_get_vect);
     
-/* Reusing lv_indev_reset_long_press for lv_indev_wait_release */
+/* Reusing lv_indev_delete for lv_indev_wait_release */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_wait_release_obj, 1, mp_lv_indev_reset_long_press, lv_indev_wait_release);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_wait_release_obj, 1, mp_lv_indev_delete, lv_indev_wait_release);
     
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_indev_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_drv_update), MP_ROM_PTR(&mp_lv_indev_drv_update_obj) },
+    { MP_ROM_QSTR(MP_QSTR_delete), MP_ROM_PTR(&mp_lv_indev_delete_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_next), MP_ROM_PTR(&mp_lv_indev_get_next_obj) },
     { MP_ROM_QSTR(MP_QSTR_enable), MP_ROM_PTR(&mp_lv_indev_enable_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_type), MP_ROM_PTR(&mp_lv_indev_get_type_obj) },
@@ -26306,9 +28340,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_t_locals_dict, mp_lv_indev_t_locals_dict
 
 STATIC const mp_rom_map_elem_t mp__lv_indev_proc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_indev_proc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26317,9 +28348,6 @@ STATIC MP_DEFINE_CONST_DICT(mp__lv_indev_proc_t_locals_dict, mp__lv_indev_proc_t
 
 STATIC const mp_rom_map_elem_t mp__lv_indev_proc_types_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_indev_proc_types_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26328,9 +28356,6 @@ STATIC MP_DEFINE_CONST_DICT(mp__lv_indev_proc_types_t_locals_dict, mp__lv_indev_
 
 STATIC const mp_rom_map_elem_t mp__lv_indev_proc_types_pointer_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_indev_proc_types_pointer_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26339,9 +28364,6 @@ STATIC MP_DEFINE_CONST_DICT(mp__lv_indev_proc_types_pointer_t_locals_dict, mp__l
 
 STATIC const mp_rom_map_elem_t mp__lv_indev_proc_types_keypad_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_indev_proc_types_keypad_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26440,7 +28462,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_send_data_obj, 2, mp_lv_group_
  * void lv_group_focus_cb_t(struct _lv_group_t *)
  */
 
-STATIC void lv_group_t_focus_cb_callback(struct _lv_group_t * arg0)
+GENMPY_UNUSED STATIC void lv_group_t_focus_cb_callback(struct _lv_group_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_group_t((void*)arg0);
@@ -26581,9 +28603,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_get_obj_count_obj, 1, mp_lv_gr
 
 STATIC const mp_rom_map_elem_t mp_lv_group_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_group_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR__del), MP_ROM_PTR(&mp_lv_group_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_default), MP_ROM_PTR(&mp_lv_group_set_default_obj) },
     { MP_ROM_QSTR(MP_QSTR_add_obj), MP_ROM_PTR(&mp_lv_group_add_obj_obj) },
@@ -26609,9 +28628,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_group_t_locals_dict, mp_lv_group_t_locals_dict
 
 STATIC const mp_rom_map_elem_t mp_lv_ll_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_ll_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26641,9 +28657,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_drv_register_obj, 1, mp_lv_fs_drv
 
 STATIC const mp_rom_map_elem_t mp_lv_fs_drv_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_fs_drv_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_fs_drv_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_register), MP_ROM_PTR(&mp_lv_fs_drv_register_obj) },
     
@@ -26698,7 +28711,7 @@ STATIC mp_obj_t mp_lv_fs_read(size_t mp_n_args, const mp_obj_t *mp_args, void *l
     lv_fs_file_t *file_p = mp_write_ptr_lv_fs_file_t(mp_args[0]);
     void *buf = mp_to_ptr(mp_args[1]);
     uint32_t btr = (uint32_t)mp_obj_get_int(mp_args[2]);
-    uint32_t *br = mp_to_ptr(mp_args[3]);
+    uint32_t *br = mp_array_to_u32ptr(mp_args[3]);
     lv_fs_res_t _res = ((lv_fs_res_t (*)(lv_fs_file_t *, void *, uint32_t, uint32_t *))lv_func_ptr)(file_p, buf, btr, br);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -26718,7 +28731,7 @@ STATIC mp_obj_t mp_lv_fs_write(size_t mp_n_args, const mp_obj_t *mp_args, void *
     lv_fs_file_t *file_p = mp_write_ptr_lv_fs_file_t(mp_args[0]);
     const void *buf = (const void *)mp_to_ptr(mp_args[1]);
     uint32_t btw = (uint32_t)mp_obj_get_int(mp_args[2]);
-    uint32_t *bw = mp_to_ptr(mp_args[3]);
+    uint32_t *bw = mp_array_to_u32ptr(mp_args[3]);
     lv_fs_res_t _res = ((lv_fs_res_t (*)(lv_fs_file_t *, const void *, uint32_t, uint32_t *))lv_func_ptr)(file_p, buf, btw, bw);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -26755,7 +28768,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_seek_obj, 3, mp_lv_fs_seek, lv_fs
 STATIC mp_obj_t mp_lv_fs_tell(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_fs_file_t *file_p = mp_write_ptr_lv_fs_file_t(mp_args[0]);
-    uint32_t *pos = mp_to_ptr(mp_args[1]);
+    uint32_t *pos = mp_array_to_u32ptr(mp_args[1]);
     lv_fs_res_t _res = ((lv_fs_res_t (*)(lv_fs_file_t *, uint32_t *))lv_func_ptr)(file_p, pos);
     return mp_obj_new_int_from_uint(_res);
 }
@@ -26767,9 +28780,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_tell_obj, 2, mp_lv_fs_tell, lv_fs
 
 STATIC const mp_rom_map_elem_t mp_lv_fs_file_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_fs_file_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_lv_fs_open_obj) },
     { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_fs_close_obj) },
     { MP_ROM_QSTR(MP_QSTR_read), MP_ROM_PTR(&mp_lv_fs_read_obj) },
@@ -26837,9 +28847,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_fs_dir_close_obj, 1, mp_lv_fs_dir_cl
 
 STATIC const mp_rom_map_elem_t mp_lv_fs_dir_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_fs_dir_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_lv_fs_dir_open_obj) },
     { MP_ROM_QSTR(MP_QSTR_read), MP_ROM_PTR(&mp_lv_fs_dir_read_obj) },
     { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_lv_fs_dir_close_obj) },
@@ -26894,9 +28901,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_mask_line_angle_init_obj, 5, mp
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_line_param_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_line_param_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_points_init), MP_ROM_PTR(&mp_lv_draw_mask_line_points_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_angle_init), MP_ROM_PTR(&mp_lv_draw_mask_line_angle_init_obj) },
     
@@ -26907,9 +28911,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_line_param_t_locals_dict, mp_lv_draw
 
 STATIC const mp_rom_map_elem_t mp__lv_draw_mask_common_dsc_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_draw_mask_common_dsc_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26918,9 +28919,6 @@ STATIC MP_DEFINE_CONST_DICT(mp__lv_draw_mask_common_dsc_t_locals_dict, mp__lv_dr
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_line_param_cfg_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_line_param_cfg_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26950,9 +28948,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_mask_angle_init_obj, 5, mp_lv_d
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_angle_param_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_angle_param_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_mask_angle_init_obj) },
     
 };
@@ -26962,9 +28957,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_angle_param_t_locals_dict, mp_lv_dra
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_angle_param_cfg_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_angle_param_cfg_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -26993,9 +28985,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_mask_radius_init_obj, 4, mp_lv_
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_radius_param_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_radius_param_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_mask_radius_init_obj) },
     
 };
@@ -27005,24 +28994,18 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_radius_param_t_locals_dict, mp_lv_dr
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_radius_param_cfg_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_radius_param_cfg_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_radius_param_cfg_t_locals_dict, mp_lv_draw_mask_radius_param_cfg_t_locals_dict_table);
         
 
-STATIC const mp_rom_map_elem_t mp_lv_sqrt_res_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_sqrt_res_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
+STATIC const mp_rom_map_elem_t mp__lv_draw_mask_radius_circle_dsc_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(_lv_draw_mask_radius_circle_dsc_t))) },
     
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_lv_sqrt_res_t_locals_dict, mp_lv_sqrt_res_t_locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(mp__lv_draw_mask_radius_circle_dsc_t_locals_dict, mp__lv_draw_mask_radius_circle_dsc_t_locals_dict_table);
         
 
 /*
@@ -27049,9 +29032,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_mask_fade_init_obj, 6, mp_lv_dr
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_fade_param_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_fade_param_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_mask_fade_init_obj) },
     
 };
@@ -27061,9 +29041,6 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_fade_param_t_locals_dict, mp_lv_draw
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_fade_param_cfg_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_fade_param_cfg_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
@@ -27079,7 +29056,7 @@ STATIC mp_obj_t mp_lv_draw_mask_map_init(size_t mp_n_args, const mp_obj_t *mp_ar
 {
     lv_draw_mask_map_param_t *param = mp_write_ptr_lv_draw_mask_map_param_t(mp_args[0]);
     const lv_area_t *coords = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
-    const lv_opa_t *map = (const lv_opa_t *)mp_to_ptr(mp_args[2]);
+    const lv_opa_t *map = (const lv_opa_t *)mp_array_to_u8ptr(mp_args[2]);
     ((void (*)(lv_draw_mask_map_param_t *, const lv_area_t *, const lv_opa_t *))lv_func_ptr)(param, coords, map);
     return mp_const_none;
 }
@@ -27091,9 +29068,6 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_mask_map_init_obj, 3, mp_lv_dra
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_map_param_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_map_param_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_mask_map_init_obj) },
     
 };
@@ -27103,13 +29077,125 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_map_param_t_locals_dict, mp_lv_draw_
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_mask_map_param_cfg_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_mask_map_param_cfg_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_map_param_cfg_t_locals_dict, mp_lv_draw_mask_map_param_cfg_t_locals_dict_table);
+        
+
+/*
+ * lvgl extension definition for:
+ * void lv_draw_backend_init(lv_draw_backend_t *backend)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_backend_init(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_draw_backend_t *backend = mp_write_ptr_lv_draw_backend_t(mp_args[0]);
+    ((void (*)(lv_draw_backend_t *))lv_func_ptr)(backend);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_backend_init_obj, 1, mp_lv_draw_backend_init, lv_draw_backend_init);
+    
+/* Reusing lv_draw_backend_init for lv_draw_backend_add */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_draw_backend_add_obj, 1, mp_lv_draw_backend_init, lv_draw_backend_add);
+    
+
+STATIC const mp_rom_map_elem_t mp_lv_draw_backend_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_backend_t))) },
+    { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_draw_backend_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_add), MP_ROM_PTR(&mp_lv_draw_backend_add_obj) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_backend_t_locals_dict, mp_lv_draw_backend_t_locals_dict_table);
+        
+
+/*
+ * lvgl extension definition for:
+ * void gd_render_frame(gd_GIF *gif, uint8_t *buffer)
+ */
+ 
+STATIC mp_obj_t mp_gd_render_frame(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    gd_GIF *gif = mp_write_ptr_gd_GIF(mp_args[0]);
+    uint8_t *buffer = mp_array_to_u8ptr(mp_args[1]);
+    ((void (*)(gd_GIF *, uint8_t *))lv_func_ptr)(gif, buffer);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_gd_render_frame_obj, 2, mp_gd_render_frame, gd_render_frame);
+    
+
+/*
+ * lvgl extension definition for:
+ * int gd_get_frame(gd_GIF *gif)
+ */
+ 
+STATIC mp_obj_t mp_gd_get_frame(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    gd_GIF *gif = mp_write_ptr_gd_GIF(mp_args[0]);
+    int _res = ((int (*)(gd_GIF *))lv_func_ptr)(gif);
+    return mp_obj_new_int(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_gd_get_frame_obj, 1, mp_gd_get_frame, gd_get_frame);
+    
+
+/*
+ * lvgl extension definition for:
+ * void gd_rewind(gd_GIF *gif)
+ */
+ 
+STATIC mp_obj_t mp_gd_rewind(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    gd_GIF *gif = mp_write_ptr_gd_GIF(mp_args[0]);
+    ((void (*)(gd_GIF *))lv_func_ptr)(gif);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_gd_rewind_obj, 1, mp_gd_rewind, gd_rewind);
+    
+/* Reusing gd_rewind for gd_close_gif */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_gd_close_gif_obj, 1, mp_gd_rewind, gd_close_gif);
+    
+
+STATIC const mp_rom_map_elem_t mp_gd_GIF_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(gd_GIF))) },
+    { MP_ROM_QSTR(MP_QSTR_render_frame), MP_ROM_PTR(&mp_gd_render_frame_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_frame), MP_ROM_PTR(&mp_gd_get_frame_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rewind), MP_ROM_PTR(&mp_gd_rewind_obj) },
+    { MP_ROM_QSTR(MP_QSTR_close_gif), MP_ROM_PTR(&mp_gd_close_gif_obj) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_gd_GIF_locals_dict, mp_gd_GIF_locals_dict_table);
+        
+
+STATIC const mp_rom_map_elem_t mp_gd_GCE_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(gd_GCE))) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_gd_GCE_locals_dict, mp_gd_GCE_locals_dict_table);
+        
+
+STATIC const mp_rom_map_elem_t mp_gd_Palette_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(gd_Palette))) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_gd_Palette_locals_dict, mp_gd_Palette_locals_dict_table);
         
 
 /* 
@@ -27118,6 +29204,31 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_map_param_cfg_t_locals_dict, mp_lv_d
  *
  */
 
+
+/*
+ * lvgl extension definition for:
+ * inline static int16_t lv_trigo_cos(int16_t angle)
+ */
+ 
+STATIC mp_obj_t mp_lv_trigo_cos(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    int16_t angle = (int16_t)mp_obj_get_int(mp_args[0]);
+    int16_t _res = ((int16_t (*)(int16_t))lv_func_ptr)(angle);
+    return mp_obj_new_int(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_trigo_cos_obj, 1, mp_lv_trigo_cos, lv_trigo_cos);
+    
+
+STATIC const mp_rom_map_elem_t mp_lv_hit_test_info_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_hit_test_info_t))) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_hit_test_info_t_locals_dict, mp_lv_hit_test_info_t_locals_dict_table);
+        
 
 /*
  * lvgl extension definition for:
@@ -27138,34 +29249,6 @@ STATIC mp_obj_t mp_lv_memcpy_small(size_t mp_n_args, const mp_obj_t *mp_args, vo
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_memcpy_small_obj, 3, mp_lv_memcpy_small, lv_memcpy_small);
     
 
-STATIC const mp_rom_map_elem_t mp_lv_hit_test_info_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_hit_test_info_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
-    
-};
-
-STATIC MP_DEFINE_CONST_DICT(mp_lv_hit_test_info_t_locals_dict, mp_lv_hit_test_info_t_locals_dict_table);
-        
-
-/*
- * lvgl extension definition for:
- * inline static int16_t lv_trigo_cos(int16_t angle)
- */
- 
-STATIC mp_obj_t mp_lv_trigo_cos(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    int16_t angle = (int16_t)mp_obj_get_int(mp_args[0]);
-    int16_t _res = ((int16_t (*)(int16_t))lv_func_ptr)(angle);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_trigo_cos_obj, 1, mp_lv_trigo_cos, lv_trigo_cos);
-    
-
 /*
  * lvgl extension definition for:
  * inline static lv_color_t lv_color_mix_premult(uint16_t *premult_c1, lv_color_t c2, uint8_t mix)
@@ -27173,7 +29256,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_trigo_cos_obj, 1, mp_lv_trigo
  
 STATIC mp_obj_t mp_lv_color_mix_premult(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    uint16_t *premult_c1 = mp_to_ptr(mp_args[0]);
+    uint16_t *premult_c1 = mp_array_to_u16ptr(mp_args[0]);
     lv_color_t c2 = mp_write_lv_color32_t(mp_args[1]);
     uint8_t mix = (uint8_t)mp_obj_get_int(mp_args[2]);
     lv_color_t _res = ((lv_color_t (*)(uint16_t *, lv_color_t, uint8_t))lv_func_ptr)(premult_c1, c2, mix);
@@ -27308,9 +29391,9 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_layer_top_obj, 0, mp_lv_scr_a
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_layer_sys_obj, 0, mp_lv_scr_act, lv_layer_sys);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_scr_load */
+/* Reusing lv_obj_move_foreground for lv_scr_load */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_scr_load_obj, 1, mp_lv_obj_allocate_spec_attr, lv_scr_load);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_scr_load_obj, 1, mp_lv_obj_move_foreground, lv_scr_load);
     
 /* Reusing lv_pct for lv_dpx */
 
@@ -27398,7 +29481,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_version_info_obj, 0, mp_lv_ve
  * void lv_log_print_g_cb_t(const char *buf)
  */
 
-STATIC void lv_log_print_g_cb_t_print_cb_callback(const char * arg0)
+GENMPY_UNUSED STATIC void lv_log_print_g_cb_t_print_cb_callback(const char * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = convert_to_str((void*)arg0);
@@ -27427,6 +29510,288 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_log_register_print_cb_obj, 1,
 /* Reusing funcptr_lv_log_print_g_cb_t for lv_log */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_log_obj, 1, mp_funcptr_lv_log_print_g_cb_t, lv_log);
+    
+/* Reusing lv_task_handler for lv_timer_handler */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_handler_obj, 0, mp_lv_task_handler, lv_timer_handler);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_timer_t *lv_timer_create_basic(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_timer_create_basic(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    
+    lv_timer_t * _res = ((lv_timer_t *(*)(void))lv_func_ptr)();
+    return mp_read_ptr_lv_timer_t((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_create_basic_obj, 0, mp_lv_timer_create_basic, lv_timer_create_basic);
+    
+
+/*
+ * Callback function lv_timer_create_timer_xcb
+ * void lv_timer_cb_t(struct _lv_timer_t *)
+ */
+
+GENMPY_UNUSED STATIC void lv_timer_create_timer_xcb_callback(struct _lv_timer_t * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = mp_read_ptr_lv_timer_t((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_timer_create_timer_xcb)) , 1, 0, mp_args);
+    return;
+}
+
+
+/*
+ * lvgl extension definition for:
+ * lv_timer_t *lv_timer_create(lv_timer_cb_t timer_xcb, uint32_t period, void *user_data)
+ */
+ 
+STATIC mp_obj_t mp_lv_timer_create(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    void *user_data = mp_to_ptr(mp_args[2]);
+    uint32_t period = (uint32_t)mp_obj_get_int(mp_args[1]);
+    void *timer_xcb = mp_lv_callback(mp_args[0], &lv_timer_create_timer_xcb_callback, MP_QSTR_lv_timer_create_timer_xcb, &user_data);
+    lv_timer_t * _res = ((lv_timer_t *(*)(lv_timer_cb_t, uint32_t, void *))lv_func_ptr)(timer_xcb, period, user_data);
+    return mp_read_ptr_lv_timer_t((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_create_obj, 3, mp_lv_timer_create, lv_timer_create);
+    
+/* Reusing lv_obj_enable_style_refresh for lv_timer_enable */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_enable_obj, 1, mp_lv_obj_enable_style_refresh, lv_timer_enable);
+    
+
+/*
+ * lvgl extension definition for:
+ * uint8_t lv_timer_get_idle(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_timer_get_idle(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    
+    uint8_t _res = ((uint8_t (*)(void))lv_func_ptr)();
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_get_idle_obj, 0, mp_lv_timer_get_idle, lv_timer_get_idle);
+    
+/* Reusing lv_trigo_cos for lv_trigo_sin */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_trigo_sin_obj, 1, mp_lv_trigo_cos, lv_trigo_sin);
+    
+
+/*
+ * lvgl extension definition for:
+ * uint32_t lv_bezier3(uint32_t t, uint32_t u0, uint32_t u1, uint32_t u2, uint32_t u3)
+ */
+ 
+STATIC mp_obj_t mp_lv_bezier3(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    uint32_t t = (uint32_t)mp_obj_get_int(mp_args[0]);
+    uint32_t u0 = (uint32_t)mp_obj_get_int(mp_args[1]);
+    uint32_t u1 = (uint32_t)mp_obj_get_int(mp_args[2]);
+    uint32_t u2 = (uint32_t)mp_obj_get_int(mp_args[3]);
+    uint32_t u3 = (uint32_t)mp_obj_get_int(mp_args[4]);
+    uint32_t _res = ((uint32_t (*)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))lv_func_ptr)(t, u0, u1, u2, u3);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_bezier3_obj, 5, mp_lv_bezier3, lv_bezier3);
+    
+
+/*
+ * lvgl extension definition for:
+ * uint16_t lv_atan2(int x, int y)
+ */
+ 
+STATIC mp_obj_t mp_lv_atan2(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    int x = (int)mp_obj_get_int(mp_args[0]);
+    int y = (int)mp_obj_get_int(mp_args[1]);
+    uint16_t _res = ((uint16_t (*)(int, int))lv_func_ptr)(x, y);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_atan2_obj, 2, mp_lv_atan2, lv_atan2);
+    
+
+/*
+ * Struct lv_sqrt_res_t
+ */
+
+STATIC inline const mp_obj_type_t *get_mp_lv_sqrt_res_t_type();
+
+STATIC inline void* mp_write_ptr_lv_sqrt_res_t(mp_obj_t self_in)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_sqrt_res_t_type()));
+    return (lv_sqrt_res_t*)self->data;
+}
+
+#define mp_write_lv_sqrt_res_t(struct_obj) *((lv_sqrt_res_t*)mp_write_ptr_lv_sqrt_res_t(struct_obj))
+
+STATIC inline mp_obj_t mp_read_ptr_lv_sqrt_res_t(void *field)
+{
+    return lv_to_mp_struct(get_mp_lv_sqrt_res_t_type(), field);
+}
+
+#define mp_read_lv_sqrt_res_t(field) mp_read_ptr_lv_sqrt_res_t(copy_buffer(&field, sizeof(lv_sqrt_res_t)))
+#define mp_read_byref_lv_sqrt_res_t(field) mp_read_ptr_lv_sqrt_res_t(&field)
+
+STATIC void mp_lv_sqrt_res_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+{
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
+    lv_sqrt_res_t *data = (lv_sqrt_res_t*)self->data;
+
+    if (dest[0] == MP_OBJ_NULL) {
+        // load attribute
+        switch(attr)
+        {
+            case MP_QSTR_i: dest[0] = mp_obj_new_int_from_uint(data->i); break; // converting from uint16_t;
+            case MP_QSTR_f: dest[0] = mp_obj_new_int_from_uint(data->f); break; // converting from uint16_t;
+            default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
+        }
+    } else {
+        if (dest[1])
+        {
+            // store attribute
+            switch(attr)
+            {
+                case MP_QSTR_i: data->i = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                case MP_QSTR_f: data->f = (uint16_t)mp_obj_get_int(dest[1]); break; // converting to uint16_t;
+                default: return;
+            }
+
+            dest[0] = MP_OBJ_NULL; // indicate success
+        }
+    }
+}
+
+STATIC void mp_lv_sqrt_res_t_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "struct lv_sqrt_res_t");
+}
+
+STATIC const mp_obj_dict_t mp_lv_sqrt_res_t_locals_dict;
+
+STATIC const mp_obj_type_t mp_lv_sqrt_res_t_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_lv_sqrt_res_t,
+    .print = mp_lv_sqrt_res_t_print,
+    .make_new = make_new_lv_struct,
+    .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
+    .attr = mp_lv_sqrt_res_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_lv_sqrt_res_t_locals_dict,
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
+};
+
+STATIC inline const mp_obj_type_t *get_mp_lv_sqrt_res_t_type()
+{
+    return &mp_lv_sqrt_res_t_type;
+}
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_sqrt(uint32_t x, lv_sqrt_res_t *q, uint32_t mask)
+ */
+ 
+STATIC mp_obj_t mp_lv_sqrt(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    uint32_t x = (uint32_t)mp_obj_get_int(mp_args[0]);
+    lv_sqrt_res_t *q = mp_write_ptr_lv_sqrt_res_t(mp_args[1]);
+    uint32_t mask = (uint32_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(uint32_t, lv_sqrt_res_t *, uint32_t))lv_func_ptr)(x, q, mask);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_sqrt_obj, 3, mp_lv_sqrt, lv_sqrt);
+    
+
+STATIC const mp_rom_map_elem_t mp_lv_sqrt_res_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_sqrt_res_t))) },
+    
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lv_sqrt_res_t_locals_dict, mp_lv_sqrt_res_t_locals_dict_table);
+        
+
+/*
+ * lvgl extension definition for:
+ * int64_t lv_pow(int64_t base, int8_t exp)
+ */
+ 
+STATIC mp_obj_t mp_lv_pow(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    int64_t base = (int64_t)mp_obj_get_ull(mp_args[0]);
+    int8_t exp = (int8_t)mp_obj_get_int(mp_args[1]);
+    int64_t _res = ((int64_t (*)(int64_t, int8_t))lv_func_ptr)(base, exp);
+    return mp_obj_new_int_from_ll(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_pow_obj, 2, mp_lv_pow, lv_pow);
+    
+
+/*
+ * lvgl extension definition for:
+ * int32_t lv_map(int32_t x, int32_t min_in, int32_t max_in, int32_t min_out, int32_t max_out)
+ */
+ 
+STATIC mp_obj_t mp_lv_map(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    int32_t x = (int32_t)mp_obj_get_int(mp_args[0]);
+    int32_t min_in = (int32_t)mp_obj_get_int(mp_args[1]);
+    int32_t max_in = (int32_t)mp_obj_get_int(mp_args[2]);
+    int32_t min_out = (int32_t)mp_obj_get_int(mp_args[3]);
+    int32_t max_out = (int32_t)mp_obj_get_int(mp_args[4]);
+    int32_t _res = ((int32_t (*)(int32_t, int32_t, int32_t, int32_t, int32_t))lv_func_ptr)(x, min_in, max_in, min_out, max_out);
+    return mp_obj_new_int(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_map_obj, 5, mp_lv_map, lv_map);
+    
+
+/*
+ * lvgl extension definition for:
+ * uint32_t lv_rand(uint32_t min, uint32_t max)
+ */
+ 
+STATIC mp_obj_t mp_lv_rand(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    uint32_t min = (uint32_t)mp_obj_get_int(mp_args[0]);
+    uint32_t max = (uint32_t)mp_obj_get_int(mp_args[1]);
+    uint32_t _res = ((uint32_t (*)(uint32_t, uint32_t))lv_func_ptr)(min, max);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_rand_obj, 2, mp_lv_rand, lv_rand);
     
 
 /*
@@ -27575,208 +29940,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_memset_00_obj, 2, mp_lv_memse
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_memset_ff_obj, 2, mp_lv_memset_00, lv_memset_ff);
     
-/* Reusing lv_task_handler for lv_timer_handler */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_handler_obj, 0, mp_lv_task_handler, lv_timer_handler);
-    
-
-/*
- * lvgl extension definition for:
- * lv_timer_t *lv_timer_create_basic(void)
- */
- 
-STATIC mp_obj_t mp_lv_timer_create_basic(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    
-    lv_timer_t * _res = ((lv_timer_t *(*)(void))lv_func_ptr)();
-    return mp_read_ptr_lv_timer_t((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_create_basic_obj, 0, mp_lv_timer_create_basic, lv_timer_create_basic);
-    
-
-/*
- * Callback function lv_timer_create_timer_xcb
- * void lv_timer_cb_t(struct _lv_timer_t *)
- */
-
-STATIC void lv_timer_create_timer_xcb_callback(struct _lv_timer_t * arg0)
-{
-    mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_timer_t((void*)arg0);
-    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_timer_create_timer_xcb)) , 1, 0, mp_args);
-    return;
-}
-
-
-/*
- * lvgl extension definition for:
- * lv_timer_t *lv_timer_create(lv_timer_cb_t timer_xcb, uint32_t period, void *user_data)
- */
- 
-STATIC mp_obj_t mp_lv_timer_create(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    void *user_data = mp_to_ptr(mp_args[2]);
-    uint32_t period = (uint32_t)mp_obj_get_int(mp_args[1]);
-    void *timer_xcb = mp_lv_callback(mp_args[0], &lv_timer_create_timer_xcb_callback, MP_QSTR_lv_timer_create_timer_xcb, &user_data);
-    lv_timer_t * _res = ((lv_timer_t *(*)(lv_timer_cb_t, uint32_t, void *))lv_func_ptr)(timer_xcb, period, user_data);
-    return mp_read_ptr_lv_timer_t((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_create_obj, 3, mp_lv_timer_create, lv_timer_create);
-    
-/* Reusing lv_obj_enable_style_refresh for lv_timer_enable */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_enable_obj, 1, mp_lv_obj_enable_style_refresh, lv_timer_enable);
-    
-
-/*
- * lvgl extension definition for:
- * uint8_t lv_timer_get_idle(void)
- */
- 
-STATIC mp_obj_t mp_lv_timer_get_idle(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    
-    uint8_t _res = ((uint8_t (*)(void))lv_func_ptr)();
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_timer_get_idle_obj, 0, mp_lv_timer_get_idle, lv_timer_get_idle);
-    
-/* Reusing lv_trigo_cos for lv_trigo_sin */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_trigo_sin_obj, 1, mp_lv_trigo_cos, lv_trigo_sin);
-    
-
-/*
- * lvgl extension definition for:
- * uint32_t lv_bezier3(uint32_t t, uint32_t u0, uint32_t u1, uint32_t u2, uint32_t u3)
- */
- 
-STATIC mp_obj_t mp_lv_bezier3(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    uint32_t t = (uint32_t)mp_obj_get_int(mp_args[0]);
-    uint32_t u0 = (uint32_t)mp_obj_get_int(mp_args[1]);
-    uint32_t u1 = (uint32_t)mp_obj_get_int(mp_args[2]);
-    uint32_t u2 = (uint32_t)mp_obj_get_int(mp_args[3]);
-    uint32_t u3 = (uint32_t)mp_obj_get_int(mp_args[4]);
-    uint32_t _res = ((uint32_t (*)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))lv_func_ptr)(t, u0, u1, u2, u3);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_bezier3_obj, 5, mp_lv_bezier3, lv_bezier3);
-    
-
-/*
- * lvgl extension definition for:
- * uint16_t lv_atan2(int x, int y)
- */
- 
-STATIC mp_obj_t mp_lv_atan2(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    int x = (int)mp_obj_get_int(mp_args[0]);
-    int y = (int)mp_obj_get_int(mp_args[1]);
-    uint16_t _res = ((uint16_t (*)(int, int))lv_func_ptr)(x, y);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_atan2_obj, 2, mp_lv_atan2, lv_atan2);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_sqrt(uint32_t x, lv_sqrt_res_t *q, uint32_t mask)
- */
- 
-STATIC mp_obj_t mp_lv_sqrt(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    uint32_t x = (uint32_t)mp_obj_get_int(mp_args[0]);
-    lv_sqrt_res_t *q = mp_write_ptr_lv_sqrt_res_t(mp_args[1]);
-    uint32_t mask = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(uint32_t, lv_sqrt_res_t *, uint32_t))lv_func_ptr)(x, q, mask);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_sqrt_obj, 3, mp_lv_sqrt, lv_sqrt);
-    
-
-/*
- * lvgl extension definition for:
- * int64_t lv_pow(int64_t base, int8_t exp)
- */
- 
-STATIC mp_obj_t mp_lv_pow(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    int64_t base = (int64_t)mp_obj_get_ull(mp_args[0]);
-    int8_t exp = (int8_t)mp_obj_get_int(mp_args[1]);
-    int64_t _res = ((int64_t (*)(int64_t, int8_t))lv_func_ptr)(base, exp);
-    return mp_obj_new_int_from_ll(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_pow_obj, 2, mp_lv_pow, lv_pow);
-    
-
-/*
- * lvgl extension definition for:
- * int32_t lv_map(int32_t x, int32_t min_in, int32_t max_in, int32_t min, int32_t max)
- */
- 
-STATIC mp_obj_t mp_lv_map(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    int32_t x = (int32_t)mp_obj_get_int(mp_args[0]);
-    int32_t min_in = (int32_t)mp_obj_get_int(mp_args[1]);
-    int32_t max_in = (int32_t)mp_obj_get_int(mp_args[2]);
-    int32_t min = (int32_t)mp_obj_get_int(mp_args[3]);
-    int32_t max = (int32_t)mp_obj_get_int(mp_args[4]);
-    int32_t _res = ((int32_t (*)(int32_t, int32_t, int32_t, int32_t, int32_t))lv_func_ptr)(x, min_in, max_in, min, max);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_map_obj, 5, mp_lv_map, lv_map);
-    
-
-/*
- * lvgl extension definition for:
- * uint32_t lv_rand(uint32_t min, uint32_t max)
- */
- 
-STATIC mp_obj_t mp_lv_rand(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    uint32_t min = (uint32_t)mp_obj_get_int(mp_args[0]);
-    uint32_t max = (uint32_t)mp_obj_get_int(mp_args[1]);
-    uint32_t _res = ((uint32_t (*)(uint32_t, uint32_t))lv_func_ptr)(min, max);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_rand_obj, 2, mp_lv_rand, lv_rand);
-    
 
 /*
  * Callback function lv_async_call_async_xcb
  * void lv_async_cb_t(void *)
  */
 
-STATIC void lv_async_call_async_xcb_callback(void * arg0)
+GENMPY_UNUSED STATIC void lv_async_call_async_xcb_callback(void * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = ptr_to_mp((void*)arg0);
@@ -27966,6 +30136,10 @@ STATIC mp_obj_t mp_lv_anim_timeline_start(size_t mp_n_args, const mp_obj_t *mp_a
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_anim_timeline_start_obj, 1, mp_lv_anim_timeline_start, lv_anim_timeline_start);
+    
+/* Reusing lv_anim_timeline_del for lv_anim_timeline_stop */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_anim_timeline_stop_obj, 1, mp_lv_anim_timeline_del, lv_anim_timeline_stop);
     
 
 /*
@@ -28203,6 +30377,25 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_txt_get_width_obj, 5, mp_lv_t
 
 /*
  * lvgl extension definition for:
+ * void lv_bidi_calculate_align(lv_text_align_t *align, lv_base_dir_t *base_dir, const char *txt)
+ */
+ 
+STATIC mp_obj_t mp_lv_bidi_calculate_align(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_text_align_t *align = mp_array_to_u8ptr(mp_args[0]);
+    lv_base_dir_t *base_dir = mp_array_to_u8ptr(mp_args[1]);
+    const char *txt = (const char *)(char*)convert_from_str(mp_args[2]);
+    ((void (*)(lv_text_align_t *, lv_base_dir_t *, const char *))lv_func_ptr)(align, base_dir, txt);
+    return mp_const_none;
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_bidi_calculate_align_obj, 3, mp_lv_bidi_calculate_align, lv_bidi_calculate_align);
+    
+
+/*
+ * lvgl extension definition for:
  * lv_style_prop_t lv_style_register_prop(void)
  */
  
@@ -28240,7 +30433,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_style_prop_get_default_obj, 1
  * void lv_layout_update_cb_t(struct _lv_obj_t *, void *user_data)
  */
 
-STATIC void lv_layout_register_cb_callback(struct _lv_obj_t * arg0, void * arg1)
+GENMPY_UNUSED STATIC void lv_layout_register_cb_callback(struct _lv_obj_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = lv_to_mp((void*)arg0);
@@ -28368,100 +30561,9 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_fs_up_obj, 1, mp_lv_fs_get_le
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_fs_get_last_obj, 1, mp_lv_fs_get_ext, lv_fs_get_last);
     
+/* Reusing funcptr_draw_rect for lv_draw_rect */
 
-/*
- * lvgl extension definition for:
- * int16_t lv_draw_mask_add(void *param, void *custom_id)
- */
- 
-STATIC mp_obj_t mp_lv_draw_mask_add(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    void *param = mp_to_ptr(mp_args[0]);
-    void *custom_id = mp_to_ptr(mp_args[1]);
-    int16_t _res = ((int16_t (*)(void *, void *))lv_func_ptr)(param, custom_id);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_add_obj, 2, mp_lv_draw_mask_add, lv_draw_mask_add);
-    
-
-/*
- * lvgl extension definition for:
- * lv_draw_mask_res_t lv_draw_mask_apply(lv_opa_t *mask_buf, lv_coord_t abs_x, lv_coord_t abs_y, lv_coord_t len)
- */
- 
-STATIC mp_obj_t mp_lv_draw_mask_apply(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_opa_t *mask_buf = mp_to_ptr(mp_args[0]);
-    lv_coord_t abs_x = (int16_t)mp_obj_get_int(mp_args[1]);
-    lv_coord_t abs_y = (int16_t)mp_obj_get_int(mp_args[2]);
-    lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[3]);
-    lv_draw_mask_res_t _res = ((lv_draw_mask_res_t (*)(lv_opa_t *, lv_coord_t, lv_coord_t, lv_coord_t))lv_func_ptr)(mask_buf, abs_x, abs_y, len);
-    return mp_obj_new_int_from_uint(_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_apply_obj, 4, mp_lv_draw_mask_apply, lv_draw_mask_apply);
-    
-
-/*
- * lvgl extension definition for:
- * void *lv_draw_mask_remove_id(int16_t id)
- */
- 
-STATIC mp_obj_t mp_lv_draw_mask_remove_id(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    int16_t id = (int16_t)mp_obj_get_int(mp_args[0]);
-    void * _res = ((void *(*)(int16_t))lv_func_ptr)(id);
-    return ptr_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_remove_id_obj, 1, mp_lv_draw_mask_remove_id, lv_draw_mask_remove_id);
-    
-
-/*
- * lvgl extension definition for:
- * void *lv_draw_mask_remove_custom(void *custom_id)
- */
- 
-STATIC mp_obj_t mp_lv_draw_mask_remove_custom(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    void *custom_id = mp_to_ptr(mp_args[0]);
-    void * _res = ((void *(*)(void *))lv_func_ptr)(custom_id);
-    return ptr_to_mp((void*)_res);
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_remove_custom_obj, 1, mp_lv_draw_mask_remove_custom, lv_draw_mask_remove_custom);
-    
-/* Reusing lv_timer_get_idle for lv_draw_mask_get_cnt */
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_get_cnt_obj, 0, mp_lv_timer_get_idle, lv_draw_mask_get_cnt);
-    
-
-/*
- * lvgl extension definition for:
- * void lv_draw_rect(const lv_area_t *coords, const lv_area_t *mask, const lv_draw_rect_dsc_t *dsc)
- */
- 
-STATIC mp_obj_t mp_lv_draw_rect(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_area_t *coords = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[0]);
-    const lv_area_t *mask = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
-    const lv_draw_rect_dsc_t *dsc = (const lv_draw_rect_dsc_t *)mp_write_ptr_lv_draw_rect_dsc_t(mp_args[2]);
-    ((void (*)(const lv_area_t *, const lv_area_t *, const lv_draw_rect_dsc_t *))lv_func_ptr)(coords, mask, dsc);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_rect_obj, 3, mp_lv_draw_rect, lv_draw_rect);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_rect_obj, 3, mp_funcptr_draw_rect, lv_draw_rect);
     
 
 /*
@@ -28470,17 +30572,17 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_rect_obj, 3, mp_lv_draw_
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_label_hint_t_type();
 
-STATIC inline lv_draw_label_hint_t* mp_write_ptr_lv_draw_label_hint_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_draw_label_hint_t(mp_obj_t self_in)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_draw_label_hint_t_type()));
     return (lv_draw_label_hint_t*)self->data;
 }
 
-#define mp_write_lv_draw_label_hint_t(struct_obj) *mp_write_ptr_lv_draw_label_hint_t(struct_obj)
+#define mp_write_lv_draw_label_hint_t(struct_obj) *((lv_draw_label_hint_t*)mp_write_ptr_lv_draw_label_hint_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_draw_label_hint_t(lv_draw_label_hint_t *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_draw_label_hint_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_draw_label_hint_t_type(), (void*)field);
+    return lv_to_mp_struct(get_mp_lv_draw_label_hint_t_type(), field);
 }
 
 #define mp_read_lv_draw_label_hint_t(field) mp_read_ptr_lv_draw_label_hint_t(copy_buffer(&field, sizeof(lv_draw_label_hint_t)))
@@ -28532,9 +30634,11 @@ STATIC const mp_obj_type_t mp_lv_draw_label_hint_t_type = {
     .print = mp_lv_draw_label_hint_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
+    .subscr = lv_struct_subscr,
     .attr = mp_lv_draw_label_hint_t_attr,
     .locals_dict = (mp_obj_dict_t*)&mp_lv_draw_label_hint_t_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
+    .buffer_p = { .get_buffer = mp_blob_get_buffer },
+    .parent = &mp_lv_base_struct_type
 };
 
 STATIC inline const mp_obj_type_t *get_mp_lv_draw_label_hint_t_type()
@@ -28566,36 +30670,14 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_label_obj, 5, mp_lv_draw
 
 STATIC const mp_rom_map_elem_t mp_lv_draw_label_hint_t_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_draw_label_hint_t))) },
-    { MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&mp_lv_cast_class_method) },
-    { MP_ROM_QSTR(MP_QSTR___cast_instance__), MP_ROM_PTR(&mp_lv_cast_instance_obj) },
-    { MP_ROM_QSTR(MP_QSTR___dereference__), MP_ROM_PTR(&mp_lv_dereference_obj) },
     
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_label_hint_t_locals_dict, mp_lv_draw_label_hint_t_locals_dict_table);
         
+/* Reusing funcptr_draw_letter for lv_draw_letter */
 
-/*
- * lvgl extension definition for:
- * void lv_draw_letter(const lv_point_t *pos_p, const lv_area_t *clip_area, const lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
- */
- 
-STATIC mp_obj_t mp_lv_draw_letter(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_point_t *pos_p = (const lv_point_t *)mp_write_ptr_lv_point_t(mp_args[0]);
-    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
-    const lv_font_t *font_p = (const lv_font_t *)mp_write_ptr_lv_font_t(mp_args[2]);
-    uint32_t letter = (uint32_t)mp_obj_get_int(mp_args[3]);
-    lv_color_t color = mp_write_lv_color32_t(mp_args[4]);
-    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[5]);
-    lv_blend_mode_t blend_mode = (uint8_t)mp_obj_get_int(mp_args[6]);
-    ((void (*)(const lv_point_t *, const lv_area_t *, const lv_font_t *, uint32_t, lv_color_t, lv_opa_t, lv_blend_mode_t))lv_func_ptr)(pos_p, clip_area, font_p, letter, color, opa, blend_mode);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_letter_obj, 7, mp_lv_draw_letter, lv_draw_letter);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_letter_obj, 7, mp_funcptr_draw_letter, lv_draw_letter);
     
 
 /*
@@ -28617,25 +30699,9 @@ STATIC mp_obj_t mp_lv_draw_img(size_t mp_n_args, const mp_obj_t *mp_args, void *
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_img_obj, 4, mp_lv_draw_img, lv_draw_img);
     
+/* Reusing funcptr_draw_line for lv_draw_line */
 
-/*
- * lvgl extension definition for:
- * void lv_draw_line(const lv_point_t *point1, const lv_point_t *point2, const lv_area_t *clip, const lv_draw_line_dsc_t *dsc)
- */
- 
-STATIC mp_obj_t mp_lv_draw_line(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_point_t *point1 = (const lv_point_t *)mp_write_ptr_lv_point_t(mp_args[0]);
-    const lv_point_t *point2 = (const lv_point_t *)mp_write_ptr_lv_point_t(mp_args[1]);
-    const lv_area_t *clip = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[2]);
-    const lv_draw_line_dsc_t *dsc = (const lv_draw_line_dsc_t *)mp_write_ptr_lv_draw_line_dsc_t(mp_args[3]);
-    ((void (*)(const lv_point_t *, const lv_point_t *, const lv_area_t *, const lv_draw_line_dsc_t *))lv_func_ptr)(point1, point2, clip, dsc);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_line_obj, 4, mp_lv_draw_line, lv_draw_line);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_line_obj, 4, mp_funcptr_draw_line, lv_draw_line);
     
 
 /*
@@ -28656,48 +30722,13 @@ STATIC mp_obj_t mp_lv_draw_triangle(size_t mp_n_args, const mp_obj_t *mp_args, v
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_triangle_obj, 3, mp_lv_draw_triangle, lv_draw_triangle);
     
+/* Reusing funcptr_draw_polygon for lv_draw_polygon */
 
-/*
- * lvgl extension definition for:
- * void lv_draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_area_t *mask, const lv_draw_rect_dsc_t *draw_dsc)
- */
- 
-STATIC mp_obj_t mp_lv_draw_polygon(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    const lv_point_t *points = (const lv_point_t *)mp_arr_to_lv_point_t_____(mp_args[0]);
-    uint16_t point_cnt = (uint16_t)mp_obj_get_int(mp_args[1]);
-    const lv_area_t *mask = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[2]);
-    const lv_draw_rect_dsc_t *draw_dsc = (const lv_draw_rect_dsc_t *)mp_write_ptr_lv_draw_rect_dsc_t(mp_args[3]);
-    ((void (*)(const lv_point_t [], uint16_t, const lv_area_t *, const lv_draw_rect_dsc_t *))lv_func_ptr)(points, point_cnt, mask, draw_dsc);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_polygon_obj, 4, mp_lv_draw_polygon, lv_draw_polygon);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_polygon_obj, 4, mp_funcptr_draw_polygon, lv_draw_polygon);
     
+/* Reusing funcptr_draw_arc for lv_draw_arc */
 
-/*
- * lvgl extension definition for:
- * void lv_draw_arc(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, const lv_area_t *clip_area, const lv_draw_arc_dsc_t *dsc)
- */
- 
-STATIC mp_obj_t mp_lv_draw_arc(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_coord_t center_x = (int16_t)mp_obj_get_int(mp_args[0]);
-    lv_coord_t center_y = (int16_t)mp_obj_get_int(mp_args[1]);
-    uint16_t radius = (uint16_t)mp_obj_get_int(mp_args[2]);
-    uint16_t start_angle = (uint16_t)mp_obj_get_int(mp_args[3]);
-    uint16_t end_angle = (uint16_t)mp_obj_get_int(mp_args[4]);
-    const lv_area_t *clip_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[5]);
-    const lv_draw_arc_dsc_t *dsc = (const lv_draw_arc_dsc_t *)mp_write_ptr_lv_draw_arc_dsc_t(mp_args[6]);
-    ((void (*)(lv_coord_t, lv_coord_t, uint16_t, uint16_t, uint16_t, const lv_area_t *, const lv_draw_arc_dsc_t *))lv_func_ptr)(center_x, center_y, radius, start_angle, end_angle, clip_area, dsc);
-    return mp_const_none;
-}
-
- 
-
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_arc_obj, 7, mp_lv_draw_arc, lv_draw_arc);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_arc_obj, 7, mp_funcptr_draw_arc, lv_draw_arc);
     
 
 /*
@@ -28722,6 +30753,146 @@ STATIC mp_obj_t mp_lv_draw_arc_get_area(size_t mp_n_args, const mp_obj_t *mp_arg
  
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_arc_get_area_obj, 8, mp_lv_draw_arc_get_area, lv_draw_arc_get_area);
+    
+
+/*
+ * lvgl extension definition for:
+ * int16_t lv_draw_mask_add(void *param, void *custom_id)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_mask_add(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    void *param = mp_to_ptr(mp_args[0]);
+    void *custom_id = mp_to_ptr(mp_args[1]);
+    int16_t _res = ((int16_t (*)(void *, void *))lv_func_ptr)(param, custom_id);
+    return mp_obj_new_int(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_add_obj, 2, mp_lv_draw_mask_add, lv_draw_mask_add);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_draw_mask_res_t lv_draw_mask_apply(lv_opa_t *mask_buf, lv_coord_t abs_x, lv_coord_t abs_y, lv_coord_t len)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_mask_apply(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_opa_t *mask_buf = mp_array_to_u8ptr(mp_args[0]);
+    lv_coord_t abs_x = (int16_t)mp_obj_get_int(mp_args[1]);
+    lv_coord_t abs_y = (int16_t)mp_obj_get_int(mp_args[2]);
+    lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[3]);
+    lv_draw_mask_res_t _res = ((lv_draw_mask_res_t (*)(lv_opa_t *, lv_coord_t, lv_coord_t, lv_coord_t))lv_func_ptr)(mask_buf, abs_x, abs_y, len);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_apply_obj, 4, mp_lv_draw_mask_apply, lv_draw_mask_apply);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_draw_mask_res_t lv_draw_mask_apply_ids(lv_opa_t *mask_buf, lv_coord_t abs_x, lv_coord_t abs_y, lv_coord_t len, const int16_t *ids, int16_t ids_count)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_mask_apply_ids(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_opa_t *mask_buf = mp_array_to_u8ptr(mp_args[0]);
+    lv_coord_t abs_x = (int16_t)mp_obj_get_int(mp_args[1]);
+    lv_coord_t abs_y = (int16_t)mp_obj_get_int(mp_args[2]);
+    lv_coord_t len = (int16_t)mp_obj_get_int(mp_args[3]);
+    const int16_t *ids = (const int16_t *)mp_array_to_i16ptr(mp_args[4]);
+    int16_t ids_count = (int16_t)mp_obj_get_int(mp_args[5]);
+    lv_draw_mask_res_t _res = ((lv_draw_mask_res_t (*)(lv_opa_t *, lv_coord_t, lv_coord_t, lv_coord_t, const int16_t *, int16_t))lv_func_ptr)(mask_buf, abs_x, abs_y, len, ids, ids_count);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_apply_ids_obj, 6, mp_lv_draw_mask_apply_ids, lv_draw_mask_apply_ids);
+    
+
+/*
+ * lvgl extension definition for:
+ * void *lv_draw_mask_remove_id(int16_t id)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_mask_remove_id(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    int16_t id = (int16_t)mp_obj_get_int(mp_args[0]);
+    void * _res = ((void *(*)(int16_t))lv_func_ptr)(id);
+    return ptr_to_mp((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_remove_id_obj, 1, mp_lv_draw_mask_remove_id, lv_draw_mask_remove_id);
+    
+
+/*
+ * lvgl extension definition for:
+ * void *lv_draw_mask_remove_custom(void *custom_id)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_mask_remove_custom(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    void *custom_id = mp_to_ptr(mp_args[0]);
+    void * _res = ((void *(*)(void *))lv_func_ptr)(custom_id);
+    return ptr_to_mp((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_remove_custom_obj, 1, mp_lv_draw_mask_remove_custom, lv_draw_mask_remove_custom);
+    
+/* Reusing funcptr_lv_async_cb_t for lv_draw_mask_free_param */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_free_param_obj, 1, mp_funcptr_lv_async_cb_t, lv_draw_mask_free_param);
+    
+/* Reusing lv_timer_get_idle for lv_draw_mask_get_cnt */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_get_cnt_obj, 0, mp_lv_timer_get_idle, lv_draw_mask_get_cnt);
+    
+
+/*
+ * lvgl extension definition for:
+ * bool lv_draw_mask_is_any(const lv_area_t *a)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_mask_is_any(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    const lv_area_t *a = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[0]);
+    bool _res = ((bool (*)(const lv_area_t *))lv_func_ptr)(a);
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_mask_is_any_obj, 1, mp_lv_draw_mask_is_any, lv_draw_mask_is_any);
+    
+/* Reusing lv_mem_init for lv_draw_init */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_init_obj, 0, mp_lv_mem_init, lv_draw_init);
+    
+
+/*
+ * lvgl extension definition for:
+ * const lv_draw_backend_t *lv_draw_backend_get(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_draw_backend_get(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    
+    const lv_draw_backend_t * _res = ((const lv_draw_backend_t *(*)(void))lv_func_ptr)();
+    return mp_read_ptr_lv_draw_backend_t((void*)_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_draw_backend_get_obj, 0, mp_lv_draw_backend_get, lv_draw_backend_get);
     
 
 /*
@@ -28767,6 +30938,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_group_create_obj, 0, mp_lv_gr
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_group_get_default_obj, 0, mp_lv_group_create, lv_group_get_default);
     
+/* Reusing lv_obj_set_parent for lv_group_swap_obj */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_swap_obj_obj, 2, mp_lv_obj_set_parent, lv_group_swap_obj);
+    
 /* Reusing lv_obj_center for lv_group_remove_obj */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_group_remove_obj_obj, 1, mp_lv_obj_center, lv_group_remove_obj);
@@ -28782,6 +30957,23 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_init_obj, 0, mp_lv_mem_init, 
 /* Reusing lv_mem_init for lv_deinit */
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_deinit_obj, 0, mp_lv_mem_init, lv_deinit);
+    
+
+/*
+ * lvgl extension definition for:
+ * bool lv_is_initialized(void)
+ */
+ 
+STATIC mp_obj_t mp_lv_is_initialized(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    
+    bool _res = ((bool (*)(void))lv_func_ptr)();
+    return convert_to_bool(_res);
+}
+
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_is_initialized_obj, 0, mp_lv_is_initialized, lv_is_initialized);
     
 /* Reusing lv_timer_del for lv_indev_read_timer_cb */
 
@@ -28864,9 +31056,9 @@ STATIC mp_obj_t mp_lv_theme_get_from_obj(size_t mp_n_args, const mp_obj_t *mp_ar
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_from_obj_obj, 1, mp_lv_theme_get_from_obj, lv_theme_get_from_obj);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_theme_apply */
+/* Reusing lv_obj_move_foreground for lv_theme_apply */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_apply_obj, 1, mp_lv_obj_allocate_spec_attr, lv_theme_apply);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_apply_obj, 1, mp_lv_obj_move_foreground, lv_theme_apply);
     
 
 /*
@@ -28901,9 +31093,9 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_color_primary_obj, 1, mp_l
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_theme_get_color_secondary_obj, 1, mp_lv_colorwheel_get_rgb, lv_theme_get_color_secondary);
     
-/* Reusing lv_obj_allocate_spec_attr for lv_disp_load_scr */
+/* Reusing lv_obj_move_foreground for lv_disp_load_scr */
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_load_scr_obj, 1, mp_lv_obj_allocate_spec_attr, lv_disp_load_scr);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_load_scr_obj, 1, mp_lv_obj_move_foreground, lv_disp_load_scr);
     
 
 /*
@@ -28979,19 +31171,23 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_theme_default_init_obj, 5, mp
 
 /*
  * lvgl extension definition for:
- * bool lv_theme_default_is_inited(void)
+ * lv_theme_t *lv_theme_default_get(void)
  */
  
-STATIC mp_obj_t mp_lv_theme_default_is_inited(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_theme_default_get(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     
-    bool _res = ((bool (*)(void))lv_func_ptr)();
-    return convert_to_bool(_res);
+    lv_theme_t * _res = ((lv_theme_t *(*)(void))lv_func_ptr)();
+    return mp_read_ptr_lv_theme_t((void*)_res);
 }
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_theme_default_is_inited_obj, 0, mp_lv_theme_default_is_inited, lv_theme_default_is_inited);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_theme_default_get_obj, 0, mp_lv_theme_default_get, lv_theme_default_get);
+    
+/* Reusing lv_is_initialized for lv_theme_default_is_inited */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_theme_default_is_inited_obj, 0, mp_lv_is_initialized, lv_theme_default_is_inited);
     
 
 /*
@@ -29077,60 +31273,55 @@ STATIC mp_obj_t mp_lv_snapshot_take_to_buf(size_t mp_n_args, const mp_obj_t *mp_
 
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_snapshot_take_to_buf_obj, 5, mp_lv_snapshot_take_to_buf, lv_snapshot_take_to_buf);
     
+/* Reusing lv_mem_init for lv_bmp_init */
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_bmp_init_obj, 0, mp_lv_mem_init, lv_bmp_init);
+    
 
 /*
- * Callback function lv_color_filter_dsc_t_filter_cb
- * lv_color_t lv_color_filter_cb_t(const struct _lv_color_filter_dsc_t *, lv_color_t, lv_opa_t)
+ * lvgl extension definition for:
+ * gd_GIF *gd_open_gif_file(const char *fname)
  */
-
-STATIC lv_color_t lv_color_filter_dsc_t_filter_cb_callback(const struct _lv_color_filter_dsc_t * arg0, lv_color_t arg1, lv_opa_t arg2)
+ 
+STATIC mp_obj_t mp_gd_open_gif_file(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    mp_obj_t mp_args[3];
-    mp_args[0] = mp_read_ptr_lv_color_filter_dsc_t((void*)arg0);
-    mp_args[1] = mp_read_lv_color32_t(arg1);
-    mp_args[2] = mp_obj_new_int_from_uint(arg2);
-    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_color_filter_dsc_t_filter_cb)) , 3, 0, mp_args);
-    return mp_write_lv_color32_t(callback_result);
+    const char *fname = (const char *)(char*)convert_from_str(mp_args[0]);
+    gd_GIF * _res = ((gd_GIF *(*)(const char *))lv_func_ptr)(fname);
+    return mp_read_ptr_gd_GIF((void*)_res);
 }
 
+ 
+
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_gd_open_gif_file_obj, 1, mp_gd_open_gif_file, gd_open_gif_file);
+    
 
 /*
- * Callback function lv_anim_t_ready_cb
- * void lv_anim_ready_cb_t(struct _lv_anim_t *)
+ * lvgl extension definition for:
+ * gd_GIF *gd_open_gif_data(const void *data)
  */
-
-STATIC void lv_anim_t_ready_cb_callback(struct _lv_anim_t * arg0)
+ 
+STATIC mp_obj_t mp_gd_open_gif_data(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
-    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_anim_t_ready_cb)) , 1, 0, mp_args);
-    return;
+    const void *data = (const void *)mp_to_ptr(mp_args[0]);
+    gd_GIF * _res = ((gd_GIF *(*)(const void *))lv_func_ptr)(data);
+    return mp_read_ptr_gd_GIF((void*)_res);
 }
 
+ 
 
-/*
- * Callback function lv_style_transition_dsc_t_path_xcb
- * int32_t lv_anim_path_cb_t(const struct _lv_anim_t *)
- */
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_gd_open_gif_data_obj, 1, mp_gd_open_gif_data, gd_open_gif_data);
+    
+/* Reusing lv_mem_init for lv_split_jpeg_init */
 
-STATIC int32_t lv_style_transition_dsc_t_path_xcb_callback(const struct _lv_anim_t * arg0)
-{
-    mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
-    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_style_transition_dsc_t_path_xcb)) , 1, 0, mp_args);
-    return (int32_t)mp_obj_get_int(callback_result);
-}
-
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_split_jpeg_init_obj, 0, mp_lv_mem_init, lv_split_jpeg_init);
+    
 
 /*
  * Callback function lv_font_t_get_glyph_dsc
  * bool get_glyph_dsc(const struct _lv_font_t *, lv_font_glyph_dsc_t *, uint32_t letter, uint32_t letter_next)
  */
 
-STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_t * arg0, lv_font_glyph_dsc_t * arg1, uint32_t arg2, uint32_t arg3)
+GENMPY_UNUSED STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_t * arg0, lv_font_glyph_dsc_t * arg1, uint32_t arg2, uint32_t arg3)
 {
     mp_obj_t mp_args[4];
     mp_args[0] = mp_read_ptr_lv_font_t((void*)arg0);
@@ -29148,14 +31339,46 @@ STATIC bool lv_font_t_get_glyph_dsc_callback(const struct _lv_font_t * arg0, lv_
  * const uint8_t *get_glyph_bitmap(const struct _lv_font_t *, uint32_t)
  */
 
-STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_t * arg0, uint32_t arg1)
+GENMPY_UNUSED STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font_t * arg0, uint32_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_font_t((void*)arg0);
     mp_args[1] = mp_obj_new_int_from_uint(arg1);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
     mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_font_t_get_glyph_bitmap)) , 2, 0, mp_args);
-    return mp_to_ptr(callback_result);
+    return mp_array_to_u8ptr(callback_result);
+}
+
+
+/*
+ * Callback function lv_color_filter_dsc_t_filter_cb
+ * lv_color_t lv_color_filter_cb_t(const struct _lv_color_filter_dsc_t *, lv_color_t, lv_opa_t)
+ */
+
+GENMPY_UNUSED STATIC lv_color_t lv_color_filter_dsc_t_filter_cb_callback(const struct _lv_color_filter_dsc_t * arg0, lv_color_t arg1, lv_opa_t arg2)
+{
+    mp_obj_t mp_args[3];
+    mp_args[0] = mp_read_ptr_lv_color_filter_dsc_t((void*)arg0);
+    mp_args[1] = mp_read_lv_color32_t(arg1);
+    mp_args[2] = mp_obj_new_int_from_uint(arg2);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_color_filter_dsc_t_filter_cb)) , 3, 0, mp_args);
+    return mp_write_lv_color32_t(callback_result);
+}
+
+
+/*
+ * Callback function lv_style_transition_dsc_t_path_xcb
+ * int32_t lv_anim_path_cb_t(const struct _lv_anim_t *)
+ */
+
+GENMPY_UNUSED STATIC int32_t lv_style_transition_dsc_t_path_xcb_callback(const struct _lv_anim_t * arg0)
+{
+    mp_obj_t mp_args[1];
+    mp_args[0] = mp_read_ptr_lv_anim_t((void*)arg0);
+    mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
+    mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_style_transition_dsc_t_path_xcb)) , 1, 0, mp_args);
+    return (int32_t)mp_obj_get_int(callback_result);
 }
 
 
@@ -29164,7 +31387,7 @@ STATIC const uint8_t * lv_font_t_get_glyph_bitmap_callback(const struct _lv_font
  * void flush_cb(struct _lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
  */
 
-STATIC void lv_disp_drv_t_flush_cb_callback(struct _lv_disp_drv_t * arg0, const lv_area_t * arg1, lv_color_t * arg2)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_flush_cb_callback(struct _lv_disp_drv_t * arg0, const lv_area_t * arg1, lv_color_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29181,7 +31404,7 @@ STATIC void lv_disp_drv_t_flush_cb_callback(struct _lv_disp_drv_t * arg0, const 
  * void rounder_cb(struct _lv_disp_drv_t *disp_drv, lv_area_t *area)
  */
 
-STATIC void lv_disp_drv_t_rounder_cb_callback(struct _lv_disp_drv_t * arg0, lv_area_t * arg1)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_rounder_cb_callback(struct _lv_disp_drv_t * arg0, lv_area_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29197,11 +31420,11 @@ STATIC void lv_disp_drv_t_rounder_cb_callback(struct _lv_disp_drv_t * arg0, lv_a
  * void set_px_cb(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)
  */
 
-STATIC void lv_disp_drv_t_set_px_cb_callback(struct _lv_disp_drv_t * arg0, uint8_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, lv_color_t arg5, lv_opa_t arg6)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_set_px_cb_callback(struct _lv_disp_drv_t * arg0, uint8_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, lv_color_t arg5, lv_opa_t arg6)
 {
     mp_obj_t mp_args[7];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
-    mp_args[1] = ptr_to_mp((void*)arg1);
+    mp_args[1] = mp_array_from_u8ptr((void*)arg1);
     mp_args[2] = mp_obj_new_int(arg2);
     mp_args[3] = mp_obj_new_int(arg3);
     mp_args[4] = mp_obj_new_int(arg4);
@@ -29218,7 +31441,7 @@ STATIC void lv_disp_drv_t_set_px_cb_callback(struct _lv_disp_drv_t * arg0, uint8
  * void monitor_cb(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
  */
 
-STATIC void lv_disp_drv_t_monitor_cb_callback(struct _lv_disp_drv_t * arg0, uint32_t arg1, uint32_t arg2)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_monitor_cb_callback(struct _lv_disp_drv_t * arg0, uint32_t arg1, uint32_t arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29235,7 +31458,7 @@ STATIC void lv_disp_drv_t_monitor_cb_callback(struct _lv_disp_drv_t * arg0, uint
  * void wait_cb(struct _lv_disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_wait_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_wait_cb_callback(struct _lv_disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29250,7 +31473,7 @@ STATIC void lv_disp_drv_t_wait_cb_callback(struct _lv_disp_drv_t * arg0)
  * void clean_dcache_cb(struct _lv_disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _lv_disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29265,7 +31488,7 @@ STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _lv_disp_drv_t * arg0)
  * void gpu_wait_cb(struct _lv_disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_gpu_wait_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_gpu_wait_cb_callback(struct _lv_disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29280,7 +31503,7 @@ STATIC void lv_disp_drv_t_gpu_wait_cb_callback(struct _lv_disp_drv_t * arg0)
  * void drv_update_cb(struct _lv_disp_drv_t *disp_drv)
  */
 
-STATIC void lv_disp_drv_t_drv_update_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_drv_update_cb_callback(struct _lv_disp_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29295,7 +31518,7 @@ STATIC void lv_disp_drv_t_drv_update_cb_callback(struct _lv_disp_drv_t * arg0)
  * void gpu_fill_cb(struct _lv_disp_drv_t *disp_drv, lv_color_t *dest_buf, lv_coord_t dest_width, const lv_area_t *fill_area, lv_color_t color)
  */
 
-STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _lv_disp_drv_t * arg0, lv_color_t * arg1, lv_coord_t arg2, const lv_area_t * arg3, lv_color_t arg4)
+GENMPY_UNUSED STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _lv_disp_drv_t * arg0, lv_color_t * arg1, lv_coord_t arg2, const lv_area_t * arg3, lv_color_t arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
@@ -29310,11 +31533,18 @@ STATIC void lv_disp_drv_t_gpu_fill_cb_callback(struct _lv_disp_drv_t * arg0, lv_
 
 
 /*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void bg_fn(lv_area_t *)
+ * void bg_fn(lv_area_t *)
+ */
+    
+
+/*
  * Callback function lv_obj_class_t_constructor_cb
  * void constructor_cb(const struct _lv_obj_class_t *class_p, struct _lv_obj_t *obj)
  */
 
-STATIC void lv_obj_class_t_constructor_cb_callback(const struct _lv_obj_class_t * arg0, struct _lv_obj_t * arg1)
+GENMPY_UNUSED STATIC void lv_obj_class_t_constructor_cb_callback(const struct _lv_obj_class_t * arg0, struct _lv_obj_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_obj_class_t((void*)arg0);
@@ -29330,7 +31560,7 @@ STATIC void lv_obj_class_t_constructor_cb_callback(const struct _lv_obj_class_t 
  * void destructor_cb(const struct _lv_obj_class_t *class_p, struct _lv_obj_t *obj)
  */
 
-STATIC void lv_obj_class_t_destructor_cb_callback(const struct _lv_obj_class_t * arg0, struct _lv_obj_t * arg1)
+GENMPY_UNUSED STATIC void lv_obj_class_t_destructor_cb_callback(const struct _lv_obj_class_t * arg0, struct _lv_obj_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_obj_class_t((void*)arg0);
@@ -29346,7 +31576,7 @@ STATIC void lv_obj_class_t_destructor_cb_callback(const struct _lv_obj_class_t *
  * void event_cb(const struct _lv_obj_class_t *class_p, struct _lv_event_t *e)
  */
 
-STATIC void lv_obj_class_t_event_cb_callback(const struct _lv_obj_class_t * arg0, struct _lv_event_t * arg1)
+GENMPY_UNUSED STATIC void lv_obj_class_t_event_cb_callback(const struct _lv_obj_class_t * arg0, struct _lv_event_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_obj_class_t((void*)arg0);
@@ -29362,7 +31592,7 @@ STATIC void lv_obj_class_t_event_cb_callback(const struct _lv_obj_class_t * arg0
  * void read_cb(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
  */
 
-STATIC void lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t * arg0, lv_indev_data_t * arg1)
+GENMPY_UNUSED STATIC void lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t * arg0, lv_indev_data_t * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_indev_drv_t((void*)arg0);
@@ -29378,7 +31608,7 @@ STATIC void lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t * arg0, lv_in
  * void feedback_cb(struct _lv_indev_drv_t *, uint8_t)
  */
 
-STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t * arg0, uint8_t arg1)
+GENMPY_UNUSED STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t * arg0, uint8_t arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_indev_drv_t((void*)arg0);
@@ -29394,7 +31624,7 @@ STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t * arg0, u
  * bool ready_cb(struct _lv_fs_drv_t *drv)
  */
 
-STATIC bool lv_fs_drv_t_ready_cb_callback(struct _lv_fs_drv_t * arg0)
+GENMPY_UNUSED STATIC bool lv_fs_drv_t_ready_cb_callback(struct _lv_fs_drv_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29409,7 +31639,7 @@ STATIC bool lv_fs_drv_t_ready_cb_callback(struct _lv_fs_drv_t * arg0)
  * void *open_cb(struct _lv_fs_drv_t *drv, const char *path, lv_fs_mode_t mode)
  */
 
-STATIC void * lv_fs_drv_t_open_cb_callback(struct _lv_fs_drv_t * arg0, const char * arg1, lv_fs_mode_t arg2)
+GENMPY_UNUSED STATIC void * lv_fs_drv_t_open_cb_callback(struct _lv_fs_drv_t * arg0, const char * arg1, lv_fs_mode_t arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29426,7 +31656,7 @@ STATIC void * lv_fs_drv_t_open_cb_callback(struct _lv_fs_drv_t * arg0, const cha
  * lv_fs_res_t close_cb(struct _lv_fs_drv_t *drv, void *file_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29442,14 +31672,14 @@ STATIC lv_fs_res_t lv_fs_drv_t_close_cb_callback(struct _lv_fs_drv_t * arg0, voi
  * lv_fs_res_t read_cb(struct _lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, void * arg2, uint32_t arg3, uint32_t * arg4)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, void * arg2, uint32_t arg3, uint32_t * arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
     mp_args[1] = ptr_to_mp((void*)arg1);
     mp_args[2] = ptr_to_mp((void*)arg2);
     mp_args[3] = mp_obj_new_int_from_uint(arg3);
-    mp_args[4] = ptr_to_mp((void*)arg4);
+    mp_args[4] = mp_array_from_u32ptr((void*)arg4);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
     mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_fs_drv_t_read_cb)) , 5, 0, mp_args);
     return (uint8_t)mp_obj_get_int(callback_result);
@@ -29461,14 +31691,14 @@ STATIC lv_fs_res_t lv_fs_drv_t_read_cb_callback(struct _lv_fs_drv_t * arg0, void
  * lv_fs_res_t write_cb(struct _lv_fs_drv_t *drv, void *file_p, const void *buf, uint32_t btw, uint32_t *bw)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, const void * arg2, uint32_t arg3, uint32_t * arg4)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, const void * arg2, uint32_t arg3, uint32_t * arg4)
 {
     mp_obj_t mp_args[5];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
     mp_args[1] = ptr_to_mp((void*)arg1);
     mp_args[2] = ptr_to_mp((void*)arg2);
     mp_args[3] = mp_obj_new_int_from_uint(arg3);
-    mp_args[4] = ptr_to_mp((void*)arg4);
+    mp_args[4] = mp_array_from_u32ptr((void*)arg4);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
     mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_fs_drv_t_write_cb)) , 5, 0, mp_args);
     return (uint8_t)mp_obj_get_int(callback_result);
@@ -29480,7 +31710,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_write_cb_callback(struct _lv_fs_drv_t * arg0, voi
  * lv_fs_res_t seek_cb(struct _lv_fs_drv_t *drv, void *file_p, uint32_t pos, lv_fs_whence_t whence)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t arg2, lv_fs_whence_t arg3)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t arg2, lv_fs_whence_t arg3)
 {
     mp_obj_t mp_args[4];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29498,12 +31728,12 @@ STATIC lv_fs_res_t lv_fs_drv_t_seek_cb_callback(struct _lv_fs_drv_t * arg0, void
  * lv_fs_res_t tell_cb(struct _lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t * arg2)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, uint32_t * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
     mp_args[1] = ptr_to_mp((void*)arg1);
-    mp_args[2] = ptr_to_mp((void*)arg2);
+    mp_args[2] = mp_array_from_u32ptr((void*)arg2);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
     mp_obj_t callback_result = mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_fs_drv_t_tell_cb)) , 3, 0, mp_args);
     return (uint8_t)mp_obj_get_int(callback_result);
@@ -29515,7 +31745,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_tell_cb_callback(struct _lv_fs_drv_t * arg0, void
  * void *dir_open_cb(struct _lv_fs_drv_t *drv, const char *path)
  */
 
-STATIC void * lv_fs_drv_t_dir_open_cb_callback(struct _lv_fs_drv_t * arg0, const char * arg1)
+GENMPY_UNUSED STATIC void * lv_fs_drv_t_dir_open_cb_callback(struct _lv_fs_drv_t * arg0, const char * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29531,7 +31761,7 @@ STATIC void * lv_fs_drv_t_dir_open_cb_callback(struct _lv_fs_drv_t * arg0, const
  * lv_fs_res_t dir_read_cb(struct _lv_fs_drv_t *drv, void *rddir_p, char *fn)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, char * arg2)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1, char * arg2)
 {
     mp_obj_t mp_args[3];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29548,7 +31778,7 @@ STATIC lv_fs_res_t lv_fs_drv_t_dir_read_cb_callback(struct _lv_fs_drv_t * arg0, 
  * lv_fs_res_t dir_close_cb(struct _lv_fs_drv_t *drv, void *rddir_p)
  */
 
-STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
+GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs_drv_t * arg0, void * arg1)
 {
     mp_obj_t mp_args[2];
     mp_args[0] = mp_read_ptr_lv_fs_drv_t((void*)arg0);
@@ -29563,6 +31793,90 @@ STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs_drv_t * arg0,
  * Function NOT generated:
  * Callback: user_data NOT FOUND! lv_draw_mask_res_t lv_draw_mask_xcb_t(lv_opa_t *mask_buf, lv_coord_t abs_x, lv_coord_t abs_y, lv_coord_t len, void *p)
  * lv_draw_mask_res_t lv_draw_mask_xcb_t(lv_opa_t *mask_buf, lv_coord_t abs_x, lv_coord_t abs_y, lv_coord_t len, void *p)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void draw_rect(const lv_area_t *coords, const lv_area_t *clip, const lv_draw_rect_dsc_t *dsc)
+ * void draw_rect(const lv_area_t *coords, const lv_area_t *clip, const lv_draw_rect_dsc_t *dsc)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void draw_arc(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, const lv_area_t *clip_area, const lv_draw_arc_dsc_t *dsc)
+ * void draw_arc(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius, uint16_t start_angle, uint16_t end_angle, const lv_area_t *clip_area, const lv_draw_arc_dsc_t *dsc)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void draw_img(const lv_area_t *map_area, const lv_area_t *clip_area, const uint8_t *map_p, const lv_draw_img_dsc_t *draw_dsc, bool chroma_key, bool alpha_byte)
+ * void draw_img(const lv_area_t *map_area, const lv_area_t *clip_area, const uint8_t *map_p, const lv_draw_img_dsc_t *draw_dsc, bool chroma_key, bool alpha_byte)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! lv_res_t draw_img_core(const lv_area_t *coords, const lv_area_t *clip_area, const void *src, const lv_draw_img_dsc_t *draw_dsc)
+ * lv_res_t draw_img_core(const lv_area_t *coords, const lv_area_t *clip_area, const void *src, const lv_draw_img_dsc_t *draw_dsc)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void draw_letter(const lv_point_t *pos_p, const lv_area_t *clip_area, const lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ * void draw_letter(const lv_point_t *pos_p, const lv_area_t *clip_area, const lv_font_t *font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void draw_line(const lv_point_t *point1, const lv_point_t *point2, const lv_area_t *clip, const lv_draw_line_dsc_t *dsc)
+ * void draw_line(const lv_point_t *point1, const lv_point_t *point2, const lv_area_t *clip, const lv_draw_line_dsc_t *dsc)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_area_t *clip_area, const lv_draw_rect_dsc_t *draw_dsc)
+ * void draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_area_t *clip_area, const lv_draw_rect_dsc_t *draw_dsc)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void blend_fill(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *fill_area, lv_color_t color, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ * void blend_fill(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *fill_area, lv_color_t color, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void blend_map(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *clip_area, const lv_color_t *src_buf, const lv_area_t *src_area, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ * void blend_map(lv_color_t *dest_buf, lv_coord_t dest_stride, const lv_area_t *clip_area, const lv_color_t *src_buf, const lv_area_t *src_area, lv_opa_t *mask, lv_opa_t opa, lv_blend_mode_t blend_mode)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void plain_text(struct gd_GIF *gif, uint16_t tx, uint16_t ty, uint16_t tw, uint16_t th, uint8_t cw, uint8_t ch, uint8_t fg, uint8_t bg)
+ * void plain_text(struct gd_GIF *gif, uint16_t tx, uint16_t ty, uint16_t tw, uint16_t th, uint8_t cw, uint8_t ch, uint8_t fg, uint8_t bg)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void comment(struct gd_GIF *gif)
+ * void comment(struct gd_GIF *gif)
+ */
+    
+
+/*
+ * Function NOT generated:
+ * Callback: user_data NOT FOUND! void application(struct gd_GIF *gif, char id[8], char auth[3])
+ * void application(struct gd_GIF *gif, char id[8], char auth[3])
  */
     
 
@@ -29596,6 +31910,11 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_chart), MP_ROM_PTR(&mp_lv_chart_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_keyboard), MP_ROM_PTR(&mp_lv_keyboard_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_list), MP_ROM_PTR(&mp_lv_list_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_menu), MP_ROM_PTR(&mp_lv_menu_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_menu_page), MP_ROM_PTR(&mp_lv_menu_page_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_menu_cont), MP_ROM_PTR(&mp_lv_menu_cont_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_menu_section), MP_ROM_PTR(&mp_lv_menu_section_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_menu_separator), MP_ROM_PTR(&mp_lv_menu_separator_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_msgbox), MP_ROM_PTR(&mp_lv_msgbox_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_meter), MP_ROM_PTR(&mp_lv_meter_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_spinbox), MP_ROM_PTR(&mp_lv_spinbox_type.mp_obj_type) },
@@ -29607,9 +31926,11 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_led), MP_ROM_PTR(&mp_lv_led_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_imgbtn), MP_ROM_PTR(&mp_lv_imgbtn_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_spangroup), MP_ROM_PTR(&mp_lv_spangroup_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_gif), MP_ROM_PTR(&mp_lv_gif_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_qrcode), MP_ROM_PTR(&mp_lv_qrcode_type.mp_obj_type) },
     
-    { MP_ROM_QSTR(MP_QSTR_memcpy_small), MP_ROM_PTR(&mp_lv_memcpy_small_obj) },
     { MP_ROM_QSTR(MP_QSTR_trigo_cos), MP_ROM_PTR(&mp_lv_trigo_cos_obj) },
+    { MP_ROM_QSTR(MP_QSTR_memcpy_small), MP_ROM_PTR(&mp_lv_memcpy_small_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_mix_premult), MP_ROM_PTR(&mp_lv_color_mix_premult_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_make), MP_ROM_PTR(&mp_lv_color_make_obj) },
     { MP_ROM_QSTR(MP_QSTR_color_hex), MP_ROM_PTR(&mp_lv_color_hex_obj) },
@@ -29632,6 +31953,18 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_version_info), MP_ROM_PTR(&mp_lv_version_info_obj) },
     { MP_ROM_QSTR(MP_QSTR_log_register_print_cb), MP_ROM_PTR(&mp_lv_log_register_print_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_log), MP_ROM_PTR(&mp_lv_log_obj) },
+    { MP_ROM_QSTR(MP_QSTR_timer_handler), MP_ROM_PTR(&mp_lv_timer_handler_obj) },
+    { MP_ROM_QSTR(MP_QSTR_timer_create_basic), MP_ROM_PTR(&mp_lv_timer_create_basic_obj) },
+    { MP_ROM_QSTR(MP_QSTR_timer_create), MP_ROM_PTR(&mp_lv_timer_create_obj) },
+    { MP_ROM_QSTR(MP_QSTR_timer_enable), MP_ROM_PTR(&mp_lv_timer_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_timer_get_idle), MP_ROM_PTR(&mp_lv_timer_get_idle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_trigo_sin), MP_ROM_PTR(&mp_lv_trigo_sin_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bezier3), MP_ROM_PTR(&mp_lv_bezier3_obj) },
+    { MP_ROM_QSTR(MP_QSTR_atan2), MP_ROM_PTR(&mp_lv_atan2_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sqrt), MP_ROM_PTR(&mp_lv_sqrt_obj) },
+    { MP_ROM_QSTR(MP_QSTR_pow), MP_ROM_PTR(&mp_lv_pow_obj) },
+    { MP_ROM_QSTR(MP_QSTR_map), MP_ROM_PTR(&mp_lv_map_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rand), MP_ROM_PTR(&mp_lv_rand_obj) },
     { MP_ROM_QSTR(MP_QSTR_mem_init), MP_ROM_PTR(&mp_lv_mem_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_mem_deinit), MP_ROM_PTR(&mp_lv_mem_deinit_obj) },
     { MP_ROM_QSTR(MP_QSTR_mem_alloc), MP_ROM_PTR(&mp_lv_mem_alloc_obj) },
@@ -29645,18 +31978,6 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_memset), MP_ROM_PTR(&mp_lv_memset_obj) },
     { MP_ROM_QSTR(MP_QSTR_memset_00), MP_ROM_PTR(&mp_lv_memset_00_obj) },
     { MP_ROM_QSTR(MP_QSTR_memset_ff), MP_ROM_PTR(&mp_lv_memset_ff_obj) },
-    { MP_ROM_QSTR(MP_QSTR_timer_handler), MP_ROM_PTR(&mp_lv_timer_handler_obj) },
-    { MP_ROM_QSTR(MP_QSTR_timer_create_basic), MP_ROM_PTR(&mp_lv_timer_create_basic_obj) },
-    { MP_ROM_QSTR(MP_QSTR_timer_create), MP_ROM_PTR(&mp_lv_timer_create_obj) },
-    { MP_ROM_QSTR(MP_QSTR_timer_enable), MP_ROM_PTR(&mp_lv_timer_enable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_timer_get_idle), MP_ROM_PTR(&mp_lv_timer_get_idle_obj) },
-    { MP_ROM_QSTR(MP_QSTR_trigo_sin), MP_ROM_PTR(&mp_lv_trigo_sin_obj) },
-    { MP_ROM_QSTR(MP_QSTR_bezier3), MP_ROM_PTR(&mp_lv_bezier3_obj) },
-    { MP_ROM_QSTR(MP_QSTR_atan2), MP_ROM_PTR(&mp_lv_atan2_obj) },
-    { MP_ROM_QSTR(MP_QSTR_sqrt), MP_ROM_PTR(&mp_lv_sqrt_obj) },
-    { MP_ROM_QSTR(MP_QSTR_pow), MP_ROM_PTR(&mp_lv_pow_obj) },
-    { MP_ROM_QSTR(MP_QSTR_map), MP_ROM_PTR(&mp_lv_map_obj) },
-    { MP_ROM_QSTR(MP_QSTR_rand), MP_ROM_PTR(&mp_lv_rand_obj) },
     { MP_ROM_QSTR(MP_QSTR_async_call), MP_ROM_PTR(&mp_lv_async_call_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_del), MP_ROM_PTR(&mp_lv_anim_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_del_all), MP_ROM_PTR(&mp_lv_anim_del_all_obj) },
@@ -29668,6 +31989,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_anim_timeline_del), MP_ROM_PTR(&mp_lv_anim_timeline_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_timeline_add), MP_ROM_PTR(&mp_lv_anim_timeline_add_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_timeline_start), MP_ROM_PTR(&mp_lv_anim_timeline_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_anim_timeline_stop), MP_ROM_PTR(&mp_lv_anim_timeline_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_timeline_set_reverse), MP_ROM_PTR(&mp_lv_anim_timeline_set_reverse_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_timeline_set_progress), MP_ROM_PTR(&mp_lv_anim_timeline_set_progress_obj) },
     { MP_ROM_QSTR(MP_QSTR_anim_timeline_get_playtime), MP_ROM_PTR(&mp_lv_anim_timeline_get_playtime_obj) },
@@ -29683,6 +32005,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tick_elaps), MP_ROM_PTR(&mp_lv_tick_elaps_obj) },
     { MP_ROM_QSTR(MP_QSTR_txt_get_size), MP_ROM_PTR(&mp_lv_txt_get_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_txt_get_width), MP_ROM_PTR(&mp_lv_txt_get_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bidi_calculate_align), MP_ROM_PTR(&mp_lv_bidi_calculate_align_obj) },
     { MP_ROM_QSTR(MP_QSTR_style_register_prop), MP_ROM_PTR(&mp_lv_style_register_prop_obj) },
     { MP_ROM_QSTR(MP_QSTR_style_prop_get_default), MP_ROM_PTR(&mp_lv_style_prop_get_default_obj) },
     { MP_ROM_QSTR(MP_QSTR_layout_register), MP_ROM_PTR(&mp_lv_layout_register_obj) },
@@ -29694,11 +32017,6 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fs_get_ext), MP_ROM_PTR(&mp_lv_fs_get_ext_obj) },
     { MP_ROM_QSTR(MP_QSTR_fs_up), MP_ROM_PTR(&mp_lv_fs_up_obj) },
     { MP_ROM_QSTR(MP_QSTR_fs_get_last), MP_ROM_PTR(&mp_lv_fs_get_last_obj) },
-    { MP_ROM_QSTR(MP_QSTR_draw_mask_add), MP_ROM_PTR(&mp_lv_draw_mask_add_obj) },
-    { MP_ROM_QSTR(MP_QSTR_draw_mask_apply), MP_ROM_PTR(&mp_lv_draw_mask_apply_obj) },
-    { MP_ROM_QSTR(MP_QSTR_draw_mask_remove_id), MP_ROM_PTR(&mp_lv_draw_mask_remove_id_obj) },
-    { MP_ROM_QSTR(MP_QSTR_draw_mask_remove_custom), MP_ROM_PTR(&mp_lv_draw_mask_remove_custom_obj) },
-    { MP_ROM_QSTR(MP_QSTR_draw_mask_get_cnt), MP_ROM_PTR(&mp_lv_draw_mask_get_cnt_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_rect), MP_ROM_PTR(&mp_lv_draw_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_label), MP_ROM_PTR(&mp_lv_draw_label_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_letter), MP_ROM_PTR(&mp_lv_draw_letter_obj) },
@@ -29708,14 +32026,26 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_draw_polygon), MP_ROM_PTR(&mp_lv_draw_polygon_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_arc), MP_ROM_PTR(&mp_lv_draw_arc_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_arc_get_area), MP_ROM_PTR(&mp_lv_draw_arc_get_area_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_add), MP_ROM_PTR(&mp_lv_draw_mask_add_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_apply), MP_ROM_PTR(&mp_lv_draw_mask_apply_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_apply_ids), MP_ROM_PTR(&mp_lv_draw_mask_apply_ids_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_remove_id), MP_ROM_PTR(&mp_lv_draw_mask_remove_id_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_remove_custom), MP_ROM_PTR(&mp_lv_draw_mask_remove_custom_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_free_param), MP_ROM_PTR(&mp_lv_draw_mask_free_param_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_get_cnt), MP_ROM_PTR(&mp_lv_draw_mask_get_cnt_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_mask_is_any), MP_ROM_PTR(&mp_lv_draw_mask_is_any_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_init), MP_ROM_PTR(&mp_lv_draw_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_backend_get), MP_ROM_PTR(&mp_lv_draw_backend_get_obj) },
     { MP_ROM_QSTR(MP_QSTR_event_send), MP_ROM_PTR(&mp_lv_event_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_event_register_id), MP_ROM_PTR(&mp_lv_event_register_id_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_create), MP_ROM_PTR(&mp_lv_group_create_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_get_default), MP_ROM_PTR(&mp_lv_group_get_default_obj) },
+    { MP_ROM_QSTR(MP_QSTR_group_swap_obj), MP_ROM_PTR(&mp_lv_group_swap_obj_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_remove_obj), MP_ROM_PTR(&mp_lv_group_remove_obj_obj) },
     { MP_ROM_QSTR(MP_QSTR_group_focus_obj), MP_ROM_PTR(&mp_lv_group_focus_obj_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_lv_deinit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_is_initialized), MP_ROM_PTR(&mp_lv_is_initialized_obj) },
     { MP_ROM_QSTR(MP_QSTR_indev_read_timer_cb), MP_ROM_PTR(&mp_lv_indev_read_timer_cb_obj) },
     { MP_ROM_QSTR(MP_QSTR_indev_get_act), MP_ROM_PTR(&mp_lv_indev_get_act_obj) },
     { MP_ROM_QSTR(MP_QSTR_indev_get_obj_act), MP_ROM_PTR(&mp_lv_indev_get_obj_act_obj) },
@@ -29736,6 +32066,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_flex_init), MP_ROM_PTR(&mp_lv_flex_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_grid_init), MP_ROM_PTR(&mp_lv_grid_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_theme_default_init), MP_ROM_PTR(&mp_lv_theme_default_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_theme_default_get), MP_ROM_PTR(&mp_lv_theme_default_get_obj) },
     { MP_ROM_QSTR(MP_QSTR_theme_default_is_inited), MP_ROM_PTR(&mp_lv_theme_default_is_inited_obj) },
     { MP_ROM_QSTR(MP_QSTR_theme_mono_init), MP_ROM_PTR(&mp_lv_theme_mono_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_theme_basic_init), MP_ROM_PTR(&mp_lv_theme_basic_init_obj) },
@@ -29743,16 +32074,23 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_snapshot_free), MP_ROM_PTR(&mp_lv_snapshot_free_obj) },
     { MP_ROM_QSTR(MP_QSTR_snapshot_buf_size_needed), MP_ROM_PTR(&mp_lv_snapshot_buf_size_needed_obj) },
     { MP_ROM_QSTR(MP_QSTR_snapshot_take_to_buf), MP_ROM_PTR(&mp_lv_snapshot_take_to_buf_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bmp_init), MP_ROM_PTR(&mp_lv_bmp_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_gd_open_gif_file), MP_ROM_PTR(&mp_gd_open_gif_file_obj) },
+    { MP_ROM_QSTR(MP_QSTR_gd_open_gif_data), MP_ROM_PTR(&mp_gd_open_gif_data_obj) },
+    { MP_ROM_QSTR(MP_QSTR_split_jpeg_init), MP_ROM_PTR(&mp_lv_split_jpeg_init_obj) },
     
     { MP_ROM_QSTR(MP_QSTR_DPI), MP_ROM_PTR(&mp_lv_ENUM_LV_DPI_type.mp_obj_type) },
-    { MP_ROM_QSTR(MP_QSTR_LOG_LEVEL), MP_ROM_PTR(&mp_lv_ENUM_LV_LOG_LEVEL_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_RES), MP_ROM_PTR(&mp_lv_LV_RES_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_LOG_LEVEL), MP_ROM_PTR(&mp_lv_ENUM_LV_LOG_LEVEL_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_ANIM_REPEAT), MP_ROM_PTR(&mp_lv_ENUM_LV_ANIM_REPEAT_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_ANIM_PLAYTIME), MP_ROM_PTR(&mp_lv_ENUM_LV_ANIM_PLAYTIME_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_COLOR), MP_ROM_PTR(&mp_lv_ENUM_LV_COLOR_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_COLOR_16), MP_ROM_PTR(&mp_lv_ENUM_LV_COLOR_16_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_OPA), MP_ROM_PTR(&mp_lv_LV_OPA_type.mp_obj_type) },
-    { MP_ROM_QSTR(MP_QSTR_COORD), MP_ROM_PTR(&mp_lv_ENUM_LV_COORD_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_ALIGN), MP_ROM_PTR(&mp_lv_LV_ALIGN_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_DIR), MP_ROM_PTR(&mp_lv_LV_DIR_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_SIZE), MP_ROM_PTR(&mp_lv_ENUM_LV_SIZE_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_COORD), MP_ROM_PTR(&mp_lv_ENUM_LV_COORD_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_FONT_SUBPX), MP_ROM_PTR(&mp_lv_LV_FONT_SUBPX_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_TEXT_FLAG), MP_ROM_PTR(&mp_lv_LV_TEXT_FLAG_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_TEXT_CMD_STATE), MP_ROM_PTR(&mp_lv_LV_TEXT_CMD_STATE_type.mp_obj_type) },
@@ -29769,10 +32107,10 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SCROLL_SNAP), MP_ROM_PTR(&mp_lv_LV_SCROLL_SNAP_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_FS_RES), MP_ROM_PTR(&mp_lv_LV_FS_RES_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_FS_MODE), MP_ROM_PTR(&mp_lv_LV_FS_MODE_type.mp_obj_type) },
+    { MP_ROM_QSTR(MP_QSTR_RADIUS), MP_ROM_PTR(&mp_lv_ENUM_LV_RADIUS_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_DRAW_MASK_RES), MP_ROM_PTR(&mp_lv_LV_DRAW_MASK_RES_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_DRAW_MASK_TYPE), MP_ROM_PTR(&mp_lv_LV_DRAW_MASK_TYPE_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_DRAW_MASK_LINE_SIDE), MP_ROM_PTR(&mp_lv_LV_DRAW_MASK_LINE_SIDE_type.mp_obj_type) },
-    { MP_ROM_QSTR(MP_QSTR_RADIUS), MP_ROM_PTR(&mp_lv_ENUM_LV_RADIUS_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_KEY), MP_ROM_PTR(&mp_lv_LV_KEY_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_FONT_FMT_TXT_CMAP), MP_ROM_PTR(&mp_lv_LV_FONT_FMT_TXT_CMAP_type.mp_obj_type) },
     { MP_ROM_QSTR(MP_QSTR_LABEL_DOT), MP_ROM_PTR(&mp_lv_ENUM_LV_LABEL_DOT_type.mp_obj_type) },
@@ -29808,13 +32146,13 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SYMBOL), MP_ROM_PTR(&mp_lv_LV_SYMBOL_type.mp_obj_type) },
     
     { MP_ROM_QSTR(MP_QSTR_C_Pointer), MP_ROM_PTR(&mp_C_Pointer_type) },
-    { MP_ROM_QSTR(MP_QSTR_color_filter_dsc_t), MP_ROM_PTR(&mp_lv_color_filter_dsc_t_type) },
     { MP_ROM_QSTR(MP_QSTR_color32_t), MP_ROM_PTR(&mp_lv_color32_t_type) },
     { MP_ROM_QSTR(MP_QSTR_color32_ch_t), MP_ROM_PTR(&mp_lv_color32_ch_t_type) },
-    { MP_ROM_QSTR(MP_QSTR_style_transition_dsc_t), MP_ROM_PTR(&mp_lv_style_transition_dsc_t_type) },
-    { MP_ROM_QSTR(MP_QSTR_anim_t), MP_ROM_PTR(&mp_lv_anim_t_type) },
     { MP_ROM_QSTR(MP_QSTR_font_t), MP_ROM_PTR(&mp_lv_font_t_type) },
     { MP_ROM_QSTR(MP_QSTR_font_glyph_dsc_t), MP_ROM_PTR(&mp_lv_font_glyph_dsc_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_color_filter_dsc_t), MP_ROM_PTR(&mp_lv_color_filter_dsc_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_style_transition_dsc_t), MP_ROM_PTR(&mp_lv_style_transition_dsc_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_anim_t), MP_ROM_PTR(&mp_lv_anim_t_type) },
     { MP_ROM_QSTR(MP_QSTR_disp_t), MP_ROM_PTR(&mp_lv_disp_t_type) },
     { MP_ROM_QSTR(MP_QSTR_disp_drv_t), MP_ROM_PTR(&mp_lv_disp_drv_t_type) },
     { MP_ROM_QSTR(MP_QSTR_disp_draw_buf_t), MP_ROM_PTR(&mp_lv_disp_draw_buf_t_type) },
@@ -29871,12 +32209,17 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_draw_mask_angle_param_cfg_t), MP_ROM_PTR(&mp_lv_draw_mask_angle_param_cfg_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_radius_param_t), MP_ROM_PTR(&mp_lv_draw_mask_radius_param_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_radius_param_cfg_t), MP_ROM_PTR(&mp_lv_draw_mask_radius_param_cfg_t_type) },
-    { MP_ROM_QSTR(MP_QSTR_sqrt_res_t), MP_ROM_PTR(&mp_lv_sqrt_res_t_type) },
+    { MP_ROM_QSTR(MP_QSTR__lv_draw_mask_radius_circle_dsc_t), MP_ROM_PTR(&mp__lv_draw_mask_radius_circle_dsc_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_fade_param_t), MP_ROM_PTR(&mp_lv_draw_mask_fade_param_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_fade_param_cfg_t), MP_ROM_PTR(&mp_lv_draw_mask_fade_param_cfg_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_map_param_t), MP_ROM_PTR(&mp_lv_draw_mask_map_param_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_map_param_cfg_t), MP_ROM_PTR(&mp_lv_draw_mask_map_param_cfg_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_draw_backend_t), MP_ROM_PTR(&mp_lv_draw_backend_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_gd_GIF), MP_ROM_PTR(&mp_gd_GIF_type) },
+    { MP_ROM_QSTR(MP_QSTR_gd_GCE), MP_ROM_PTR(&mp_gd_GCE_type) },
+    { MP_ROM_QSTR(MP_QSTR_gd_Palette), MP_ROM_PTR(&mp_gd_Palette_type) },
     { MP_ROM_QSTR(MP_QSTR_hit_test_info_t), MP_ROM_PTR(&mp_lv_hit_test_info_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_sqrt_res_t), MP_ROM_PTR(&mp_lv_sqrt_res_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_label_hint_t), MP_ROM_PTR(&mp_lv_draw_label_hint_t_type) },
     
     { MP_ROM_QSTR(MP_QSTR_color_t), MP_ROM_PTR(&mp_lv_color32_t_type) },
@@ -29916,7 +32259,18 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_list_class), MP_ROM_PTR(&mp_lv_list_class) },
     { MP_ROM_QSTR(MP_QSTR_list_text_class), MP_ROM_PTR(&mp_lv_list_text_class) },
     { MP_ROM_QSTR(MP_QSTR_list_btn_class), MP_ROM_PTR(&mp_lv_list_btn_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_class), MP_ROM_PTR(&mp_lv_menu_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_page_class), MP_ROM_PTR(&mp_lv_menu_page_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_cont_class), MP_ROM_PTR(&mp_lv_menu_cont_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_section_class), MP_ROM_PTR(&mp_lv_menu_section_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_separator_class), MP_ROM_PTR(&mp_lv_menu_separator_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_sidebar_cont_class), MP_ROM_PTR(&mp_lv_menu_sidebar_cont_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_main_cont_class), MP_ROM_PTR(&mp_lv_menu_main_cont_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_sidebar_header_cont_class), MP_ROM_PTR(&mp_lv_menu_sidebar_header_cont_class) },
+    { MP_ROM_QSTR(MP_QSTR_menu_main_header_cont_class), MP_ROM_PTR(&mp_lv_menu_main_header_cont_class) },
     { MP_ROM_QSTR(MP_QSTR_msgbox_class), MP_ROM_PTR(&mp_lv_msgbox_class) },
+    { MP_ROM_QSTR(MP_QSTR_msgbox_content_class), MP_ROM_PTR(&mp_lv_msgbox_content_class) },
+    { MP_ROM_QSTR(MP_QSTR_msgbox_backdrop_class), MP_ROM_PTR(&mp_lv_msgbox_backdrop_class) },
     { MP_ROM_QSTR(MP_QSTR_meter_class), MP_ROM_PTR(&mp_lv_meter_class) },
     { MP_ROM_QSTR(MP_QSTR_spinbox_class), MP_ROM_PTR(&mp_lv_spinbox_class) },
     { MP_ROM_QSTR(MP_QSTR_spinner_class), MP_ROM_PTR(&mp_lv_spinner_class) },
@@ -29939,8 +32293,13 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_STYLE_GRID_CELL_ROW_POS), MP_ROM_PTR(&mp_LV_STYLE_GRID_CELL_ROW_POS) },
     { MP_ROM_QSTR(MP_QSTR_STYLE_GRID_CELL_ROW_SPAN), MP_ROM_PTR(&mp_LV_STYLE_GRID_CELL_ROW_SPAN) },
     { MP_ROM_QSTR(MP_QSTR_STYLE_GRID_CELL_Y_ALIGN), MP_ROM_PTR(&mp_LV_STYLE_GRID_CELL_Y_ALIGN) },
+    { MP_ROM_QSTR(MP_QSTR_gif_class), MP_ROM_PTR(&mp_lv_gif_class) },
+    { MP_ROM_QSTR(MP_QSTR_qrcode_class), MP_ROM_PTR(&mp_lv_qrcode_class) },
     
     
+#ifdef LV_OBJ_T
+    { MP_ROM_QSTR(MP_QSTR_LvReferenceError), MP_ROM_PTR(&mp_type_LvReferenceError) },
+#endif // LV_OBJ_T
 };
 
 
@@ -29979,6 +32338,11 @@ STATIC const mp_lv_obj_type_t *mp_lv_obj_types[] = {
     &mp_lv_chart_type,
     &mp_lv_keyboard_type,
     &mp_lv_list_type,
+    &mp_lv_menu_type,
+    &mp_lv_menu_page_type,
+    &mp_lv_menu_cont_type,
+    &mp_lv_menu_section_type,
+    &mp_lv_menu_separator_type,
     &mp_lv_msgbox_type,
     &mp_lv_meter_type,
     &mp_lv_spinbox_type,
@@ -29990,6 +32354,8 @@ STATIC const mp_lv_obj_type_t *mp_lv_obj_types[] = {
     &mp_lv_led_type,
     &mp_lv_imgbtn_type,
     &mp_lv_spangroup_type,
+    &mp_lv_gif_type,
+    &mp_lv_qrcode_type,
     NULL
 };
     
