@@ -102,7 +102,7 @@ class CustomWidgetClass():
         obj.draw_desc = lv.draw_rect_dsc_t()
         obj.draw_desc.init()
         obj.draw_desc.bg_opa = lv.OPA.COVER;
-        obj.draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
+        obj.draw_desc.bg_grad.stops[0].color = obj.get_style_bg_color(lv.PART.MAIN)
         
         obj.points = [
             {'x':area.x1 + area.get_width()//2,
