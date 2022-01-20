@@ -123,6 +123,20 @@
     * 0: to disable caching */
     #define LV_CIRCLE_CACHE_SIZE 4
 
+    /*Allow dithering gradient (to achieve visual smooth color gradients on limited color depth display)
+    *LV_DITHER_GRADIENT implies allocating one or two more lines of the object's rendering surface
+    *The increase in memory consumption is (32 bits * object width) plus 24 bits * object width if using error diffusion */
+    #define LV_DITHER_GRADIENT 1
+
+    /*Add support for error diffusion dithering.
+    *Error diffusion dithering gets a much better visual result, but implies more CPU consumption and memory when drawing.
+    *The increase in memory consumption is (24 bits * object's width)*/
+    #define LV_DITHER_ERROR_DIFFUSION 1
+
+    /**Number of stops allowed per gradient. Increase this to allow more stops.
+    *This adds (sizeof(lv_color_t) + 1) bytes per additional stop*/
+    #define LV_GRADIENT_MAX_STOPS    2
+
 #endif /*LV_DRAW_COMPLEX*/
 
 /*Default image cache size. Image caching keeps the images opened.
@@ -165,7 +179,10 @@
 #define LV_USE_GPU_SDL 0
 #if LV_USE_GPU_SDL
     #define LV_GPU_SDL_INCLUDE_PATH <SDL2/SDL.h>
+    /*Texture cache size, 8MB by default*/
     #define LV_GPU_SDL_LRU_SIZE (1024 * 1024 * 8)
+    /*Custom blend mode for mask drawing, disable if you need to link with older SDL2 lib*/
+    #define LV_GPU_SDL_CUSTOM_BLEND_MODE (SDL_VERSION_ATLEAST(2, 0, 6))
 #endif
 
 /*-------------
@@ -284,7 +301,7 @@
 /*Attribute to mark large constant arrays for example font's bitmaps*/
 #define LV_ATTRIBUTE_LARGE_CONST
 
-/*Complier prefix for a big array declaration in RAM*/
+/*Compiler prefix for a big array declaration in RAM*/
 #define LV_ATTRIBUTE_LARGE_RAM_ARRAY
 
 /*Place performance critical functions into a faster memory (e.g RAM)*/
@@ -622,7 +639,10 @@
 #define LV_USE_SNAPSHOT 1
 
 /*1: Enable Monkey test*/
-#define LV_USE_MONKEY 0
+#define LV_USE_MONKEY   0
+
+/*1: Enable grid navigation*/
+#define LV_USE_GRIDNAV  0
 
 /*==================
 * EXAMPLES
@@ -635,7 +655,7 @@
  * DEMO USAGE
  ====================*/
 
-/*Show some widget*/
+/*Show some widget. It might be required to increase `LV_MEM_SIZE` */
 #define LV_USE_DEMO_WIDGETS        0
 #if LV_USE_DEMO_WIDGETS
 #define LV_DEMO_WIDGETS_SLIDESHOW  0
