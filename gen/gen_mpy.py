@@ -1748,6 +1748,8 @@ def try_generate_struct(struct_name, struct):
     if not struct.decls:
         if struct_name == struct.name:
             return None
+        if struct.name not in structs:
+            return None
         return try_generate_type(structs[struct.name])
     flatten_struct_decls = flatten_struct(struct.decls)
     # Go over fields and try to generate type convertors for each
