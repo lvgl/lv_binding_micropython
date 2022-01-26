@@ -147,7 +147,6 @@ function(all_lv_bindings)
                 soc/sens_struct.h
                 soc/rtc.h
                 driver/periph_ctrl.h
-                include/esp_private
         )
     endif(ESP_PLATFORM)
 
