@@ -9,7 +9,7 @@ ORIENT_PORTRAIT  = True
 
 class driver:
     
-    def __init__(self,width=420,height=320,orientation=ORIENT_PORTRAIT):
+    def __init__(self,width=420,height=320,orientation=ORIENT_PORTRAIT, asynchronous=False, exception_sink=None):
 
         if not lv.is_initialized():
             lv.init()
@@ -17,6 +17,8 @@ class driver:
         self.width = width
         self.height = height
         self.orientation = orientation
+        self.asynchronous = asynchronous
+        self.exception_sink = exception_sink
         self.disp = None
         self.touch = None
         self.type = None
@@ -27,7 +29,7 @@ class driver:
 
         import SDL
         SDL.init(w=self.width, h=self.height, auto_refresh=False)
-        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
+        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh, asynchronous=self.asynchronous, exception_sink=self.exception_sink)
 
         # Register SDL display driver.
 
@@ -60,6 +62,8 @@ class driver:
         from ili9XXX import ili9341,LANDSCAPE
         from xpt2046 import xpt2046
         import espidf as esp
+
+        self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous, exception_sink=self.exception_sink)
 
         if self.orientation == ORIENT_PORTRAIT:
             print ("Running the ili9341 lvgl version in portait mode")

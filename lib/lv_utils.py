@@ -65,7 +65,7 @@ class event_loop():
 
     _current_instance = None
 
-    def __init__(self, freq=25, timer_id=default_timer_id, max_scheduled=2, refresh_cb=None, asynchronous=False):
+    def __init__(self, freq=25, timer_id=default_timer_id, max_scheduled=2, refresh_cb=None, asynchronous=False, exception_sink=None):
         if self.is_running():
             raise RuntimeError("Event loop is already running!")
 
@@ -76,6 +76,7 @@ class event_loop():
 
         self.delay = 1000 // freq
         self.refresh_cb = refresh_cb
+        self.exception_sink = exception_sink if exception_sink else self.default_exception_sink
 
         self.asynchronous = asynchronous
         if self.asynchronous:
@@ -114,9 +115,13 @@ class event_loop():
         return event_loop._current_instance
 
     def task_handler(self, _):
-        lv.task_handler()
-        if self.refresh_cb: self.refresh_cb()
-        self.scheduled -= 1
+        try:
+            lv.task_handler()
+            if self.refresh_cb: self.refresh_cb()
+            self.scheduled -= 1
+        except Exception as e:
+            if self.exception_sink:
+                self.exception_sink(e)
 
     def timer_cb(self, t):
         # Can be called in Interrupt context
@@ -141,4 +146,11 @@ class event_loop():
             await uasyncio.sleep_ms(self.delay)
             lv.tick_inc(self.delay)
             self.refresh_event.set()
+            
 
+    def default_exception_sink(self, e):
+        exc = usys.exc_info()
+        print('ERROR! %s: %s\n%s' % (
+            exc[0].__name__,
+            exc[1],
+            exc[2] if exc[2] else ''))

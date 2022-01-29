@@ -84,8 +84,8 @@ class CustomWidgetClass():
 
         if code == lv.EVENT.DRAW_MAIN:
             # Draw the widget
-            clip_area = lv.area_t.__cast__(e.get_param())
-            self.draw(obj, clip_area)
+            draw_ctx = e.get_draw_ctx()
+            self.draw(obj, draw_ctx)
         elif code in [
                 lv.EVENT.STYLE_CHANGED,
                 lv.EVENT.VALUE_CHANGED,
@@ -115,13 +115,13 @@ class CustomWidgetClass():
 
         obj.valid = True
 
-    def draw(self, obj, clip_area):
+    def draw(self, obj, draw_ctx):
         # If object invalidated, recalculate its parameters
         if not obj.valid:
             self.calc(obj)
 
         # Draw the custom widget
-        lv.draw_polygon(obj.points, len(obj.points), clip_area, obj.draw_desc)
+        draw_ctx.polygon(obj.draw_desc, obj.points, len(obj.points))
 
 ##############################################################################
 # A Python class to wrap the LVGL custom widget
