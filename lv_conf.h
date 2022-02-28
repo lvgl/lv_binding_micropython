@@ -1,6 +1,6 @@
 /**
  * @file lv_conf.h
- * Configuration file for v8.1.1-dev
+ * Configuration file for v8.3.0-dev
  */
 
 /*
@@ -671,6 +671,9 @@
 
 /*1: Enable grid navigation*/
 #define LV_USE_GRIDNAV  1
+
+/*1: Enable lv_obj fragment*/
+#define LV_USE_FRAGMENT 0
 
 /*==================
 * EXAMPLES
