@@ -2,7 +2,12 @@ import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
-import lv_utils
+
+try:
+    import lv_utils
+    lv_utils_available = True
+except:
+    lv_utils_available = False
 
 ORIENT_LANDSCAPE = False
 ORIENT_PORTRAIT  = True
@@ -22,14 +27,15 @@ class driver:
         self.disp = None
         self.touch = None
         self.type = None
-        if not lv_utils.event_loop.is_running():
+        if not (lv_utils_available and lv_utils.event_loop.is_running()):
             self.init_gui()
-        
+
     def init_gui_SDL(self):
 
         import SDL
-        SDL.init(w=self.width, h=self.height, auto_refresh=False)
-        self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh, asynchronous=self.asynchronous, exception_sink=self.exception_sink)
+        SDL.init(w=self.width, h=self.height, auto_refresh=(not lv_utils_available))
+        if lv_utils_available:
+            self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh, asynchronous=self.asynchronous, exception_sink=self.exception_sink)
 
         # Register SDL display driver.
 
@@ -63,7 +69,8 @@ class driver:
         from xpt2046 import xpt2046
         import espidf as esp
 
-        self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous, exception_sink=self.exception_sink)
+        if lv_utils_available:
+            self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous, exception_sink=self.exception_sink)
 
         if self.orientation == ORIENT_PORTRAIT:
             print ("Running the ili9341 lvgl version in portait mode")
