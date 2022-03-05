@@ -74,7 +74,7 @@ def fs_write_cb(drv, fs_file, buf, btw, bw):
     return lv.FS_RES.OK
 
 
-def fs_register(fs_drv, letter):
+def fs_register(fs_drv, letter, cache_size=-1):
 
     fs_drv.init()
     fs_drv.letter = ord(letter)
@@ -84,6 +84,9 @@ def fs_register(fs_drv, letter):
     fs_drv.seek_cb = fs_seek_cb
     fs_drv.tell_cb = fs_tell_cb
     fs_drv.close_cb = fs_close_cb
+
+    if cache_size >= 0:
+        fs_drv.cache_size = cache_size
 
     fs_drv.register()
 
