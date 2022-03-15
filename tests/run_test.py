@@ -22,8 +22,8 @@
 DELAY_MS=25
 MAX_CHILDREN=100
 
-import sys
-sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+import usys
+usys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import gc
 import os
@@ -78,7 +78,7 @@ def send_events():
 
 def run():
     try:
-        script = sys.argv[1]
+        script = usys.argv[1]
         script_path = script[:script.rfind('/')] if script.find('/') >= 0 else '.'
         script_name = script[script.rfind('/')+1:] if script.find('/') >= 0 else script
 
@@ -87,8 +87,8 @@ def run():
         with open(script, 'r') as file:
             file_string = file.read()
             os.chdir(script_path)
-            sys.argv[0] = script_name
-            del sys.argv[1]
+            usys.argv[0] = script_name
+            del usys.argv[1]
             exec(file_string, {'__file__': script_name, 'lv': lv})
             time.sleep_ms(DELAY_MS)
             gc.collect()
@@ -100,13 +100,8 @@ def run():
                 lv_utils.event_loop.current_instance().deinit()
                 time.sleep_ms(DELAY_MS)
 
-    except:
-        exc = sys.exc_info()
-        print('ERROR! %s: %s\n%s' % (
-            exc[0].__name__,
-            exc[1],
-            exc[2] if exc[2] else ''))
-
-        sys.exit(255) # 255 to exit xargs
+    except Exception as e:
+        usys.print_exception(e)
+        usys.exit(255) # 255 to exit xargs
 
 run()

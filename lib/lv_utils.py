@@ -153,8 +153,5 @@ class event_loop():
             
 
     def default_exception_sink(self, e):
-        exc = usys.exc_info()
-        print('ERROR! %s: %s\n%s' % (
-            exc[0].__name__,
-            exc[1],
-            exc[2] if exc[2] else ''))
+        usys.print_exception(e)
+        event_loop.current_instance().deinit()
