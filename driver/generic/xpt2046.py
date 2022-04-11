@@ -6,7 +6,7 @@ import struct
 # https://github.com/MatthewLowden/RPi-XPT2046-Touchscreen-Python/blob/master/XPT2046.py
 # and the XPT2046 datasheet
 
-class Xpt2046:
+class Xpt2046_hw(object):
     CHAN_X  = const(0b0101_0000)
     CHAN_Y  = const(0b0001_0000)
     CHAN_Z1 = const(0b0011_0000)
@@ -80,6 +80,37 @@ class Xpt2046:
         else: return None
         mx,my=xx*1./N,yy*1./N
         return self._raw2px((mx,my))
+
+
+class Xpt2046(Xpt2046_hw):
+    lcd=None
+    spi=None
+    def indev_drv_read_cb(self, indev_drv, data):
+        # wait for DMA transfer (if any) before switchint SPI to 1 MHz
+        if self.lcd: self.lcd._rp2_wait_dma()
+        print('.',end='')
+        self.spi.init(baudrate=1_000_000)
+        pos=self.pos()
+        if pos is None: data.state=0
+        else: (data.point.x,data.point.y),data.state=pos,1
+        # print('#',end='')
+        # switch SPI back to 24 MHz for the display
+        self.spi.init(baudrate=24_000_000)
+        return False
+
+    def __init__(self,spi,lcd=None,**kw):
+        super().__init__(spi=spi,**kw)
+        # self.lcd=lcd
+        Xpt2046.lcd=lcd
+        Xpt2046.spi=self.spi
+        
+        import lvgl as lv
+        indev_drv=lv.indev_drv_t()
+        indev_drv.init()
+        indev_drv.type=lv.INDEV_TYPE.POINTER
+        indev_drv.read_cb=lambda indev_drv,data: self.indev_drv_read_cb(indev_drv,data)
+        indev_drv.register()
+
 
 if __name__=='__main__':
 

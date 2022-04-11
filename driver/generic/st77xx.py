@@ -4,7 +4,20 @@ import struct
 import uctypes
 
 from micropython import const
-import rp2_dma
+
+#
+# This driver was written from scratch using datasheets and looking at other drivers listed here:
+#
+
+# This is Pimoroni driver, with Adafruit header:
+# https://github.com/pimoroni/st7789-python/blob/master/library/ST7789/__init__.py
+# This is c++ Adafruit driver:
+# https://github.com/adafruit/Adafruit-ST7735-Library/blob/master/Adafruit_ST7789.cpp
+# independent (?) micropython implementation:
+# https://techatronic.com/st7789-display-pi-pico/
+# st77xx c driver (for uPy), with simplified init sequence:
+# https://github.com/szampardi/st77xx_mpy
+
 
 ST77XX_NOP = const(0x00)
 ST77XX_SWRESET = const(0x01)
@@ -83,14 +96,6 @@ ST77XX_COLOR_MODE_16BIT = const(0x05)
 ST77XX_COLOR_MODE_18BIT = const(0x06)
 ST77XX_COLOR_MODE_16M = const(0x07)
 
-# This is Pimoroni driver, with Adafruit header:
-# https://github.com/pimoroni/st7789-python/blob/master/library/ST7789/__init__.py
-# This is c++ Adafruit driver:
-# https://github.com/adafruit/Adafruit-ST7735-Library/blob/master/Adafruit_ST7789.cpp
-# independent (?) micropython implementation:
-# https://techatronic.com/st7789-display-pi-pico/
-# st77xx c driver (for uPy), with simplified init sequence:
-# https://github.com/szampardi/st77xx_mpy
 
 ST77XX_COL_ROW_MODEL_START_ROTMAP={
     # ST7789
@@ -102,15 +107,21 @@ ST77XX_COL_ROW_MODEL_START_ROTMAP={
     (128,160,'redtab'):[(2,1),(1,2),(2,1),(1,2)],
 }
 
-class St77xx(object):
-    def __init__(self, *, cs, dc, bl, spi, res, suppRes, model=None, suppModel=[], rst=None, rot=1, dma=None, variant=''):
+class St77xx_hw(object):
+    def __init__(self, *, cs, dc, spi, res, suppRes, bl=None, model=None, suppModel=[], rst=None, rot=1, rp2_dma=None, variant=''):
         '''
+        This is an abstract low-level driver the ST77xx controllers, not to be instantiated directly.
+        Derived classes implement chip-specific bits.
+
         * *cs*: chip select pin (= slave select, SS)
         * *dc*: data/command pin
-        * *bl*: backlight PWM pin
+        * *bl*: backlight PWM pin (optional)
         * *rst*: optional reset pin
         * *res*: resolution tuple; (width,height) with zero rotation
         * *rot*: display orientation (0: portrait, 1: landscape, 2: inverted protrait, 3: inverted landscape)
+        * *rp2_dma*: optional DMA object for the rp2 port
+
+        *suppModel*, *suppRes*, *variant* are provided by the subclass constructor.
         '''
         self.buf1 = bytearray(1)
         self.buf2 = bytearray(2)
@@ -128,7 +139,7 @@ class St77xx(object):
         self.res=res
         self.model=model
 
-        self.dma=dma
+        self.rp2_dma=rp2_dma
         self.spi=spi
         self.hard_reset()
 
@@ -142,6 +153,7 @@ class St77xx(object):
             time.sleep(.2)
         self.config()
     def set_backlight(self,percent):
+        if self.bl is None: return
         self.bl.duty_u16(percent*655)
     def set_window(self, x, y, w, h):
         c0,r0=ST77XX_COL_ROW_MODEL_START_ROTMAP[self.res[0],self.res[1],self.model][self.rot%4]
@@ -157,7 +169,7 @@ class St77xx(object):
 
     def blit(self, x, y, w, h, buf, is_blocking=True):
         self.set_window(x, y, w, h)
-        if self.dma: self.write_register_dma(ST77XX_RAMWR, buf, is_blocking)
+        if self.rp2_dma: self._rp2_write_register_dma(ST77XX_RAMWR, buf, is_blocking)
         else: self.write_register(ST77XX_RAMWR, buf)
 
     def clear(self, color):
@@ -183,17 +195,17 @@ class St77xx(object):
             self.spi.write(buf)
         self.cs.value(1)
 
-    def write_register_dma(self, reg, buf, is_blocking=True):
+    def _rp2_write_register_dma(self, reg, buf, is_blocking=True):
         'If *is_blocking* is False, used should call wait_dma explicitly.'
         SPI1_BASE = 0x40040000 # FIXME: will be different for another SPI bus?
         SSPDR     = 0x008
-        self.dma.config(
+        self.rp2_dma.config(
             src_addr = uctypes.addressof(buf),
             dst_addr = SPI1_BASE + SSPDR,
             count    = len(buf),
             src_inc  = True,
             dst_inc  = False,
-            trig_dreq= self.dma.DREQ_SPI1_TX
+            trig_dreq= self.rp2_dma.DREQ_SPI1_TX
         )
         struct.pack_into('B',self.buf1,0,reg)
         self.cs.value(0)
@@ -202,14 +214,14 @@ class St77xx(object):
         self.spi.write(self.buf1)
 
         self.dc.value(1)
-        self.dma.enable()
+        self.rp2_dma.enable()
 
-        if is_blocking: self.wait_dma()
+        if is_blocking: self._rp2_wait_dma()
 
-    def wait_dma(self):
-        if self.dma is None: return
-        while self.dma.is_busy(): pass
-        self.dma.disable()
+    def _rp2_wait_dma(self):
+        if self.rp2_dma is None: return
+        while self.rp2_dma.is_busy(): pass
+        self.rp2_dma.disable()
         # wait to send last byte. It should take < 1uS @ 10MHz
         time.sleep_us(1)
         self.cs.value(1)
@@ -227,7 +239,7 @@ class St77xx(object):
             if delay>0: time.sleep_ms(delay)
 
 
-class St7735(St77xx):
+class St7735_hw(St77xx_hw):
     '''There are several ST7735-based LCD models, we only tested the blacktab model really.'''
     def __init__(self,res,model='greentab',**kw):
         super().__init__(res=res,suppRes=[(128,160),],model=model,suppModel=['greentab','redtab','blacktab'],**kw)
@@ -296,7 +308,7 @@ class St7735(St77xx):
         self.apply_rotation(self.rot)
 
 
-class St7789(St77xx):
+class St7789_hw(St77xx_hw):
     def __init__(self,res,**kw):
         super().__init__(res=res,suppRes=[(240,320),],model=None,suppModel=None,**kw)
     def config(self):
@@ -335,6 +347,44 @@ class St7789(St77xx):
         self._run_seq(init7789)
         self.apply_rotation(self.rot)
 
+class St77xx_lvgl(object):
+    '''LVGL wrapper for St77xx, not to be instantiated directly.
+
+    * creates and registers LVGL display driver;
+    * allocates buffers (double-buffered by default);
+    * sets the driver callback to the disp_drv_flush_cb method.
+
+    '''
+    def disp_drv_flush_cb(self,disp_drv,area,color):
+        print(f"({area.x1},{area.y1}..{area.x2},{area.y2})")
+        self._rp2_wait_dma() # wait if not yet done and DMA is being used
+        # blit in background
+        self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),disp_drv.draw_buf.buf_act.__dereference__(2*w*h),is_blocking=False)
+        disp_drv.flush_ready()
+        # register to LVGL here
+    def __init__(self,doublebuffer=True):
+        import lvgl as lv
+        if lv.COLOR.DEPTH!=16 or not lv.COLOR_16.SWAP: raise RuntimeError(f'LVGL *must* be compiled with 16bit color depth and swapped bytes (current: lv.COLOR.DEPTH={lv.COLOR.DEPTH}, lv.COLOR_16.SWAP={lv.COLOR_16.SWAP})')
+        disp_draw_buf=lv.disp_draw_buf_t()
+        disp_draw_buf.init(fb1:=bytearray(self.width*2*32),bytearray(self.width*2*32) if doublebuffer else None,len(fb1)//lv.color_t.__SIZE__)
+        disp_drv=lv.disp_drv_t()
+        disp_drv.init()
+        disp_drv.draw_buf=disp_draw_buf
+        disp_drv.flush_cb=lambda disp_drv,area,color: self.disp_drv_flush_cb(disp_drv,area,color)
+        disp_drv.hor_res=self.width
+        disp_drv.ver_res=self.height
+        disp_drv.register()
+
+
+class St7735(St7735_hw,St77xx_lvgl):
+    def __init__(self,res,**kw):
+        St7735_hw.__init__(self,res=res,**kw)
+        St77xx_lvgl.__init__(self)
+
+class St7789(St7789_hw,St77xx_lvgl):
+    def __init__(self,res,**kw):
+        St7789_hw.__init__(self,res=res,**kw)
+        St77xx_lvgl.__init__(self)
 
 if __name__=='__main__':
 
@@ -386,19 +436,19 @@ if __name__=='__main__':
         mosi=machine.Pin(11,machine.Pin.OUT),
         miso=machine.Pin(12,machine.Pin.IN)
     )
-    dma=rp2_dma.DMA(0)
-    # dma=None
+    # dma=rp2_dma.DMA(0)
+    rp2_dma=None
 
     if 1:
         # Waveshare Pi Pico 2.8 LCD https://www.waveshare.com/Pico-ResTouch-LCD-2.8.htm
-        waveshare_28_lcd=St7789(rot=0,res=(240,320),spi=spi,dma=dma,cs=9,dc=8,bl=13,rst=15)
+        waveshare_28_lcd=St7789_hw(rot=0,res=(240,320),spi=spi,rp2_dma=rp2_dma,cs=9,dc=8,bl=13,rst=15)
         test_lcd(lcd=waveshare_28_lcd)
     if 1:
         # Waveshare Pi Pico 1.8 LCD https://www.waveshare.com/wiki/Pico-LCD-1.8
         # (not sure if this is redtab, but the driver works; someone with access to more hardware can adjust perhaps)
-        waveshare_18_lcd=St7735(rot=0,res=(128,160),spi=spi,dma=dma,cs=9,dc=8,bl=13,rst=12,model='redtab')
+        waveshare_18_lcd=St7735_hw(rot=0,res=(128,160),spi=spi,rp2_dma=rp2_dma,cs=9,dc=8,bl=13,rst=12,model='redtab')
         test_lcd(lcd=waveshare_18_lcd)
     if 1320:
         # no-name variant which arduino library calls blacktab  (IIRC)
-        noname_177_lcd=St7735(rot=0,res=(128,160),spi=spi,dma=None,cs=9,dc=8,bl=13,rst=12,model='blacktab')
+        noname_177_lcd=St7735_hw(rot=0,res=(128,160),spi=spi,rp2_dma=None,cs=9,dc=8,bl=13,rst=12,model='blacktab')
         test_lcd(lcd=noname_177_lcd)
