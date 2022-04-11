@@ -4,17 +4,17 @@ import struct
 import machine
 
 class DMA:
-    DMA_BASE  = 0x50000000
+    DMA_BASE  = const(0x50000000)
 
-    DMA_EN    = 0x01 << 0
-    HIGH_PRIO = 0x01 << 1
-    INCR_READ = 0x01 << 4
-    INCR_WRITE= 0x01 << 5
-    DREQ_PIO0_RX0 = 0x04 << 15
-    DREQ_SPI1_TX  = 0x12 << 15
-    DREQ_PERMANENT= 0x3F << 15
-    IRQ_QUIET = 0x01 << 21
-    BUSY      = 0x01 << 24
+    DMA_EN    = const(0x01 << 0)
+    HIGH_PRIO = const(0x01 << 1)
+    INCR_READ = const(0x01 << 4)
+    INCR_WRITE= const(0x01 << 5)
+    DREQ_PIO0_RX0 = const(0x04 << 15)
+    DREQ_SPI1_TX  = const(0x12 << 15)
+    DREQ_PERMANENT= const(0x3F << 15)
+    IRQ_QUIET = const(0x01 << 21)
+    BUSY      = const(0x01 << 24)
 
     def __init__( self, channelNumber ):
         offset = channelNumber * 0x40
@@ -47,33 +47,3 @@ class DMA:
             return True
         else:
             return False
-
-def test_dma():
-    dma = DMA(0)
-    src_buf = b"Hello World!"*1000
-    dst_buf = bytearray( 12*1000 )
-
-    dma.config(
-        src_addr = uctypes.addressof( src_buf ),
-        dst_addr = uctypes.addressof( dst_buf ),
-        count = len( src_buf ),
-        src_inc = True,
-        dst_inc = True,
-        trig_dreq = DMA.DREQ_PERMANENT
-    )
-
-    t0 = time.ticks_us()
-    dma.enable()
-    while( dma.is_busy() ):
-        pass
-    dma.disable()
-    t1 = time.ticks_us()
-
-    print( "dst", dst_buf[0:12], "..." )
-
-    print( "Transfer speed [B/s]:", len( src_buf )/((t1-t0)*1e-6) )
-    print( "@CPU freq:", machine.freq() )
-
-if __name__=='__main__':
-    test_dma()
-    print( "done" )

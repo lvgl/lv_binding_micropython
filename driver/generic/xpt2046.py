@@ -88,7 +88,7 @@ class Xpt2046(Xpt2046_hw):
     def indev_drv_read_cb(self, indev_drv, data):
         # wait for DMA transfer (if any) before switchint SPI to 1 MHz
         if self.lcd: self.lcd._rp2_wait_dma()
-        print('.',end='')
+        # print('.',end='')
         self.spi.init(baudrate=1_000_000)
         pos=self.pos()
         if pos is None: data.state=0
@@ -110,25 +110,3 @@ class Xpt2046(Xpt2046_hw):
         indev_drv.type=lv.INDEV_TYPE.POINTER
         indev_drv.read_cb=lambda indev_drv,data: self.indev_drv_read_cb(indev_drv,data)
         indev_drv.register()
-
-
-if __name__=='__main__':
-
-    def test_tsc():
-        TP_CLK_PIN,TP_MOSI_PIN,TP_MISO_PIN=10,11,12
-        TP_CS_PIN=16
-        spi=machine.SPI(
-            1,
-            baudrate=2_000_000, # the chip does not handle more than 2MHz (!)
-            polarity=0,
-            phase=0,
-            sck=machine.Pin(TP_CLK_PIN, machine.Pin.OUT),
-            mosi=machine.Pin(TP_MOSI_PIN, machine.Pin.OUT),
-            miso=machine.Pin(TP_MISO_PIN, machine.Pin.OUT),
-        )
-
-        tsc=Xpt2046(spi=spi,cs=TP_CS_PIN,rot=1)
-        for i in range(100000):
-            if p:=tsc.pos(): print(p)
-
-    test_tsc()
