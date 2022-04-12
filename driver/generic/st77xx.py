@@ -170,7 +170,7 @@ class St77xx_hw(object):
         self.write_register(ST77XX_CASET, self.buf4)
         struct.pack_into('>hh', self.buf4, 0, r0+y, r0+y+h-1)
         self.write_register(ST77XX_RASET, self.buf4)
-    def Epply_rotation(self,rot):
+    def apply_rotation(self,rot):
         self.rot=rot
         if (self.rot%2)==0: self.width,self.height=self.res
         else: self.height,self.width=self.res
@@ -373,6 +373,7 @@ class St77xx_lvgl(object):
         # register to LVGL here
     def __init__(self,doublebuffer=True):
         import lvgl as lv
+        if not lv.is_initialized(): raise RuntimeError('LVGL not initialized (call lvgl.init() first).')
         if lv.COLOR.DEPTH!=16 or not lv.COLOR_16.SWAP: raise RuntimeError(f'LVGL *must* be compiled with 16bit color depth and swapped bytes (current: lv.COLOR.DEPTH={lv.COLOR.DEPTH}, lv.COLOR_16.SWAP={lv.COLOR_16.SWAP})')
         disp_draw_buf=lv.disp_draw_buf_t()
         disp_draw_buf.init(fb1:=bytearray(self.width*2*32),bytearray(self.width*2*32) if doublebuffer else None,len(fb1)//lv.color_t.__SIZE__)
