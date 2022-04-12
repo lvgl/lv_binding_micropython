@@ -2,6 +2,9 @@ import time
 import uctypes
 import struct
 import machine
+import sys
+
+if sys.platform!='rp2': raise ImportError('This module can only be meaningfully used on the rp2 platform.')
 
 class DMA:
     DMA_BASE  = const(0x50000000)
