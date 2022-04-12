@@ -1,10 +1,15 @@
-import time
 import machine
 import struct
 
 # see e.g.
 # https://github.com/MatthewLowden/RPi-XPT2046-Touchscreen-Python/blob/master/XPT2046.py
 # and the XPT2046 datasheet
+
+XPT2046_PORTRAIT = const(0)
+XPT2046_LANDSCAPE = const(1)
+XPT2046_INV_PORTRAIT = const(2)
+XPT2046_INV_LANDSCAPE = const(3)
+
 
 class Xpt2046_hw(object):
     CHAN_X  = const(0b0101_0000)
@@ -30,7 +35,7 @@ class Xpt2046_hw(object):
         return ret
 
     def __init__(self,*,
-        spi: machine.SPI,cs,bits=12,ranges=((100,1900),(200,1950)),width=240,height=320,rot=0):
+        spi: machine.SPI,cs,bits=12,ranges=((100,1900),(200,1950)),width=240,height=320,rot=XPT2046_PORTRAIT):
         '''
         Construct the Xpt2046 touchscreen controller.
         *spi*: spi bus instance; its baud rate must *not* exceed 2_000_000 (2MHz) for correct functionality
@@ -39,7 +44,7 @@ class Xpt2046_hw(object):
         *ranges*: `(x_min,x_max),(y_min,y_max)` for raw coordinate readings; calibrated values might be provided.
         *width*: width of the underyling screen in pixels, in natural (rot=0) orientation (0..*width* is the range for reported horizontal coordinate)
         *height*: height of the underyling screen in pixels
-        *rot*: screen rotation (0: portrait, 1: landscape, 2: reverse portrait, 3: reverse landscape)
+        *rot*: screen rotation (0: portrait, 1: landscape, 2: inverted portrait, 3: inverted landscape); the constants XPT2046_PORTRAIT, XPT2046_LANDSCAPE, XPT2046_INV_PORTRAIT, XPT2046_INV_LANDSCAPE may be used.
         '''
         self.buf = bytearray(3)
         self.spi = spi
@@ -89,20 +94,24 @@ class Xpt2046(Xpt2046_hw):
         # wait for DMA transfer (if any) before switchint SPI to 1 MHz
         if self.lcd: self.lcd._rp2_wait_dma()
         # print('.',end='')
-        self.spi.init(baudrate=1_000_000)
+        if self.spiRate: self.spi.init(baudrate=1_000_000)
         pos=self.pos()
         if pos is None: data.state=0
         else: (data.point.x,data.point.y),data.state=pos,1
         # print('#',end='')
         # switch SPI back to 24 MHz for the display
-        self.spi.init(baudrate=24_000_000)
+        if self.spiRate: self.spi.init(baudrate=self.spiRate)
         return False
 
-    def __init__(self,spi,lcd=None,**kw):
+    def __init__(self,spi,spiRate=24_000_000,lcd=None,**kw):
+        '''XPT2046 touchscreen driver for LVGL; cf. documentation of :obj:`Xpt2046_hw` for the meaning of parameters being passed.
+
+        *lcd*: optional St77xx instance; in case of port-specific async DMA transfer on RP2, it will wait for the transfer to finish before using the SPI bus.
+        *spiRate*: the SPI bus must set to low frequency (1MHz) when reading from the XPT2046; when *spiRate* is given, the bus will be switched back to this frequency when XPT2046 is done reading. The default 24MHz targets St77xx display chips which operate at that frequency and come often with XPT2046-based touchscreen.
+        '''
         super().__init__(spi=spi,**kw)
-        # self.lcd=lcd
-        Xpt2046.lcd=lcd
-        Xpt2046.spi=self.spi
+        self.spiRate=spiRate
+        self.lcd=lcd
         
         import lvgl as lv
         indev_drv=lv.indev_drv_t()

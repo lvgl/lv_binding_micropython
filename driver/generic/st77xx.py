@@ -107,21 +107,30 @@ ST77XX_COL_ROW_MODEL_START_ROTMAP={
     (128,160,'redtab'):[(2,1),(1,2),(2,1),(1,2)],
 }
 
+ST77XX_PORTRAIT = const(0)
+ST77XX_LANDSCAPE = const(1)
+ST77XX_INV_PORTRAIT = const(2)
+ST77XX_INV_LANDSCAPE = const(3)
+
 class St77xx_hw(object):
-    def __init__(self, *, cs, dc, spi, res, suppRes, bl=None, model=None, suppModel=[], rst=None, rot=1, rp2_dma=None, variant=''):
+    def __init__(self, *, cs, dc, spi, res, suppRes, bl=None, model=None, suppModel=[], rst=None, rot=ST77XX_LANDSCAPE, rp2_dma=None):
         '''
         This is an abstract low-level driver the ST77xx controllers, not to be instantiated directly.
-        Derived classes implement chip-specific bits.
+        Derived classes implement chip-specific bits. THe following parameters are recognized:
 
         * *cs*: chip select pin (= slave select, SS)
         * *dc*: data/command pin
         * *bl*: backlight PWM pin (optional)
         * *rst*: optional reset pin
         * *res*: resolution tuple; (width,height) with zero rotation
-        * *rot*: display orientation (0: portrait, 1: landscape, 2: inverted protrait, 3: inverted landscape)
+        * *rot*: display orientation (0: portrait, 1: landscape, 2: inverted protrait, 3: inverted landscape); the constants ST77XX_PORTRAIT, ST77XX_LANDSCAPE, ST77XX_INV_POTRAIT, ST77XX_INV_LANDSCAPE may be used.
         * *rp2_dma*: optional DMA object for the rp2 port
+        * *model*: display model, to account for variations in products
 
-        *suppModel*, *suppRes*, *variant* are provided by the subclass constructor.
+        Subclass constructors (implementing concrete chip) set in addition the following, not to be used directly:
+
+        * *suppModel*: models supported by the hardware driver
+        * *suppRes*: resolutions supported by the hardware driver, as list of (width,height) tuples
         '''
         self.buf1 = bytearray(1)
         self.buf2 = bytearray(2)
@@ -161,7 +170,7 @@ class St77xx_hw(object):
         self.write_register(ST77XX_CASET, self.buf4)
         struct.pack_into('>hh', self.buf4, 0, r0+y, r0+y+h-1)
         self.write_register(ST77XX_RASET, self.buf4)
-    def apply_rotation(self,rot):
+    def Epply_rotation(self,rot):
         self.rot=rot
         if (self.rot%2)==0: self.width,self.height=self.res
         else: self.height,self.width=self.res
@@ -378,10 +387,12 @@ class St77xx_lvgl(object):
 
 class St7735(St7735_hw,St77xx_lvgl):
     def __init__(self,res,**kw):
+        '''See :obj:`St77xx_hw` for the meaning of the parameters.'''
         St7735_hw.__init__(self,res=res,**kw)
         St77xx_lvgl.__init__(self)
 
 class St7789(St7789_hw,St77xx_lvgl):
     def __init__(self,res,**kw):
+        '''See :obj:`St77xx_hw` for the meaning of the parameters.'''
         St7789_hw.__init__(self,res=res,**kw)
         St77xx_lvgl.__init__(self)
