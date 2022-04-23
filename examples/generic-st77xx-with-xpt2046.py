@@ -25,6 +25,12 @@ else: rp2_dma=None
 import lvgl as lv
 lv.init()
 
+# create async event loop; this example freezes with the default sync (timer-based) event loop created in the driver (why?)
+import lv_utils
+import uasyncio
+lv_utils.event_loop(refresh_cb=lv.task_handler,asynchronous=True)
+
+
 lcd=St7789(rot=3,res=(240,320),spi=spi,cs=9,dc=8,bl=13,rst=15,rp2_dma=rp2_dma)
 lcd.set_backlight(30)
 touch=Xpt2046(spi=spi,cs=16,rot=1)
@@ -40,7 +46,5 @@ btn.center()
 btn.add_event_cb(cb_btn,lv.EVENT.CLICKED,None)
 lv.scr_load(scr)
 
-import lv_utils
-import uasyncio
-lv_utils.event_loop(refresh_cb=lv.task_handler,asynchronous=True)
+# run the asyncio event loop now
 uasyncio.Loop.run_forever()

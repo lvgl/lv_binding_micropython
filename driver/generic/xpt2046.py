@@ -114,9 +114,10 @@ class Xpt2046(Xpt2046_hw):
         self.lcd=lcd
         
         import lvgl as lv
-        if not lv.is_initialized(): raise RuntimeError('LVGL not initialized (call lvgl.init() first).')
-        indev_drv=lv.indev_drv_t()
-        indev_drv.init()
-        indev_drv.type=lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb=lambda indev_drv,data: self.indev_drv_read_cb(indev_drv,data)
-        indev_drv.register()
+        if not lv.is_initialized(): lv.init()
+        
+        self.indev_drv=lv.indev_drv_t()
+        self.indev_drv.init()
+        self.indev_drv.type=lv.INDEV_TYPE.POINTER
+        self.indev_drv.read_cb=lambda indev_drv,data: self.indev_drv_read_cb(indev_drv,data)
+        self.indev_drv.register()
