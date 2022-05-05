@@ -3,7 +3,6 @@ sys.path.append('.')
 from st77xx import *
 from xpt2046 import *
 
-
 spi=machine.SPI(
     1,
     baudrate=24_000_000,
@@ -25,26 +24,14 @@ else: rp2_dma=None
 import lvgl as lv
 lv.init()
 
-# create async event loop; this example freezes with the default sync (timer-based) event loop created in the driver (why?)
-import lv_utils
-import uasyncio
-lv_utils.event_loop(refresh_cb=lv.task_handler,asynchronous=True)
-
-
 lcd=St7789(rot=3,res=(240,320),spi=spi,cs=9,dc=8,bl=13,rst=15,rp2_dma=rp2_dma)
 lcd.set_backlight(30)
 touch=Xpt2046(spi=spi,cs=16,rot=1)
-
-
-def cb_btn(event): print("Hello World!")
 
 scr=lv.obj()
 btn=lv.btn(scr)
 lbl=lv.label(btn)
 lbl.set_text("Press me!")
 btn.center()
-btn.add_event_cb(cb_btn,lv.EVENT.CLICKED,None)
+btn.add_event_cb(lambda event: print('Button clicked!'),lv.EVENT.CLICKED,None)
 lv.scr_load(scr)
-
-# run the asyncio event loop now
-uasyncio.Loop.run_forever()
