@@ -384,7 +384,6 @@ class AdvancedDemoApplication:
         indev_drv.register()
 
     def init_gui_rp2(self):
-        # this example currently displays garbage on the LCD
         import xpt2046
         import st77xx
         if sys.platform!='rp2': raise ImportError('Only works on the rp2 platform.')
