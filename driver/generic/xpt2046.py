@@ -112,12 +112,12 @@ class Xpt2046(Xpt2046_hw):
         super().__init__(spi=spi,**kw)
         self.spiRate=spiRate
         self.lcd=lcd
-        
+
         import lvgl as lv
         if not lv.is_initialized(): lv.init()
-        
+
         self.indev_drv=lv.indev_drv_t()
         self.indev_drv.init()
         self.indev_drv.type=lv.INDEV_TYPE.POINTER
-        self.indev_drv.read_cb=lambda indev_drv,data: self.indev_drv_read_cb(indev_drv,data)
+        self.indev_drv.read_cb=self.indev_drv_read_cb
         self.indev_drv.register()

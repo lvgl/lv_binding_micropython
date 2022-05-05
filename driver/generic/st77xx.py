@@ -373,20 +373,20 @@ class St77xx_lvgl(object):
     def __init__(self,doublebuffer=True):
         import lvgl as lv
         import lv_utils
-        
+
         if lv.COLOR.DEPTH!=16 or not lv.COLOR_16.SWAP: raise RuntimeError(f'LVGL *must* be compiled with 16bit color depth and swapped bytes (current: lv.COLOR.DEPTH={lv.COLOR.DEPTH}, lv.COLOR_16.SWAP={lv.COLOR_16.SWAP})')
 
         if not lv.is_initialized(): lv.init()
         # create event loop if not yet present
         if not lv_utils.event_loop.is_running(): self.event_loop=lv_utils.event_loop()
-        
+
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
         self.disp_draw_buf=lv.disp_draw_buf_t()
         self.disp_draw_buf.init(fb1:=bytearray(self.width*2*32),bytearray(self.width*2*32) if doublebuffer else None,len(fb1)//lv.color_t.__SIZE__)
         self.disp_drv=lv.disp_drv_t()
         self.disp_drv.init()
         self.disp_drv.draw_buf=self.disp_draw_buf
-        self.disp_drv.flush_cb=lambda disp_drv,area,color: self.disp_drv_flush_cb(disp_drv,area,color)
+        self.disp_drv.flush_cb=self.disp_drv_flush_cb
         self.disp_drv.hor_res=self.width
         self.disp_drv.ver_res=self.height
         self.disp_drv.register()
