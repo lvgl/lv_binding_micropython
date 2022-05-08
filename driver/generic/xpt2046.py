@@ -88,30 +88,28 @@ class Xpt2046_hw(object):
 
 
 class Xpt2046(Xpt2046_hw):
-    lcd=None
-    spi=None
     def indev_drv_read_cb(self, indev_drv, data):
         # wait for DMA transfer (if any) before switchint SPI to 1 MHz
-        if self.lcd: self.lcd._rp2_wait_dma()
+        if self.spiPrereadCb: self.spiPrereadCb()
         # print('.',end='')
         if self.spiRate: self.spi.init(baudrate=1_000_000)
         pos=self.pos()
         if pos is None: data.state=0
         else: (data.point.x,data.point.y),data.state=pos,1
         # print('#',end='')
-        # switch SPI back to 24 MHz for the display
+        # switch SPI back to spiRate
         if self.spiRate: self.spi.init(baudrate=self.spiRate)
         return False
 
-    def __init__(self,spi,spiRate=24_000_000,lcd=None,**kw):
+    def __init__(self,spi,spiRate=24_000_000,spiPrereadCb=None,**kw):
         '''XPT2046 touchscreen driver for LVGL; cf. documentation of :obj:`Xpt2046_hw` for the meaning of parameters being passed.
 
-        *lcd*: optional St77xx instance; in case of port-specific async DMA transfer on RP2, it will wait for the transfer to finish before using the SPI bus.
+        *spiPrereadCb*: call this before reading from SPI; used to block until DMA transfer is complete (when sharing SPI bus).
         *spiRate*: the SPI bus must set to low frequency (1MHz) when reading from the XPT2046; when *spiRate* is given, the bus will be switched back to this frequency when XPT2046 is done reading. The default 24MHz targets St77xx display chips which operate at that frequency and come often with XPT2046-based touchscreen.
         '''
         super().__init__(spi=spi,**kw)
         self.spiRate=spiRate
-        self.lcd=lcd
+        self.spiPrereadCb=spiPrereadCb
 
         import lvgl as lv
         if not lv.is_initialized(): lv.init()

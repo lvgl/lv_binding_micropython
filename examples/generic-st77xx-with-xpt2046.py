@@ -13,10 +13,9 @@ spi=machine.SPI(
     miso=machine.Pin(12,machine.Pin.IN)
 )
 
-## TODO: measure fps gain w/ DMA
 if 0:
     # with DMA, the repaints seem to be too slow? To be investigated
-    # but we seem to be fine performance-wise without DMA anyway
+    # we seem to be fine performance-wise without DMA with 320x240 anyway
     import rp2_dma
     rp2_dma=rp2_dma.DMA(0)
 else: rp2_dma=None
@@ -24,9 +23,9 @@ else: rp2_dma=None
 import lvgl as lv
 lv.init()
 
-lcd=St7789(rot=3,res=(240,320),spi=spi,cs=9,dc=8,bl=13,rst=15,rp2_dma=rp2_dma)
+lcd=St7789(rot=3,res=(240,320),spi=spi,cs=9,dc=8,bl=13,rst=15,rp2_dma=rp2_dma,factor=8)
 lcd.set_backlight(30)
-touch=Xpt2046(spi=spi,cs=16,rot=1)
+touch=Xpt2046(spi=spi,cs=16,rot=1,spiPrereadCb=lcd.rp2_wait_dma)
 
 scr=lv.obj()
 btn=lv.btn(scr)

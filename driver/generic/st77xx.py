@@ -113,7 +113,7 @@ ST77XX_INV_PORTRAIT = const(2)
 ST77XX_INV_LANDSCAPE = const(3)
 
 class St77xx_hw(object):
-    def __init__(self, *, cs, dc, spi, res, suppRes, bl=None, model=None, suppModel=[], rst=None, rot=ST77XX_LANDSCAPE, rp2_dma=None):
+    def __init__(self, *, cs, dc, spi, res, suppRes, bl=None, model=None, suppModel=[], rst=None, rot=ST77XX_LANDSCAPE, bgr=False, rp2_dma=None):
         '''
         This is an abstract low-level driver the ST77xx controllers, not to be instantiated directly.
         Derived classes implement chip-specific bits. THe following parameters are recognized:
@@ -121,11 +121,13 @@ class St77xx_hw(object):
         * *cs*: chip select pin (= slave select, SS)
         * *dc*: data/command pin
         * *bl*: backlight PWM pin (optional)
+        * *model*: display model, to account for variations in products
         * *rst*: optional reset pin
         * *res*: resolution tuple; (width,height) with zero rotation
         * *rot*: display orientation (0: portrait, 1: landscape, 2: inverted protrait, 3: inverted landscape); the constants ST77XX_PORTRAIT, ST77XX_LANDSCAPE, ST77XX_INV_POTRAIT, ST77XX_INV_LANDSCAPE may be used.
+        * *bgr*: color order if BGR (not RGB)
         * *rp2_dma*: optional DMA object for the rp2 port
-        * *model*: display model, to account for variations in products
+
 
         Subclass constructors (implementing concrete chip) set in addition the following, not to be used directly:
 
@@ -140,6 +142,7 @@ class St77xx_hw(object):
         self.bl.value(1)
         self.bl=machine.PWM(self.bl)
         self.rot=rot
+        self.bgr=bgr
         self.width,self.height=(0,0) # set in apply_rotation
 
         if res not in suppRes: raise ValueError('Unsupported resolution %s; the driver supports: %s.'%(str(res),', '.join(str(r) for r in suppRes)))
@@ -174,7 +177,7 @@ class St77xx_hw(object):
         self.rot=rot
         if (self.rot%2)==0: self.width,self.height=self.res
         else: self.height,self.width=self.res
-        self.write_register(ST77XX_MADCTL,bytes([ST77XX_MADCTL_BGR | ST77XX_MADCTL_ROTS[self.rot%4]]))
+        self.write_register(ST77XX_MADCTL,bytes([(ST77XX_MADCTL_BGR if self.bgr else 0)|ST77XX_MADCTL_ROTS[self.rot%4]]))
 
     def blit(self, x, y, w, h, buf, is_blocking=True):
         self.set_window(x, y, w, h)
@@ -225,9 +228,13 @@ class St77xx_hw(object):
         self.dc.value(1)
         self.rp2_dma.enable()
 
-        if is_blocking: self._rp2_wait_dma()
+        if is_blocking: self.rp2_wait_dma()
 
-    def _rp2_wait_dma(self):
+    def rp2_wait_dma(self):
+        '''
+        Wait for rp2-port DMA transfer to finish; no-op unless self.rp2_dma is defined.
+        Can be used as callback before accessing shared SPI bus e.g. with the xpt2046 driver.
+        '''
         if self.rp2_dma is None: return
         while self.rp2_dma.is_busy(): pass
         self.rp2_dma.disable()
@@ -325,7 +332,7 @@ class St7789_hw(St77xx_hw):
             # out of sleep mode
             (ST77XX_SLPOUT, None, 100),
             # memory access direction (this is set again in apply_rotation, is that okay?)
-            (ST77XX_MADCTL, bytes([ST77XX_MADCTL_BGR | ST77XX_MADCTL_ROTS[self.rot%4]])),
+            (ST77XX_MADCTL, bytes([ST77XX_MADCTL_ROTS[self.rot%4]])),
             # RGB565
             (ST77XX_COLMOD, bytes([ST77XX_COLOR_MODE_65K | ST77XX_COLOR_MODE_16BIT])),
             # front/back porch setting in normal/idle/partial modes; 3rd byte (PSEN) 0x00 = disabled
@@ -366,15 +373,18 @@ class St77xx_lvgl(object):
     '''
     def disp_drv_flush_cb(self,disp_drv,area,color):
         # print(f"({area.x1},{area.y1}..{area.x2},{area.y2})")
-        self._rp2_wait_dma() # wait if not yet done and DMA is being used
+        self.rp2_wait_dma() # wait if not yet done and DMA is being used
         # blit in background
         self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),disp_drv.draw_buf.buf_act.__dereference__(2*w*h),is_blocking=False)
         self.disp_drv.flush_ready()
-    def __init__(self,doublebuffer=True):
+    def __init__(self,doublebuffer=True,factor=4):
         import lvgl as lv
         import lv_utils
 
-        if lv.COLOR.DEPTH!=16 or not lv.COLOR_16.SWAP: raise RuntimeError(f'LVGL *must* be compiled with 16bit color depth and swapped bytes (current: lv.COLOR.DEPTH={lv.COLOR.DEPTH}, lv.COLOR_16.SWAP={lv.COLOR_16.SWAP})')
+        if lv.COLOR.DEPTH!=16: raise RuntimeError(f'LVGL *must* be compiled with LV_COLOR_DEPTH=16 (currently LV_COLOR_DEPTH={lv.COLOR.DEPTH}.')
+        if self.bgr==hasattr(lv.color_t().ch,'green_l'): raise RuntimeError(f'BGR mode requires LV_COLOR_16_SWAP=1, RGB requires no byte swap (current: self.bgr={self.bgr}, LV_COLOR16_SWAP={int(hasattr(lv.color_t().ch,"green_l"))})')
+        
+        bufSize=(self.width*self.height*lv.color_t.__SIZE__)//factor
 
         if not lv.is_initialized(): lv.init()
         # create event loop if not yet present
@@ -382,7 +392,7 @@ class St77xx_lvgl(object):
 
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
         self.disp_draw_buf=lv.disp_draw_buf_t()
-        self.disp_draw_buf.init(fb1:=bytearray(self.width*2*32),bytearray(self.width*2*32) if doublebuffer else None,len(fb1)//lv.color_t.__SIZE__)
+        self.disp_draw_buf.init(fb1:=bytearray(bufSize),bytearray(bufSize) if doublebuffer else None,len(fb1)//lv.color_t.__SIZE__)
         self.disp_drv=lv.disp_drv_t()
         self.disp_drv.init()
         self.disp_drv.draw_buf=self.disp_draw_buf
@@ -393,13 +403,13 @@ class St77xx_lvgl(object):
 
 
 class St7735(St7735_hw,St77xx_lvgl):
-    def __init__(self,res,**kw):
+    def __init__(self,res,doublebuffer=True,factor=4,**kw):
         '''See :obj:`St77xx_hw` for the meaning of the parameters.'''
         St7735_hw.__init__(self,res=res,**kw)
-        St77xx_lvgl.__init__(self)
+        St77xx_lvgl.__init__(self,doublebuffer,factor)
 
 class St7789(St7789_hw,St77xx_lvgl):
-    def __init__(self,res,**kw):
+    def __init__(self,res,doublebuffer=True,factor=4,**kw):
         '''See :obj:`St77xx_hw` for the meaning of the parameters.'''
         St7789_hw.__init__(self,res=res,**kw)
-        St77xx_lvgl.__init__(self)
+        St77xx_lvgl.__init__(self,doublebuffer,factor)
