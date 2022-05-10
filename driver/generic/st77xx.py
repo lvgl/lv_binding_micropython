@@ -139,10 +139,12 @@ class St77xx_hw(object):
         self.buf4 = bytearray(4)
 
         self.cs,self.dc,self.rst=[(machine.Pin(p,machine.Pin.OUT) if isinstance(p,int) else p) for p in (cs,dc,rst)]
-        if isinstance(self.bl,int): self.bl=machine.PWM(self.bl)
+        self.bl=bl
+        if isinstance(self.bl,int): self.bl=machine.PWM(machine.Pin(self.bl,machine.Pin.OUT))
+        elif isinstance(self.bl,machine.Pin): self.bl=machine.PWM(self.bl)
         assert isinstance(self.bl,(machine.PWM,type(None)))
         self.set_backlight(10) # set some backlight
-        
+
         self.rot=rot
         self.bgr=bgr
         self.width,self.height=(0,0) # this is set later in hard_reset->config->apply_rotation
@@ -157,6 +159,7 @@ class St77xx_hw(object):
         self.spi=spi
         self.hard_reset()
 
+
     def off(self): self.set_backlight(0)
 
     def hard_reset(self):
@@ -166,6 +169,9 @@ class St77xx_hw(object):
                 time.sleep(.2)
             time.sleep(.2)
         self.config()
+    def config(self):
+        self.config_hw() # defined in child classes
+        self.apply_rotation(self.rot)
     def set_backlight(self,percent):
         if self.bl is None: return
         self.bl.duty_u16(percent*655)
@@ -175,6 +181,7 @@ class St77xx_hw(object):
         self.write_register(ST77XX_CASET, self.buf4)
         struct.pack_into('>hh', self.buf4, 0, r0+y, r0+y+h-1)
         self.write_register(ST77XX_RASET, self.buf4)
+
     def apply_rotation(self,rot):
         self.rot=rot
         if (self.rot%2)==0: self.width,self.height=self.res
@@ -261,7 +268,7 @@ class St7735_hw(St77xx_hw):
     '''There are several ST7735-based LCD models, we only tested the blacktab model really.'''
     def __init__(self,res,model='greentab',**kw):
         super().__init__(res=res,suppRes=[(128,160),],model=model,suppModel=['greentab','redtab','blacktab'],**kw)
-    def config(self):
+    def config_hw(self):
         # mostly from here
         # https://github.com/stechiez/raspberrypi-pico/blob/main/pico_st7735/st7735/ST7735.py
 
@@ -322,18 +329,17 @@ class St7735_hw(St77xx_hw):
         else:
             print('Warning: the greentab model was never properly tested')
             self._run_seq(init7735)
-        # this applies ST77XX_MADCTL
-        self.apply_rotation(self.rot)
+        # ST77XX_MADCTL applied in apply_rotation
 
 
 class St7789_hw(St77xx_hw):
     def __init__(self,res,**kw):
         super().__init__(res=res,suppRes=[(240,320),],model=None,suppModel=None,**kw)
-    def config(self):
+    def config_hw(self):
         init7789=[
             # out of sleep mode
             (ST77XX_SLPOUT, None, 100),
-            # memory access direction (this is set again in apply_rotation, is that okay?)
+            # memory access direction (this is set again in apply_rotation)
             (ST77XX_MADCTL, bytes([ST77XX_MADCTL_ROTS[self.rot%4]])),
             # RGB565
             (ST77XX_COLMOD, bytes([ST77XX_COLOR_MODE_65K | ST77XX_COLOR_MODE_16BIT])),
@@ -363,7 +369,7 @@ class St7789_hw(St77xx_hw):
             (ST77XX_SLPOUT, None, 100),
         ]
         self._run_seq(init7789)
-        self.apply_rotation(self.rot)
+        # ST77XX_MADCTL applied in apply_rotation
 
 class St77xx_lvgl(object):
     '''LVGL wrapper for St77xx, not to be instantiated directly.
