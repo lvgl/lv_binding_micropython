@@ -138,12 +138,14 @@ class St77xx_hw(object):
         self.buf2 = bytearray(2)
         self.buf4 = bytearray(4)
 
-        self.cs,self.dc,self.bl,self.rst=[(machine.Pin(p,machine.Pin.OUT) if isinstance(p,int) else p) for p in (cs,dc,bl,rst)]
-        self.bl.value(1)
-        self.bl=machine.PWM(self.bl)
+        self.cs,self.dc,self.rst=[(machine.Pin(p,machine.Pin.OUT) if isinstance(p,int) else p) for p in (cs,dc,rst)]
+        if isinstance(self.bl,int): self.bl=machine.PWM(self.bl)
+        assert isinstance(self.bl,(machine.PWM,type(None)))
+        self.set_backlight(10) # set some backlight
+        
         self.rot=rot
         self.bgr=bgr
-        self.width,self.height=(0,0) # set in apply_rotation
+        self.width,self.height=(0,0) # this is set later in hard_reset->config->apply_rotation
 
         if res not in suppRes: raise ValueError('Unsupported resolution %s; the driver supports: %s.'%(str(res),', '.join(str(r) for r in suppRes)))
         if suppModel and model not in suppModel: raise ValueError('Unsupported model %s; the driver supports: %s.'%(str(model),', '.join(str(r) for r in suppModel)))
@@ -155,8 +157,8 @@ class St77xx_hw(object):
         self.spi=spi
         self.hard_reset()
 
-    def off(self):
-        self.bl.value(0)
+    def off(self): self.set_backlight(0)
+
     def hard_reset(self):
         if self.rst:
             for v in (1,0,1):
