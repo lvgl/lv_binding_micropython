@@ -383,11 +383,34 @@ class AdvancedDemoApplication:
         indev_drv.read_cb = lcd.ts_read
         indev_drv.register()
 
+    def init_gui_rp2(self):
+        import xpt2046
+        import st77xx
+        if sys.platform!='rp2': raise ImportError('Only works on the rp2 platform.')
+        print('Using RP2 GUI')
+        spi=machine.SPI(
+            1,
+            baudrate=24_000_000,
+            polarity=0,
+            phase=0,
+            sck=machine.Pin(10,machine.Pin.OUT),
+            mosi=machine.Pin(11,machine.Pin.OUT),
+            miso=machine.Pin(12,machine.Pin.IN)
+        )
+        self.disp=st77xx.St7789(rot=st77xx.ST77XX_INV_LANDSCAPE,res=(240,320),spi=spi,cs=9,dc=8,bl=13,rst=15,rp2_dma=None)
+        self.disp.set_backlight(100)
+        self.touch=xpt2046.Xpt2046(spi=spi,cs=16,rot=xpt2046.XPT2046_INV_LANDSCAPE)
+
     def init_gui(self):
 
         # Identify platform and initialize it
 
         if not event_loop.is_running():
+            try:
+                self.init_gui_rp2()
+            except ImportError:
+                pass
+
             try:
                 self.init_gui_esp32()
             except ImportError:
@@ -403,6 +426,7 @@ class AdvancedDemoApplication:
             except ImportError:
                 pass
 
+
         # Create the main screen and load it.
 
         self.screen_main = Screen_Main(self)
@@ -415,3 +439,4 @@ app.init_gui()
 # if __name__ == '__main__':
 #    while True:
 #        pass
+    
