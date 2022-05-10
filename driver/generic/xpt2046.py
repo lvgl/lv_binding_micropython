@@ -1,7 +1,9 @@
+# © 2022 Václav Šmilauer <eu@doxos.eu>
+# MIT-licensed
 import machine
 import struct
 
-# see e.g.
+# for inspiration see e.g.
 # https://github.com/MatthewLowden/RPi-XPT2046-Touchscreen-Python/blob/master/XPT2046.py
 # and the XPT2046 datasheet
 
