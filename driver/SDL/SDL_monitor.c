@@ -18,6 +18,7 @@
 #include <string.h>
 #include MONITOR_SDL_INCLUDE_PATH
 #include "SDL_mouse.h"
+#include "SDL_keyboard.h"
 
 /*********************
  *      DEFINES
@@ -191,7 +192,7 @@ void monitor_sdl_refr_core(void)
         mousewheel_handler(&event);
 #endif
 
-#if USE_KEYBOARD
+#if USE_KEYBOARD != 0
         keyboard_handler(&event);
 #endif
         if((&event)->type == SDL_WINDOWEVENT) {

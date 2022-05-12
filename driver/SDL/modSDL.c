@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include "SDL_monitor.h"
 #include "SDL_mouse.h"
+#include "SDL_keyboard.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -132,6 +133,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_refresh_SDL_obj, mp_refresh_SDL);
 
 DEFINE_PTR_OBJ(monitor_flush);
 DEFINE_PTR_OBJ(mouse_read);
+DEFINE_PTR_OBJ(keyboard_read);
 
 STATIC const mp_rom_map_elem_t SDL_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_SDL) },
@@ -140,6 +142,7 @@ STATIC const mp_rom_map_elem_t SDL_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR_refresh), MP_ROM_PTR(&mp_refresh_SDL_obj) },
         { MP_ROM_QSTR(MP_QSTR_monitor_flush), MP_ROM_PTR(&PTR_OBJ(monitor_flush))},
         { MP_ROM_QSTR(MP_QSTR_mouse_read), MP_ROM_PTR(&PTR_OBJ(mouse_read))},
+        { MP_ROM_QSTR(MP_QSTR_keyboard_read), MP_ROM_PTR(&PTR_OBJ(keyboard_read))},
 };
          
 

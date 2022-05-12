@@ -225,7 +225,7 @@
 /*-------------------------------
  *   Keyboard of a PC (using SDL)
  *------------------------------*/
-#define USE_KEYBOARD    0
+#define USE_KEYBOARD    1
 #if USE_KEYBOARD
 /*No settings*/
 #endif
