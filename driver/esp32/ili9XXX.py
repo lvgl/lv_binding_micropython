@@ -282,7 +282,7 @@ class ili9XXX:
         if lv_utils.event_loop.is_running():
             self.event_loop.deinit()
 
-        self.disp_drv.remove()
+        self.disp.remove()
 
         if self.spi:
 
@@ -406,7 +406,7 @@ class ili9XXX:
             esp.gpio_set_level(self.backlight, self.backlight_on)
 
         # Register the driver
-        self.disp_drv.register()
+        self.disp = self.disp_drv.register()
 
 
     def init(self):
