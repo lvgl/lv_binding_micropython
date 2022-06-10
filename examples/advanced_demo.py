@@ -131,9 +131,11 @@ class Page_Buttons:
         self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.START)
 
         self.btn1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
+        app.group.add_obj(self.btn1)
         self.btn1.set_size(80, 80)
 
         self.btn2 = SymbolButton(page, lv.SYMBOL.PAUSE, "Pause")
+        app.group.add_obj(self.btn2)
         self.btn2.set_size(80, 80)
 
         self.label = lv.label(page)
@@ -161,6 +163,7 @@ class Page_Simple:
 
         # slider
         self.slider = lv.slider(page)
+        app.group.add_obj(self.slider)
         self.slider.set_width(lv.pct(80))
         self.slider_label = lv.label(page)
         self.slider.add_event_cb(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
@@ -173,6 +176,7 @@ class Page_Simple:
                        ('Blue', ColorStyle(0x00F))] 
     
         self.style_selector = lv.dropdown(page)
+        app.group.add_obj(self.style_selector)
         self.style_selector.add_style(ShadowStyle(), lv.PART.MAIN)
         self.style_selector.align(lv.ALIGN.OUT_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
@@ -180,6 +184,7 @@ class Page_Simple:
 
         # counter button
         self.counter_btn = lv.btn(page)
+        app.group.add_obj(self.counter_btn)
         self.counter_btn.set_size(80,80)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")
@@ -250,7 +255,16 @@ class AnimatedChart(lv.chart):
             ready_cb=lambda a:self.anim_phase1(),
             time=(self.min * self.factor) // 100,
         )
-
+class Page_Text:
+    def __init__(self, app, page):
+        self.app = app
+        self.page = page
+        self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
+        self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
+        self.ta = lv.textarea(self.page)
+        app.group.add_obj(self.ta)
+        self.ta.set_height(lv.pct(100))
+        self.ta.set_width(lv.pct(100))
 
 class Page_Chart:
     def __init__(self, app, page):
@@ -282,11 +296,11 @@ class Page_Chart:
             self.chart.factor = self.slider.get_value()
 
         self.slider = lv.slider(page)
+        app.group.add_obj(self.slider)
         self.slider.set_size(10, lv.pct(100))
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
         self.slider.add_event_cb(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
-
 
 class Screen_Main(lv.obj):
     def __init__(self, app, *args, **kwds):
@@ -296,6 +310,7 @@ class Screen_Main(lv.obj):
         self.tabview = lv.tabview(self, lv.DIR.TOP, 20)
         self.page_simple = Page_Simple(self.app, self.tabview.add_tab("Simple"))
         self.page_buttons = Page_Buttons(self.app, self.tabview.add_tab("Buttons"))
+        self.page_text = Page_Text(self.app, self.tabview.add_tab("Text"))
         self.page_chart = Page_Chart(self.app, self.tabview.add_tab("Chart"))
 
 
@@ -304,20 +319,23 @@ class AdvancedDemoApplication:
 
         import SDL
 
-        SDL.init(auto_refresh=False)
-        self.event_loop = event_loop(refresh_cb = SDL.refresh)
+        WIDTH = 480
+        HEIGHT = 320
+
+        SDL.init(w=WIDTH, h=HEIGHT, auto_refresh=False)
+        self.event_loop = event_loop()
 
         # Register SDL display driver.
 
         disp_buf1 = lv.disp_draw_buf_t()
-        buf1_1 = bytes(480 * 10)
+        buf1_1 = bytes(WIDTH * 10)
         disp_buf1.init(buf1_1, None, len(buf1_1)//4)
         disp_drv = lv.disp_drv_t()
         disp_drv.init()
         disp_drv.draw_buf = disp_buf1
         disp_drv.flush_cb = SDL.monitor_flush
-        disp_drv.hor_res = 480
-        disp_drv.ver_res = 320
+        disp_drv.hor_res = WIDTH
+        disp_drv.ver_res = HEIGHT
         disp_drv.register()
 
         # Regsiter SDL mouse driver
@@ -326,7 +344,17 @@ class AdvancedDemoApplication:
         indev_drv.init() 
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = SDL.mouse_read
-        indev_drv.register()
+        self.mouse = indev_drv.register()
+
+        # Register keyboard driver
+
+        keyboard_drv = lv.indev_drv_t()
+        keyboard_drv.init()
+        keyboard_drv.type = lv.INDEV_TYPE.KEYPAD
+        keyboard_drv.read_cb = SDL.keyboard_read
+        self.keyboard = keyboard_drv.register()
+        self.keyboard.set_group(self.group)
+        
         
     def init_gui_esp32(self):
 
@@ -402,6 +430,8 @@ class AdvancedDemoApplication:
         self.touch=xpt2046.Xpt2046(spi=spi,cs=16,rot=xpt2046.XPT2046_INV_LANDSCAPE)
 
     def init_gui(self):
+
+        self.group = lv.group_create()
 
         # Identify platform and initialize it
 

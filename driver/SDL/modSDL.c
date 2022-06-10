@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
-#include "SDL_monitor.h"
-#include "SDL_mouse.h"
+#include "sdl_common.h"
+#include "sdl.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -24,15 +24,8 @@
 
 STATIC pthread_t mp_thread;
 
-STATIC mp_obj_t mp_refresh_SDL()
-{
-    if (monitor_active()) monitor_sdl_refr_core();
-    return mp_const_none;
-}
-
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
-    mp_refresh_SDL();
     lv_task_handler();
     return mp_const_none;
 }
@@ -92,7 +85,7 @@ STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
     // parse args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-    monitor_init(args[ARG_w].u_int, args[ARG_h].u_int);
+    sdl_init(args[ARG_w].u_int, args[ARG_h].u_int);
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
     /* Required for HTML input elements to work */
@@ -122,7 +115,13 @@ STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
 
 STATIC mp_obj_t mp_deinit_SDL()
 {
-    monitor_deinit();
+    sdl_deinit();
+    return mp_const_none;
+}
+
+STATIC mp_obj_t mp_refresh_SDL()
+{
+    // Placeholder for backward compatability
     return mp_const_none;
 }
 
@@ -130,8 +129,24 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_init_SDL_obj, 0, mp_init_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_SDL_obj, mp_deinit_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_refresh_SDL_obj, mp_refresh_SDL);
 
+static void monitor_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+{
+    sdl_display_flush(disp_drv, area, color_p);
+}
+
+static void mouse_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+{
+    sdl_mouse_read(indev_drv, data);
+}
+
+static void keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+{
+    sdl_keyboard_read(indev_drv, data);
+}
+
 DEFINE_PTR_OBJ(monitor_flush);
 DEFINE_PTR_OBJ(mouse_read);
+DEFINE_PTR_OBJ(keyboard_read);
 
 STATIC const mp_rom_map_elem_t SDL_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_SDL) },
@@ -140,6 +155,7 @@ STATIC const mp_rom_map_elem_t SDL_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR_refresh), MP_ROM_PTR(&mp_refresh_SDL_obj) },
         { MP_ROM_QSTR(MP_QSTR_monitor_flush), MP_ROM_PTR(&PTR_OBJ(monitor_flush))},
         { MP_ROM_QSTR(MP_QSTR_mouse_read), MP_ROM_PTR(&PTR_OBJ(mouse_read))},
+        { MP_ROM_QSTR(MP_QSTR_keyboard_read), MP_ROM_PTR(&PTR_OBJ(keyboard_read))},
 };
          
 
