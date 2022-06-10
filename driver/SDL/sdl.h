@@ -13,7 +13,6 @@ extern "C" {
 /*********************
  *      INCLUDES
  *********************/
-#include "lv_drv_conf.h"
 
 #include "sdl_common.h"
 
