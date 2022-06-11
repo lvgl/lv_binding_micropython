@@ -16,7 +16,11 @@ import sys
 # FFI libraries
 
 libc = ffi.open("libc.so.6")
-librt = ffi.open("librt.so")
+try:
+    librt = ffi.open("librt.so")
+except OSError as e:
+    librt = libc
+
 
 # C constants
 
