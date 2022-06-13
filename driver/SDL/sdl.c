@@ -53,6 +53,8 @@ static void monitor_sdl_refr(lv_timer_t * t);
  **********************/
 static int monitor_w;
 static int monitor_h;
+float sdl_zoom;
+bool sdl_fullscreen;
 
 monitor_t monitor;
 
@@ -75,10 +77,12 @@ bool monitor_active(void)
     return sdl_inited && !sdl_quit_qry;
 }
 
-void sdl_init(int w, int h)
+void sdl_init(int w, int h, float zoom, bool fullscreen)
 {
     monitor_w = w;
     monitor_h = h;
+    sdl_zoom = zoom;
+    sdl_fullscreen = fullscreen;
     
     /*Initialize the SDL*/
     SDL_Init(SDL_INIT_VIDEO);
@@ -90,8 +94,8 @@ void sdl_init(int w, int h)
     window_create(&monitor2);
     int x, y;
     SDL_GetWindowPosition(monitor2.window, &x, &y);
-    SDL_SetWindowPosition(monitor.window, x + (SDL_HOR_RES * SDL_ZOOM) / 2 + 10, y);
-    SDL_SetWindowPosition(monitor2.window, x - (SDL_HOR_RES * SDL_ZOOM) / 2 - 10, y);
+    SDL_SetWindowPosition(monitor.window, (int)(x + (SDL_HOR_RES * SDL_ZOOM) / 2 + 10), y);
+    SDL_SetWindowPosition(monitor2.window, (int)(x - (SDL_HOR_RES * SDL_ZOOM) / 2 - 10), y);
 #endif
 
     SDL_StartTextInput();
@@ -316,13 +320,14 @@ static void window_create(monitor_t * m)
 {
 
     int flag = 0;
-#if SDL_FULLSCREEN
-    flag |= SDL_WINDOW_FULLSCREEN;
-#endif
+
+    if (SDL_FULLSCREEN) {
+        flag |= SDL_WINDOW_FULLSCREEN;
+    }
 
     m->window = SDL_CreateWindow("TFT Simulator",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              SDL_HOR_RES * SDL_ZOOM, SDL_VER_RES * SDL_ZOOM, flag);       /*last param. SDL_WINDOW_BORDERLESS to hide borders*/
+                              (int) (SDL_HOR_RES * SDL_ZOOM), (int) (SDL_VER_RES * SDL_ZOOM), flag);       /*last param. SDL_WINDOW_BORDERLESS to hide borders*/
 
     m->renderer = SDL_CreateRenderer(m->window, -1, SDL_RENDERER_SOFTWARE);
     m->texture = SDL_CreateTexture(m->renderer,

@@ -32,8 +32,8 @@ extern "C" {
 
 #define SDL_HOR_RES     monitor_w
 #define SDL_VER_RES     monitor_h
-#define SDL_ZOOM        1
-#define SDL_FULLSCREEN  0
+#define SDL_ZOOM        sdl_zoom
+#define SDL_FULLSCREEN  sdl_fullscreen
 
 
 /**********************
@@ -43,12 +43,16 @@ extern "C" {
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
+
+extern float sdl_zoom;
+extern bool sdl_fullscreen;
+
 extern volatile bool sdl_quit_qry;
 
 /**
  * Initialize SDL to be used as display, mouse and mouse wheel drivers.
  */
-void sdl_init(int w, int h);
+void sdl_init(int w, int h, float zoom, bool fullscreen);
 
 /**
  * Deinit the monitor and close SDL

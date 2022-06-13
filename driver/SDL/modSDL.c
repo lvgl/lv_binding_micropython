@@ -75,17 +75,22 @@ static void handle_sigusr1(int signo)
 
 STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_w, ARG_h, ARG_auto_refresh };
+    enum { ARG_w, ARG_h, ARG_zoom, ARG_fullscreen, ARG_auto_refresh };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_HOR_RES_MAX} },
         { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_VER_RES_MAX} },
+        { MP_QSTR_zoom, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = mp_const_none} },
+        { MP_QSTR_fullscreen, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = 1} },
         { MP_QSTR_auto_refresh, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = true} },
     };
 
     // parse args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-    sdl_init(args[ARG_w].u_int, args[ARG_h].u_int);
+    sdl_init(args[ARG_w].u_int,
+             args[ARG_h].u_int,
+             args[ARG_zoom].u_obj != mp_const_none? mp_obj_get_float_to_f(args[ARG_zoom].u_obj) : 1,
+             args[ARG_fullscreen].u_bool);
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
     /* Required for HTML input elements to work */
