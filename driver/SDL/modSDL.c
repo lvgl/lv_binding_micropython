@@ -80,7 +80,7 @@ STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         { MP_QSTR_w, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_HOR_RES_MAX} },
         { MP_QSTR_h, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = LV_VER_RES_MAX} },
         { MP_QSTR_zoom, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = mp_const_none} },
-        { MP_QSTR_fullscreen, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = 1} },
+        { MP_QSTR_fullscreen, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false } },
         { MP_QSTR_auto_refresh, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = true} },
     };
 

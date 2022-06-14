@@ -131,11 +131,9 @@ class Page_Buttons:
         self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.START)
 
         self.btn1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
-        app.group.add_obj(self.btn1)
         self.btn1.set_size(80, 80)
 
         self.btn2 = SymbolButton(page, lv.SYMBOL.PAUSE, "Pause")
-        app.group.add_obj(self.btn2)
         self.btn2.set_size(80, 80)
 
         self.label = lv.label(page)
@@ -163,7 +161,6 @@ class Page_Simple:
 
         # slider
         self.slider = lv.slider(page)
-        app.group.add_obj(self.slider)
         self.slider.set_width(lv.pct(80))
         self.slider_label = lv.label(page)
         self.slider.add_event_cb(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
@@ -176,7 +173,6 @@ class Page_Simple:
                        ('Blue', ColorStyle(0x00F))] 
     
         self.style_selector = lv.dropdown(page)
-        app.group.add_obj(self.style_selector)
         self.style_selector.add_style(ShadowStyle(), lv.PART.MAIN)
         self.style_selector.align(lv.ALIGN.OUT_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
@@ -184,7 +180,6 @@ class Page_Simple:
 
         # counter button
         self.counter_btn = lv.btn(page)
-        app.group.add_obj(self.counter_btn)
         self.counter_btn.set_size(80,80)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")
@@ -262,7 +257,6 @@ class Page_Text:
         self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
         self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
         self.ta = lv.textarea(self.page)
-        app.group.add_obj(self.ta)
         self.ta.set_height(lv.pct(100))
         self.ta.set_width(lv.pct(100))
 
@@ -296,7 +290,6 @@ class Page_Chart:
             self.chart.factor = self.slider.get_value()
 
         self.slider = lv.slider(page)
-        app.group.add_obj(self.slider)
         self.slider.set_size(10, lv.pct(100))
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
@@ -434,6 +427,7 @@ class AdvancedDemoApplication:
     def init_gui(self):
 
         self.group = lv.group_create()
+        self.group.set_default()
 
         # Identify platform and initialize it
 

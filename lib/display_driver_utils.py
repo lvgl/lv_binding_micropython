@@ -14,10 +14,14 @@ ORIENT_PORTRAIT  = True
 
 class driver:
     
-    def __init__(self,width=420,height=320,orientation=ORIENT_PORTRAIT, asynchronous=False, exception_sink=None):
+    def __init__(self,width=420,height=320,orientation=ORIENT_PORTRAIT, asynchronous=False, exception_sink=None, defaultGroup=True):
 
         if not lv.is_initialized():
             lv.init()
+
+        self.group = lv.group_create()
+        if defaultGroup:
+            self.group.set_default()
 
         self.width = width
         self.height = height
@@ -58,6 +62,15 @@ class driver:
         indev_drv.read_cb = SDL.mouse_read;
         indev_drv.register();
 
+        # Register keyboard driver
+
+        keyboard_drv = lv.indev_drv_t()
+        keyboard_drv.init()
+        keyboard_drv.type = lv.INDEV_TYPE.KEYPAD
+        keyboard_drv.read_cb = SDL.keyboard_read
+        self.keyboard = keyboard_drv.register()
+        self.keyboard.set_group(self.group)
+        
         self.type = "SDL"
         print("Running the SDL lvgl version")
         
