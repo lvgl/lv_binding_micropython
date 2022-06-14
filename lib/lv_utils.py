@@ -9,7 +9,7 @@
 #        SDL.init(auto_refresh=False)
 #        # Register SDL display driver.
 #        # Regsiter SDL mouse driver
-#        event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh)
+#        event_loop = lv_utils.event_loop()
 #
 #
 # uasyncio example with SDL:
@@ -17,7 +17,7 @@
 #        SDL.init(auto_refresh=False)
 #        # Register SDL display driver.
 #        # Regsiter SDL mouse driver
-#        event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh, asynchronous=True)
+#        event_loop = lv_utils.event_loop(asynchronous=True)
 #        uasyncio.Loop.run_forever()
 #
 # uasyncio example with ili9341:

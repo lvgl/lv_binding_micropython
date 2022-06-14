@@ -57,7 +57,7 @@ try:
     # Initialize driver
 
     SDL.init(w=HOR_RES, h=VER_RES, auto_refresh=False)
-    event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh, asynchronous=True)
+    event_loop = lv_utils.event_loop(asynchronous=True)
 
     # Register SDL display driver.
 
