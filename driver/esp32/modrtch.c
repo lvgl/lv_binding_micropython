@@ -173,6 +173,7 @@ const mp_obj_module_t mp_module_rtch = {
     .globals = (mp_obj_dict_t*)&mp_module_rtch_globals
 };
 
+MP_REGISTER_MODULE(MP_QSTR_rtch, mp_module_rtch);
 
 STATIC mp_obj_t rtch_make_new(const mp_obj_type_t *type,
                                  size_t n_args,

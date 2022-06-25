@@ -170,3 +170,4 @@ const mp_obj_module_t mp_module_SDL = {
     .globals = (mp_obj_dict_t*)&mp_module_SDL_globals
 };
 
+MP_REGISTER_MODULE(MP_QSTR_SDL, mp_module_SDL);
