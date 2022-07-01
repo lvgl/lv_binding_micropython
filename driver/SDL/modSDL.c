@@ -93,10 +93,6 @@ STATIC mp_obj_t mp_init_SDL(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
              args[ARG_fullscreen].u_bool);
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mp_lv_main_loop, 1000 / LV_TICK_RATE, 0);
-    /* Required for HTML input elements to work */
-    SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
-    SDL_EventState(SDL_KEYDOWN, SDL_DISABLE);
-    SDL_EventState(SDL_KEYUP, SDL_DISABLE);
 #else
     if (args[ARG_auto_refresh].u_bool) {
         SDL_CreateThread(tick_thread, "tick", NULL);

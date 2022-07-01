@@ -86,6 +86,9 @@ void sdl_init(int w, int h, float zoom, bool fullscreen)
     
     /*Initialize the SDL*/
     SDL_Init(SDL_INIT_VIDEO);
+#ifdef __EMSCRIPTEN__
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+#endif
 
     SDL_SetEventFilter(quit_filter, NULL);
 
