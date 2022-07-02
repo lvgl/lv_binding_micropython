@@ -188,7 +188,7 @@ const mp_obj_module_t mp_module_rk043fn48h = {
     .globals = (mp_obj_dict_t *)&mp_module_rk043fn48h_globals
 };
 
-MP_REGISTER_MODULE(MP_QSTR_rk043fn48h, mp_module_rk043fn48h, 1);
+MP_REGISTER_MODULE(MP_QSTR_rk043fn48h, mp_module_rk043fn48h);
 
 static bool config_ltdc(void) {
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
