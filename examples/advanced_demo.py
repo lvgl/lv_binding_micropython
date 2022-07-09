@@ -314,7 +314,7 @@ class AdvancedDemoApplication:
 
         WIDTH = 480
         HEIGHT = 320
-        ZOOM = 2
+        ZOOM = 1
         FULLSCREEN = False
 
         SDL.init(w=WIDTH, h=HEIGHT, zoom=ZOOM, fullscreen=FULLSCREEN, auto_refresh=False)
