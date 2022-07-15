@@ -1809,7 +1809,7 @@ def try_generate_struct(struct_name, struct):
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
             write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting to callback {type_name}'.
                 format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
-            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_obj, {cast}data->{field}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
+            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_mpobj, {cast}data->{field}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
                 format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
         else:
             user_data = None
@@ -2080,7 +2080,7 @@ def try_generate_type(type_ast):
             try:
                 print("#define %s NULL\n" % func_ptr_name)
                 gen_mp_func(func, None)
-                print("STATIC inline mp_obj_t mp_lv_{f}(void *func){{ return mp_lv_funcptr(&mp_{f}_obj, func, NULL, MP_QSTR_, NULL); }}\n".format(
+                print("STATIC inline mp_obj_t mp_lv_{f}(void *func){{ return mp_lv_funcptr(&mp_{f}_mpobj, func, NULL, MP_QSTR_, NULL); }}\n".format(
                     f=func_ptr_name))
                 lv_to_mp_funcptr[ptr_type] = func_ptr_name
                 # eprint("/* --> lv_to_mp_funcptr[%s] = %s */" % (ptr_type, func_ptr_name))
@@ -2322,7 +2322,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
 
 def emit_func_obj(func_obj_name, func_name, param_count, func_ptr, is_static):
     print("""
-STATIC {builtin_macro}(mp_{func_obj_name}_obj, {param_count}, mp_{func_name}, {func_ptr});
+STATIC {builtin_macro}(mp_{func_obj_name}_mpobj, {param_count}, mp_{func_name}, {func_ptr});
     """.format(
             func_obj_name = func_obj_name,
             func_name = func_name,
@@ -2451,7 +2451,7 @@ enum_referenced = collections.OrderedDict()
 def gen_obj_methods(obj_name):
     global enums
     helper_members = ["{ MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&cast_obj_class_method) }"] if len(obj_names) > 0 and obj_name == base_obj_name else []
-    members = ["{{ MP_ROM_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_obj) }}".
+    members = ["{{ MP_ROM_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_mpobj) }}".
                     format(method=method.name, method_name=sanitize(method_name_from_func_name(method.name))) for method in get_methods(obj_name)]
     obj_metadata[obj_name]['members'].update({method_name_from_func_name(method.name): func_metadata[method.name] for method in get_methods(obj_name)})
     # add parent methods
@@ -2502,7 +2502,7 @@ STATIC mp_obj_t {obj}_make_new(
     size_t n_kw,
     const mp_obj_t *args)
 {{
-    return make_new(&mp_{ctor_name}_obj, type, n_args, n_kw, args);
+    return make_new(&mp_{ctor_name}_mpobj, type, n_args, n_kw, args);
 }}
 """
 
@@ -2692,7 +2692,7 @@ STATIC MP_DEFINE_CONST_DICT(mp_{sanitized_struct_name}_locals_dict, mp_{sanitize
             struct_name = struct_name,
             struct_tag = 'struct ' if struct_name in structs_without_typedef.keys() else '',
             sanitized_struct_name = sanitized_struct_name,
-            functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
+            functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_mpobj) }},\n    '.
                 format(name = sanitize(noncommon_part(f.name, struct_name)), func = f.name) for f in struct_funcs]),
         ))
 
@@ -2791,7 +2791,7 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
         module_name = sanitize(module_name),
         objects = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_lv_{obj}_type.mp_obj_type) }},\n    '.
             format(obj = sanitize(o)) for o in obj_names]),
-        functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_obj) }},\n    '.
+        functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_mpobj) }},\n    '.
             format(name = sanitize(simplify_identifier(f.name)), func = f.name) for f in module_funcs]),
         enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type.mp_obj_type) }},\n    '.
             format(name = sanitize(get_enum_name(enum_name)), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
