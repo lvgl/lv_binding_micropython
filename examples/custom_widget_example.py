@@ -130,7 +130,9 @@ class CustomWidgetClass():
 class CustomWidget():
 
     # An instance of a widget-class to be used for creating custom widgets
-    cls = CustomWidgetClass(lv.DPI.DEF, lv.DPI.DEF)
+    d = lv.disp_get_default();
+    dpi = d.get_dpi()
+    cls = CustomWidgetClass(dpi, dpi)
 
     @staticmethod
     def get_class():
