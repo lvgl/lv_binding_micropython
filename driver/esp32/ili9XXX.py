@@ -98,7 +98,7 @@ class ili9XXX:
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         invert=False, double_buffer=True, half_duplex=True, display_type=0, asynchronous=False, initialize=True,
-        color_format=lv.COLOR_FORMAT.NATIVE
+        color_format=None
     ):
 
         # Initializations
@@ -168,7 +168,8 @@ class ili9XXX:
         self.disp_drv.monitor_cb = self.monitor
         self.disp_drv.hor_res = self.width
         self.disp_drv.ver_res = self.height
-        self.disp_drv.color_format = color_format
+        if color_format:
+            self.disp_drv.color_format = color_format
 
         if self.initialize:
             self.init()
@@ -593,7 +594,7 @@ class ili9488(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=8, hybrid=True, width=320, height=480, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=lv.COLOR_FORMAT.NATIVE
+        color_format=None
     ):
 
         if lv.color_t.__SIZE__ != 4:
@@ -643,7 +644,7 @@ class gc9a01(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=60, factor=4, hybrid=True, width=240, height=240, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=lv.COLOR_FORMAT.NATIVE
+        color_format=None
     ):
 
         if lv.color_t.__SIZE__ != 2:
