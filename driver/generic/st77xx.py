@@ -446,7 +446,6 @@ class St77xx_lvgl(object):
         import lv_utils
 
         if lv.COLOR.DEPTH!=16: raise RuntimeError(f'LVGL *must* be compiled with LV_COLOR_DEPTH=16 (currently LV_COLOR_DEPTH={lv.COLOR.DEPTH}.')
-        if self.bgr==hasattr(lv.color_t().ch,'green_l'): raise RuntimeError(f'BGR mode requires LV_COLOR_16_SWAP=1, RGB requires no byte swap (current: self.bgr={self.bgr}, LV_COLOR16_SWAP={int(hasattr(lv.color_t().ch,"green_l"))})')
         
         bufSize=(self.width*self.height*lv.color_t.__SIZE__)//factor
 
@@ -463,6 +462,7 @@ class St77xx_lvgl(object):
         self.disp_drv.flush_cb=self.disp_drv_flush_cb
         self.disp_drv.hor_res=self.width
         self.disp_drv.ver_res=self.height
+        self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE_REVERSE if self.bgr else lv.COLOR_FORMAT.NATIVE
         self.disp_drv.register()
 
 

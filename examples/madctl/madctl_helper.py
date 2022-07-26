@@ -21,5 +21,5 @@ btn.align(lv.ALIGN.CENTER,0,0)
 btn.add_style(style, 0)
 
 label = lv.label(btn)
-label.set_text("F");
+label.set_text("F")
 label.center()

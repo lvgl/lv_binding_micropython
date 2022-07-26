@@ -58,9 +58,9 @@ class driver:
 
         indev_drv = lv.indev_drv_t()
         indev_drv.init() 
-        indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read_cb = SDL.mouse_read;
-        indev_drv.register();
+        indev_drv.type = lv.INDEV_TYPE.POINTER
+        indev_drv.read_cb = SDL.mouse_read
+        indev_drv.register()
 
         # Register keyboard driver
 
@@ -120,9 +120,9 @@ class driver:
         touch.init()
         indev_drv = lv.indev_drv_t()
         lv.indev_drv_init(indev_drv) 
-        indev_drv.type = lv.INDEV_TYPE.POINTER;
-        indev_drv.read_cb = touch.read;
-        lv.indev_drv_register(indev_drv);
+        indev_drv.type = lv.INDEV_TYPE.POINTER
+        indev_drv.read_cb = touch.read
+        lv.indev_drv_register(indev_drv)
         '''
 
     def init_gui_twatch(self):

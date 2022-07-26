@@ -63,9 +63,9 @@ class CustomWidgetClass():
     def constructor(self, lv_cls, obj):
         # Initialize the custom widget instance
         obj.valid = False
-        obj.add_flag(obj.FLAG.CLICKABLE);
-        obj.add_flag(obj.FLAG.CHECKABLE);
-        obj.add_flag(obj.FLAG.SCROLL_ON_FOCUS);
+        obj.add_flag(obj.FLAG.CLICKABLE)
+        obj.add_flag(obj.FLAG.CHECKABLE)
+        obj.add_flag(obj.FLAG.SCROLL_ON_FOCUS)
         # print("Contructor called!")
 
     def destructor(self, lv_cls, obj):
@@ -101,7 +101,7 @@ class CustomWidgetClass():
 
         obj.draw_desc = lv.draw_rect_dsc_t()
         obj.draw_desc.init()
-        obj.draw_desc.bg_opa = lv.OPA.COVER;
+        obj.draw_desc.bg_opa = lv.OPA.COVER
         obj.draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
         
         obj.points = [
@@ -130,7 +130,9 @@ class CustomWidgetClass():
 class CustomWidget():
 
     # An instance of a widget-class to be used for creating custom widgets
-    cls = CustomWidgetClass(lv.DPI.DEF, lv.DPI.DEF)
+    d = lv.disp_get_default()
+    dpi = d.get_dpi()
+    cls = CustomWidgetClass(dpi, dpi)
 
     @staticmethod
     def get_class():
@@ -177,13 +179,13 @@ class CustomTheme(lv.theme_t):
             self.init()
 
             # Default color is gray
-            self.set_bg_color(lv.palette_main(lv.PALETTE.GREY));
+            self.set_bg_color(lv.palette_main(lv.PALETTE.GREY))
 
             # Child elements are centered
-            self.set_layout(lv.LAYOUT_FLEX.value);
-            self.set_flex_main_place(lv.FLEX_ALIGN.CENTER);
-            self.set_flex_cross_place(lv.FLEX_ALIGN.CENTER);
-            self.set_flex_track_place(lv.FLEX_ALIGN.CENTER);
+            self.set_layout(lv.LAYOUT_FLEX.value)
+            self.set_flex_main_place(lv.FLEX_ALIGN.CENTER)
+            self.set_flex_cross_place(lv.FLEX_ALIGN.CENTER)
+            self.set_flex_track_place(lv.FLEX_ALIGN.CENTER)
 
     class PressedStyle(lv.style_t):
         def __init__(self):
@@ -191,7 +193,7 @@ class CustomTheme(lv.theme_t):
             self.init()
 
             # Pressed color is blue
-            self.set_bg_color(lv.palette_main(lv.PALETTE.BLUE));
+            self.set_bg_color(lv.palette_main(lv.PALETTE.BLUE))
 
 
     def __init__(self):

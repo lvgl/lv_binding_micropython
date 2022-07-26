@@ -85,7 +85,7 @@ def open_png(decoder, dsc):
     png_decoded = png.C_Pointer()
     png_width = png.C_Pointer()
     png_height = png.C_Pointer()
-    error = png.decode32(png_decoded, png_width, png_height, png_data, png_size);
+    error = png.decode32(png_decoded, png_width, png_height, png_data, png_size)
     if error:
         return None # LV_IMG_DECODER_OPEN_FAIL
     img_size = png_width.int_val * png_height.int_val * lv.color_t.__SIZE__
