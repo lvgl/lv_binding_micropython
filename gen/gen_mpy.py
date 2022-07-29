@@ -1625,6 +1625,10 @@ for enum_def in enum_defs:
             else:
                 enums[enum_name] = enum
 
+for enum in [enum for enum in enums if len(enums[enum]) == 1 and enum.startswith('ENUM')]:
+    int_constants.append('%s_%s' % (enum, next(iter(enums[enum]))))
+    del enums[enum]
+
 # Add special string enums
 
 print ('''
