@@ -445,7 +445,7 @@ class St77xx_lvgl(object):
         import lvgl as lv
         import lv_utils
 
-        if lv.COLOR.DEPTH!=16: raise RuntimeError(f'LVGL *must* be compiled with LV_COLOR_DEPTH=16 (currently LV_COLOR_DEPTH={lv.COLOR.DEPTH}.')
+        if lv.COLOR_DEPTH!=16: raise RuntimeError(f'LVGL *must* be compiled with LV_COLOR_DEPTH=16 (currently LV_COLOR_DEPTH={lv.COLOR_DEPTH}.')
         
         bufSize=(self.width*self.height*lv.color_t.__SIZE__)//factor
 
