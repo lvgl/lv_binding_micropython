@@ -462,7 +462,7 @@ class St77xx_lvgl(object):
         self.disp_drv.flush_cb=self.disp_drv_flush_cb
         self.disp_drv.hor_res=self.width
         self.disp_drv.ver_res=self.height
-        self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE_REVERSE if self.bgr else lv.COLOR_FORMAT.NATIVE
+        self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE if self.bgr else lv.COLOR_FORMAT.NATIVE_REVERSE
         self.disp_drv.register()
 
 
