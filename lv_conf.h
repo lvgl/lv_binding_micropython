@@ -151,11 +151,11 @@
 /*Use SDL renderer API*/
 #define LV_USE_DRAW_SDL 0
 #if LV_USE_DRAW_SDL
-    #define LV_DARW_SDL_INCLUDE_PATH <SDL2/SDL.h>
+    #define LV_DRAW_SDL_INCLUDE_PATH <SDL2/SDL.h>
     /*Texture cache size, 8MB by default*/
-    #define LV_DARW_SDL_LRU_SIZE (1024 * 1024 * 8)
+    #define LV_DRAW_SDL_LRU_SIZE (1024 * 1024 * 8)
     /*Custom blend mode for mask drawing, disable if you need to link with older SDL2 lib*/
-    #define LV_DARW_SDL_CUSTOM_BLEND_MODE (SDL_VERSION_ATLEAST(2, 0, 6))
+    #define LV_DRAW_SDL_CUSTOM_BLEND_MODE (SDL_VERSION_ATLEAST(2, 0, 6))
 #endif
 
 /*=====================
@@ -217,6 +217,10 @@
     /*1: Print the log with 'printf';
     *0: User need to register a callback with `lv_log_register_print_cb()`*/
     #define LV_LOG_PRINTF 0
+
+    /*1: Enable print timestamp;
+     *0: Disable print timestamp*/
+    #define LV_LOG_USE_TIMESTAMP 1
 
     /*Enable/disable LV_LOG_TRACE in modules that produces a huge number of logs*/
     #define LV_LOG_TRACE_MEM        1
@@ -439,7 +443,7 @@
 #define LV_USE_ARABIC_PERSIAN_CHARS 1
 
 /*==================
- *  WIDGET USAGE
+ * WIDGETS
  *================*/
 
 /*Documentation of the widgets: https://docs.lvgl.io/latest/en/html/widgets/index.html*/
@@ -503,9 +507,6 @@
 #define LV_USE_MSGBOX     1
 
 #define LV_USE_ROLLER     1   /*Requires: lv_label*/
-#if LV_USE_ROLLER
-    #define LV_ROLLER_INF_PAGES 7 /*Number of extra "pages" when the roller is infinite*/
-#endif
 
 #define LV_USE_SLIDER     1   /*Requires: lv_bar*/
 
@@ -652,15 +653,20 @@
 
 /*FFmpeg library for image decoding and playing videos
  *Supports all major image formats so do not enable other image decoder with it*/
-#define LV_USE_FFMPEG 0
+#ifdef MICROPY_FFMPEG
+    #define LV_USE_FFMPEG 1
+#else
+    #define LV_USE_FFMPEG 0
+#endif
+
 #if LV_USE_FFMPEG
     /*Dump input information to stderr*/
     #define LV_FFMPEG_DUMP_FORMAT 0
 #endif
 
-/*================
+/*==================
  * OTHERS
- *================*/
+ *==================*/
 
 /*1: Enable API to take snapshot for object*/
 #define LV_USE_SNAPSHOT 1
