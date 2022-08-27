@@ -82,11 +82,8 @@ endfunction()
 # Definitions for specific bindings
 
 set(LVGL_DIR ${LV_BINDINGS_DIR}/lvgl)
-set(LV_PNG_DIR ${LV_BINDINGS_DIR}/driver/png/lodepng)
 
 set(LV_MP ${CMAKE_BINARY_DIR}/lv_mp.c)
-set(LV_PNG ${CMAKE_BINARY_DIR}/lv_png.c)
-set(LV_PNG_C ${CMAKE_BINARY_DIR}/lv_png_c.c)
 if(ESP_PLATFORM)
     set(LV_ESPIDF ${CMAKE_BINARY_DIR}/lv_espidf.c)
 endif()
@@ -109,24 +106,8 @@ function(all_lv_bindings)
             -M lvgl -MP lv
     )
         
-    # LODEPNG bindings
-
-    file(GLOB_RECURSE LV_PNG_HEADERS ${LV_PNG_DIR}/*.h)
-    configure_file(${LV_PNG_DIR}/lodepng.cpp ${LV_PNG_C} COPYONLY)
-    lv_bindings(
-        OUTPUT
-            ${LV_PNG}
-        INPUT
-            ${LV_PNG_DIR}/lodepng.h
-        DEPENDS
-            ${LV_PNG_HEADERS}
-        COMPILE_OPTIONS
-            -DLODEPNG_NO_COMPILE_ENCODER -DLODEPNG_NO_COMPILE_DISK -DLODEPNG_NO_COMPILE_ALLOCATORS
-        GEN_OPTIONS
-            -M lodepng
-    )
-
     # ESPIDF bindings
+
     if(ESP_PLATFORM)
         file(GLOB_RECURSE LV_ESPIDF_HEADERS ${IDF_PATH}/components/*.h ${LV_BINDINGS_DIR}/driver/esp32/*.h)
         lv_bindings(
@@ -156,16 +137,12 @@ endfunction()
 
 set(LV_INCLUDE
     ${LV_BINDINGS_DIR}
-    ${LV_PNG_DIR}
 )
 
 # Add sources to CMake component
 
 set(LV_SRC
     ${LV_MP}
-    ${LV_PNG}
-    ${LV_PNG_C}
-    ${LV_BINDINGS_DIR}/driver/png/mp_lodepng.c
 )
 
 if(ESP_PLATFORM)

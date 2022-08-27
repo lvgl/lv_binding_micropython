@@ -9,7 +9,6 @@ import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
-from imagetools import get_png_info, open_png
 import display_driver_utils
 
 # Init
@@ -22,12 +21,6 @@ try:
     script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
 except NameError: 
     script_path = ''
-
-# Register an image decoder
-
-decoder = lv.img.decoder_create()
-decoder.info_cb = get_png_info
-decoder.open_cb = open_png
 
 # Load the image
 

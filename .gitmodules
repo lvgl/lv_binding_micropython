@@ -4,6 +4,3 @@
 [submodule "micropython/pycparser"]
 	path = pycparser
 	url = https://github.com/eliben/pycparser.git
-[submodule "driver/png/lodepng"]
-	path = driver/png/lodepng
-	url = https://github.com/lvandeve/lodepng.git
