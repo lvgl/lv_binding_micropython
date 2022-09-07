@@ -38,7 +38,7 @@
 #define LV_USE_BUILTIN_MALLOC 0
 #if LV_USE_BUILTIN_MALLOC
     /*Size of the memory available for `lv_malloc()` in bytes (>= 2kB)*/
-    #define LV_MEM_SIZE (48 * 1024)          /*[bytes]*/
+    #define LV_MEM_SIZE (128U * 1024U)          /*[bytes]*/
 
     /*Set an address for the memory pool instead of allocating it as a normal array. Can be in external SRAM too.*/
     #define LV_MEM_ADR 0     /*0: unused*/
@@ -710,6 +710,17 @@
         #define LV_IME_PINYIN_K9_CAND_TEXT_NUM 3
     #endif // LV_IME_PINYIN_USE_K9_MODE
 #endif
+
+/*1: Enable file explorer*/
+/*Requires: lv_table*/
+#define LV_USE_FILE_EXPLORER                     1
+#if LV_USE_FILE_EXPLORER
+    /*Maximum length of path*/
+    #define LV_FILE_EXPLORER_PATH_MAX_LEN        (128)
+    /*Quick access bar, 1:use, 0:not use*/
+    /*Requires: lv_list*/
+    #define LV_FILE_EXPLORER_QUICK_ACCESS        1
+#endif  
 
 /*==================
 * EXAMPLES
