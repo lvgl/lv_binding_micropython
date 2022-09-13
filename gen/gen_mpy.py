@@ -2196,6 +2196,24 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
     # print('/* --> callback: %s */' % (gen.visit(func)))
     callback_metadata[func_name] = {'args':[]}
     args = func.args.params
+    enumerated_args = []
+    for i, arg in enumerate(args):
+        arg_name = f'arg{i}'
+        new_arg = c_ast.Decl(
+                    name=arg_name,
+                    quals=arg.quals,
+                    storage=[],
+                    funcspec=[],
+                    type=copy.deepcopy(arg.type),
+                    init=None,
+                    bitsize=None)
+        t = new_arg
+        while hasattr(t, 'type'):
+            if hasattr(t.type, 'declname'):
+                t.type.declname = arg_name
+            t = t.type
+        enumerated_args.append(new_arg)
+        # print(f'/* --> {gen.visit(new_arg)} */')
     if not func_name: func_name = get_arg_name(func.type)
     # print('/* --> callback: func_name = %s */' % func_name)
     if is_global_callback(func):
@@ -2241,7 +2259,7 @@ GENMPY_UNUSED STATIC {return_type} {func_name}_callback({func_args})
         func_prototype = gen.visit(func),
         func_name = sanitize(func_name),
         return_type = return_type,
-        func_args = ', '.join(["%s arg%s" % (gen.visit(arg.type), i) for i,arg in enumerate(args)]),
+        func_args = ', '.join([(gen.visit(arg)) for arg in enumerated_args]),
         num_args=len(args),
         build_args="\n    ".join([build_callback_func_arg(arg, i, func, func_name=func_name) for i,arg in enumerate(args)]),
         user_data=full_user_data,
