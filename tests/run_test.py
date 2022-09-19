@@ -89,7 +89,7 @@ def run():
             usys.argv[0] = script_name
             del usys.argv[1]
             exec(file_string, {'__file__': script_name, 'lv': lv})
-            time.sleep_ms(DELAY_MS)
+            time.sleep_ms(DELAY_MS * 2)
             gc.collect()
             lv.scr_act().tree_walk(collect_objects, None)
             send_events()
