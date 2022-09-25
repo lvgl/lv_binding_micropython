@@ -30,7 +30,13 @@ static int16_t last_y = 0;
 static int16_t wheel_diff = 0;
 static lv_indev_state_t wheel_state = LV_INDEV_STATE_RELEASED;
 
-static char buf[KEYBOARD_BUFFER_SIZE];
+struct key_event
+{
+    char key;
+    bool state;
+};
+static struct key_event key_buffer[KEYBOARD_BUFFER_SIZE];
+static int16_t key_buffer_len = 0;
 
 /**********************
  *   GLOBAL FUNCTIONS
@@ -74,22 +80,12 @@ void sdl_keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 
-    static bool dummy_read = false;
-    const size_t len = strlen(buf);
-
-    /*Send a release manually*/
-    if (dummy_read) {
-        dummy_read = false;
-        data->state = LV_INDEV_STATE_RELEASED;
-        data->continue_reading = len > 0;
-    }
-        /*Send the pressed character*/
-    else if (len > 0) {
-        dummy_read = true;
-        data->state = LV_INDEV_STATE_PRESSED;
-        data->key = buf[0];
-        memmove(buf, buf + 1, len);
-        data->continue_reading = true;
+    if(key_buffer_len > 0){
+        data->state = key_buffer[0].state;
+        data->key = key_buffer[0].key;
+        key_buffer_len--;
+        data->continue_reading = key_buffer_len > 0;
+        memmove(&key_buffer[0], &key_buffer[1], sizeof(struct key_event) * key_buffer_len);
     }
 }
 
@@ -186,25 +182,34 @@ void mousewheel_handler(SDL_Event * event)
  */
 void keyboard_handler(SDL_Event * event)
 {
+    bool key_state = (event->type == SDL_KEYUP) ? LV_INDEV_STATE_RELEASED : LV_INDEV_STATE_PRESSED;
     /* We only care about SDL_KEYDOWN and SDL_TEXTINPUT events */
     switch(event->type) {
         case SDL_KEYDOWN:                       /*Button press*/
+        case SDL_KEYUP:                       /*Button release*/
         {
             const uint32_t ctrl_key = keycode_to_ctrl_key(event->key.keysym.sym);
-            if (ctrl_key == '\0')
-                return;
-            const size_t len = strlen(buf);
-            if (len < KEYBOARD_BUFFER_SIZE - 1) {
-                buf[len] = ctrl_key;
-                buf[len + 1] = '\0';
+            
+            if(key_buffer_len < KEYBOARD_BUFFER_SIZE){
+                key_buffer[key_buffer_len].key = ctrl_key;
+                key_buffer[key_buffer_len].state = key_state;
+                key_buffer_len++;
             }
             break;
         }
         case SDL_TEXTINPUT:                     /*Text input*/
         {
-            const size_t len = strlen(buf) + strlen(event->text.text);
-            if (len < KEYBOARD_BUFFER_SIZE - 1)
-                strcat(buf, event->text.text);
+            const size_t len = key_buffer_len + strlen(event->text.text);
+            if (len < KEYBOARD_BUFFER_SIZE - 2) {
+                for (uint32_t i = 0; i < strlen(event->text.text); i++) {
+                    key_buffer[key_buffer_len].key = event->text.text[i];
+                    key_buffer[key_buffer_len].state = LV_INDEV_STATE_PRESSED;
+                    key_buffer_len++;
+                    key_buffer[key_buffer_len].key = event->text.text[i];
+                    key_buffer[key_buffer_len].state = LV_INDEV_STATE_RELEASED;
+                    key_buffer_len++;
+                }
+            }
         }
             break;
         default:
@@ -263,6 +268,6 @@ uint32_t keycode_to_ctrl_key(SDL_Keycode sdl_key)
             return LV_KEY_PREV;
 
         default:
-            return '\0';
+            return sdl_key;
     }
 }
