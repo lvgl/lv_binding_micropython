@@ -409,7 +409,7 @@
 #define LV_TXT_ENC LV_TXT_ENC_UTF8
 
 /*Can break (wrap) texts on these chars*/
-#define LV_TXT_BREAK_CHARS " ,.;:-_"
+#define LV_TXT_BREAK_CHARS " ,.;:-_)]}"
 
 /*If a word is at least this long, will break wherever "prettiest"
  *To disable, set to a value <= 0*/
@@ -641,6 +641,15 @@
         /* (0:use system defaults) */
         #define LV_FREETYPE_CACHE_FT_FACES 0
         #define LV_FREETYPE_CACHE_FT_SIZES 0
+    #endif
+#endif
+
+/* Built-in TTF decoder */
+#ifndef LV_USE_TINY_TTF
+    #define LV_USE_TINY_TTF 1
+    #if LV_USE_TINY_TTF
+        /* Enable loading TTF data from files */
+        #define LV_TINY_TTF_FILE_SUPPORT 1
     #endif
 #endif
 

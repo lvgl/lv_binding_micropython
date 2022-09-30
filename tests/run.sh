@@ -6,8 +6,18 @@ SCRIPT_PATH="`dirname \"$0\"`"
 
 NUMCPUS=`nproc`
 
-TEST_PATH="$SCRIPT_PATH/../examples/*.py $SCRIPT_PATH/../lvgl/examples/"
-EXCLUDE_PATH="$SCRIPT_PATH/../examples/fb_test.py $SCRIPT_PATH/../examples/uasyncio*.py $SCRIPT_PATH/../examples/generic-st77xx-with-xpt2046.py"
+TEST_PATH=" \
+   $SCRIPT_PATH/../examples/*.py \
+   $SCRIPT_PATH/../lvgl/examples/ \
+   $SCRIPT_PATH/../lvgl/demos/ \
+"
+
+EXCLUDE_PATH=" \
+   $SCRIPT_PATH/../examples/fb_test.py \
+   $SCRIPT_PATH/../examples/uasyncio*.py \
+   $SCRIPT_PATH/../examples/generic-st77xx-with-xpt2046.py \
+   $SCRIPT_PATH/../lvgl/demos/music/assets/spectrum.py \
+"
 
 EXCLUDE_FINDEXP=$(echo $EXCLUDE_PATH | sed "s/^\|[[:space:]]/ -and -not -path /g")
 

@@ -2221,7 +2221,7 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
     else:
         user_data = get_user_data(func, func_name)
 
-        if user_data_argument and len(args) > 0 and gen.visit(args[-1]) == 'void *':
+        if user_data_argument and len(args) > 0 and gen.visit(args[-1].type) == 'void *':
             full_user_data = 'arg%d' % (len(args) - 1)
         elif user_data:
             full_user_data = 'arg0->%s' % user_data
