@@ -1,6 +1,15 @@
-from micropython import const
+"""Generic ILI9xxx drivers.
 
-from .st77xx import St77xx_hw, St77xx_lvgl
+This code is licensed under MIT license.
+
+Adapted from:
+    https://github.com/rdagger/micropython-ili9341
+
+TODO:
+    * Usage information.
+"""
+from micropython import const
+from st77xx import St77xx_hw, St77xx_lvgl
 
 # Command constants from ILI9341 datasheet
 _NOP = const(0x00)  # No-op
@@ -77,9 +86,18 @@ _MADCTL_ROTS = (
     const(_MADCTL_MX | _MADCTL_MY | _MADCTL_MV),  # 3 = inverted landscape
 )
 
+ILI9XXX_PORTRAIT = const(0)
+ILI9XXX_LANDSCAPE = const(1)
+ILI9XXX_INV_PORTRAIT = const(2)
+ILI9XXX_INV_LANDSCAPE = const(3)
+
 
 class Ili9341_hw(St77xx_hw):
     def __init__(self, res, **kw):
+        """ILI9341 TFT Display Driver.
+
+        Requires ``LV_COLOR_DEPTH=16`` when building lv_micropython to function.
+        """
         super().__init__(
             res=res,
             suppRes=[
