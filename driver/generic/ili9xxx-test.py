@@ -1,3 +1,5 @@
+import time
+
 from machine import SPI, Pin
 
 from ili9xxx import Ili9341_hw

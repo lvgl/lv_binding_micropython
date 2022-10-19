@@ -10,7 +10,7 @@ TODO:
 """
 from micropython import const
 
-from st77xx import St77xx_hw, St77xx_lvgl
+import st77xx
 
 # Command constants from ILI9341 datasheet
 _NOP = const(0x00)  # No-op
@@ -87,13 +87,13 @@ _MADCTL_ROTS = (
     const(_MADCTL_MX | _MADCTL_MY | _MADCTL_MV),  # 3 = inverted landscape
 )
 
-ILI9XXX_PORTRAIT = const(0)
-ILI9XXX_LANDSCAPE = const(1)
-ILI9XXX_INV_PORTRAIT = const(2)
-ILI9XXX_INV_LANDSCAPE = const(3)
+ILI9XXX_PORTRAIT = st77xx.ST77XX_PORTRAIT
+ILI9XXX_LANDSCAPE = st77xx.ST77XX_LANDSCAPE
+ILI9XXX_INV_PORTRAIT = st77xx.ST77XX_INV_PORTRAIT
+ILI9XXX_INV_LANDSCAPE = st77xx.ST77XX_INV_LANDSCAPE
 
 
-class Ili9341_hw(St77xx_hw):
+class Ili9341_hw(st77xx.St77xx_hw):
     def __init__(self, **kw):
         """ILI9341 TFT Display Driver.
 
@@ -156,12 +156,12 @@ class Ili9341_hw(St77xx_hw):
         )
 
 
-class Ili9341(Ili9341_hw, St77xx_lvgl):
+class Ili9341(Ili9341_hw, st77xx.St77xx_lvgl):
     def __init__(self, doublebuffer=True, factor=4, **kw):
         """See :obj:`Ili9341_hw` for the meaning of the parameters."""
         import lvgl as lv
 
         Ili9341_hw.__init__(self, **kw)
-        St77xx_lvgl.__init__(self, doublebuffer, factor)
+        st77xx.St77xx_lvgl.__init__(self, doublebuffer, factor)
         self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE_REVERSE
         self.disp_drv.register()
