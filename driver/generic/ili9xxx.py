@@ -9,6 +9,7 @@ TODO:
     * Usage information.
 """
 from micropython import const
+
 from st77xx import St77xx_hw, St77xx_lvgl
 
 # Command constants from ILI9341 datasheet
@@ -93,13 +94,13 @@ ILI9XXX_INV_LANDSCAPE = const(3)
 
 
 class Ili9341_hw(St77xx_hw):
-    def __init__(self, res, **kw):
+    def __init__(self, **kw):
         """ILI9341 TFT Display Driver.
 
         Requires ``LV_COLOR_DEPTH=16`` when building lv_micropython to function.
         """
         super().__init__(
-            res=res,
+            res=(240, 320),
             suppRes=[
                 (240, 320),
             ],
@@ -156,11 +157,11 @@ class Ili9341_hw(St77xx_hw):
 
 
 class Ili9341(Ili9341_hw, St77xx_lvgl):
-    def __init__(self, res, doublebuffer=True, factor=4, **kw):
+    def __init__(self, doublebuffer=True, factor=4, **kw):
         """See :obj:`Ili9341_hw` for the meaning of the parameters."""
         import lvgl as lv
 
-        Ili9341_hw.__init__(self, res=res, **kw)
+        Ili9341_hw.__init__(self, **kw)
         St77xx_lvgl.__init__(self, doublebuffer, factor)
         self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE_REVERSE
         self.disp_drv.register()
