@@ -5,8 +5,14 @@ This code is licensed under MIT license.
 Adapted from:
     https://github.com/rdagger/micropython-ili9341
 
-TODO:
-    * Usage information.
+The following code snippet will instantiate the driver and
+automatically register it to lvgl. Adjust the SPI bus and
+pin configurations to match your hardware setup::
+
+    import ili9xxx
+    from machine import SPI, Pin
+    spi = SPI(0, baudrate=24_000_000, sck=Pin(18), mosi=Pin(19), miso=Pin(16))
+    drv = ili9xxx.Ili9341(spi=spi, dc=15, cs=17, rst=14)
 """
 from micropython import const
 
