@@ -112,7 +112,7 @@ class Ili9341_hw(st77xx.St77xx_hw):
             ],
             model=None,
             suppModel=None,
-            bgr=True,
+            bgr=False,
             **kw,
         )
 
@@ -130,7 +130,6 @@ class Ili9341_hw(st77xx.St77xx_hw):
                 (_PWCTR2, b"\x10"),  # Pwr ctrl 2
                 (_VMCTR1, b"\x3E\x28"),  # VCOM ctrl 1
                 (_VMCTR2, b"\x86"),  # VCOM ctrl 2
-                # (_MADCTL, self.rotation"),  # Memory access ctrl  # TODO: rotation?
                 (_VSCRSADD, b"\x00"),  # Vertical scrolling start address
                 (_PIXFMT, b"\x55"),  # COLMOD: Pixel format
                 (_FRMCTR1, b"\x00\x18"),  # Frame rate ctrl
@@ -158,7 +157,7 @@ class Ili9341_hw(st77xx.St77xx_hw):
             self.height, self.width = self.res
         self.write_register(
             _MADCTL,
-            bytes([(_MADCTL_BGR if self.bgr else 0) | _MADCTL_ROTS[self.rot % 4]]),
+            bytes([_MADCTL_BGR | _MADCTL_ROTS[self.rot % 4]]),
         )
 
 
@@ -169,5 +168,3 @@ class Ili9341(Ili9341_hw, st77xx.St77xx_lvgl):
 
         Ili9341_hw.__init__(self, **kw)
         st77xx.St77xx_lvgl.__init__(self, doublebuffer, factor)
-        self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE_REVERSE
-        self.disp_drv.register()
