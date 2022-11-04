@@ -622,6 +622,9 @@
 /*QR code library*/
 #define LV_USE_QRCODE 1
 
+/*Barcode code library*/
+#define LV_USE_BARCODE 1
+
 /*FreeType library*/
 #ifdef MICROPY_FREETYPE
     #define LV_USE_FREETYPE 1
