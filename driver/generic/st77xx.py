@@ -196,9 +196,10 @@ class St77xx_hw(object):
 
         self.cs,self.dc,self.rst=[(machine.Pin(p,machine.Pin.OUT) if isinstance(p,int) else p) for p in (cs,dc,rst)]
         self.bl=bl
-        if isinstance(self.bl,int): self.bl=machine.PWM(machine.Pin(self.bl,machine.Pin.OUT))
-        elif isinstance(self.bl,machine.Pin): self.bl=machine.PWM(self.bl)
-        assert isinstance(self.bl,(machine.PWM,type(None)))
+        if hasattr(machine, "PWM"):
+            if isinstance(self.bl,int): self.bl=machine.PWM(machine.Pin(self.bl,machine.Pin.OUT))
+            elif isinstance(self.bl,machine.Pin): self.bl=machine.PWM(self.bl)
+            assert isinstance(self.bl,(machine.PWM,type(None)))
         self.set_backlight(10) # set some backlight
 
         self.rot=rot
