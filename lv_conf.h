@@ -59,9 +59,10 @@
 #endif  /*LV_USE_BUILTIN_SNPRINTF*/
 
 #define LV_STDLIB_INCLUDE "include/lv_mp_mem_custom_include.h"
-#define LV_MALLOC       m_malloc
-#define LV_REALLOC      m_realloc
-#define LV_FREE         m_free
+#define LV_MALLOC(size)       gc_alloc(size, 0)
+#define LV_REALLOC(ptr, size) gc_realloc(ptr, size, true)
+#define LV_FREE               gc_free
+
 #define LV_MEMSET       lv_memset_builtin
 #define LV_MEMCPY       lv_memcpy_builtin
 #define LV_SNPRINTF     lv_snprintf_builtin
@@ -732,7 +733,7 @@
     /*Quick access bar, 1:use, 0:not use*/
     /*Requires: lv_list*/
     #define LV_FILE_EXPLORER_QUICK_ACCESS        1
-#endif  
+#endif
 
 /*==================
 * EXAMPLES
