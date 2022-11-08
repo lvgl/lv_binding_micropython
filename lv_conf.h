@@ -19,6 +19,12 @@
 
 #include <stdint.h>
 
+/*=======================
+ * Development version!
+ * ======================*/
+
+#define LV_USE_DEV_VERSION
+
 /*====================
    COLOR SETTINGS
  *====================*/
@@ -72,6 +78,9 @@
 /*====================
    HAL SETTINGS
  *====================*/
+
+/*Default display refresh, input device read and animation step period.*/
+#define LV_DEF_REFR_PERIOD  33      /*[ms]*/
 
 /*Use a custom tick source that tells the elapsed time in milliseconds.
  *It removes the need to manually update the tick with `lv_tick_inc()`)*/
@@ -172,6 +181,14 @@
     e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
     #define LV_GPU_DMA2D_CMSIS_INCLUDE
 #endif
+
+/*Use GD32 IPA GPU
+ * This adds support for Image Processing Accelerator on GD32F450 and GD32F470 series MCUs
+ *
+ * NOTE: IPA on GD32F450 has a bug where the fill operation overwrites data beyond the
+ * framebuffer. This driver works around it by saving and restoring affected memory, but
+ * this makes it not thread-safe. GD32F470 is not affected. */
+#define LV_USE_GPU_GD32_IPA 0
 
 /*Use NXP's PXP GPU iMX RTxxx platforms*/
 #define LV_USE_GPU_NXP_PXP 0
@@ -732,7 +749,26 @@
     /*Quick access bar, 1:use, 0:not use*/
     /*Requires: lv_list*/
     #define LV_FILE_EXPLORER_QUICK_ACCESS        1
-#endif  
+#endif
+
+/*==================
+ * DEVICES
+ *==================*/
+
+/*Use SDL to open window on PC and handle mouse and keyboard*/
+#define LV_USE_SDL              0
+#if LV_USE_SDL
+    #define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
+#endif
+
+/*Driver for /dev/fb*/
+#define LV_USE_LINUX_FBDEV      0
+#if LV_USE_LINUX_FBDEV
+    #define LV_LINUX_FBDEV_BSD  0
+#endif
+
+/*Interface for TFT_eSPI*/
+#define LV_USE_TFT_ESPI         0
 
 /*==================
 * EXAMPLES
