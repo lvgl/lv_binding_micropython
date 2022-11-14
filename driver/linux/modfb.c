@@ -3,7 +3,7 @@
  *      INCLUDES
  *********************/
 
-#include "../../lib/lv_bindings/lvgl/lvgl.h"
+#include "../../lvgl/lvgl.h"
 #include "../include/common.h"
 #include <stdlib.h>
 #include <unistd.h>
@@ -57,7 +57,7 @@ STATIC inline bool fbdev_active()
 }
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
-{  
+{
     lv_task_handler();
     return mp_const_none;
 }
@@ -81,7 +81,7 @@ STATIC void* tick_thread(void * data)
 static void handle_sigusr1(int signo)
 {
     // Let the signal pass. blocking function would return E_INTR.
-    // This would cause a call to "mp_handle_pending" even when 
+    // This would cause a call to "mp_handle_pending" even when
     // waiting for user input.
     // See https://github.com/micropython/micropython/pull/5723
 }
@@ -115,7 +115,7 @@ STATIC mp_obj_t mp_init_fb(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
             exit(1);
         }
     }
-    
+
     return err == 0? mp_const_true: mp_const_false;
 }
 
@@ -139,7 +139,7 @@ STATIC const mp_rom_map_elem_t fb_globals_table[] = {
         { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&mp_deinit_fb_obj) },
         { MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&PTR_OBJ(fbdev_flush))},
 };
-         
+
 
 STATIC MP_DEFINE_CONST_DICT (
     mp_module_fb_globals,

@@ -683,6 +683,9 @@ print ("""
 #include "py/objtype.h"
 #include "py/objexcept.h"
 
+#include "lvgl/src/misc/lv_gc.h"
+#include LV_GC_INCLUDE
+
 /*
  * {module_name} includes
  */
@@ -2787,6 +2790,23 @@ for (func_name, func, struct_name) in callbacks_used_on_structs:
         # func_name = get_arg_name(func.type)
         # lv_to_mp[func_name] = lv_to_mp['void *']
         # mp_to_lv[func_name] = mp_to_lv['void *']
+
+#
+# Instantiate and register LV root pointers
+#
+
+print("""
+/*
+ * lvgl root pointers.
+ */
+
+#define LV_REGISTER_ROOT(root_type, root_name) MP_REGISTER_ROOT_POINTER(root_type root_name);
+LV_ITERATE_ROOTS(LV_REGISTER_ROOT);
+
+MP_REGISTER_ROOT_POINTER(void *mp_lv_user_data);
+
+""")
+
 
 #
 # Emit Mpy Module definition
