@@ -2223,7 +2223,7 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
     if not func_name: func_name = get_arg_name(func.type)
     # print('/* --> callback: func_name = %s */' % func_name)
     if is_global_callback(func):
-        full_user_data = 'MP_STATE_PORT(mp_lv_user_data)'
+        full_user_data = 'LV_GC_ROOT(mp_lv_user_data)'
     else:
         user_data = get_user_data(func, func_name)
 
@@ -2312,7 +2312,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
                 callback_name = '%s_%s' % (struct_name, callback_name)
                 user_data = get_user_data(arg_type, callback_name)
                 if is_global_callback(arg_type):
-                    full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
+                    full_user_data = '&LV_GC_ROOT(mp_lv_user_data)'
                 else:
                     full_user_data = '&%s->%s' % (first_arg.name, user_data) if user_data else None
                     if index == 0:
@@ -2751,6 +2751,9 @@ module_funcs = [func for func in funcs if not func.name in generated_funcs]
 for module_func in module_funcs[:]: # clone list because we are changing it in the loop.
     if module_func.name in generated_funcs:
         continue # generated_funcs could change inside the loop so need to recheck.
+    if module_func.name == "lv_init":
+        func_metadata[module_func.name] = {'type': 'function', 'args':[]}
+        continue # special case handled separately
     try:
         gen_mp_func(module_func, None)
         # A new function can create new struct with new function structs
@@ -2806,10 +2809,22 @@ print("""
  * lvgl root pointers.
  */
 
-#define LV_REGISTER_ROOT(root_type, root_name) MP_REGISTER_ROOT_POINTER(root_type root_name);
-LV_ITERATE_ROOTS(LV_REGISTER_ROOT);
+MP_REGISTER_ROOT_POINTER(struct lvgl_root_pointers_t * lvgl);
 
-MP_REGISTER_ROOT_POINTER(void *mp_lv_user_data);
+STATIC mp_obj_t mp_lv_init(void)
+{
+    if (lv_is_initialized()) {
+        return mp_const_none;
+    }
+
+    // Create object to hold all the lvgl global objects.
+    MP_STATE_VM(lvgl) =  m_new0(lvgl_root_pointers_t, 1);
+
+    lv_init();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_lv_init_mpobj, mp_lv_init);
 
 """)
 
