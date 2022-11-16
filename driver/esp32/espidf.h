@@ -82,8 +82,13 @@ void * memset ( void * ptr, int value, size_t num );
 
 static inline void SPH0645_WORKAROUND(int i2s_num)
 {
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
     REG_SET_BIT( I2S_TIMING_REG(i2s_num), BIT(9));
     REG_SET_BIT( I2S_CONF_REG(i2s_num), I2S_RX_MSB_SHIFT);
+#elif CONFIG_IDF_TARGET_ESP32S3
+    REG_SET_BIT( I2S_RX_TIMING_REG(i2s_num), BIT(9));
+    REG_SET_BIT( I2S_RX_CONF_REG(i2s_num), I2S_RX_MSB_SHIFT);
+#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,11 +181,13 @@ void ex_spi_post_cb_isr(spi_transaction_t *trans);
 
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
 // SPI HOST enum was changed to macros on v4
+#if CONFIG_IDF_TARGET_ESP32
 enum {
     ENUM_SPI_HOST = SPI_HOST,
     ENUM_HSPI_HOST = HSPI_HOST,
     ENUM_VSPI_HOST = VSPI_HOST,
 };
+#endif /* CONFIG_IDF_TARGET_ESP32 */
 #endif
 
 enum {

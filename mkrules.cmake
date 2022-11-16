@@ -120,6 +120,14 @@ function(all_lv_bindings)
             GEN_OPTIONS
                  -M espidf
             FILTER
+                clk.h
+                FreeRTOSConfig_arch.h
+                gpio.h
+                lldesc.h
+                rtc_io.h
+                esp_eth.h
+                esp_eth_phy.h
+                esp_eth_netif_glue.h
                 i2s_ll.h
                 i2s_hal.h
                 esp_intr_alloc.h
