@@ -231,6 +231,7 @@ class ili9XXX:
             esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
             esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
 
+            # ESP32-S3 need USE SPI_DMA_CH_AUTO == 3
             ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
             if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 

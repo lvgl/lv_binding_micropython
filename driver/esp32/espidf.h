@@ -181,13 +181,17 @@ void ex_spi_post_cb_isr(spi_transaction_t *trans);
 
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
 // SPI HOST enum was changed to macros on v4
-#if CONFIG_IDF_TARGET_ESP32
 enum {
+#if CONFIG_IDF_TARGET_ESP32
     ENUM_SPI_HOST = SPI_HOST,
     ENUM_HSPI_HOST = HSPI_HOST,
     ENUM_VSPI_HOST = VSPI_HOST,
+#elif CONFIG_IDF_TARGET_ESP32S3
+    ENUM_SPI_HOST = SPI1_HOST,
+    ENUM_HSPI_HOST = SPI2_HOST,
+    ENUM_VSPI_HOST = SPI3_HOST,
+#endif
 };
-#endif /* CONFIG_IDF_TARGET_ESP32 */
 #endif
 
 enum {
