@@ -247,5 +247,5 @@ def event_cb(e):
     print("%s Clicked!" % repr(e.get_target()))
 
 for widget in [btn, customWidget]:
-    widget.add_event_cb(event_cb, lv.EVENT.CLICKED, None)
+    widget.add_event(event_cb, lv.EVENT.CLICKED, None)
 

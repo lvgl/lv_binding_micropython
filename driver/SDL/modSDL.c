@@ -130,17 +130,17 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_init_SDL_obj, 0, mp_init_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_deinit_SDL_obj, mp_deinit_SDL);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mp_refresh_SDL_obj, mp_refresh_SDL);
 
-static void monitor_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+static void monitor_flush(lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     sdl_display_flush(disp_drv, area, color_p);
 }
 
-static void mouse_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+static void mouse_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     sdl_mouse_read(indev_drv, data);
 }
 
-static void keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+static void keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     sdl_keyboard_read(indev_drv, data);
 }

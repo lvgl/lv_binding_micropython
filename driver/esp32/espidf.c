@@ -177,7 +177,7 @@ typedef struct {
 
 void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
-    lv_disp_drv_t *disp_drv = _disp_drv;
+    lv_disp_t *disp_drv = _disp_drv;
     const lv_area_t *area = _area;
     lv_color_t *color_p = _color_p;
     int start_x = 0;

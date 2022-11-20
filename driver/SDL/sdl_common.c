@@ -40,7 +40,7 @@ static char buf[KEYBOARD_BUFFER_SIZE];
  * @param indev_drv pointer to the related input device driver
  * @param data store the mouse data here
  */
-void sdl_mouse_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+void sdl_mouse_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 
@@ -56,7 +56,7 @@ void sdl_mouse_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
  * @param indev_drv pointer to the related input device driver
  * @param data store the read data here
  */
-void sdl_mousewheel_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+void sdl_mousewheel_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 
@@ -70,7 +70,7 @@ void sdl_mousewheel_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
  * @param indev_drv pointer to the related input device driver
  * @param data store the red data here
  */
-void sdl_keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 

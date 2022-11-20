@@ -123,10 +123,10 @@ void sdl_deinit(void)
  * @param area an area where to copy `color_p`
  * @param color_p an array of pixels to copy to the `area` part of the screen
  */
-void sdl_display_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+void sdl_display_flush(lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
-    lv_coord_t hres = disp_drv->hor_res;
-    lv_coord_t vres = disp_drv->ver_res;
+    lv_coord_t hres = lv_disp_get_hor_res(disp_drv);
+    lv_coord_t vres = lv_disp_get_ver_res(disp_drv);
 
 //    printf("x1:%d,y1:%d,x2:%d,y2:%d\n", area->x1, area->y1, area->x2, area->y2);
 
@@ -152,7 +152,7 @@ void sdl_display_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
     }
 #else
     uint32_t w = lv_area_get_width(area);
-    for(y = area->y1; y <= area->y2 && y < disp_drv->ver_res; y++) {
+    for(y = area->y1; y <= area->y2 && y < lv_disp_get_ver_res(disp_drv); y++) {
         memcpy(&monitor.tft_fb[y * SDL_HOR_RES + area->x1], color_p, w * sizeof(lv_color_t));
         color_p += w;
     }
@@ -181,7 +181,7 @@ void sdl_display_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
  * @param area an area where to copy `color_p`
  * @param color_p an array of pixels to copy to the `area` part of the screen
  */
-void sdl_display_flush2(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+void sdl_display_flush2(lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     lv_coord_t hres = disp_drv->hor_res;
     lv_coord_t vres = disp_drv->ver_res;
@@ -358,6 +358,7 @@ static void window_update(monitor_t * m)
     SDL_UpdateTexture(m->texture, NULL, m->tft_fb_act, SDL_HOR_RES * sizeof(uint32_t));
 #endif
     SDL_RenderClear(m->renderer);
+    /*
     lv_disp_t * d = _lv_refr_get_disp_refreshing();
     if(d->driver->screen_transp) {
         SDL_SetRenderDrawColor(m->renderer, 0xff, 0, 0, 0xff);
@@ -365,6 +366,7 @@ static void window_update(monitor_t * m)
         r.x = 0; r.y = 0; r.w = SDL_HOR_RES; r.h = SDL_VER_RES;
         SDL_RenderDrawRect(m->renderer, &r);
     }
+    */
 
     /*Update the renderer with the texture containing the rendered image*/
     SDL_RenderCopy(m->renderer, m->texture, NULL, NULL);

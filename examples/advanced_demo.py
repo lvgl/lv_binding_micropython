@@ -147,7 +147,7 @@ class Page_Buttons:
                 self.label.set_text('[%d] %s %s' % (self.btn_event_count[name], name, event_name))
 
         for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.add_event_cb(lambda event, btn_name=name: button_cb(event, btn_name), lv.EVENT.ALL, None)
+            btn.add_event(lambda event, btn_name=name: button_cb(event, btn_name), lv.EVENT.ALL, None)
 
 
 class Page_Simple:
@@ -163,7 +163,7 @@ class Page_Simple:
         self.slider = lv.slider(page)
         self.slider.set_width(lv.pct(80))
         self.slider_label = lv.label(page)
-        self.slider.add_event_cb(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
+        self.slider.add_event(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
         self.on_slider_changed(None)
 
         # style selector
@@ -176,7 +176,7 @@ class Page_Simple:
         self.style_selector.add_style(ShadowStyle(), lv.PART.MAIN)
         self.style_selector.align(lv.ALIGN.OUT_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
-        self.style_selector.add_event_cb(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
+        self.style_selector.add_event(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
 
         # counter button
         self.counter_btn = lv.btn(page)
@@ -184,7 +184,7 @@ class Page_Simple:
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")
         self.counter_label.align(lv.ALIGN.CENTER, 0, 0)
-        self.counter_btn.add_event_cb(self.on_counter_btn, lv.EVENT.CLICKED, None)
+        self.counter_btn.add_event(self.on_counter_btn, lv.EVENT.CLICKED, None)
         self.counter = 0
 
     def on_slider_changed(self, event):
@@ -293,7 +293,7 @@ class Page_Chart:
         self.slider.set_size(10, lv.pct(100))
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
-        self.slider.add_event_cb(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
+        self.slider.add_event(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
 
 class Screen_Main(lv.obj):
     def __init__(self, app, *args, **kwds):
@@ -322,33 +322,27 @@ class AdvancedDemoApplication:
 
         # Register SDL display driver.
 
-        disp_buf1 = lv.disp_draw_buf_t()
         buf1_1 = bytes(WIDTH * 10)
-        disp_buf1.init(buf1_1, None, len(buf1_1)//4)
-        disp_drv = lv.disp_drv_t()
-        disp_drv.init()
-        disp_drv.draw_buf = disp_buf1
-        disp_drv.flush_cb = SDL.monitor_flush
-        disp_drv.hor_res = WIDTH
-        disp_drv.ver_res = HEIGHT
-        disp_drv.register()
+        disp_drv = lv.disp_create(WIDTH, HEIGHT)
+        lv.disp_set_draw_buffers(disp_drv, buf1_1, None, len(buf1_1)//4, lv.DISP_RENDER_MODE.PARTIAL)
+        lv.disp_set_flush_cb(disp_drv, SDL.monitor_flush)
 
         # Regsiter SDL mouse driver
 
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init() 
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = SDL.mouse_read
-        self.mouse = indev_drv.register()
+        # indev_drv = lv.indev_drv_t()
+        # indev_drv.init() 
+        # indev_drv.type = lv.INDEV_TYPE.POINTER
+        # indev_drv.read_cb = SDL.mouse_read
+        # self.mouse = indev_drv.register()
 
-        # Register keyboard driver
+        # # Register keyboard driver
 
-        keyboard_drv = lv.indev_drv_t()
-        keyboard_drv.init()
-        keyboard_drv.type = lv.INDEV_TYPE.KEYPAD
-        keyboard_drv.read_cb = SDL.keyboard_read
-        self.keyboard = keyboard_drv.register()
-        self.keyboard.set_group(self.group)
+        # keyboard_drv = lv.indev_drv_t()
+        # keyboard_drv.init()
+        # keyboard_drv.type = lv.INDEV_TYPE.KEYPAD
+        # keyboard_drv.read_cb = SDL.keyboard_read
+        # self.keyboard = keyboard_drv.register()
+        # self.keyboard.set_group(self.group)
         
         
     def init_gui_esp32(self):

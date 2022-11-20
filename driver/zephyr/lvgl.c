@@ -50,7 +50,7 @@ static uint8_t buf1[BUFFER_SIZE] __aligned(4);
 
 #ifdef CONFIG_LVGL_BUFFER_ALLOC_STATIC
 
-static int lvgl_allocate_rendering_buffers(lv_disp_drv_t *disp_drv)
+static int lvgl_allocate_rendering_buffers(lv_disp_t *disp_drv)
 {
 	struct display_capabilities cap;
 	const struct device *display_dev = (const struct device *)disp_drv->user_data;
@@ -84,7 +84,7 @@ static int lvgl_allocate_rendering_buffers(lv_disp_drv_t *disp_drv)
 
 #else
 
-static int lvgl_allocate_rendering_buffers(lv_disp_drv_t *disp_drv)
+static int lvgl_allocate_rendering_buffers(lv_disp_t *disp_drv)
 {
 	void *buf0 = NULL;
 	void *buf1 = NULL;
@@ -171,7 +171,7 @@ static void lvgl_pointer_kscan_callback(const struct device *dev,
 	}
 }
 
-static bool lvgl_pointer_kscan_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
+static bool lvgl_pointer_kscan_read(lv_indev_t *drv, lv_indev_data_t *data)
 {
 	lv_disp_t *disp;
 	const struct device *disp_dev;
@@ -251,7 +251,7 @@ static int lvgl_pointer_kscan_init(void)
 	const struct device *kscan_dev =
 		device_get_binding(CONFIG_LVGL_POINTER_KSCAN_DEV_NAME);
 
-	lv_indev_drv_t indev_drv;
+	lv_indev_t indev_drv;
 
 	if (kscan_dev == NULL) {
 		printf("Keyboard scan device not found.");
@@ -289,7 +289,7 @@ int lvgl_init(const struct device *dev)
 	const struct device *display_dev =
 		device_get_binding(CONFIG_LVGL_DISPLAY_DEV_NAME);
 	int err = 0;
-	lv_disp_drv_t disp_drv;
+	lv_disp_t disp_drv;
 
 	if (display_dev == NULL) {
 		printf("Display device not found.");

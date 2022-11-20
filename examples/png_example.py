@@ -59,6 +59,6 @@ def drag_event_handler(e):
 
 for img in [img1, img2]:
     img.add_flag(img.FLAG.CLICKABLE)
-    img.add_event_cb(drag_event_handler, lv.EVENT.PRESSING, None)
+    img.add_event(drag_event_handler, lv.EVENT.PRESSING, None)
 
 

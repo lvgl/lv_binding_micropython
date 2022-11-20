@@ -266,7 +266,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         lv_obj->user_data = self;
         
         // Register a "Delete" event callback
-        lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
+        lv_obj_add_event(lv_obj, mp_lv_delete_cb, LV_OBJ_EVENT_DELETE, NULL);
     }
     return MP_OBJ_FROM_PTR(self);
 }
@@ -4697,7 +4697,7 @@ STATIC const mp_rom_map_elem_t LV_EVENT_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_REFRESH), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_REFRESH)) },
     { MP_ROM_QSTR(MP_QSTR_READY), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_READY)) },
     { MP_ROM_QSTR(MP_QSTR_CANCEL), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CANCEL)) },
-    { MP_ROM_QSTR(MP_QSTR_DELETE), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_DELETE)) },
+    { MP_ROM_QSTR(MP_QSTR_DELETE), MP_ROM_PTR(MP_ROM_INT(LV_OBJ_EVENT_DELETE)) },
     { MP_ROM_QSTR(MP_QSTR_CHILD_CHANGED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CHILD_CHANGED)) },
     { MP_ROM_QSTR(MP_QSTR_CHILD_CREATED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CHILD_CREATED)) },
     { MP_ROM_QSTR(MP_QSTR_CHILD_DELETED), MP_ROM_PTR(MP_ROM_INT(LV_EVENT_CHILD_DELETED)) },
@@ -8222,15 +8222,15 @@ STATIC inline const mp_obj_type_t *get_mp_lv_disp_draw_buf_t_type()
 
 /*
  * lvgl extension definition for:
- * void flush_cb(struct _lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
+ * void flush_cb(struct _lv_disp_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
  */
  
 STATIC mp_obj_t mp_funcptr_flush_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
     const lv_area_t *area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
     lv_color_t *color_p = mp_write_ptr_lv_color32_t(mp_args[2]);
-    ((void (*)(struct _lv_disp_drv_t *, const lv_area_t *, lv_color_t *))lv_func_ptr)(disp_drv, area, color_p);
+    ((void (*)(struct _lv_disp_t *, const lv_area_t *, lv_color_t *))lv_func_ptr)(disp_drv, area, color_p);
     return mp_const_none;
 }
 
@@ -8240,20 +8240,20 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_flush_cb_mpobj, 3, mp_fu
     
 STATIC inline mp_obj_t mp_lv_funcptr_flush_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_flush_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_flush_cb_callback(struct _lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p);
+STATIC void lv_disp_t_flush_cb_callback(struct _lv_disp_t *disp_drv, const lv_area_t *area, lv_color_t *color_p);
 #define funcptr_rounder_cb NULL
 
 
 /*
  * lvgl extension definition for:
- * void rounder_cb(struct _lv_disp_drv_t *disp_drv, lv_area_t *area)
+ * void rounder_cb(struct _lv_disp_t *disp_drv, lv_area_t *area)
  */
  
 STATIC mp_obj_t mp_funcptr_rounder_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
     lv_area_t *area = mp_write_ptr_lv_area_t(mp_args[1]);
-    ((void (*)(struct _lv_disp_drv_t *, lv_area_t *))lv_func_ptr)(disp_drv, area);
+    ((void (*)(struct _lv_disp_t *, lv_area_t *))lv_func_ptr)(disp_drv, area);
     return mp_const_none;
 }
 
@@ -8263,25 +8263,25 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_rounder_cb_mpobj, 2, mp_
     
 STATIC inline mp_obj_t mp_lv_funcptr_rounder_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_rounder_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_rounder_cb_callback(struct _lv_disp_drv_t *disp_drv, lv_area_t *area);
+STATIC void lv_disp_t_rounder_cb_callback(struct _lv_disp_t *disp_drv, lv_area_t *area);
 #define funcptr_set_px_cb NULL
 
 
 /*
  * lvgl extension definition for:
- * void set_px_cb(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)
+ * void set_px_cb(struct _lv_disp_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)
  */
  
 STATIC mp_obj_t mp_funcptr_set_px_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
     uint8_t *buf = mp_array_to_u8ptr(mp_args[1]);
     lv_coord_t buf_w = (int16_t)mp_obj_get_int(mp_args[2]);
     lv_coord_t x = (int16_t)mp_obj_get_int(mp_args[3]);
     lv_coord_t y = (int16_t)mp_obj_get_int(mp_args[4]);
     lv_color_t color = mp_write_lv_color32_t(mp_args[5]);
     lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[6]);
-    ((void (*)(struct _lv_disp_drv_t *, uint8_t *, lv_coord_t, lv_coord_t, lv_coord_t, lv_color_t, lv_opa_t))lv_func_ptr)(disp_drv, buf, buf_w, x, y, color, opa);
+    ((void (*)(struct _lv_disp_t *, uint8_t *, lv_coord_t, lv_coord_t, lv_coord_t, lv_color_t, lv_opa_t))lv_func_ptr)(disp_drv, buf, buf_w, x, y, color, opa);
     return mp_const_none;
 }
 
@@ -8291,21 +8291,21 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_set_px_cb_mpobj, 7, mp_f
     
 STATIC inline mp_obj_t mp_lv_funcptr_set_px_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_set_px_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_set_px_cb_callback(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
+STATIC void lv_disp_t_set_px_cb_callback(struct _lv_disp_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
 #define funcptr_clear_cb NULL
 
 
 /*
  * lvgl extension definition for:
- * void clear_cb(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, uint32_t size)
+ * void clear_cb(struct _lv_disp_t *disp_drv, uint8_t *buf, uint32_t size)
  */
  
 STATIC mp_obj_t mp_funcptr_clear_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
     uint8_t *buf = mp_array_to_u8ptr(mp_args[1]);
     uint32_t size = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_disp_drv_t *, uint8_t *, uint32_t))lv_func_ptr)(disp_drv, buf, size);
+    ((void (*)(struct _lv_disp_t *, uint8_t *, uint32_t))lv_func_ptr)(disp_drv, buf, size);
     return mp_const_none;
 }
 
@@ -8315,21 +8315,21 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_clear_cb_mpobj, 3, mp_fu
     
 STATIC inline mp_obj_t mp_lv_funcptr_clear_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_clear_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_clear_cb_callback(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, uint32_t size);
+STATIC void lv_disp_t_clear_cb_callback(struct _lv_disp_t *disp_drv, uint8_t *buf, uint32_t size);
 #define funcptr_monitor_cb NULL
 
 
 /*
  * lvgl extension definition for:
- * void monitor_cb(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
+ * void monitor_cb(struct _lv_disp_t *disp_drv, uint32_t time, uint32_t px)
  */
  
 STATIC mp_obj_t mp_funcptr_monitor_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
     uint32_t time = (uint32_t)mp_obj_get_int(mp_args[1]);
     uint32_t px = (uint32_t)mp_obj_get_int(mp_args[2]);
-    ((void (*)(struct _lv_disp_drv_t *, uint32_t, uint32_t))lv_func_ptr)(disp_drv, time, px);
+    ((void (*)(struct _lv_disp_t *, uint32_t, uint32_t))lv_func_ptr)(disp_drv, time, px);
     return mp_const_none;
 }
 
@@ -8339,19 +8339,19 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_monitor_cb_mpobj, 3, mp_
     
 STATIC inline mp_obj_t mp_lv_funcptr_monitor_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_monitor_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_monitor_cb_callback(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
+STATIC void lv_disp_t_monitor_cb_callback(struct _lv_disp_t *disp_drv, uint32_t time, uint32_t px);
 #define funcptr_wait_cb NULL
 
 
 /*
  * lvgl extension definition for:
- * void wait_cb(struct _lv_disp_drv_t *disp_drv)
+ * void wait_cb(struct _lv_disp_t *disp_drv)
  */
  
 STATIC mp_obj_t mp_funcptr_wait_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
-    ((void (*)(struct _lv_disp_drv_t *))lv_func_ptr)(disp_drv);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
+    ((void (*)(struct _lv_disp_t *))lv_func_ptr)(disp_drv);
     return mp_const_none;
 }
 
@@ -8361,10 +8361,10 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_wait_cb_mpobj, 1, mp_fun
     
 STATIC inline mp_obj_t mp_lv_funcptr_wait_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_wait_cb_callback(struct _lv_disp_drv_t *disp_drv);
-STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _lv_disp_drv_t *disp_drv);
-STATIC void lv_disp_drv_t_drv_update_cb_callback(struct _lv_disp_drv_t *disp_drv);
-STATIC void lv_disp_drv_t_render_start_cb_callback(struct _lv_disp_drv_t *disp_drv);
+STATIC void lv_disp_t_wait_cb_callback(struct _lv_disp_t *disp_drv);
+STATIC void lv_disp_t_clean_dcache_cb_callback(struct _lv_disp_t *disp_drv);
+STATIC void lv_disp_t_drv_update_cb_callback(struct _lv_disp_t *disp_drv);
+STATIC void lv_disp_t_render_start_cb_callback(struct _lv_disp_t *disp_drv);
 #define funcptr_draw_rect NULL
 
 
@@ -9529,14 +9529,14 @@ STATIC inline const mp_obj_type_t *get_mp_lv_draw_ctx_t_type()
 
 /*
  * lvgl extension definition for:
- * void draw_ctx_init(struct _lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx)
+ * void draw_ctx_init(struct _lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx)
  */
  
 STATIC mp_obj_t mp_funcptr_draw_ctx_init(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_disp_drv_t *disp_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_disp_t *disp_drv = mp_to_ptr(mp_args[0]);
     lv_draw_ctx_t *draw_ctx = mp_write_ptr_lv_draw_ctx_t(mp_args[1]);
-    ((void (*)(struct _lv_disp_drv_t *, lv_draw_ctx_t *))lv_func_ptr)(disp_drv, draw_ctx);
+    ((void (*)(struct _lv_disp_t *, lv_draw_ctx_t *))lv_func_ptr)(disp_drv, draw_ctx);
     return mp_const_none;
 }
 
@@ -9546,35 +9546,35 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_draw_ctx_init_mpobj, 2, 
     
 STATIC inline mp_obj_t mp_lv_funcptr_draw_ctx_init(void *func){ return mp_lv_funcptr(&mp_funcptr_draw_ctx_init_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_disp_drv_t_draw_ctx_init_callback(struct _lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx);
-STATIC void lv_disp_drv_t_draw_ctx_deinit_callback(struct _lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx);
+STATIC void lv_disp_t_draw_ctx_init_callback(struct _lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx);
+STATIC void lv_disp_t_draw_ctx_deinit_callback(struct _lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx);
 
 /*
- * Struct lv_disp_drv_t
+ * Struct lv_disp_t
  */
 
-STATIC inline const mp_obj_type_t *get_mp_lv_disp_drv_t_type();
+STATIC inline const mp_obj_type_t *get_mp_lv_disp_t_type();
 
-STATIC inline void* mp_write_ptr_lv_disp_drv_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_disp_t(mp_obj_t self_in)
 {
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_disp_drv_t_type()));
-    return (lv_disp_drv_t*)self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_disp_t_type()));
+    return (lv_disp_t*)self->data;
 }
 
-#define mp_write_lv_disp_drv_t(struct_obj) *((lv_disp_drv_t*)mp_write_ptr_lv_disp_drv_t(struct_obj))
+#define mp_write_lv_disp_t(struct_obj) *((lv_disp_t*)mp_write_ptr_lv_disp_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_disp_drv_t(void *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_disp_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_disp_drv_t_type(), field);
+    return lv_to_mp_struct(get_mp_lv_disp_t_type(), field);
 }
 
-#define mp_read_lv_disp_drv_t(field) mp_read_ptr_lv_disp_drv_t(copy_buffer(&field, sizeof(lv_disp_drv_t)))
-#define mp_read_byref_lv_disp_drv_t(field) mp_read_ptr_lv_disp_drv_t(&field)
+#define mp_read_lv_disp_t(field) mp_read_ptr_lv_disp_t(copy_buffer(&field, sizeof(lv_disp_t)))
+#define mp_read_byref_lv_disp_t(field) mp_read_ptr_lv_disp_t(&field)
 
-STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    lv_disp_drv_t *data = (lv_disp_drv_t*)self->data;
+    lv_disp_t *data = (lv_disp_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
@@ -9594,19 +9594,19 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             case MP_QSTR_rotated: dest[0] = mp_obj_new_int_from_uint(data->rotated); break; // converting from uint32_t;
             case MP_QSTR_screen_transp: dest[0] = mp_obj_new_int_from_uint(data->screen_transp); break; // converting from uint32_t;
             case MP_QSTR_dpi: dest[0] = mp_obj_new_int_from_uint(data->dpi); break; // converting from uint32_t;
-            case MP_QSTR_flush_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_flush_cb_mpobj, (void*)data->flush_cb, lv_disp_drv_t_flush_cb_callback ,MP_QSTR_lv_disp_drv_t_flush_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area, lv_color_t *color_p);
-            case MP_QSTR_rounder_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_rounder_cb_mpobj, (void*)data->rounder_cb, lv_disp_drv_t_rounder_cb_callback ,MP_QSTR_lv_disp_drv_t_rounder_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area);
-            case MP_QSTR_set_px_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_set_px_cb_mpobj, (void*)data->set_px_cb, lv_disp_drv_t_set_px_cb_callback ,MP_QSTR_lv_disp_drv_t_set_px_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
-            case MP_QSTR_clear_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_clear_cb_mpobj, (void*)data->clear_cb, lv_disp_drv_t_clear_cb_callback ,MP_QSTR_lv_disp_drv_t_clear_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, uint32_t size);
-            case MP_QSTR_monitor_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_monitor_cb_mpobj, (void*)data->monitor_cb, lv_disp_drv_t_monitor_cb_callback ,MP_QSTR_lv_disp_drv_t_monitor_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
-            case MP_QSTR_wait_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->wait_cb, lv_disp_drv_t_wait_cb_callback ,MP_QSTR_lv_disp_drv_t_wait_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
-            case MP_QSTR_clean_dcache_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->clean_dcache_cb, lv_disp_drv_t_clean_dcache_cb_callback ,MP_QSTR_lv_disp_drv_t_clean_dcache_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
-            case MP_QSTR_drv_update_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->drv_update_cb, lv_disp_drv_t_drv_update_cb_callback ,MP_QSTR_lv_disp_drv_t_drv_update_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
-            case MP_QSTR_render_start_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->render_start_cb, lv_disp_drv_t_render_start_cb_callback ,MP_QSTR_lv_disp_drv_t_render_start_cb, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv);
+            case MP_QSTR_flush_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_flush_cb_mpobj, (void*)data->flush_cb, lv_disp_t_flush_cb_callback ,MP_QSTR_lv_disp_t_flush_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, lv_area_t *area, lv_color_t *color_p);
+            case MP_QSTR_rounder_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_rounder_cb_mpobj, (void*)data->rounder_cb, lv_disp_t_rounder_cb_callback ,MP_QSTR_lv_disp_t_rounder_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, lv_area_t *area);
+            case MP_QSTR_set_px_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_set_px_cb_mpobj, (void*)data->set_px_cb, lv_disp_t_set_px_cb_callback ,MP_QSTR_lv_disp_t_set_px_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
+            case MP_QSTR_clear_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_clear_cb_mpobj, (void*)data->clear_cb, lv_disp_t_clear_cb_callback ,MP_QSTR_lv_disp_t_clear_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, uint8_t *buf, uint32_t size);
+            case MP_QSTR_monitor_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_monitor_cb_mpobj, (void*)data->monitor_cb, lv_disp_t_monitor_cb_callback ,MP_QSTR_lv_disp_t_monitor_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, uint32_t time, uint32_t px);
+            case MP_QSTR_wait_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->wait_cb, lv_disp_t_wait_cb_callback ,MP_QSTR_lv_disp_t_wait_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv);
+            case MP_QSTR_clean_dcache_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->clean_dcache_cb, lv_disp_t_clean_dcache_cb_callback ,MP_QSTR_lv_disp_t_clean_dcache_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv);
+            case MP_QSTR_drv_update_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->drv_update_cb, lv_disp_t_drv_update_cb_callback ,MP_QSTR_lv_disp_t_drv_update_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv);
+            case MP_QSTR_render_start_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_wait_cb_mpobj, (void*)data->render_start_cb, lv_disp_t_render_start_cb_callback ,MP_QSTR_lv_disp_t_render_start_cb, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv);
             case MP_QSTR_color_chroma_key: dest[0] = mp_read_byref_lv_color32_t(data->color_chroma_key); break; // converting from lv_color_t;
             case MP_QSTR_draw_ctx: dest[0] = mp_read_ptr_lv_draw_ctx_t((void*)data->draw_ctx); break; // converting from lv_draw_ctx_t *;
-            case MP_QSTR_draw_ctx_init: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_ctx_init_mpobj, (void*)data->draw_ctx_init, lv_disp_drv_t_draw_ctx_init_callback ,MP_QSTR_lv_disp_drv_t_draw_ctx_init, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx);
-            case MP_QSTR_draw_ctx_deinit: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_ctx_init_mpobj, (void*)data->draw_ctx_deinit, lv_disp_drv_t_draw_ctx_deinit_callback ,MP_QSTR_lv_disp_drv_t_draw_ctx_deinit, data->user_data); break; // converting from callback void (*)(lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx);
+            case MP_QSTR_draw_ctx_init: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_ctx_init_mpobj, (void*)data->draw_ctx_init, lv_disp_t_draw_ctx_init_callback ,MP_QSTR_lv_disp_t_draw_ctx_init, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx);
+            case MP_QSTR_draw_ctx_deinit: dest[0] = mp_lv_funcptr(&mp_funcptr_draw_ctx_init_mpobj, (void*)data->draw_ctx_deinit, lv_disp_t_draw_ctx_deinit_callback ,MP_QSTR_lv_disp_t_draw_ctx_deinit, data->user_data); break; // converting from callback void (*)(lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx);
             case MP_QSTR_draw_ctx_size: dest[0] = mp_obj_new_int_from_uint(data->draw_ctx_size); break; // converting from size_t;
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
             default: call_parent_methods(self_in, attr, dest); // fallback to locals_dict lookup
@@ -9631,19 +9631,19 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
                 case MP_QSTR_rotated: data->rotated = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_screen_transp: data->screen_transp = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
                 case MP_QSTR_dpi: data->dpi = (uint32_t)mp_obj_get_int(dest[1]); break; // converting to uint32_t;
-                case MP_QSTR_flush_cb: data->flush_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_flush_cb_callback ,MP_QSTR_lv_disp_drv_t_flush_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area, lv_color_t *color_p);
-                case MP_QSTR_rounder_cb: data->rounder_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_rounder_cb_callback ,MP_QSTR_lv_disp_drv_t_rounder_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, lv_area_t *area);
-                case MP_QSTR_set_px_cb: data->set_px_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_set_px_cb_callback ,MP_QSTR_lv_disp_drv_t_set_px_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
-                case MP_QSTR_clear_cb: data->clear_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_clear_cb_callback ,MP_QSTR_lv_disp_drv_t_clear_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, uint8_t *buf, uint32_t size);
-                case MP_QSTR_monitor_cb: data->monitor_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_monitor_cb_callback ,MP_QSTR_lv_disp_drv_t_monitor_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px);
-                case MP_QSTR_wait_cb: data->wait_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_wait_cb_callback ,MP_QSTR_lv_disp_drv_t_wait_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
-                case MP_QSTR_clean_dcache_cb: data->clean_dcache_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_clean_dcache_cb_callback ,MP_QSTR_lv_disp_drv_t_clean_dcache_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
-                case MP_QSTR_drv_update_cb: data->drv_update_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_drv_update_cb_callback ,MP_QSTR_lv_disp_drv_t_drv_update_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
-                case MP_QSTR_render_start_cb: data->render_start_cb = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_render_start_cb_callback ,MP_QSTR_lv_disp_drv_t_render_start_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv);
+                case MP_QSTR_flush_cb: data->flush_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_flush_cb_callback ,MP_QSTR_lv_disp_t_flush_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, lv_area_t *area, lv_color_t *color_p);
+                case MP_QSTR_rounder_cb: data->rounder_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_rounder_cb_callback ,MP_QSTR_lv_disp_t_rounder_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, lv_area_t *area);
+                case MP_QSTR_set_px_cb: data->set_px_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_set_px_cb_callback ,MP_QSTR_lv_disp_t_set_px_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa);
+                case MP_QSTR_clear_cb: data->clear_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_clear_cb_callback ,MP_QSTR_lv_disp_t_clear_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, uint8_t *buf, uint32_t size);
+                case MP_QSTR_monitor_cb: data->monitor_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_monitor_cb_callback ,MP_QSTR_lv_disp_t_monitor_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, uint32_t time, uint32_t px);
+                case MP_QSTR_wait_cb: data->wait_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_wait_cb_callback ,MP_QSTR_lv_disp_t_wait_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv);
+                case MP_QSTR_clean_dcache_cb: data->clean_dcache_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_clean_dcache_cb_callback ,MP_QSTR_lv_disp_t_clean_dcache_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv);
+                case MP_QSTR_drv_update_cb: data->drv_update_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_drv_update_cb_callback ,MP_QSTR_lv_disp_t_drv_update_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv);
+                case MP_QSTR_render_start_cb: data->render_start_cb = (void*)mp_lv_callback(dest[1], lv_disp_t_render_start_cb_callback ,MP_QSTR_lv_disp_t_render_start_cb, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv);
                 case MP_QSTR_color_chroma_key: data->color_chroma_key = mp_write_lv_color32_t(dest[1]); break; // converting to lv_color_t;
                 case MP_QSTR_draw_ctx: data->draw_ctx = (void*)mp_write_ptr_lv_draw_ctx_t(dest[1]); break; // converting to lv_draw_ctx_t *;
-                case MP_QSTR_draw_ctx_init: data->draw_ctx_init = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_draw_ctx_init_callback ,MP_QSTR_lv_disp_drv_t_draw_ctx_init, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx);
-                case MP_QSTR_draw_ctx_deinit: data->draw_ctx_deinit = (void*)mp_lv_callback(dest[1], lv_disp_drv_t_draw_ctx_deinit_callback ,MP_QSTR_lv_disp_drv_t_draw_ctx_deinit, &data->user_data); break; // converting to callback void (*)(lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx);
+                case MP_QSTR_draw_ctx_init: data->draw_ctx_init = (void*)mp_lv_callback(dest[1], lv_disp_t_draw_ctx_init_callback ,MP_QSTR_lv_disp_t_draw_ctx_init, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx);
+                case MP_QSTR_draw_ctx_deinit: data->draw_ctx_deinit = (void*)mp_lv_callback(dest[1], lv_disp_t_draw_ctx_deinit_callback ,MP_QSTR_lv_disp_t_draw_ctx_deinit, &data->user_data); break; // converting to callback void (*)(lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx);
                 case MP_QSTR_draw_ctx_size: data->draw_ctx_size = (size_t)mp_obj_get_int(dest[1]); break; // converting to size_t;
                 case MP_QSTR_user_data: data->user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
                 default: return;
@@ -9654,31 +9654,31 @@ STATIC void mp_lv_disp_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
     }
 }
 
-STATIC void mp_lv_disp_drv_t_print(const mp_print_t *print,
+STATIC void mp_lv_disp_t_print(const mp_print_t *print,
     mp_obj_t self_in,
     mp_print_kind_t kind)
 {
-    mp_printf(print, "struct lv_disp_drv_t");
+    mp_printf(print, "struct lv_disp_t");
 }
 
-STATIC const mp_obj_dict_t mp_lv_disp_drv_t_locals_dict;
+STATIC const mp_obj_dict_t mp_lv_disp_t_locals_dict;
 
-STATIC const mp_obj_type_t mp_lv_disp_drv_t_type = {
+STATIC const mp_obj_type_t mp_lv_disp_t_type = {
     { &mp_type_type },
-    .name = MP_QSTR_lv_disp_drv_t,
-    .print = mp_lv_disp_drv_t_print,
+    .name = MP_QSTR_lv_disp_t,
+    .print = mp_lv_disp_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
     .subscr = lv_struct_subscr,
-    .attr = mp_lv_disp_drv_t_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_lv_disp_drv_t_locals_dict,
+    .attr = mp_lv_disp_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_lv_disp_t_locals_dict,
     .buffer_p = { .get_buffer = mp_blob_get_buffer },
     .parent = &mp_lv_base_struct_type
 };
 
-STATIC inline const mp_obj_type_t *get_mp_lv_disp_drv_t_type()
+STATIC inline const mp_obj_type_t *get_mp_lv_disp_t_type()
 {
-    return &mp_lv_disp_drv_t_type;
+    return &mp_lv_disp_t_type;
 }
     
 #define funcptr_lv_timer_cb_t NULL
@@ -10000,7 +10000,7 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_driver: dest[0] = mp_read_ptr_lv_disp_drv_t((void*)data->driver); break; // converting from lv_disp_drv_t *;
+            case MP_QSTR_driver: dest[0] = mp_read_ptr_lv_disp_t((void*)data->driver); break; // converting from lv_disp_t *;
             case MP_QSTR_refr_timer: dest[0] = mp_read_ptr_lv_timer_t((void*)data->refr_timer); break; // converting from lv_timer_t *;
             case MP_QSTR_theme: dest[0] = mp_read_ptr_lv_theme_t((void*)data->theme); break; // converting from lv_theme_t *;
             case MP_QSTR_screens: dest[0] = ptr_to_mp((void*)data->screens); break; // converting from lv_obj_t **;
@@ -10029,7 +10029,7 @@ STATIC void mp_lv_disp_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_driver: data->driver = (void*)mp_write_ptr_lv_disp_drv_t(dest[1]); break; // converting to lv_disp_drv_t *;
+                case MP_QSTR_driver: data->driver = (void*)mp_write_ptr_lv_disp_t(dest[1]); break; // converting to lv_disp_t *;
                 case MP_QSTR_refr_timer: data->refr_timer = (void*)mp_write_ptr_lv_timer_t(dest[1]); break; // converting to lv_timer_t *;
                 case MP_QSTR_theme: data->theme = (void*)mp_write_ptr_lv_theme_t(dest[1]); break; // converting to lv_theme_t *;
                 case MP_QSTR_screens: data->screens = (void*)mp_to_ptr(dest[1]); break; // converting to lv_obj_t **;
@@ -12189,29 +12189,29 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_event_base_mpobj, 2, mp_lv_obj_e
     
 
 /*
- * Callback function lv_obj_add_event_cb_event_cb
+ * Callback function lv_obj_add_event_event_cb
  * void lv_event_cb_t(lv_event_t *e)
  */
 
-GENMPY_UNUSED STATIC void lv_obj_add_event_cb_event_cb_callback(lv_event_t * arg0)
+GENMPY_UNUSED STATIC void lv_obj_add_event_event_cb_callback(lv_event_t * arg0)
 {
     mp_obj_t mp_args[1];
     mp_args[0] = mp_read_ptr_lv_event_t((void*)arg0);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_obj_add_event_cb_event_cb)) , 1, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_obj_add_event_event_cb)) , 1, 0, mp_args);
     return;
 }
 
 
 /*
  * lvgl extension definition for:
- * struct _lv_event_dsc_t *lv_obj_add_event_cb(struct _lv_obj_t *obj, lv_event_cb_t event_cb, lv_event_code_t filter, void *user_data)
+ * struct _lv_event_dsc_t *lv_obj_add_event(struct _lv_obj_t *obj, lv_event_cb_t event_cb, lv_event_code_t filter, void *user_data)
  */
  
-STATIC mp_obj_t mp_lv_obj_add_event_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+STATIC mp_obj_t mp_lv_obj_add_event(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     void *user_data = mp_to_ptr(mp_args[3]);
-    void *event_cb = mp_lv_callback(mp_args[1], &lv_obj_add_event_cb_event_cb_callback, MP_QSTR_lv_obj_add_event_cb_event_cb, &user_data);
+    void *event_cb = mp_lv_callback(mp_args[1], &lv_obj_add_event_event_cb_callback, MP_QSTR_lv_obj_add_event_event_cb, &user_data);
     lv_event_code_t filter = (int)mp_obj_get_int(mp_args[2]);
     struct _lv_obj_t *obj = mp_to_lv(mp_args[0]);
     struct _lv_event_dsc_t * _res = ((struct _lv_event_dsc_t *(*)(struct _lv_obj_t *, lv_event_cb_t, lv_event_code_t, void *))lv_func_ptr)(obj, event_cb, filter, user_data);
@@ -12220,7 +12220,7 @@ STATIC mp_obj_t mp_lv_obj_add_event_cb(size_t mp_n_args, const mp_obj_t *mp_args
 
  
 
-STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_add_event_cb_mpobj, 4, mp_lv_obj_add_event_cb, lv_obj_add_event_cb);
+STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_add_event_mpobj, 4, mp_lv_obj_add_event, lv_obj_add_event);
     
 
 /*
@@ -13180,7 +13180,7 @@ STATIC const mp_rom_map_elem_t obj_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_is_editable), MP_ROM_PTR(&mp_lv_obj_is_editable_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_is_group_def), MP_ROM_PTR(&mp_lv_obj_is_group_def_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_event_base), MP_ROM_PTR(&mp_lv_obj_event_base_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_add_event_cb), MP_ROM_PTR(&mp_lv_obj_add_event_cb_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_add_event), MP_ROM_PTR(&mp_lv_obj_add_event_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_remove_event_cb), MP_ROM_PTR(&mp_lv_obj_remove_event_cb_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_remove_event_cb_with_user_data), MP_ROM_PTR(&mp_lv_obj_remove_event_cb_with_user_data_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_remove_event_dsc), MP_ROM_PTR(&mp_lv_obj_remove_event_dsc_mpobj) },
@@ -24608,14 +24608,14 @@ STATIC inline const mp_obj_type_t *get_mp_lv_indev_data_t_type()
 
 /*
  * lvgl extension definition for:
- * void read_cb(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
+ * void read_cb(struct _lv_indev_t *indev_drv, lv_indev_data_t *data)
  */
  
 STATIC mp_obj_t mp_funcptr_read_cb_1(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_indev_drv_t *indev_drv = mp_to_ptr(mp_args[0]);
+    struct _lv_indev_t *indev_drv = mp_to_ptr(mp_args[0]);
     lv_indev_data_t *data = mp_write_ptr_lv_indev_data_t(mp_args[1]);
-    ((void (*)(struct _lv_indev_drv_t *, lv_indev_data_t *))lv_func_ptr)(indev_drv, data);
+    ((void (*)(struct _lv_indev_t *, lv_indev_data_t *))lv_func_ptr)(indev_drv, data);
     return mp_const_none;
 }
 
@@ -24625,20 +24625,20 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_read_cb_1_mpobj, 2, mp_f
     
 STATIC inline mp_obj_t mp_lv_funcptr_read_cb_1(void *func){ return mp_lv_funcptr(&mp_funcptr_read_cb_1_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
+STATIC void lv_indev_t_read_cb_callback(struct _lv_indev_t *indev_drv, lv_indev_data_t *data);
 #define funcptr_feedback_cb NULL
 
 
 /*
  * lvgl extension definition for:
- * void feedback_cb(struct _lv_indev_drv_t *, uint8_t)
+ * void feedback_cb(struct _lv_indev_t *, uint8_t)
  */
  
 STATIC mp_obj_t mp_funcptr_feedback_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_indev_drv_t *arg0 = mp_to_ptr(mp_args[0]);
+    struct _lv_indev_t *arg0 = mp_to_ptr(mp_args[0]);
     uint8_t arg1 = (uint8_t)mp_obj_get_int(mp_args[1]);
-    ((void (*)(struct _lv_indev_drv_t *, uint8_t))lv_func_ptr)(arg0, arg1);
+    ((void (*)(struct _lv_indev_t *, uint8_t))lv_func_ptr)(arg0, arg1);
     return mp_const_none;
 }
 
@@ -24648,42 +24648,42 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_funcptr_feedback_cb_mpobj, 2, mp
     
 STATIC inline mp_obj_t mp_lv_funcptr_feedback_cb(void *func){ return mp_lv_funcptr(&mp_funcptr_feedback_cb_mpobj, func, NULL, MP_QSTR_, NULL); }
 
-STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t *, uint8_t);
+STATIC void lv_indev_t_feedback_cb_callback(struct _lv_indev_t *, uint8_t);
 
 /*
- * Struct lv_indev_drv_t
+ * Struct lv_indev_t
  */
 
-STATIC inline const mp_obj_type_t *get_mp_lv_indev_drv_t_type();
+STATIC inline const mp_obj_type_t *get_mp_lv_indev_t_type();
 
-STATIC inline void* mp_write_ptr_lv_indev_drv_t(mp_obj_t self_in)
+STATIC inline void* mp_write_ptr_lv_indev_t(mp_obj_t self_in)
 {
-    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_indev_drv_t_type()));
-    return (lv_indev_drv_t*)self->data;
+    mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, get_mp_lv_indev_t_type()));
+    return (lv_indev_t*)self->data;
 }
 
-#define mp_write_lv_indev_drv_t(struct_obj) *((lv_indev_drv_t*)mp_write_ptr_lv_indev_drv_t(struct_obj))
+#define mp_write_lv_indev_t(struct_obj) *((lv_indev_t*)mp_write_ptr_lv_indev_t(struct_obj))
 
-STATIC inline mp_obj_t mp_read_ptr_lv_indev_drv_t(void *field)
+STATIC inline mp_obj_t mp_read_ptr_lv_indev_t(void *field)
 {
-    return lv_to_mp_struct(get_mp_lv_indev_drv_t_type(), field);
+    return lv_to_mp_struct(get_mp_lv_indev_t_type(), field);
 }
 
-#define mp_read_lv_indev_drv_t(field) mp_read_ptr_lv_indev_drv_t(copy_buffer(&field, sizeof(lv_indev_drv_t)))
-#define mp_read_byref_lv_indev_drv_t(field) mp_read_ptr_lv_indev_drv_t(&field)
+#define mp_read_lv_indev_t(field) mp_read_ptr_lv_indev_t(copy_buffer(&field, sizeof(lv_indev_t)))
+#define mp_read_byref_lv_indev_t(field) mp_read_ptr_lv_indev_t(&field)
 
-STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
+STATIC void mp_lv_indev_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    lv_indev_drv_t *data = (lv_indev_drv_t*)self->data;
+    lv_indev_t *data = (lv_indev_t*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         switch(attr)
         {
             case MP_QSTR_type: dest[0] = mp_obj_new_int(data->type); break; // converting from lv_indev_type_t;
-            case MP_QSTR_read_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_read_cb_1_mpobj, (void*)data->read_cb, lv_indev_drv_t_read_cb_callback ,MP_QSTR_lv_indev_drv_t_read_cb, data->user_data); break; // converting from callback void (*)(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
-            case MP_QSTR_feedback_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_feedback_cb_mpobj, (void*)data->feedback_cb, lv_indev_drv_t_feedback_cb_callback ,MP_QSTR_lv_indev_drv_t_feedback_cb, data->user_data); break; // converting from callback void (*)(lv_indev_drv_t *, uint8_t);
+            case MP_QSTR_read_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_read_cb_1_mpobj, (void*)data->read_cb, lv_indev_t_read_cb_callback ,MP_QSTR_lv_indev_t_read_cb, data->user_data); break; // converting from callback void (*)(lv_indev_t *indev_drv, lv_indev_data_t *data);
+            case MP_QSTR_feedback_cb: dest[0] = mp_lv_funcptr(&mp_funcptr_feedback_cb_mpobj, (void*)data->feedback_cb, lv_indev_t_feedback_cb_callback ,MP_QSTR_lv_indev_t_feedback_cb, data->user_data); break; // converting from callback void (*)(lv_indev_t *, uint8_t);
             case MP_QSTR_user_data: dest[0] = ptr_to_mp((void*)data->user_data); break; // converting from void *;
             case MP_QSTR_disp: dest[0] = mp_read_ptr_lv_disp_t((void*)data->disp); break; // converting from lv_disp_t *;
             case MP_QSTR_read_timer: dest[0] = mp_read_ptr_lv_timer_t((void*)data->read_timer); break; // converting from lv_timer_t *;
@@ -24702,8 +24702,8 @@ STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             switch(attr)
             {
                 case MP_QSTR_type: data->type = (int)mp_obj_get_int(dest[1]); break; // converting to lv_indev_type_t;
-                case MP_QSTR_read_cb: data->read_cb = (void*)mp_lv_callback(dest[1], lv_indev_drv_t_read_cb_callback ,MP_QSTR_lv_indev_drv_t_read_cb, &data->user_data); break; // converting to callback void (*)(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
-                case MP_QSTR_feedback_cb: data->feedback_cb = (void*)mp_lv_callback(dest[1], lv_indev_drv_t_feedback_cb_callback ,MP_QSTR_lv_indev_drv_t_feedback_cb, &data->user_data); break; // converting to callback void (*)(lv_indev_drv_t *, uint8_t);
+                case MP_QSTR_read_cb: data->read_cb = (void*)mp_lv_callback(dest[1], lv_indev_t_read_cb_callback ,MP_QSTR_lv_indev_t_read_cb, &data->user_data); break; // converting to callback void (*)(lv_indev_t *indev_drv, lv_indev_data_t *data);
+                case MP_QSTR_feedback_cb: data->feedback_cb = (void*)mp_lv_callback(dest[1], lv_indev_t_feedback_cb_callback ,MP_QSTR_lv_indev_t_feedback_cb, &data->user_data); break; // converting to callback void (*)(lv_indev_t *, uint8_t);
                 case MP_QSTR_user_data: data->user_data = (void*)mp_to_ptr(dest[1]); break; // converting to void *;
                 case MP_QSTR_disp: data->disp = (void*)mp_write_ptr_lv_disp_t(dest[1]); break; // converting to lv_disp_t *;
                 case MP_QSTR_read_timer: data->read_timer = (void*)mp_write_ptr_lv_timer_t(dest[1]); break; // converting to lv_timer_t *;
@@ -24721,31 +24721,31 @@ STATIC void mp_lv_indev_drv_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
     }
 }
 
-STATIC void mp_lv_indev_drv_t_print(const mp_print_t *print,
+STATIC void mp_lv_indev_t_print(const mp_print_t *print,
     mp_obj_t self_in,
     mp_print_kind_t kind)
 {
-    mp_printf(print, "struct lv_indev_drv_t");
+    mp_printf(print, "struct lv_indev_t");
 }
 
-STATIC const mp_obj_dict_t mp_lv_indev_drv_t_locals_dict;
+STATIC const mp_obj_dict_t mp_lv_indev_t_locals_dict;
 
-STATIC const mp_obj_type_t mp_lv_indev_drv_t_type = {
+STATIC const mp_obj_type_t mp_lv_indev_t_type = {
     { &mp_type_type },
-    .name = MP_QSTR_lv_indev_drv_t,
-    .print = mp_lv_indev_drv_t_print,
+    .name = MP_QSTR_lv_indev_t,
+    .print = mp_lv_indev_t_print,
     .make_new = make_new_lv_struct,
     .binary_op = lv_struct_binary_op,
     .subscr = lv_struct_subscr,
-    .attr = mp_lv_indev_drv_t_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_lv_indev_drv_t_locals_dict,
+    .attr = mp_lv_indev_t_attr,
+    .locals_dict = (mp_obj_dict_t*)&mp_lv_indev_t_locals_dict,
     .buffer_p = { .get_buffer = mp_blob_get_buffer },
     .parent = &mp_lv_base_struct_type
 };
 
-STATIC inline const mp_obj_type_t *get_mp_lv_indev_drv_t_type()
+STATIC inline const mp_obj_type_t *get_mp_lv_indev_t_type()
 {
-    return &mp_lv_indev_drv_t_type;
+    return &mp_lv_indev_t_type;
 }
     
 typedef __typeof__( ((_lv_indev_proc_t*)(0))->types ) _lv_indev_proc_types_t;
@@ -25358,7 +25358,7 @@ STATIC void mp_lv_indev_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         // load attribute
         switch(attr)
         {
-            case MP_QSTR_driver: dest[0] = mp_read_ptr_lv_indev_drv_t((void*)data->driver); break; // converting from lv_indev_drv_t *;
+            case MP_QSTR_driver: dest[0] = mp_read_ptr_lv_indev_t((void*)data->driver); break; // converting from lv_indev_t *;
             case MP_QSTR_proc: dest[0] = mp_read_byref__lv_indev_proc_t(data->proc); break; // converting from _lv_indev_proc_t;
             case MP_QSTR_cursor: dest[0] = lv_to_mp((void*)data->cursor); break; // converting from lv_obj_t *;
             case MP_QSTR_group: dest[0] = mp_read_ptr_lv_group_t((void*)data->group); break; // converting from lv_group_t *;
@@ -25371,7 +25371,7 @@ STATIC void mp_lv_indev_t_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
             // store attribute
             switch(attr)
             {
-                case MP_QSTR_driver: data->driver = (void*)mp_write_ptr_lv_indev_drv_t(dest[1]); break; // converting to lv_indev_drv_t *;
+                case MP_QSTR_driver: data->driver = (void*)mp_write_ptr_lv_indev_t(dest[1]); break; // converting to lv_indev_t *;
                 case MP_QSTR_proc: data->proc = mp_write__lv_indev_proc_t(dest[1]); break; // converting to _lv_indev_proc_t;
                 case MP_QSTR_cursor: data->cursor = (void*)mp_to_lv(dest[1]); break; // converting to lv_obj_t *;
                 case MP_QSTR_group: data->group = (void*)mp_write_ptr_lv_group_t(dest[1]); break; // converting to lv_group_t *;
@@ -27196,14 +27196,14 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_dpx_mpobj, 2, mp_lv_disp_dpx, l
 
 /*
  * lvgl extension definition for:
- * void lv_disp_drv_update(lv_disp_t *disp, lv_disp_drv_t *new_drv)
+ * void lv_disp_drv_update(lv_disp_t *disp, lv_disp_t *new_drv)
  */
  
 STATIC mp_obj_t mp_lv_disp_drv_update(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_disp_t *disp = mp_write_ptr_lv_disp_t(mp_args[0]);
-    lv_disp_drv_t *new_drv = mp_write_ptr_lv_disp_drv_t(mp_args[1]);
-    ((void (*)(lv_disp_t *, lv_disp_drv_t *))lv_func_ptr)(disp, new_drv);
+    lv_disp_t *new_drv = mp_write_ptr_lv_disp_t(mp_args[1]);
+    ((void (*)(lv_disp_t *, lv_disp_t *))lv_func_ptr)(disp, new_drv);
     return mp_const_none;
 }
 
@@ -27578,13 +27578,13 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_disp_t_locals_dict, mp_lv_disp_t_locals_dict_t
 
 /*
  * lvgl extension definition for:
- * void lv_disp_drv_init(lv_disp_drv_t *driver)
+ * void lv_disp_drv_init(lv_disp_t *driver)
  */
  
 STATIC mp_obj_t mp_lv_disp_drv_init(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    lv_disp_drv_t *driver = mp_write_ptr_lv_disp_drv_t(mp_args[0]);
-    ((void (*)(lv_disp_drv_t *))lv_func_ptr)(driver);
+    lv_disp_t *driver = mp_write_ptr_lv_disp_t(mp_args[0]);
+    ((void (*)(lv_disp_t *))lv_func_ptr)(driver);
     return mp_const_none;
 }
 
@@ -27595,13 +27595,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_drv_init_mpobj, 1, mp_lv_disp_d
 
 /*
  * lvgl extension definition for:
- * lv_disp_t *lv_disp_drv_register(lv_disp_drv_t *driver)
+ * lv_disp_t *lv_disp_drv_register(lv_disp_t *driver)
  */
  
 STATIC mp_obj_t mp_lv_disp_drv_register(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    lv_disp_drv_t *driver = mp_write_ptr_lv_disp_drv_t(mp_args[0]);
-    lv_disp_t * _res = ((lv_disp_t *(*)(lv_disp_drv_t *))lv_func_ptr)(driver);
+    lv_disp_t *driver = mp_write_ptr_lv_disp_t(mp_args[0]);
+    lv_disp_t * _res = ((lv_disp_t *(*)(lv_disp_t *))lv_func_ptr)(driver);
     return mp_read_ptr_lv_disp_t((void*)_res);
 }
 
@@ -27616,13 +27616,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_flush_ready_mpobj, 1, mp_lv_dis
 
 /*
  * lvgl extension definition for:
- * bool lv_disp_flush_is_last(lv_disp_drv_t *disp_drv)
+ * bool lv_disp_flush_is_last(lv_disp_t *disp_drv)
  */
  
 STATIC mp_obj_t mp_lv_disp_flush_is_last(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    lv_disp_drv_t *disp_drv = mp_write_ptr_lv_disp_drv_t(mp_args[0]);
-    bool _res = ((bool (*)(lv_disp_drv_t *))lv_func_ptr)(disp_drv);
+    lv_disp_t *disp_drv = mp_write_ptr_lv_disp_t(mp_args[0]);
+    bool _res = ((bool (*)(lv_disp_t *))lv_func_ptr)(disp_drv);
     return convert_to_bool(_res);
 }
 
@@ -27633,14 +27633,14 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_flush_is_last_mpobj, 1, mp_lv_d
 
 /*
  * lvgl extension definition for:
- * void lv_disp_drv_use_generic_set_px_cb(lv_disp_drv_t *disp_drv, lv_img_cf_t cf)
+ * void lv_disp_drv_use_generic_set_px_cb(lv_disp_t *disp_drv, lv_img_cf_t cf)
  */
  
 STATIC mp_obj_t mp_lv_disp_drv_use_generic_set_px_cb(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    lv_disp_drv_t *disp_drv = mp_write_ptr_lv_disp_drv_t(mp_args[0]);
+    lv_disp_t *disp_drv = mp_write_ptr_lv_disp_t(mp_args[0]);
     lv_img_cf_t cf = (uint8_t)mp_obj_get_int(mp_args[1]);
-    ((void (*)(lv_disp_drv_t *, lv_img_cf_t))lv_func_ptr)(disp_drv, cf);
+    ((void (*)(lv_disp_t *, lv_img_cf_t))lv_func_ptr)(disp_drv, cf);
     return mp_const_none;
 }
 
@@ -27649,8 +27649,8 @@ STATIC mp_obj_t mp_lv_disp_drv_use_generic_set_px_cb(size_t mp_n_args, const mp_
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_disp_drv_use_generic_set_px_cb_mpobj, 2, mp_lv_disp_drv_use_generic_set_px_cb, lv_disp_drv_use_generic_set_px_cb);
     
 
-STATIC const mp_rom_map_elem_t mp_lv_disp_drv_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_disp_drv_t))) },
+STATIC const mp_rom_map_elem_t mp_lv_disp_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_disp_t))) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_disp_drv_init_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_register), MP_ROM_PTR(&mp_lv_disp_drv_register_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_flush_ready), MP_ROM_PTR(&mp_lv_disp_flush_ready_mpobj) },
@@ -27659,7 +27659,7 @@ STATIC const mp_rom_map_elem_t mp_lv_disp_drv_t_locals_dict_table[] = {
     
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_lv_disp_drv_t_locals_dict, mp_lv_disp_drv_t_locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(mp_lv_disp_t_locals_dict, mp_lv_disp_t_locals_dict_table);
         
 
 /*
@@ -30445,13 +30445,13 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_draw_mask_polygon_param_cfg_t_locals_dict, mp_
 
 /*
  * lvgl extension definition for:
- * void lv_indev_drv_init(struct _lv_indev_drv_t *driver)
+ * void lv_indev_drv_init(struct _lv_indev_t *driver)
  */
  
 STATIC mp_obj_t mp_lv_indev_drv_init(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_indev_drv_t *driver = mp_write_ptr_lv_indev_drv_t(mp_args[0]);
-    ((void (*)(struct _lv_indev_drv_t *))lv_func_ptr)(driver);
+    struct _lv_indev_t *driver = mp_write_ptr_lv_indev_t(mp_args[0]);
+    ((void (*)(struct _lv_indev_t *))lv_func_ptr)(driver);
     return mp_const_none;
 }
 
@@ -30462,13 +30462,13 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_init_mpobj, 1, mp_lv_indev
 
 /*
  * lvgl extension definition for:
- * lv_indev_t *lv_indev_drv_register(struct _lv_indev_drv_t *driver)
+ * lv_indev_t *lv_indev_drv_register(struct _lv_indev_t *driver)
  */
  
 STATIC mp_obj_t mp_lv_indev_drv_register(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
-    struct _lv_indev_drv_t *driver = mp_write_ptr_lv_indev_drv_t(mp_args[0]);
-    lv_indev_t * _res = ((lv_indev_t *(*)(struct _lv_indev_drv_t *))lv_func_ptr)(driver);
+    struct _lv_indev_t *driver = mp_write_ptr_lv_indev_t(mp_args[0]);
+    lv_indev_t * _res = ((lv_indev_t *(*)(struct _lv_indev_t *))lv_func_ptr)(driver);
     return mp_read_ptr_lv_indev_t((void*)_res);
 }
 
@@ -30477,14 +30477,14 @@ STATIC mp_obj_t mp_lv_indev_drv_register(size_t mp_n_args, const mp_obj_t *mp_ar
 STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_indev_drv_register_mpobj, 1, mp_lv_indev_drv_register, lv_indev_drv_register);
     
 
-STATIC const mp_rom_map_elem_t mp_lv_indev_drv_t_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_indev_drv_t))) },
+STATIC const mp_rom_map_elem_t mp_lv_indev_t_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof(lv_indev_t))) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&mp_lv_indev_drv_init_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_register), MP_ROM_PTR(&mp_lv_indev_drv_register_mpobj) },
     
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_drv_t_locals_dict, mp_lv_indev_drv_t_locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_t_locals_dict, mp_lv_indev_t_locals_dict_table);
         
 
 STATIC const mp_rom_map_elem_t mp_lv_indev_data_t_locals_dict_table[] = {
@@ -30497,14 +30497,14 @@ STATIC MP_DEFINE_CONST_DICT(mp_lv_indev_data_t_locals_dict, mp_lv_indev_data_t_l
 
 /*
  * lvgl extension definition for:
- * void lv_indev_drv_update(lv_indev_t *indev, struct _lv_indev_drv_t *new_drv)
+ * void lv_indev_drv_update(lv_indev_t *indev, struct _lv_indev_t *new_drv)
  */
  
 STATIC mp_obj_t mp_lv_indev_drv_update(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
 {
     lv_indev_t *indev = mp_write_ptr_lv_indev_t(mp_args[0]);
-    struct _lv_indev_drv_t *new_drv = mp_write_ptr_lv_indev_drv_t(mp_args[1]);
-    ((void (*)(lv_indev_t *, struct _lv_indev_drv_t *))lv_func_ptr)(indev, new_drv);
+    struct _lv_indev_t *new_drv = mp_write_ptr_lv_indev_t(mp_args[1]);
+    ((void (*)(lv_indev_t *, struct _lv_indev_t *))lv_func_ptr)(indev, new_drv);
     return mp_const_none;
 }
 
@@ -33463,47 +33463,47 @@ GENMPY_UNUSED STATIC int32_t lv_style_transition_dsc_t_path_xcb_callback(const s
 
 
 /*
- * Callback function lv_disp_drv_t_flush_cb
- * void flush_cb(struct _lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
+ * Callback function lv_disp_t_flush_cb
+ * void flush_cb(struct _lv_disp_t *disp_drv, const lv_area_t *area, lv_color_t *color_p)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_flush_cb_callback(struct _lv_disp_drv_t * arg0, const lv_area_t * arg1, lv_color_t * arg2)
+GENMPY_UNUSED STATIC void lv_disp_t_flush_cb_callback(struct _lv_disp_t * arg0, const lv_area_t * arg1, lv_color_t * arg2)
 {
     mp_obj_t mp_args[3];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_read_ptr_lv_area_t((void*)arg1);
     mp_args[2] = mp_read_ptr_lv_color32_t((void*)arg2);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_flush_cb)) , 3, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_flush_cb)) , 3, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_rounder_cb
- * void rounder_cb(struct _lv_disp_drv_t *disp_drv, lv_area_t *area)
+ * Callback function lv_disp_t_rounder_cb
+ * void rounder_cb(struct _lv_disp_t *disp_drv, lv_area_t *area)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_rounder_cb_callback(struct _lv_disp_drv_t * arg0, lv_area_t * arg1)
+GENMPY_UNUSED STATIC void lv_disp_t_rounder_cb_callback(struct _lv_disp_t * arg0, lv_area_t * arg1)
 {
     mp_obj_t mp_args[2];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_read_ptr_lv_area_t((void*)arg1);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_rounder_cb)) , 2, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_rounder_cb)) , 2, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_set_px_cb
- * void set_px_cb(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)
+ * Callback function lv_disp_t_set_px_cb
+ * void set_px_cb(struct _lv_disp_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y, lv_color_t color, lv_opa_t opa)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_set_px_cb_callback(struct _lv_disp_drv_t * arg0, uint8_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, lv_color_t arg5, lv_opa_t arg6)
+GENMPY_UNUSED STATIC void lv_disp_t_set_px_cb_callback(struct _lv_disp_t * arg0, uint8_t * arg1, lv_coord_t arg2, lv_coord_t arg3, lv_coord_t arg4, lv_color_t arg5, lv_opa_t arg6)
 {
     mp_obj_t mp_args[7];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_array_from_u8ptr((void*)arg1);
     mp_args[2] = mp_obj_new_int(arg2);
     mp_args[3] = mp_obj_new_int(arg3);
@@ -33511,101 +33511,101 @@ GENMPY_UNUSED STATIC void lv_disp_drv_t_set_px_cb_callback(struct _lv_disp_drv_t
     mp_args[5] = mp_read_lv_color32_t(arg5);
     mp_args[6] = mp_obj_new_int_from_uint(arg6);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_set_px_cb)) , 7, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_set_px_cb)) , 7, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_clear_cb
- * void clear_cb(struct _lv_disp_drv_t *disp_drv, uint8_t *buf, uint32_t size)
+ * Callback function lv_disp_t_clear_cb
+ * void clear_cb(struct _lv_disp_t *disp_drv, uint8_t *buf, uint32_t size)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_clear_cb_callback(struct _lv_disp_drv_t * arg0, uint8_t * arg1, uint32_t arg2)
+GENMPY_UNUSED STATIC void lv_disp_t_clear_cb_callback(struct _lv_disp_t * arg0, uint8_t * arg1, uint32_t arg2)
 {
     mp_obj_t mp_args[3];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_array_from_u8ptr((void*)arg1);
     mp_args[2] = mp_obj_new_int_from_uint(arg2);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_clear_cb)) , 3, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_clear_cb)) , 3, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_monitor_cb
- * void monitor_cb(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
+ * Callback function lv_disp_t_monitor_cb
+ * void monitor_cb(struct _lv_disp_t *disp_drv, uint32_t time, uint32_t px)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_monitor_cb_callback(struct _lv_disp_drv_t * arg0, uint32_t arg1, uint32_t arg2)
+GENMPY_UNUSED STATIC void lv_disp_t_monitor_cb_callback(struct _lv_disp_t * arg0, uint32_t arg1, uint32_t arg2)
 {
     mp_obj_t mp_args[3];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_obj_new_int_from_uint(arg1);
     mp_args[2] = mp_obj_new_int_from_uint(arg2);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_monitor_cb)) , 3, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_monitor_cb)) , 3, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_wait_cb
- * void wait_cb(struct _lv_disp_drv_t *disp_drv)
+ * Callback function lv_disp_t_wait_cb
+ * void wait_cb(struct _lv_disp_t *disp_drv)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_wait_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_t_wait_cb_callback(struct _lv_disp_t * arg0)
 {
     mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_wait_cb)) , 1, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_wait_cb)) , 1, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_clean_dcache_cb
- * void clean_dcache_cb(struct _lv_disp_drv_t *disp_drv)
+ * Callback function lv_disp_t_clean_dcache_cb
+ * void clean_dcache_cb(struct _lv_disp_t *disp_drv)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_clean_dcache_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_t_clean_dcache_cb_callback(struct _lv_disp_t * arg0)
 {
     mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_clean_dcache_cb)) , 1, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_clean_dcache_cb)) , 1, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_drv_update_cb
- * void drv_update_cb(struct _lv_disp_drv_t *disp_drv)
+ * Callback function lv_disp_t_drv_update_cb
+ * void drv_update_cb(struct _lv_disp_t *disp_drv)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_drv_update_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_t_drv_update_cb_callback(struct _lv_disp_t * arg0)
 {
     mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_drv_update_cb)) , 1, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_drv_update_cb)) , 1, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_render_start_cb
- * void render_start_cb(struct _lv_disp_drv_t *disp_drv)
+ * Callback function lv_disp_t_render_start_cb
+ * void render_start_cb(struct _lv_disp_t *disp_drv)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_render_start_cb_callback(struct _lv_disp_drv_t * arg0)
+GENMPY_UNUSED STATIC void lv_disp_t_render_start_cb_callback(struct _lv_disp_t * arg0)
 {
     mp_obj_t mp_args[1];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_render_start_cb)) , 1, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_render_start_cb)) , 1, 0, mp_args);
     return;
 }
 
@@ -33883,33 +33883,33 @@ GENMPY_UNUSED STATIC void lv_draw_ctx_t_layer_destroy_callback(struct _lv_draw_c
 
 
 /*
- * Callback function lv_disp_drv_t_draw_ctx_init
- * void draw_ctx_init(struct _lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx)
+ * Callback function lv_disp_t_draw_ctx_init
+ * void draw_ctx_init(struct _lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_draw_ctx_init_callback(struct _lv_disp_drv_t * arg0, lv_draw_ctx_t * arg1)
+GENMPY_UNUSED STATIC void lv_disp_t_draw_ctx_init_callback(struct _lv_disp_t * arg0, lv_draw_ctx_t * arg1)
 {
     mp_obj_t mp_args[2];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_read_ptr_lv_draw_ctx_t((void*)arg1);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_draw_ctx_init)) , 2, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_draw_ctx_init)) , 2, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_disp_drv_t_draw_ctx_deinit
- * void draw_ctx_deinit(struct _lv_disp_drv_t *disp_drv, lv_draw_ctx_t *draw_ctx)
+ * Callback function lv_disp_t_draw_ctx_deinit
+ * void draw_ctx_deinit(struct _lv_disp_t *disp_drv, lv_draw_ctx_t *draw_ctx)
  */
 
-GENMPY_UNUSED STATIC void lv_disp_drv_t_draw_ctx_deinit_callback(struct _lv_disp_drv_t * arg0, lv_draw_ctx_t * arg1)
+GENMPY_UNUSED STATIC void lv_disp_t_draw_ctx_deinit_callback(struct _lv_disp_t * arg0, lv_draw_ctx_t * arg1)
 {
     mp_obj_t mp_args[2];
-    mp_args[0] = mp_read_ptr_lv_disp_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_disp_t((void*)arg0);
     mp_args[1] = mp_read_ptr_lv_draw_ctx_t((void*)arg1);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_drv_t_draw_ctx_deinit)) , 2, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_disp_t_draw_ctx_deinit)) , 2, 0, mp_args);
     return;
 }
 
@@ -34140,33 +34140,33 @@ GENMPY_UNUSED STATIC lv_fs_res_t lv_fs_drv_t_dir_close_cb_callback(struct _lv_fs
     
 
 /*
- * Callback function lv_indev_drv_t_read_cb
- * void read_cb(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
+ * Callback function lv_indev_t_read_cb
+ * void read_cb(struct _lv_indev_t *indev_drv, lv_indev_data_t *data)
  */
 
-GENMPY_UNUSED STATIC void lv_indev_drv_t_read_cb_callback(struct _lv_indev_drv_t * arg0, lv_indev_data_t * arg1)
+GENMPY_UNUSED STATIC void lv_indev_t_read_cb_callback(struct _lv_indev_t * arg0, lv_indev_data_t * arg1)
 {
     mp_obj_t mp_args[2];
-    mp_args[0] = mp_read_ptr_lv_indev_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_indev_t((void*)arg0);
     mp_args[1] = mp_read_ptr_lv_indev_data_t((void*)arg1);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_indev_drv_t_read_cb)) , 2, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_indev_t_read_cb)) , 2, 0, mp_args);
     return;
 }
 
 
 /*
- * Callback function lv_indev_drv_t_feedback_cb
- * void feedback_cb(struct _lv_indev_drv_t *, uint8_t)
+ * Callback function lv_indev_t_feedback_cb
+ * void feedback_cb(struct _lv_indev_t *, uint8_t)
  */
 
-GENMPY_UNUSED STATIC void lv_indev_drv_t_feedback_cb_callback(struct _lv_indev_drv_t * arg0, uint8_t arg1)
+GENMPY_UNUSED STATIC void lv_indev_t_feedback_cb_callback(struct _lv_indev_t * arg0, uint8_t arg1)
 {
     mp_obj_t mp_args[2];
-    mp_args[0] = mp_read_ptr_lv_indev_drv_t((void*)arg0);
+    mp_args[0] = mp_read_ptr_lv_indev_t((void*)arg0);
     mp_args[1] = mp_obj_new_int_from_uint(arg1);
     mp_obj_t callbacks = get_callback_dict_from_user_data(arg0->user_data);
-    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_indev_drv_t_feedback_cb)) , 2, 0, mp_args);
+    mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_lv_indev_t_feedback_cb)) , 2, 0, mp_args);
     return;
 }
 
@@ -34482,7 +34482,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_area_t), MP_ROM_PTR(&mp_lv_area_t_type) },
     { MP_ROM_QSTR(MP_QSTR_point_t), MP_ROM_PTR(&mp_lv_point_t_type) },
     { MP_ROM_QSTR(MP_QSTR_disp_t), MP_ROM_PTR(&mp_lv_disp_t_type) },
-    { MP_ROM_QSTR(MP_QSTR_disp_drv_t), MP_ROM_PTR(&mp_lv_disp_drv_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_disp_drv_t), MP_ROM_PTR(&mp_lv_disp_t_type) },
     { MP_ROM_QSTR(MP_QSTR_disp_draw_buf_t), MP_ROM_PTR(&mp_lv_disp_draw_buf_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_ctx_t), MP_ROM_PTR(&mp_lv_draw_ctx_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_rect_dsc_t), MP_ROM_PTR(&mp_lv_draw_rect_dsc_t_type) },
@@ -34538,7 +34538,7 @@ STATIC const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_draw_mask_map_param_cfg_t), MP_ROM_PTR(&mp_lv_draw_mask_map_param_cfg_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_polygon_param_t), MP_ROM_PTR(&mp_lv_draw_mask_polygon_param_t_type) },
     { MP_ROM_QSTR(MP_QSTR_draw_mask_polygon_param_cfg_t), MP_ROM_PTR(&mp_lv_draw_mask_polygon_param_cfg_t_type) },
-    { MP_ROM_QSTR(MP_QSTR_indev_drv_t), MP_ROM_PTR(&mp_lv_indev_drv_t_type) },
+    { MP_ROM_QSTR(MP_QSTR_indev_drv_t), MP_ROM_PTR(&mp_lv_indev_t_type) },
     { MP_ROM_QSTR(MP_QSTR_indev_data_t), MP_ROM_PTR(&mp_lv_indev_data_t_type) },
     { MP_ROM_QSTR(MP_QSTR_indev_t), MP_ROM_PTR(&mp_lv_indev_t_type) },
     { MP_ROM_QSTR(MP_QSTR__lv_indev_proc_t), MP_ROM_PTR(&mp__lv_indev_proc_t_type) },

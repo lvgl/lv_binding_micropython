@@ -24,7 +24,7 @@
 LTDC_HandleTypeDef *hltdc = NULL;           // handle to LTDC, referenced in stm32_it.c
 DMA2D_HandleTypeDef *hdma2d = NULL;         // handle to DMA2D, referenced in stm32_it.c
 i2c_t *i2c_ts = NULL;                       // I2C handle for touchscreen
-lv_disp_drv_t *dma2d_disp_drv = NULL;  // handle to display driver
+lv_disp_t *dma2d_disp_drv = NULL;  // handle to display driver
 lv_color_t *fb[2] = {NULL, NULL};           // framebuffer pointers
 uint32_t w = 0;                             // display width
 uint32_t h = 0;                             // display height
@@ -114,7 +114,7 @@ STATIC mp_obj_t mp_rk043fn48h_deinit() {
     return mp_const_none;
 }
 
-STATIC void mp_rk043fn48h_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
+STATIC void mp_rk043fn48h_flush(lv_disp_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
     if ((lv_area_get_width(area) == w) && (lv_area_get_height(area) == h)) {
         dma2d_disp_drv = disp_drv;
         SCB_CleanInvalidateDCache();
@@ -144,7 +144,7 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     lv_disp_flush_ready(dma2d_disp_drv);
 }
 
-STATIC bool mp_rk043fn48h_ts_read(struct _lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
+STATIC bool mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t *data) {
     static TS_StateTypeDef ts_state = {0};
     static lv_coord_t lastX = 0;
     static lv_coord_t lastY = 0;

@@ -942,7 +942,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         lv_obj->user_data = self;
         
         // Register a "Delete" event callback
-        lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
+        lv_obj_add_event(lv_obj, mp_lv_delete_cb, LV_OBJ_EVENT_DELETE, NULL);
     }
     return MP_OBJ_FROM_PTR(self);
 }

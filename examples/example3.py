@@ -72,9 +72,9 @@ def btn1_event_cb(event):
 def btn2_event_cb(event):
     lv.scr_load(scr1)
 
-slider.add_event_cb(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
-btn1.add_event_cb(btn1_event_cb, lv.EVENT.CLICKED, None)
-btn2.add_event_cb(btn2_event_cb, lv.EVENT.CLICKED, None)
+slider.add_event(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
+btn1.add_event(btn1_event_cb, lv.EVENT.CLICKED, None)
+btn2.add_event(btn2_event_cb, lv.EVENT.CLICKED, None)
 
 # Create a keyboard
 kb = lv.keyboard(scr1)

@@ -32,7 +32,7 @@
 
 bool fbdev_init(void);
 void fbdev_deinit(void);
-void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
+void fbdev_flush(lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
 
 /**********************
  *  STATIC VARIABLES
@@ -209,7 +209,7 @@ void fbdev_deinit(void)
  * @param area->y2 bottom coordinate
  * @param color_p an array of colors
  */
-void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+void fbdev_flush(lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     if(fbp == NULL ||
             area->x2 < 0 ||
@@ -238,7 +238,7 @@ void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * 
         for(y = act_y1; y <= act_y2; y++) {
             for(x = act_x1; x <= act_x2; x++) {
                 location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * finfo.line_length / 4;
-                fbp32[location] = color_p->full;
+                fbp32[location] = *(uint32_t*)color_p;
                 color_p++;
             }
 
@@ -253,7 +253,7 @@ void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * 
         for(y = act_y1; y <= act_y2; y++) {
             for(x = act_x1; x <= act_x2; x++) {
                 location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * finfo.line_length / 2;
-                fbp16[location] = color_p->full;
+                fbp16[location] = *(uint32_t*)color_p;
                 color_p++;
             }
 
@@ -268,7 +268,7 @@ void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * 
         for(y = act_y1; y <= act_y2; y++) {
             for(x = act_x1; x <= act_x2; x++) {
                 location = (x + vinfo.xoffset) + (y + vinfo.yoffset) * finfo.line_length;
-                fbp8[location] = color_p->full;
+                fbp8[location] = *(uint32_t*)color_p;
                 color_p++;
             }
 
@@ -286,7 +286,7 @@ void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * 
                 byte_location = location / 8; /* find the byte we need to change */
                 bit_location = location % 8; /* inside the byte found, find the bit we need to change */
                 fbp8[byte_location] &= ~(((uint8_t)(1)) << bit_location);
-                fbp8[byte_location] |= ((uint8_t)(color_p->full)) << bit_location;
+                fbp8[byte_location] |= ((uint8_t)(*(uint32_t*)color_p)) << bit_location;
                 color_p++;
             }
 

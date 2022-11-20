@@ -83,7 +83,7 @@ class Tpcal():
         self.big_btn.add_style(style_transp, lv.PART.MAIN)
         self.big_btn.add_style(style_transp, lv.PART.MAIN)
         #self.big_btn.set_layout(lv.LAYOUT.OFF)
-        self.big_btn.add_event_cb(lambda event, self=self: self.calibrate_clicked(),lv.EVENT.CLICKED, None) 
+        self.big_btn.add_event(lambda event, self=self: self.calibrate_clicked(),lv.EVENT.CLICKED, None) 
 
         # Create the screen, circle and label
 

@@ -65,28 +65,28 @@ void sdl_deinit(void);
  * @param area an area where to copy `color_p`
  * @param color_p an array of pixel to copy to the `area` part of the screen
  */
-void sdl_display_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
+void sdl_display_flush(lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
 
 /**
  * Get the current position and state of the mouse
  * @param indev_drv pointer to the related input device driver
  * @param data store the mouse data here
  */
-void sdl_mouse_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+void sdl_mouse_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 
 /**
  * Get encoder (i.e. mouse wheel) ticks difference and pressed state
  * @param indev_drv pointer to the related input device driver
  * @param data store the read data here
  */
-void sdl_mousewheel_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+void sdl_mousewheel_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 
 /**
  * Get input from the keyboard.
  * @param indev_drv pointer to the related input device driver
  * @param data store the red data here
  */
-void sdl_keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 
 int quit_filter(void * userdata, SDL_Event * event);
 
