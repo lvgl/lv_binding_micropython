@@ -316,10 +316,14 @@ structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef i
 structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) for decl in ast.ext if hasattr(decl, 'type') and is_struct(decl.type))
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
+opaque_structs = collections.OrderedDict((typedef.declname, c_ast.Struct(name=typedef.declname, decls=[])) for typedef in typedefs if isinstance(typedef.type, c_ast.Struct) and typedef.type.decls == None)
+structs.update(opaque_structs)
+# print('/* --> opaque structs len = %d */' % len(opaque_structs))
+# print('/* --> opaque structs  %s */' % ',\n'.join([struct_name for struct_name in opaque_structs]))
 # print('/* --> structs:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs if struct_name)))
 # print('/* --> structs_without_typedef:\n%s */' % ',\n'.join(sorted(str(structs_without_typedef[struct_name]) for struct_name in structs_without_typedef if struct_name)))
-# print('/* --> explicit_structs:\n%s */' % ',\n'.join(sorted(str(explicit_structs[struct_name]) for struct_name in explicit_structs if struct_name)))
-# eprint('/* --> structs without typedef:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs_without_typedef)))
+# print('/* --> explicit_structs:\n%s */' % ',\n'.join(sorted(struct_name + " = " + str(explicit_structs[struct_name]) for struct_name in explicit_structs if struct_name)))
+# print('/* --> structs without typedef:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs_without_typedef)))
 
 # Functions and objects
 
@@ -1748,7 +1752,7 @@ def try_generate_struct(struct_name, struct):
     if struct_name in mp_to_lv:
         return mp_to_lv[struct_name]
     # print('/* --> try_generate_struct %s: %s\n%s */' % (struct_name, gen.visit(struct), struct))
-    if not struct.decls:
+    if struct.decls is None:
         if struct_name == struct.name:
             return None
         if struct.name not in structs:
@@ -1858,7 +1862,7 @@ STATIC inline mp_obj_t mp_read_ptr_{sanitized_struct_name}(void *field)
 STATIC void mp_{sanitized_struct_name}_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {{
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
-    {struct_tag}{struct_name} *data = ({struct_tag}{struct_name}*)self->data;
+    GENMPY_UNUSED {struct_tag}{struct_name} *data = ({struct_tag}{struct_name}*)self->data;
 
     if (dest[0] == MP_OBJ_NULL) {{
         // load attribute
@@ -2706,16 +2710,22 @@ def generate_struct_functions(struct_list):
             except MissingConversionException as exp:
                 gen_func_error(struct_func, exp)
                 struct_funcs.remove(struct_func)
+        if struct_name not in structs or structs[struct_name].decls:
+            struct_size_attr = '{{ MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},'.format(
+                struct_name = struct_name,
+                struct_tag = 'struct ' if struct_name in structs_without_typedef.keys() else '',
+            )
+        else:
+            struct_size_attr = ''
         print('''
 STATIC const mp_rom_map_elem_t mp_{sanitized_struct_name}_locals_dict_table[] = {{
-    {{ MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},
+    {struct_size}
     {functions}
 }};
 
 STATIC MP_DEFINE_CONST_DICT(mp_{sanitized_struct_name}_locals_dict, mp_{sanitized_struct_name}_locals_dict_table);
         '''.format(
-            struct_name = struct_name,
-            struct_tag = 'struct ' if struct_name in structs_without_typedef.keys() else '',
+            struct_size = struct_size_attr,
             sanitized_struct_name = sanitized_struct_name,
             functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_mpobj) }},\n    '.
                 format(name = sanitize(noncommon_part(f.name, struct_name)), func = f.name) for f in struct_funcs]),
