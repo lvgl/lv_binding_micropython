@@ -1,3 +1,5 @@
+#if 0
+
 /**
  * @file sdl.c
  *
@@ -371,3 +373,4 @@ static void window_update(monitor_t * m)
     SDL_RenderPresent(m->renderer);
 }
 
+#endif

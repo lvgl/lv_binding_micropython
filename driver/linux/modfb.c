@@ -2,7 +2,7 @@
 /*********************
  *      INCLUDES
  *********************/
-
+# if 0
 #include "../../lib/lv_bindings/lvgl/lvgl.h"
 #include "../include/common.h"
 #include <stdlib.h>
@@ -301,4 +301,6 @@ void fbdev_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * 
 
     lv_disp_flush_ready(disp_drv);
 }
+
+#endif
 

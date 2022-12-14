@@ -1,3 +1,5 @@
+#if 0
+
 /**
  * @file sdl_common.h
  *
@@ -104,3 +106,5 @@ void keyboard_handler(SDL_Event * event);
 #endif
 
 #endif /* SDL_COMMON_H */
+
+#endif

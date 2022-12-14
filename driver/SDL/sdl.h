@@ -1,3 +1,5 @@
+#if 0
+
 /**
  * @file sdl.h
  *
@@ -81,4 +83,6 @@ void sdl_keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
 
 #ifdef __cplusplus
 } /* extern "C" */
+#endif
+
 #endif

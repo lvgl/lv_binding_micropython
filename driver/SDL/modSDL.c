@@ -1,3 +1,5 @@
+#if 0
+
 #include "../include/common.h"
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
@@ -171,3 +173,5 @@ const mp_obj_module_t mp_module_SDL = {
 };
 
 MP_REGISTER_MODULE(MP_QSTR_SDL, mp_module_SDL);
+
+#endif

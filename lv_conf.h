@@ -19,6 +19,9 @@
 
 #include <stdint.h>
 
+
+#define LV_USE_DEV_VERSION 
+
 /*====================
    COLOR SETTINGS
  *====================*/
@@ -744,6 +747,23 @@
     #define LV_DEMO_MUSIC_LARGE     0
     #define LV_DEMO_MUSIC_AUTO_PLAY 0
 #endif
+
+/*==================
+ * DEVICES
+ *==================*/
+#define LV_USE_SDL  1
+#if LV_USE_SDL
+#  define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
+#endif
+
+#define LV_USE_WAYLAND  0
+
+#define LV_USE_ILI9341  0
+
+#define LV_USE_LINUX_FBDEV 0
+
+#define LV_USE_TFT_ESPI 0
+
 
 /*--END OF LV_CONF_H--*/
 
