@@ -17,7 +17,6 @@ import fs_driver
 lv.init()
 
 # display driver init...
-
 import display_driver_utils # Default implementation. Replace by your driver
 driver = display_driver_utils.driver()
 

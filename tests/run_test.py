@@ -71,7 +71,7 @@ def send_events():
                 if not lv.obj.__cast__(obj): # skip deleted objects
                     continue
                 # print('\t%s' % get_member_name(lv.EVENT, event))
-                lv.event_send(obj, event, None)
+                obj.send_event(event, None)
                 time.sleep_ms(DELAY_MS)
                 gc.collect()
 

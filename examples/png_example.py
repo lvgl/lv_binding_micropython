@@ -15,6 +15,7 @@ import display_driver_utils
 
 lv.init()
 driver = display_driver_utils.driver()
+
 scr = lv.scr_act()
 lv.img.cache_set_size(2)
 try:

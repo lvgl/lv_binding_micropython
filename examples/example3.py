@@ -36,7 +36,6 @@ try:
 except ImportError:
     import display_driver
 
-
 scr1 = lv.obj()
 scr2 = lv.obj()
 lv.scr_load(scr1)

@@ -11,32 +11,9 @@ lv.init()
 
 class driver:
     def init_gui_SDL(self):
+        lv.sdl_window_create(480, 320)
+        lv.sdl_mouse_create();
 
-        import SDL
-
-        SDL.init()
-
-        # Register SDL display driver.
-
-        disp_buf1 = lv.disp_draw_buf_t()
-        buf1_1 = bytearray(480*10)
-        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.__SIZE__)
-        disp_drv = lv.disp_drv_t()
-        disp_drv.init()
-        disp_drv.draw_buf = disp_buf1
-        disp_drv.flush_cb = SDL.monitor_flush
-        disp_drv.hor_res = 480
-        disp_drv.ver_res = 320
-        disp_drv.register()
-
-        # Regsiter SDL mouse driver
-
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init()
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = SDL.mouse_read
-        indev_drv.register()
-        
     def init_gui_esp32(self):
 
         import ILI9341 as ili
@@ -140,7 +117,7 @@ img = lv.img(scr)
 img.align(lv.ALIGN.CENTER, 0, 0)
 img_dsc = lv.img_dsc_t(
     {
-        "header": {"always_zero": 0, "w": 100, "h": 75, "cf": lv.img.CF.TRUE_COLOR},
+        "header": {"always_zero": 0, "w": 100, "h": 75, "cf": lv.COLOR_FORMAT.NATIVE},
         "data_size": len(img_data),
         "data": img_data,
     }

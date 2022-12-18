@@ -35,42 +35,13 @@ class driver:
             self.init_gui()
 
     def init_gui_SDL(self):
-
-        import SDL
-        SDL.init(w=self.width, h=self.height, auto_refresh=(not lv_utils_available))
         if lv_utils_available:
-            self.event_loop = lv_utils.event_loop(refresh_cb = SDL.refresh, asynchronous=self.asynchronous, exception_sink=self.exception_sink)
+            self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous, exception_sink=self.exception_sink)
 
-        # Register SDL display driver.
-
-        disp_buf1 = lv.disp_draw_buf_t()
-        buf1_1 = bytearray(self.width*10)
-        disp_buf1.init(buf1_1, None, len(buf1_1)//4)
-        disp_drv = lv.disp_drv_t()
-        disp_drv.init()
-        disp_drv.draw_buf = disp_buf1
-        disp_drv.flush_cb = SDL.monitor_flush
-        disp_drv.hor_res = self.width
-        disp_drv.ver_res = self.height
-        disp_drv.register()
-
-        # Register SDL mouse driver
-
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init() 
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = SDL.mouse_read
-        indev_drv.register()
-
-        # Register keyboard driver
-
-        keyboard_drv = lv.indev_drv_t()
-        keyboard_drv.init()
-        keyboard_drv.type = lv.INDEV_TYPE.KEYPAD
-        keyboard_drv.read_cb = SDL.keyboard_read
-        self.keyboard = keyboard_drv.register()
+        lv.sdl_window_create(self.width, self.height)
+        self.mouse = lv.sdl_mouse_create()
+        self.keyboard = lv.sdl_keyboard_create()
         self.keyboard.set_group(self.group)
-        
         self.type = "SDL"
         print("Running the SDL lvgl version")
         

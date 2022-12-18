@@ -309,23 +309,13 @@ class Screen_Main(lv.obj):
 
 class AdvancedDemoApplication:
     def init_gui_SDL(self):
-
-        import SDL
-
         WIDTH = 480
         HEIGHT = 320
         ZOOM = 1
         FULLSCREEN = False
 
-        SDL.init(w=WIDTH, h=HEIGHT, zoom=ZOOM, fullscreen=FULLSCREEN, auto_refresh=False)
         self.event_loop = event_loop()
-
-        # Register SDL display driver.
-
-        buf1_1 = bytes(WIDTH * 10)
-        disp_drv = lv.disp_create(WIDTH, HEIGHT)
-        lv.disp_set_draw_buffers(disp_drv, buf1_1, None, len(buf1_1)//4, lv.DISP_RENDER_MODE.PARTIAL)
-        lv.disp_set_flush_cb(disp_drv, SDL.monitor_flush)
+        lv.sdl_window_create(WIDTH, HEIGHT)
 
         # Regsiter SDL mouse driver
 
