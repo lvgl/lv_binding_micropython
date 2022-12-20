@@ -8,7 +8,10 @@ include(${LVGL_DIR}/CMakeLists.txt)
 # lvgl bindings target (the mpy module)
 add_library(usermod_lv_bindings INTERFACE)
 target_sources(usermod_lv_bindings INTERFACE ${LV_SRC})
-target_include_directories(usermod_lv_bindings INTERFACE ${LV_INCLUDE})
+target_include_directories(usermod_lv_bindings INTERFACE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${LV_INCLUDE}
+)
 
 target_link_libraries(usermod_lv_bindings INTERFACE lvgl_interface)
 
