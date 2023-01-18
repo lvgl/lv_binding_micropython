@@ -48,7 +48,7 @@ img2.set_pos(100,200)
 # Drag handler
 
 def drag_event_handler(e):
-    self = e.get_target()
+    self = e.get_target_obj()
     indev = lv.indev_get_act()
     vect = lv.point_t()
     indev.get_vect(vect)
