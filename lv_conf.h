@@ -756,7 +756,13 @@
  *==================*/
 
 /*Use SDL to open window on PC and handle mouse and keyboard*/
-#define LV_USE_SDL              1
+
+#ifdef MICROPY_SDL
+    #define LV_USE_SDL 1
+#else
+    #define LV_USE_SDL 0
+#endif
+
 #if LV_USE_SDL
     #define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
 #endif
