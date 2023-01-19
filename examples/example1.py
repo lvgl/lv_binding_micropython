@@ -11,8 +11,9 @@ lv.init()
 
 class driver:
     def init_gui_SDL(self):
-        lv.sdl_window_create(480, 320)
-        lv.sdl_mouse_create();
+        self.event_loop = lv_utils.event_loop()
+        self.disp_drv = lv.sdl_window_create(480, 320)
+        self.indev_drv = lv.sdl_mouse_create();
 
     def init_gui_esp32(self):
 

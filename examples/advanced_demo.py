@@ -315,7 +315,10 @@ class AdvancedDemoApplication:
         FULLSCREEN = False
 
         self.event_loop = event_loop()
-        lv.sdl_window_create(WIDTH, HEIGHT)
+        self.disp_drv = lv.sdl_window_create(WIDTH, HEIGHT)
+        self.mouse = lv.sdl_mouse_create()
+        self.keyboard = lv.sdl_keyboard_create()
+        self.keyboard.set_group(self.group)
 
         # Regsiter SDL mouse driver
 
