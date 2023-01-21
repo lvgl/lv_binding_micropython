@@ -238,9 +238,9 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
         color24_t* tmp24 = (color24_t*) color_p;
 
         for(i=0; i < size; i++) {
-            tmp24[i].red = tmp32[i].ch.red;
-            tmp24[i].green = tmp32[i].ch.green;
-            tmp24[i].blue = tmp32[i].ch.blue;
+            tmp24[i].red = tmp32[i].red;
+            tmp24[i].green = tmp32[i].green;
+            tmp24[i].blue = tmp32[i].blue;
         }
     }
 
