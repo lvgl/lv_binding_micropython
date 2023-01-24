@@ -13,7 +13,7 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_task.h"
-#include "lvgl/src/hal/lv_hal_indev.h"
+#include "lvgl/src/core/lv_indev.h"
 #include "lvgl/src/core/lv_disp.h"
 
 #include "esp_log.h"
