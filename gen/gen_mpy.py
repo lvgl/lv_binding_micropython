@@ -257,11 +257,6 @@ def str_enum_to_str(str_enum):
     res = lv_str_enum_pattern.match(str_enum).group(1)
     return ('%s_' % module_prefix.upper()) + res
 
-def user_data_from_callback_func(callback_func_name):
-    return 'user_data'
-    # res = lv_callback_type_pattern.match(callback_func_name)
-    # return res.group(2) + '_user_data' if res and res.group(2) else None
-
 def is_obj_ctor(func):
     # ctor name must match pattern
     if not create_obj_pattern.match(func.name): return False
@@ -377,6 +372,9 @@ def get_first_arg_type(func):
         return None
     return get_type(first_arg.type, remove_quals = True)
 
+def get_base_struct_name(struct_name):
+    return struct_name[:-2] if struct_name.endswith('_t') else struct_name
+
 # "struct function" starts with struct name (without _t), and their first argument is a pointer to the struct
 # Need also to take into account struct functions of aliases of current struct.
 @memoize
@@ -384,7 +382,7 @@ def get_struct_functions(struct_name):
     global funcs
     if not struct_name:
         return []
-    base_struct_name = struct_name[:-2] if struct_name.endswith('_t') else struct_name
+    base_struct_name = get_base_struct_name(struct_name)
     # eprint("get_struct_functions %s: %s" % (struct_name, [get_type(func.type.args.params[0].type.type, remove_quals = True) for func in funcs if func.name.startswith(base_struct_name)]))
     # eprint("get_struct_functions %s: %s" % (struct_name, struct_aliases[struct_name] if struct_name in struct_aliases else ""))
 
@@ -1691,6 +1689,18 @@ def decl_to_callback(decl):
             # print('/* callback: ADDED CALLBACK: %s\n%s */' % (func_typedef_name, func_typedefs[func_typedef_name]))
     else: return None
 
+def get_user_data_getter(containing_struct, containing_struct_name = None):
+    if not containing_struct_name and containing_struct and containing_struct.name:
+        containing_struct_name = containing_struct.name
+    if not containing_struct_name:
+        return None
+    getter_name = get_base_struct_name(containing_struct_name)+'_get_user_data'
+    # print('/* struct functions = %s */' % [s.name + ':' + str(len(s.type.args.params)) for s in get_struct_functions(containing_struct_name)])
+    # print('/* getter_name = %s */' % getter_name)
+    getters = [s for s in get_struct_functions(containing_struct_name) if s.name == getter_name and len(s.type.args.params) == 1]
+    if getters:
+        return getters[0]
+
 def get_user_data(func, func_name = None, containing_struct = None, containing_struct_name = None):
     args = func.args.params
     if not func_name: func_name = get_arg_name(func.type)
@@ -1705,7 +1715,7 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
         struct_arg_type_name = get_type(args[0].type.type, remove_quals = True)
         # print('/* --> get_user_data: containing_struct_name = %s, struct_arg_type_name = %s */' % (containing_struct_name, struct_arg_type_name))
         if containing_struct_name and struct_arg_type_name != containing_struct_name:
-            return None
+            return None, None
         if not containing_struct:
             try_generate_type(args[0].type)
             if struct_arg_type_name in structs:
@@ -1715,13 +1725,10 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
             #     print('/* --> callback: %s First argument is %s */' % (gen.visit(func), struct_arg_type_name))
         if containing_struct:
             flatten_struct_decls = flatten_struct(containing_struct.decls)
-            user_data = user_data_from_callback_func(func_name)
+            user_data = 'user_data'
             user_data_found = user_data in [decl.name for decl in flatten_struct_decls]
             # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
-               
-    if user_data_found: return user_data
-    else: return None
-
+    return (user_data if user_data_found else None), get_user_data_getter(containing_struct, containing_struct_name)
 
 #
 # Generate structs when needed
@@ -1797,7 +1804,7 @@ def try_generate_struct(struct_name, struct):
         if callback:
             # print("/* %s callback %s */" % (gen.visit(decl), callback))
             func_name, arg_type  = callback
-            user_data = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
+            user_data, _ = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
             if not callback in callbacks_used_on_structs:
                 callbacks_used_on_structs.append(callback + (struct_name,))
             # Emit callback forward decl.
@@ -2223,7 +2230,7 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
     if is_global_callback(func):
         full_user_data = 'MP_STATE_PORT(mp_lv_user_data)'
     else:
-        user_data = get_user_data(func, func_name)
+        user_data, user_data_getter = get_user_data(func, func_name)
 
         if user_data_argument and len(args) > 0 and gen.visit(args[-1].type) == 'void *':
             full_user_data = 'arg%d' % (len(args) - 1)
@@ -2231,6 +2238,8 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
             full_user_data = 'arg0->%s' % user_data
             if len(args) < 1 or hasattr(args[0].type.type, 'names') and lv_base_obj_pattern.match(args[0].type.type.names[0]):
                 raise MissingConversionException("Callback: First argument of callback function must be lv_obj_t")
+        elif user_data_getter:
+            full_user_data = '%s(arg0)' % user_data_getter.name
         else:
             full_user_data = None
 
@@ -2300,6 +2309,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
 
         try:
             user_data_argument = False
+            full_user_data = None
             if len(args) > 0 and gen.visit(args[-1].type) == 'void *' and args[-1].name == 'user_data':
                 callback_name = '%s_%s' % (func.name, callback_name)
                 full_user_data = '&user_data'
@@ -2308,11 +2318,14 @@ def build_mp_func_arg(arg, index, func, obj_name):
                 first_arg = args[0]
                 struct_name = get_name(first_arg.type.type.type if hasattr(first_arg.type.type,'type') else first_arg.type.type)
                 callback_name = '%s_%s' % (struct_name, callback_name)
-                user_data = get_user_data(arg_type, callback_name)
+                user_data, user_data_getter = get_user_data(arg_type, callback_name)
                 if is_global_callback(arg_type):
                     full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
                 else:
-                    full_user_data = '&%s->%s' % (first_arg.name, user_data) if user_data else None
+                    if user_data:
+                        full_user_data = '&%s->%s' % (first_arg.name, user_data)
+                    elif user_data_getter:
+                        full_user_data = '%s(%s)' % (user_data_getter.name, first_arg.name)
                     if index == 0:
                        raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
                     if not full_user_data:
