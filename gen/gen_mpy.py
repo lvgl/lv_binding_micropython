@@ -1397,13 +1397,29 @@ STATIC mp_obj_t get_callback_dict_from_user_data(void *user_data)
     return NULL;
 }
 
-STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callback_name, void **user_data_ptr)
+typedef void *(*mp_lv_get_user_data)(void *);
+typedef void (*mp_lv_set_user_data)(void *, void *);
+
+STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callback_name,
+     void **user_data_ptr, void *containing_struct, mp_lv_get_user_data get_user_data, mp_lv_set_user_data set_user_data)
 {
-    if (lv_callback && mp_obj_is_callable(mp_callback)){
-        if (user_data_ptr){
+    if (lv_callback && mp_obj_is_callable(mp_callback)) {
+        void *user_data = NULL;
+        if (user_data_ptr) {
             // user_data is either a dict of callbacks in case of struct, or a pointer to mp_lv_obj_t in case of lv_obj_t
             if (! (*user_data_ptr) ) *user_data_ptr = MP_OBJ_TO_PTR(mp_obj_new_dict(0)); // if it's NULL - it's a dict for a struct
-            mp_obj_t callbacks = get_callback_dict_from_user_data(*user_data_ptr);
+            user_data = *user_data_ptr;
+        }
+        else if (get_user_data && set_user_data) {
+            user_data = get_user_data(containing_struct);
+            if (!user_data) {
+                user_data = MP_OBJ_TO_PTR(mp_obj_new_dict(0));
+                set_user_data(containing_struct, user_data);
+            }
+        }
+
+        if (user_data) {
+            mp_obj_t callbacks = get_callback_dict_from_user_data(user_data);
             mp_obj_dict_store(callbacks, MP_OBJ_NEW_QSTR(callback_name), mp_callback);
         }
         return lv_callback;
@@ -1689,17 +1705,23 @@ def decl_to_callback(decl):
             # print('/* callback: ADDED CALLBACK: %s\n%s */' % (func_typedef_name, func_typedefs[func_typedef_name]))
     else: return None
 
-def get_user_data_getter(containing_struct, containing_struct_name = None):
+def get_user_data_accessors(containing_struct, containing_struct_name = None):
     if not containing_struct_name and containing_struct and containing_struct.name:
         containing_struct_name = containing_struct.name
     if not containing_struct_name:
-        return None
-    getter_name = get_base_struct_name(containing_struct_name)+'_get_user_data'
+        return None, None
+    base_struct_name = get_base_struct_name(containing_struct_name)
+    getter_name = base_struct_name + '_get_user_data'
+    setter_name = base_struct_name + '_set_user_data'
     # print('/* struct functions = %s */' % [s.name + ':' + str(len(s.type.args.params)) for s in get_struct_functions(containing_struct_name)])
     # print('/* getter_name = %s */' % getter_name)
-    getters = [s for s in get_struct_functions(containing_struct_name) if s.name == getter_name and len(s.type.args.params) == 1]
-    if getters:
-        return getters[0]
+    struct_functions = get_struct_functions(containing_struct_name)
+    getters = [s for s in struct_functions if s.name == getter_name and len(s.type.args.params) == 1]
+    setters = [s for s in struct_functions if s.name == setter_name and len(s.type.args.params) == 2]
+    if getters and setters:
+        return getters[0], setters[0]
+    else:
+        return None, None
 
 def get_user_data(func, func_name = None, containing_struct = None, containing_struct_name = None):
     args = func.args.params
@@ -1715,7 +1737,7 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
         struct_arg_type_name = get_type(args[0].type.type, remove_quals = True)
         # print('/* --> get_user_data: containing_struct_name = %s, struct_arg_type_name = %s */' % (containing_struct_name, struct_arg_type_name))
         if containing_struct_name and struct_arg_type_name != containing_struct_name:
-            return None, None
+            return None, None, None
         if not containing_struct:
             try_generate_type(args[0].type)
             if struct_arg_type_name in structs:
@@ -1728,7 +1750,7 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
             user_data = 'user_data'
             user_data_found = user_data in [decl.name for decl in flatten_struct_decls]
             # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
-    return (user_data if user_data_found else None), get_user_data_getter(containing_struct, containing_struct_name)
+    return (user_data if user_data_found else None), *get_user_data_accessors(containing_struct, containing_struct_name)
 
 #
 # Generate structs when needed
@@ -1804,7 +1826,7 @@ def try_generate_struct(struct_name, struct):
         if callback:
             # print("/* %s callback %s */" % (gen.visit(decl), callback))
             func_name, arg_type  = callback
-            user_data, _ = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
+            user_data, _, _ = get_user_data(arg_type, func_name = func_name, containing_struct = struct, containing_struct_name = struct_name)
             if not callback in callbacks_used_on_structs:
                 callbacks_used_on_structs.append(callback + (struct_name,))
             # Emit callback forward decl.
@@ -1821,7 +1843,7 @@ def try_generate_struct(struct_name, struct):
                     gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_%s_callback'" % (struct_name, func_name))
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting to callback {type_name}'.
+            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}, NULL, NULL, NULL); break; // converting to callback {type_name}'.
                 format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
             read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_mpobj, {cast}data->{field}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
                 format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
@@ -2230,7 +2252,7 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
     if is_global_callback(func):
         full_user_data = 'MP_STATE_PORT(mp_lv_user_data)'
     else:
-        user_data, user_data_getter = get_user_data(func, func_name)
+        user_data, user_data_getter, _ = get_user_data(func, func_name)
 
         if user_data_argument and len(args) > 0 and gen.visit(args[-1].type) == 'void *':
             full_user_data = 'arg%d' % (len(args) - 1)
@@ -2310,6 +2332,8 @@ def build_mp_func_arg(arg, index, func, obj_name):
         try:
             user_data_argument = False
             full_user_data = None
+            user_data_getter = None
+            user_data_setter = None
             if len(args) > 0 and gen.visit(args[-1].type) == 'void *' and args[-1].name == 'user_data':
                 callback_name = '%s_%s' % (func.name, callback_name)
                 full_user_data = '&user_data'
@@ -2318,14 +2342,14 @@ def build_mp_func_arg(arg, index, func, obj_name):
                 first_arg = args[0]
                 struct_name = get_name(first_arg.type.type.type if hasattr(first_arg.type.type,'type') else first_arg.type.type)
                 callback_name = '%s_%s' % (struct_name, callback_name)
-                user_data, user_data_getter = get_user_data(arg_type, callback_name)
+                user_data, user_data_getter, user_data_setter = get_user_data(arg_type, callback_name)
                 if is_global_callback(arg_type):
                     full_user_data = '&MP_STATE_PORT(mp_lv_user_data)'
                 else:
                     if user_data:
                         full_user_data = '&%s->%s' % (first_arg.name, user_data)
-                    elif user_data_getter:
-                        full_user_data = '%s(%s)' % (user_data_getter.name, first_arg.name)
+                    elif user_data_getter and user_data_setter:
+                        full_user_data = 'NULL' # uses getter/setter instead
                     if index == 0:
                        raise MissingConversionException("Callback argument '%s' cannot be the first argument! We assume the first argument contains the user_data" % gen.visit(arg))
                     if not full_user_data:
@@ -2335,11 +2359,14 @@ def build_mp_func_arg(arg, index, func, obj_name):
             arg_metadata = {'type': 'callback', 'function': callback_metadata[callback_name]}
             if arg.name: arg_metadata['name'] = arg.name
             func_metadata[func.name]['args'].append(arg_metadata)
-            return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], &{callback_name}_callback, MP_QSTR_{callback_name}, {full_user_data});'.format(
+            return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], &{callback_name}_callback, MP_QSTR_{callback_name}, {full_user_data}, {containing_struct}, (mp_lv_get_user_data){user_data_getter}, (mp_lv_set_user_data){user_data_setter});'.format(
                 i = index,
                 arg_name = fixed_arg.name,
                 callback_name = sanitize(callback_name),
-                full_user_data = full_user_data)
+                full_user_data = full_user_data,
+                containing_struct = first_arg.name if user_data_getter and user_data_setter else "NULL",
+                user_data_getter = user_data_getter.name if user_data_getter else 'NULL',
+                user_data_setter = user_data_setter.name if user_data_setter else 'NULL')
         except MissingConversionException as exp:
             gen_func_error(arg, exp)
             callback_name = 'NULL'
