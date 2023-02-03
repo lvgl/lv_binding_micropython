@@ -43,13 +43,11 @@ class mouse_indev:
         self.ver_res = self.scr.get_height()
 
         # Register LVGL indev driver
-        self.indev_drv = lv.indev_drv_t()
-        self.indev_drv.init()
-        self.indev_drv.type = lv.INDEV_TYPE.POINTER
-        self.indev_drv.read_cb = self.mouse_read
-        self.indev = self.indev_drv.register()
+        self.indev = lv.indev_create()
+        self.indev.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev.set_read_cb(self.mouse_read)
 
-    def mouse_read(self, indev_drv, data) -> int:
+    def mouse_read(self, indev, data) -> int:
         
         # Check if there is input to be read from evdev
         if not self.poll.poll()[0][1] & select.POLLIN:

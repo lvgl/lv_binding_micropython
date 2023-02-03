@@ -781,7 +781,13 @@
 #endif
 
 /*Driver for /dev/fb*/
-#define LV_USE_LINUX_FBDEV      0
+
+#ifdef MICROPY_FB
+    #define LV_USE_LINUX_FBDEV      1
+#else
+    #define LV_USE_LINUX_FBDEV      0
+#endif
+
 #if LV_USE_LINUX_FBDEV
     #define LV_LINUX_FBDEV_BSD  0
 #endif
