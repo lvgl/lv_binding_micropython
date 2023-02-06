@@ -192,6 +192,7 @@ def function_prototype(func):
     func_proto = c_ast.Typename(
             name=None,
             quals=[],
+            align=[],
             type=ptr_decl)
 
     return func_proto
@@ -2117,6 +2118,7 @@ def try_generate_type(type_ast):
             func = c_ast.Decl(
                     name=func_ptr_name,
                     quals=[],
+                    align=[],
                     storage=[],
                     funcspec=[],
                     type=type_ast.type,
@@ -2240,6 +2242,7 @@ def gen_callback_func(func, func_name = None, user_data_argument = False):
         new_arg = c_ast.Decl(
                     name=arg_name,
                     quals=arg.quals,
+                    align=[],
                     storage=[],
                     funcspec=[],
                     type=copy.deepcopy(arg.type),
