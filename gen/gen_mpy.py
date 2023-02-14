@@ -1623,6 +1623,10 @@ MP_ARRAY_CONVERTOR(i64ptr, 8, true)
 
 enums = collections.OrderedDict()
 for enum_def in enum_defs:
+    # Skip stdatomic.h memory_order, no bindings needed.
+    if isinstance(enum_def, c_ast.TypeDecl) and enum_def.declname == 'memory_order':
+        continue
+
     # eprint("--> %s" % enum_def)
     while hasattr(enum_def.type, 'name') and not enum_def.type.values:
         enum_def  = next(e for e in enum_defs if hasattr(e.type, 'name') and e.type.name == enum_def.type.name and e.type.values)
