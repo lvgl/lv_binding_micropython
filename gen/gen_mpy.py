@@ -1855,7 +1855,7 @@ def try_generate_struct(struct_name, struct):
         else:
             user_data = None
             # Only allow write to non-const members
-            is_writeable = hasattr(decl.type, 'quals') and 'const' not in decl.type.quals
+            is_writeable = (not hasattr(decl.type, 'quals')) or 'const' not in decl.type.quals
             # Arrays must be handled by memcpy, otherwise we would get "assignment to expression with array type" error
             if isinstance(decl.type, c_ast.ArrayDecl):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), gen.visit(decl.type.dim))
