@@ -1968,6 +1968,17 @@ def try_generate_array_type(type_ast):
         replace('/','_div_')
     arr_to_c_convertor_name = 'mp_arr_to_%s' % array_convertor_suffix
     arr_to_mp_convertor_name = 'mp_arr_from_%s' % array_convertor_suffix
+
+    if hasattr(type_ast.type, 'names'):
+        for nme in type_ast.type.names:
+            if nme in lv_to_mp:
+                struct_type = False
+                break
+        else:
+            struct_type = True
+    else:
+        struct_type = False
+
     print((('''
 /*
  * Array convertors for {arr_name}
@@ -2013,7 +2024,7 @@ GENMPY_UNUSED STATIC mp_obj_t {arr_to_mp_convertor_name}({qualified_type} *arr)
         qualified_ptr_type = qualified_element_ptr_type,
         check_dim = '//TODO check dim!' if dim else '',
         mp_to_lv_convertor = mp_to_lv[element_type],
-        lv_to_mp_convertor = lv_to_mp[element_type],
+        lv_to_mp_convertor = lv_to_mp[element_type_ptr] if struct_type and dim else lv_to_mp[element_type],
         mp_to_lv_ptr_convertor = mp_to_lv[element_type_ptr],
         lv_to_mp_ptr_convertor = lv_to_mp[element_type_ptr],
         dim = dim if dim else 1,
