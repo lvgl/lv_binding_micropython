@@ -1969,9 +1969,12 @@ def try_generate_array_type(type_ast):
     arr_to_c_convertor_name = 'mp_arr_to_%s' % array_convertor_suffix
     arr_to_mp_convertor_name = 'mp_arr_from_%s' % array_convertor_suffix
 
-    if hasattr(type_ast.type, 'names'):
+    if isinstance(type_ast.type, c_ast.IdentifierType):
         for nme in type_ast.type.names:
-            if nme in lv_to_mp:
+            for strct in struct_typedefs:
+                if strct.declname == nme:
+                    break
+            else:
                 struct_type = False
                 break
         else:
