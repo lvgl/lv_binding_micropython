@@ -37,6 +37,18 @@ lv.init()
 HOR_RES = 240
 VER_RES = 320
 
+# Try to initialize SDL
+try:
+    # Register SDL display driver.
+
+    disp_drv = lv.sdl_window_create(HOR_RES, VER_RES)
+    mouse = lv.sdl_mouse_create()
+
+    event_loop = lv_utils.event_loop(asynchronous=True)
+
+except AttributeError:
+    pass
+
 # Try initialize ili9341/xpt2046
 try:
     from ili9XXX import ili9341
@@ -49,40 +61,6 @@ try:
 
 except ImportError:
     pass
-
-# Try to initialize SDL
-try:
-    import SDL
-
-    # Initialize driver
-
-    SDL.init(w=HOR_RES, h=VER_RES, auto_refresh=False)
-    event_loop = lv_utils.event_loop(asynchronous=True)
-
-    # Register SDL display driver.
-
-    disp_buf1 = lv.disp_draw_buf_t()
-    buf1_1 = bytearray(HOR_RES * 10)
-    disp_buf1.init(buf1_1, None, len(buf1_1)//4)
-    disp_drv = lv.disp_drv_t()
-    disp_drv.init()
-    disp_drv.draw_buf = disp_buf1
-    disp_drv.flush_cb = SDL.monitor_flush
-    disp_drv.hor_res = HOR_RES
-    disp_drv.ver_res = VER_RES
-    disp_drv.register()
-
-    # Regsiter SDL mouse driver
-
-    indev_drv = lv.indev_drv_t()
-    indev_drv.init() 
-    indev_drv.type = lv.INDEV_TYPE.POINTER
-    indev_drv.read_cb = SDL.mouse_read
-    indev_drv.register()
-
-except ImportError:
-    pass
-
 
 ##################################################################################################
 # Stylized Message Box class

@@ -142,13 +142,14 @@ class event_loop():
     async def async_refresh(self):
         while True:
             await self.refresh_event.wait()
-            self.refresh_event.clear()
-            try:
-                lv.task_handler()
-            except Exception as e:
-                if self.exception_sink:
-                    self.exception_sink(e)
-            if self.refresh_cb: self.refresh_cb()
+            if lv._nesting.value == 0:
+                self.refresh_event.clear()
+                try:
+                    lv.task_handler()
+                except Exception as e:
+                    if self.exception_sink:
+                        self.exception_sink(e)
+                if self.refresh_cb: self.refresh_cb()
 
     async def async_timer(self):
         while True:
