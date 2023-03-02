@@ -461,7 +461,10 @@ blobs = collections.OrderedDict((decl.name, decl.type.type) for decl in ast.ext 
     if isinstance(decl, c_ast.Decl) \
         and 'extern' in decl.storage \
         and hasattr(decl, 'type') \
-        and isinstance(decl.type, c_ast.TypeDecl))
+        and isinstance(decl.type, c_ast.TypeDecl)
+        and not decl.name.startswith('_'))
+
+blobs['_nesting'] = parser.parse('extern int _nesting;').ext[0].type.type
 
 int_constants = []
 
@@ -1428,6 +1431,8 @@ STATIC void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
     }
 }
 
+static int _nesting = 0;
+
 // Function pointers wrapper
 
 STATIC mp_obj_t mp_lv_funcptr(const mp_lv_obj_fun_builtin_var_t *mp_fun, void *lv_fun, void *lv_callback, qstr func_name, void *user_data)
@@ -2287,7 +2292,9 @@ GENMPY_UNUSED STATIC {return_type} {func_name}_callback({func_args})
     mp_obj_t mp_args[{num_args}];
     {build_args}
     mp_obj_t callbacks = get_callback_dict_from_user_data({user_data});
+    _nesting++;
     {return_value_assignment}mp_call_function_n_kw(mp_obj_dict_get(callbacks, MP_OBJ_NEW_QSTR(MP_QSTR_{func_name})) , {num_args}, 0, mp_args);
+    _nesting--;
     return{return_value};
 }}
 """.format(

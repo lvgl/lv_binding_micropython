@@ -120,8 +120,9 @@ class event_loop():
 
     def task_handler(self, _):
         try:
-            lv.task_handler()
-            if self.refresh_cb: self.refresh_cb()
+            if lv._nesting.value == 0:
+                lv.task_handler()
+                if self.refresh_cb: self.refresh_cb()
             self.scheduled -= 1
         except Exception as e:
             if self.exception_sink:
