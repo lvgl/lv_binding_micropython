@@ -151,40 +151,23 @@ Example:
 import lvgl as lv
 lv.init()
 
-import SDL
-SDL.init()
+from lv_utils import event_loop
 
-# Register SDL display driver.
+WIDTH = 480
+HEIGHT = 320
 
-disp_buf1 = lv.disp_buf_t()
-buf1_1 = bytes(480*10)
-disp_buf1.init(buf1_1, None, len(buf1_1)//4)
-disp_drv = lv.disp_drv_t()
-disp_drv.init()
-disp_drv.buffer = disp_buf1
-disp_drv.flush_cb = SDL.monitor_flush
-disp_drv.hor_res = 480
-disp_drv.ver_res = 320
-disp_drv.register()
-
-# Regsiter SDL mouse driver
-
-indev_drv = lv.indev_drv_t()
-indev_drv.init()
-indev_drv.type = lv.INDEV_TYPE.POINTER
-indev_drv.read_cb = SDL.mouse_read
-indev_drv.register()
+event_loop = event_loop()
+disp_drv = lv.sdl_window_create(WIDTH, HEIGHT)
+mouse = lv.sdl_mouse_create()
+keyboard = lv.sdl_keyboard_create()
+keyboard.set_group(self.group)
 ```
 
-In this example we import SDL. SDL module gives access to display and input device on a unix/linux machine. It contains several objects such as `SDL.monitor_flush`, which are wrappers around function pointers and can be registerd as LVGL display and input driver.
-Behind the scences these objects implement the buffer protocol to give access to the function pointer bytes.
-
-Starting from version 6.0, lvgl supports setting the display settings (width, length) on runtime. In this example they are set to 480x320. Color depth is set on compile time.
+In this example we use LVGL built in LVGL driver.  
 
 Currently supported drivers for Micropyton are
 
-- SDL unix drivers (display and mouse)
-- Linux Frame Buffer (`/dev/fb0`)
+- LVGL built-in drivers such ase the unix/Linux SDL (display, mouse, keyboard) and Frame Buffer (`/dev/fb0`)
 - ILI9341 driver for ESP32
 - XPT2046 driver for ESP32
 - FT6X36 (capacitive touch IC) for ESP32
@@ -209,7 +192,16 @@ So the location for Micropython drivers is https://github.com/lvgl/lv_binding_mi
 
 LVGL requires an Event Loop to re-draw the screen, handle user input etc.
 The default Event Loop is implement in [lv_utils.py](https://github.com/lvgl/lv_binding_micropython/blob/master/lib/lv_utils.py) which uses Micropython Timer to schedule calls to LVGL.
-It also supports running the Event Loop in [uasyncio](https://docs.micropython.org/en/latest/library/uasyncio.html) if needed.
+It also supports running the Event Loop in [uasyncio](https://docs.micropython.org/en/latest/library/uasyncio.html) if needed.  
+Some drivers start the event loop automatically if it doesn't already run. To configure the event loop for these drivers, just initialize the event loop before registering the driver.  
+LVGL native drivers, such as the SDL driver, do not start the event loop. You must start the event loop explicitly otherwise screen will not refresh.
+
+The event loop can be started like this:
+```
+from lv_utils import event_loop
+event_loop = event_loop()
+```
+and you can configure it by providing parameters, see lv_utils.py for more details.
 
 ### Adding Micropython Bindings to a project
 
@@ -276,31 +268,18 @@ lv.init()
 ```
 #### Registering Display and Input drivers
 ```python
-import SDL
-SDL.init()
+from lv_utils import event_loop
 
-# Register SDL display driver.
+WIDTH = 480
+HEIGHT = 320
 
-disp_buf1 = lv.disp_buf_t()
-buf1_1 = bytes(480*10)
-disp_buf1.init(buf1_1, None, len(buf1_1)//4)
-disp_drv = lv.disp_drv_t()
-disp_drv.init()
-disp_drv.buffer = disp_buf1
-disp_drv.flush_cb = SDL.monitor_flush
-disp_drv.hor_res = 480
-disp_drv.ver_res = 320
-disp_drv.register()
-
-# Register SDL mouse driver
-
-indev_drv = lv.indev_drv_t()
-indev_drv.init()
-indev_drv.type = lv.INDEV_TYPE.POINTER
-indev_drv.read_cb = SDL.mouse_read
-indev_drv.register()
+event_loop = event_loop()
+disp_drv = lv.sdl_window_create(WIDTH, HEIGHT)
+mouse = lv.sdl_mouse_create()
+keyboard = lv.sdl_keyboard_create()
+keyboard.set_group(self.group)
 ```
-In this example, SDL display and input drivers are registered on a unix port of Micropython.
+In this example, LVGL native SDL display and input drivers are registered on a unix port of Micropython.
 
 Here is an alternative example for ESP32 ILI9341 + XPT2046 drivers:
 

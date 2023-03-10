@@ -312,7 +312,7 @@ structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) fo
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
 opaque_structs = collections.OrderedDict((typedef.declname, c_ast.Struct(name=typedef.declname, decls=[])) for typedef in typedefs if isinstance(typedef.type, c_ast.Struct) and typedef.type.decls == None)
-structs.update(opaque_structs)
+structs.update({k:v for k,v in opaque_structs.items() if k not in structs})
 # print('/* --> opaque structs len = %d */' % len(opaque_structs))
 # print('/* --> opaque structs  %s */' % ',\n'.join([struct_name for struct_name in opaque_structs]))
 # print('/* --> structs:\n%s */' % ',\n'.join(sorted(str(structs[struct_name]) for struct_name in structs if struct_name)))

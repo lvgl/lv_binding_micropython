@@ -183,20 +183,22 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
     int start_x = 0;
     int start_y = 0;
 
-    // We use disp_drv->user_data to pass data from MP to C
+    void *driver_data = lv_disp_get_driver_data(disp_drv);
+
+    // We use disp_drv->driver_data to pass data from MP to C
     // The following lines extract dc and spi
 
-    int dc = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_dc)));
-    int dt = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_dt)));
+    int dc = mp_obj_get_int(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_dc)));
+    int dt = mp_obj_get_int(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_dt)));
     mp_buffer_info_t buffer_info;
-    mp_get_buffer_raise(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
+    mp_get_buffer_raise(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_spi)), &buffer_info, MP_BUFFER_READ);
     spi_device_handle_t *spi_ptr = buffer_info.buf;
 
     // Some devices may need a start_x and start_y offset for displays with LCD screens smaller
     // than the devices built in frame buffer.
 
-    start_x = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_x)));
-    start_y = mp_obj_get_int(mp_obj_dict_get(disp_drv->user_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_y)));
+    start_x = mp_obj_get_int(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_x)));
+    start_y = mp_obj_get_int(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_start_y)));
 
     int x1 = area->x1 + start_x;
     int x2 = area->x2 + start_x;

@@ -4,7 +4,7 @@
 # For ili9341 display:
 #
 #   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=16"
 #   (make parameter) to configure LVGL use the same color format as ili9341
 #   and prevent the need to loop over all pixels to translate them.
 #
@@ -22,7 +22,7 @@
 # For gc9a01 display:
 #
 #   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=16"
 #   (make parameter) to configure LVGL use the same color format as ili9341
 #   and prevent the need to loop over all pixels to translate them.
 #
@@ -33,7 +33,7 @@
 # For st7789 display:
 #
 #   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
+#     LV_CFLAGS="-DLV_COLOR_DEPTH=16"
 #   (make parameter) to configure LVGL use the same color format as ili9341
 #   and prevent the need to loop over all pixels to translate them.
 #
@@ -149,27 +149,22 @@ class ili9XXX:
         else:
             raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
 
-        self.disp_buf = lv.disp_draw_buf_t()
-        self.disp_drv = lv.disp_drv_t()
-
-        self.disp_buf.init(self.buf1, self.buf2, self.buf_size // lv.color_t.__SIZE__)
-        self.disp_drv.init()
         self.disp_spi_init()
+        self.disp_drv = lv.disp_create(self.width, self.height)
+        self.disp_drv.set_flush_cb(esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush)
+        self.disp_drv.set_draw_buffers(self.buf1, self.buf2, self.buf_size, lv.DISP_RENDER_MODE.PARTIAL)
 
-        self.disp_drv.user_data = {
+        self.disp_drv.set_driver_data({
             'dc': self.dc,
             'spi': self.spi,
             'dt': self.display_type,
             'start_x': self.start_x,
-            'start_y': self.start_y}
+            'start_y': self.start_y})
 
-        self.disp_drv.draw_buf = self.disp_buf
-        self.disp_drv.flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
-        self.disp_drv.monitor_cb = self.monitor
-        self.disp_drv.hor_res = self.width
-        self.disp_drv.ver_res = self.height
+        # TODO: enable monitor by listening to LV_EVENT_RENDER_READY
+        # self.disp_drv.monitor_cb = self.monitor
         if color_format:
-            self.disp_drv.color_format = color_format
+            self.disp_drv.set_color_format(color_format)
 
         if self.initialize:
             self.init()
@@ -409,10 +404,6 @@ class ili9XXX:
             print("Enable backlight")
             esp.gpio_set_level(self.backlight, self.backlight_on)
 
-        # Register the driver
-        self.disp = self.disp_drv.register()
-
-
     def init(self):
         import utime
         generator = self._init(lambda ms:(yield ms))
@@ -542,7 +533,7 @@ class ili9341(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSE
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSED
     ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
@@ -732,7 +723,7 @@ class st7789(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=320, height=240, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSE):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSED):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -784,7 +775,7 @@ class st7735(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSE):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSED):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 

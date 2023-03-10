@@ -48,11 +48,9 @@ class xpt2046:
         
         self.spi_init()
 
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init()
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = self.read
-        indev_drv.register()
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(self.read)
         
     def calibrate(self, x0, y0, x1, y1):
         self.cal_x0 = x0

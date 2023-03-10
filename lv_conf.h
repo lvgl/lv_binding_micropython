@@ -29,7 +29,7 @@
    COLOR SETTINGS
  *====================*/
 
-/*Color depth: 1 (1 byte per pixel), 8 (RGB332), 16 (RGB565), 32 (ARGB8888)*/
+/*Color depth: 1 (1 byte per pixel), 8 (RGB332), 16 (RGB565), 24 (RGB888), 32 (ARGB8888)*/
 #ifndef LV_COLOR_DEPTH
 #define LV_COLOR_DEPTH 32
 #endif
@@ -44,7 +44,7 @@
 #define LV_USE_BUILTIN_MALLOC 0
 #if LV_USE_BUILTIN_MALLOC
     /*Size of the memory available for `lv_malloc()` in bytes (>= 2kB)*/
-    #define LV_MEM_SIZE (128U * 1024U)          /*[bytes]*/
+    #define LV_MEM_SIZE (48U * 1024U)          /*[bytes]*/
 
     /*Size of the memory expand for `lv_malloc()` in bytes*/
     #define LV_MEM_POOL_EXPAND_SIZE 0
@@ -79,6 +79,11 @@
 #define LV_VSNPRINTF    lv_vsnprintf_builtin
 #define LV_STRLEN       lv_strlen_builtin
 #define LV_STRNCPY      lv_strncpy_builtin
+
+#define LV_COLOR_EXTERN_INCLUDE <stdint.h>
+#define LV_COLOR_MIX      lv_color_mix
+#define LV_COLOR_PREMULT      lv_color_premult
+#define LV_COLOR_MIX_PREMULT      lv_color_mix_premult
 
 /*====================
    HAL SETTINGS
@@ -778,6 +783,7 @@
 
 #if LV_USE_SDL
     #define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
+    #define LV_SDL_PARTIAL_MODE    0    /*Recommended only to emulate a setup with a display controller*/
 #endif
 
 /*Driver for /dev/fb*/

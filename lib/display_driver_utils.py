@@ -89,11 +89,9 @@ class driver:
         import rtch
         touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33)
         touch.init()
-        indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv) 
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = touch.read
-        lv.indev_drv_register(indev_drv)
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(touch.read)
         '''
 
     def init_gui_twatch(self):

@@ -46,11 +46,10 @@ class ft6x36:
         self.point = lv.point_t( {'x': 0, 'y': 0} )
         self.points = [lv.point_t( {'x': 0, 'y': 0} ), lv.point_t( {'x': 0, 'y': 0} )]
         self.state = lv.INDEV_STATE.RELEASED
-        self.indev_drv = lv.indev_drv_t()
-        self.indev_drv.init()
-        self.indev_drv.type = lv.INDEV_TYPE.POINTER
-        self.indev_drv.read_cb = self.callback
-        self.indev_drv.register()
+        
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(self.callback)
 
     def callback(self, driver, data):
 
@@ -69,16 +68,15 @@ class ft6x36:
         sensorbytes = self.i2c.readfrom_mem(self.addr, 2, 11)
         self.presses = sensorbytes[0]
         if self.presses > 2:
-            return False
+            return
         try:
             if self.presses:
                 self.points[0] = get_point(1)
             if self.presses == 2:
                 self.points[1] = get_point(7)
         except ValueError:
-            return False
+            return
         if sensorbytes[3] >> 4:
             self.points[0], self.points[1] = self.points[1], self.points[0]
         data.point = self.points[0]
         data.state = self.state = lv.INDEV_STATE.PRESSED if self.presses else lv.INDEV_STATE.RELEASED
-        return False

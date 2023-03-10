@@ -454,17 +454,10 @@ class St77xx_lvgl(object):
         if not lv_utils.event_loop.is_running(): self.event_loop=lv_utils.event_loop()
 
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
-        self.disp_draw_buf=lv.disp_draw_buf_t()
-        self.disp_draw_buf.init(fb1:=bytearray(bufSize),bytearray(bufSize) if doublebuffer else None,len(fb1)//lv.color_t.__SIZE__)
-        self.disp_drv=lv.disp_drv_t()
-        self.disp_drv.init()
-        self.disp_drv.draw_buf=self.disp_draw_buf
-        self.disp_drv.flush_cb=self.disp_drv_flush_cb
-        self.disp_drv.hor_res=self.width
-        self.disp_drv.ver_res=self.height
-        self.disp_drv.color_format = lv.COLOR_FORMAT.NATIVE if self.bgr else lv.COLOR_FORMAT.NATIVE_REVERSE
-        self.disp_drv.register()
-
+        self.disp_drv = lv.disp_create(self.width, self.height)
+        self.disp_drv.set_flush_cb(self.disp_drv_flush_cb)
+        self.disp_drv.set_draw_buffers(bytearray(bufSize), bytearray(bufSize) if doublebuffer else None, bufSize, lv.DISP_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_color_format(lv.COLOR_FORMAT.NATIVE if self.bgr else lv.COLOR_FORMAT.NATIVE_REVERSED)
 
 class St7735(St7735_hw,St77xx_lvgl):
     def __init__(self,res,doublebuffer=True,factor=4,**kw):

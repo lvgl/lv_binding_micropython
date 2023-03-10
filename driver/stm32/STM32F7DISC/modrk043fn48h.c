@@ -144,7 +144,7 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     lv_disp_flush_ready(dma2d_disp_drv);
 }
 
-STATIC bool mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t *data) {
+STATIC void mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t *data) {
     static TS_StateTypeDef ts_state = {0};
     static lv_coord_t lastX = 0;
     static lv_coord_t lastY = 0;
@@ -159,8 +159,6 @@ STATIC bool mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t
         data->point.y = lastY;
         data->state = LV_INDEV_STATE_REL;
     }
-
-    return false;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_rk043fn48h_init_obj, 0, mp_rk043fn48h_init);

@@ -319,24 +319,6 @@ class AdvancedDemoApplication:
         self.mouse = lv.sdl_mouse_create()
         self.keyboard = lv.sdl_keyboard_create()
         self.keyboard.set_group(self.group)
-
-        # Regsiter SDL mouse driver
-
-        # indev_drv = lv.indev_drv_t()
-        # indev_drv.init() 
-        # indev_drv.type = lv.INDEV_TYPE.POINTER
-        # indev_drv.read_cb = SDL.mouse_read
-        # self.mouse = indev_drv.register()
-
-        # # Register keyboard driver
-
-        # keyboard_drv = lv.indev_drv_t()
-        # keyboard_drv.init()
-        # keyboard_drv.type = lv.INDEV_TYPE.KEYPAD
-        # keyboard_drv.read_cb = SDL.keyboard_read
-        # self.keyboard = keyboard_drv.register()
-        # self.keyboard.set_group(self.group)
-        
         
     def init_gui_esp32(self):
 
@@ -344,7 +326,9 @@ class AdvancedDemoApplication:
 
         from ili9XXX import ili9341
 
-        self.disp = ili9341(dc=32, cs=33, power=-1, backlight=-1)
+        # self.disp = ili9341(dc=32, cs=33, power=-1, backlight=-1)
+        self.disp = ili9341(mhz=20, dc=32, cs=33, power=-1, backlight=-1, hybrid=False, factor=8)
+
 
         # Register raw resistive touch driver
 
@@ -352,11 +336,9 @@ class AdvancedDemoApplication:
         import rtch
         self.touch = rtch.touch(xp = 32, yp = 33, xm = 25, ym = 26, touch_rail = 27, touch_sense = 33)
         self.touch.init()
-        indev_drv = lv.indev_drv_t()
-        lv.indev_drv_init(indev_drv) 
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = self.touch.read
-        lv.indev_drv_register(indev_drv)
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(self.touch.read)
         """
 
         # Register xpt2046 touch driver
@@ -374,24 +356,16 @@ class AdvancedDemoApplication:
         # Register display driver
         self.event_loop = event_loop()
         lcd.init(w=hres, h=vres)
-        disp_buf1 = lv.disp_draw_buf_t()
+        self.disp_drv = lv.disp_create(hres, vres)
+        self.disp_drv.set_flush_cb(lcd.flush)
         buf1_1 = bytearray(hres * 50 * lv.color_t.__SIZE__)
         buf1_2 = bytearray(hres * 50 * lv.color_t.__SIZE__)
-        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.__SIZE__)
-        disp_drv = lv.disp_drv_t()
-        disp_drv.init()
-        disp_drv.draw_buf = disp_buf1
-        disp_drv.flush_cb = lcd.flush
-        disp_drv.hor_res = hres
-        disp_drv.ver_res = vres
-        disp_drv.register()
+        self.disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISP_RENDER_MODE.PARTIAL)
 
         # Register touch sensor
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init()
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = lcd.ts_read
-        indev_drv.register()
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(lcd.ts_read)
 
     def init_gui_rp2(self):
         import xpt2046
@@ -419,26 +393,14 @@ class AdvancedDemoApplication:
         # Identify platform and initialize it
 
         if not event_loop.is_running():
-            try:
+            if sys.platform == 'rp2':
                 self.init_gui_rp2()
-            except ImportError:
-                pass
-
-            try:
+            elif sys.platform == 'esp32':
                 self.init_gui_esp32()
-            except ImportError:
-                pass
-
-            try:
+            elif sys.platform == 'linux':
                 self.init_gui_SDL()
-            except ImportError:
-                pass
-
-            try:
+            elif sys.platform == 'stm32':
                 self.init_gui_stm32()
-            except ImportError:
-                pass
-
 
         # Create the main screen and load it.
 

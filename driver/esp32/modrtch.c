@@ -107,14 +107,13 @@ typedef struct _rtch_t
 // This means we can have only one active touch driver instance, pointed by this global.
 STATIC rtch_t *g_rtch = NULL;
 
-STATIC bool touch_read(lv_indev_t * indev_drv, lv_indev_data_t *data)
+STATIC void touch_read(lv_indev_t * indev_drv, lv_indev_data_t *data)
 {
     rtch_info_t *touch_info = &g_rtch->rtch_info;
     xSemaphoreTake(g_rtch->rtch_info_mutex, portMAX_DELAY);
     data->point = (lv_point_t){touch_info->x, touch_info->y};
     data->state = touch_info->touched? LV_INDEV_STATE_PRESSED: LV_INDEV_STATE_RELEASED;
     xSemaphoreGive(g_rtch->rtch_info_mutex);
-    return false;
 }
 
 STATIC mp_obj_t mp_activate_rtch(mp_obj_t self_in)

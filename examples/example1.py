@@ -17,25 +17,12 @@ class driver:
 
     def init_gui_esp32(self):
 
-        import ILI9341 as ili
+        from ili9XXX import ili9341
 
         # Initialize ILI9341 display
 
-        disp = ili.display(miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, backlight=2)
-        disp.init()
-
-        # Register display driver
-
-        disp_buf1 = lv.disp_draw_buf_t()
-        buf1_1 = bytearray(480*10)
-        disp_buf1.init(buf1_1, None, len(buf1_1) // lv.color_t.__SIZE__)
-        disp_drv = lv.disp_drv_t()
-        disp_drv.init()
-        disp_drv.draw_buf = disp_buf1
-        disp_drv.flush_cb = disp.flush
-        disp_drv.hor_res = 240
-        disp_drv.ver_res = 320
-        disp_drv.register()
+        self.disp = ili9341(mhz=20, dc=32, cs=33, power=-1, backlight=-1, hybrid=False, factor=8)
+        self.disp.init()
 
         # Register raw resistive touch driver
 
@@ -43,11 +30,9 @@ class driver:
 
         touch = rtch.touch(xp=32, yp=33, xm=25, ym=26, touch_rail=27, touch_sense=33)
         touch.init()
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init()
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = touch.read
-        indev_drv.register()
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(touch.read)
 
     def init_gui_stm32(self):
         import rk043fn48h as lcd
@@ -58,26 +43,19 @@ class driver:
         # Register display driver
         event_loop = lv_utils.event_loop()
         lcd.init(w=hres, h=vres)
-        disp_buf1 = lv.disp_draw_buf_t()
+        self.disp_drv = lv.disp_create(hres, vres)
+        self.disp_drv.set_flush_cb(lcd.flush)
         buf1_1 = lcd.framebuffer(1)
         buf1_2 = lcd.framebuffer(2)
-        disp_buf1.init(buf1_1, buf1_2, len(buf1_1) // lv.color_t.__SIZE__)
-        disp_drv = lv.disp_drv_t()
-        disp_drv.init()
-        disp_drv.draw_buf = disp_buf1
-        disp_drv.flush_cb = lcd.flush
-        disp_drv.gpu_blend_cb = lcd.gpu_blend
-        disp_drv.gpu_fill_cb = lcd.gpu_fill
-        disp_drv.hor_res = hres
-        disp_drv.ver_res = vres
-        disp_drv.register()
+        self.disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISP_RENDER_MODE.PARTIAL)
+
+        # disp_drv.gpu_blend_cb = lcd.gpu_blend
+        # disp_drv.gpu_fill_cb = lcd.gpu_fill
 
         # Register touch sensor
-        indev_drv = lv.indev_drv_t()
-        indev_drv.init()
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = lcd.ts_read
-        indev_drv.register()
+        self.indev_drv = lv.indev_create()
+        self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_read_cb(lcd.ts_read)
 
     def init_gui(self):
 
