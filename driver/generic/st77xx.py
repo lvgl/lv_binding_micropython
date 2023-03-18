@@ -439,7 +439,7 @@ class St77xx_lvgl(object):
         # print(f"({area.x1},{area.y1}..{area.x2},{area.y2})")
         self.rp2_wait_dma() # wait if not yet done and DMA is being used
         # blit in background
-        self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),disp_drv.draw_buf.buf_act.__dereference__(2*w*h),is_blocking=False)
+        self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),color.__dereference__(lv.color_t.__SIZE__*w*h),is_blocking=False)
         self.disp_drv.flush_ready()
     def __init__(self,doublebuffer=True,factor=4):
         import lvgl as lv
