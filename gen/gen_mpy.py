@@ -8,7 +8,7 @@
 # - When converting mp to ptr (and vice versa), verify that types are compatible. Now all pointers are casted to void*.
 
 from __future__ import print_function
-import collections
+import collection
 import sys
 import struct
 import copy
@@ -910,7 +910,7 @@ STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
 STATIC void mp_lv_delete_cb(lv_event_t * e)
 {
-    LV_OBJ_T *lv_obj = e->target;
+    LV_OBJ_T *lv_obj = e->current_target;
     if (lv_obj){
         mp_lv_obj_t *self = lv_obj->user_data;
         if (self) {
