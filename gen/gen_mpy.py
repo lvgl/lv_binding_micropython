@@ -8,7 +8,7 @@
 # - When converting mp to ptr (and vice versa), verify that types are compatible. Now all pointers are casted to void*.
 
 from __future__ import print_function
-import collection
+import collections
 import sys
 import struct
 import copy
