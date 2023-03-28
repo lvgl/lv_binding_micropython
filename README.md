@@ -23,8 +23,8 @@ Micopython's build script (Makefile or CMake) should run `gen_mpy.py` automatica
 - If you would like to see an example of how a generated `lv_mpy.c` looks like, have a look at [`lv_mpy_example.c`](https://raw.githubusercontent.com/lvgl/lv_binding_micropython/master/gen/lv_mpy_example.c). Note that its only exported (non static) symbol is `mp_module_lvgl` which should be registered in Micropython as a module.
 - lv_binding_micropython is usually used as a git submodule of [lv_micropython](https://github.com/lvgl/lv_micropython) which builds Micropython + LVGL + lvgl-bindings, but can also be used on other forks of Micropython.
 
-It's worth noting that the Mircopython Bindings module (`lv_mpy.c`) is dependant on LVGL configuration.
-LVGL is configured by `lv_conf.h` where different objects and features could be enabled or disabled. LVGL bindings are generated only for the enabled objects and features. Changing `lv_conf.h` requires re running `gen_mpy.py`, therfore it's useful to run it automatically in the build script, as done by lv_micropython.
+It's worth noting that the Mircopython Bindings module (`lv_mpy.c`) is dependent on LVGL configuration.
+LVGL is configured by `lv_conf.h` where different objects and features could be enabled or disabled. LVGL bindings are generated only for the enabled objects and features. Changing `lv_conf.h` requires re running `gen_mpy.py`, therefore it's useful to run it automatically in the build script, as done by lv_micropython.
 
 ### Memory Management
 
@@ -33,8 +33,8 @@ This means that structs allocated for LVGL use don't need to be deallocated expl
 For this to work correctly, LVGL is configured to use gc and to use Micropython's memory allocation functions, and also register all LVGL "root" global variables to Micropython's gc.
 
 From the user's perspective, structs can be created and will be collected by gc when they are no longer referenced.
-However, LVGL screen objects (`lv.obj` with no parent) are automatically assigned to default display, therefor not collected by gc even when no longer explicitly referenced.
-When you want to free a screen and all its decendants so gc could collect their memory, make sure you call `screen.delete()` when you no longer need it.
+However, LVGL screen objects (`lv.obj` with no parent) are automatically assigned to default display, therefore not collected by gc even when no longer explicitly referenced.
+When you want to free a screen and all its descendants so gc could collect their memory, make sure you call `screen.delete()` when you no longer need it.
 
 Make sure you keep a reference to your display driver and input driver to prevent them from being collected.
 
@@ -45,7 +45,7 @@ No synchronization means (locks, mutexes) are taken.
 However, asynchronous calls to LVGL still take place periodically for screen refresh and other LVGL tasks such as animation.
 
 This is achieved by using the internal Micropython scheduler (that must be enabled), by calling `mp_sched_schedule`.
-`mp_sched_schedule` is called when screen needs to be refreshed. LVGL expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/lvgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting)). This is ususally handled in the display device driver.
+`mp_sched_schedule` is called when screen needs to be refreshed. LVGL expects the function `lv_task_handler` to be called periodically (see [lvgl/README.md#porting](https://github.com/lvgl/lvgl/blob/6718decbb7b561b68e450203b83dff60ce3d802c/README.md#porting)). This is usually handled in the display device driver.
 Here is [an example](https://github.com/lvgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L23) of calling `lv_task_handler` with `mp_sched_schedule` for refreshing LVGL. [`mp_lv_task_handler`](https://github.com/lvgl/lv_binding_micropython/blob/77b0c9f2678b6fbd0950fbf27380052246841082/driver/SDL/modSDL.c#L7) is scheduled to run on the same thread Micropython is running, and it calls both `lv_task_handler` for LVGL task handling and `monitor_sdl_refr_core` for refreshing the display and handling mouse events.
 
 With REPL (interactive console), when waiting for the user input, asynchronous events can also happen. In [this example](https://github.com/lvgl/lv_mpy/blob/bc635700e4186f39763e5edee73660fbe1a27cd4/ports/unix/unix_mphal.c#L176) we just call `mp_handle_pending` periodically when waiting for a keypress. `mp_handle_pending` takes care of dispatching asynchronous events registered with `mp_sched_schedule`.
@@ -68,7 +68,7 @@ structs can also be initialized from dict. For example, the example above can be
 c = lvgl.color_t({'ch': {'red' : 0xff}})
 ```
 
-All lvgl globals (functions, enums, types) are avaiable under lvgl module. For example, `lvgl.SYMBOL` is an "enum" of symbol strings, `lvgl.anim_create` will create animation etc.
+All lvgl globals (functions, enums, types) are available under lvgl module. For example, `lvgl.SYMBOL` is an "enum" of symbol strings, `lvgl.anim_create` will create animation etc.
 
 ### Callbacks
 
@@ -79,7 +79,7 @@ Therefore in the Micropython binding we need to register both a function pointer
 Therefore we defined a **callback convention** that expects lvgl headers to be defined in a certain way. Callbacks that are declared according to the convention would allow the binding to register a Micropython object next to the function pointer when registering a callback, and access that object when the callback is called.
 The Micropython callable object is automatically saved in a `user_data` variable which is provided when registering or calling the callback.
 
-The callback convetion assumes the following:
+The callback convention assumes the following:
 - There's a struct that contains a field called `void * user_data`.
 - A pointer to that struct is provided as the first argument of a callback registration function.
 - A pointer to that struct is provided as the first argument of the callback itself.
@@ -88,10 +88,10 @@ Another option is that the callback function pointer is just a field of a struct
 
 Another option is:
 - A parameter called `void * user_data` is provided to the registration function as the last argument.
-- The callback itself recieves `void *` as the last argument
+- The callback itself receives `void *` as the last argument
 
 In this case, the user should provide either `None` or a dict as the `user_data` argument of the registration function.
-The callback will recieve a Blob which can be casted to the dict in the last argument.
+The callback will receive a Blob which can be casted to the dict in the last argument.
 (See `async_call` example below)
 
 As long as the convention above is followed, the lvgl Micropython binding script would automatically set and use `user_data` when callbacks are set and used.
@@ -113,7 +113,7 @@ The `user_data` field **must not be used directly by the user**, since it is use
 ### Display and Input Drivers
 
 LVGL can be configured to use different displays and different input devices. More information is available on [LVGL documentation](https://docs.lvgl.io/master/porting/display.html).
-Registering a driver is essentially calling a registeration function (for example `disp_drv_register`) and passing a function pointer as a parameter (actually a struct that contains function pointers). The function pointer is used to access the actual display / input device.
+Registering a driver is essentially calling a registration function (for example `disp_drv_register`) and passing a function pointer as a parameter (actually a struct that contains function pointers). The function pointer is used to access the actual display / input device.
 
 When implementing a display or input LVGL driver with Micropython, there are 3 option:
 - Implement a Pure Python driver. It the easiest way to implement a driver, but may perform poorly
@@ -122,7 +122,7 @@ When implementing a display or input LVGL driver with Micropython, there are 3 o
 
 An example of Pure/Hybrid driver is the [ili9XXX.py](https://github.com/lvgl/lv_binding_micropython/blob/master/driver/esp32/ili9XXX.py).
 
-The driver registration should eventually be perfomed in the Micropython script, either in the driver code itself in case of the pure/hybrid driver or in user code in case of C driver (for example, in the case of the SDL driver). Registering the driver on Python and not in C is important to make it easy for the user to select and replace drivers without building the project and changing C files.
+The driver registration should eventually be performed in the Micropython script, either in the driver code itself in case of the pure/hybrid driver or in user code in case of C driver (for example, in the case of the SDL driver). Registering the driver on Python and not in C is important to make it easy for the user to select and replace drivers without building the project and changing C files.
 
 When creating a display or input LVGL driver, make sure you let the user **configure all parameters on runtime**, such as SPI pins, frequency, etc.
 Eventually the user would want to build the firmware once and use the same driver in different configuration without re-building the C project.
@@ -167,7 +167,7 @@ In this example we use LVGL built in LVGL driver.
 
 Currently supported drivers for Micropyton are
 
-- LVGL built-in drivers such ase the unix/Linux SDL (display, mouse, keyboard) and Frame Buffer (`/dev/fb0`)
+- LVGL built-in drivers such use the unix/Linux SDL (display, mouse, keyboard) and Frame Buffer (`/dev/fb0`)
 - ILI9341 driver for ESP32
 - XPT2046 driver for ESP32
 - FT6X36 (capacitive touch IC) for ESP32
@@ -230,7 +230,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -I <Include Path>, --include <Include Path>
-                        Preprocesor include path
+                        Preprocessor include path
   -D <Macro Name>, --define <Macro Name>
                         Define preprocessor macro
   -E <Preprocessed File>, --external-preprocessing <Preprocessed File>
@@ -291,7 +291,7 @@ import lvgl as lv
 from ili9XXX import ili9341
 disp = ili9341()
 
-# Import XPT2046 driver and initalize it
+# Import XPT2046 driver and initialize it
 
 from xpt2046 import xpt2046
 touch = xpt2046()
@@ -303,7 +303,7 @@ By default, both ILI9341 and XPT2046 are initialized on the same SPI bus with th
 - XPT2046: `cs=25, spihost=esp.HSPI_HOST, mhz=5, max_cmds=16, cal_x0 = 3783, cal_y0 = 3948, cal_x1 = 242, cal_y1 = 423, transpose = True, samples = 3`
 
 You can change any of these parameters on ili9341/xpt2046 constructor.
-You can also initalize them on different SPI buses if you want, by providing miso/mosi/clk parameters. Set them to -1 to use existing (initialized) spihost bus.
+You can also initialize them on different SPI buses if you want, by providing miso/mosi/clk parameters. Set them to -1 to use existing (initialized) spihost bus.
 
 Here's another example, this time importing and initialising display and touch drivers for the M5Stack Core2 device, which uses an FT6336 chip on the I2C bus to read from its capacitive touch screen and uses an ili9342 display controller, which has some inverted signals compared to the ili9341:
 
@@ -514,7 +514,7 @@ def cb(user_data):
 lv.async_call(cb, {'value':42})
 ```
 
-#### Listing available functions/memebers/constants etc.
+#### Listing available functions/members/constants etc.
 ```python
 print('\n'.join(dir(lvgl)))
 print('\n'.join(dir(lvgl.btn)))

@@ -119,7 +119,7 @@ def remove_quals(ast):
         return remove_quals(ast[1])
     for i, c1 in enumerate(ast.children()):
         child = ast.children()[i]
-        if not isinstance(child, c_ast.FuncDecl): # Don't remove quals which change function prorotype
+        if not isinstance(child, c_ast.FuncDecl): # Don't remove quals which change function prototype
             remove_quals(child)
 
 @memoize
@@ -248,7 +248,7 @@ def is_method_of(func_name, obj_name):
 
 def method_name_from_func_name(func_name):
     res = lv_method_pattern.match(func_name).group(1)
-    return res if res != "del" else "delete" # del is a resrved name, don't use it
+    return res if res != "del" else "delete" # del is a reserved name, don't use it
 
 def get_enum_name(enum):
     match_result = lv_enum_name_pattern.match(enum)
@@ -2396,7 +2396,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
     arg_metadata = {'type': lv_mp_type[arg_type]}
     if arg.name: arg_metadata['name'] = arg.name
     func_metadata[func.name]['args'].append(arg_metadata)
-    cast = ("(%s)" % gen.visit(fixed_arg.type)) if 'const' in arg.quals else "" # allow convertion from non const to const, sometimes requires cast
+    cast = ("(%s)" % gen.visit(fixed_arg.type)) if 'const' in arg.quals else "" # allow conversion from non const to const, sometimes requires cast
     return '{var} = {cast}{convertor}(mp_args[{i}]);'.format(
             var = gen.visit(fixed_arg),
             cast = cast,
@@ -2471,7 +2471,7 @@ def gen_mp_func(func, obj_name):
         if return_type not in lv_to_mp or not lv_to_mp[return_type]:
             try_generate_type(func.type.type)
             if return_type not in lv_to_mp or not lv_to_mp[return_type]:
-                raise MissingConversionException("Missing convertion from %s" % return_type)
+                raise MissingConversionException("Missing conversion from %s" % return_type)
         build_result = "%s _res = " % qualified_return_type
         cast = '(void*)' if isinstance(func.type.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
         build_return_value = "{type}({cast}_res)".format(type = lv_to_mp[return_type], cast = cast)

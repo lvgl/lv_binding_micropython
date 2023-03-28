@@ -26,7 +26,7 @@ for rot in (0, 1, 2, 3):
     lcd.apply_rotation(rot)
 
     lcd.clear(0x0000)
-    # 1/4 screen pixels square with white border red backgorund
+    # 1/4 screen pixels square with white border red background
     w, h = lcd.width // 4, lcd.height // 8
     bmp = build_rect_buf(w, h, [0x03, 0x03])
     t0 = time.ticks_us()

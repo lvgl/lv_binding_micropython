@@ -311,7 +311,7 @@ int lvgl_init(const struct device *dev)
 
 	err = lvgl_allocate_rendering_buffers(&disp_drv);
 	if (err != 0) {
-		printf("Error alocate buffers\n");
+		printf("Error allocate buffers\n");
 		return err;
 	}
 

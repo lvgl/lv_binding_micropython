@@ -299,7 +299,7 @@ typedef enum {
 } sh2lib_data_flag;
 
 /**
- * @brief Flag returned by data_recv_cb to indicate recieve status
+ * @brief Flag returned by data_recv_cb to indicate receive status
  */
 typedef enum {
     SH2LIB_DATA_RECV_NONE,              

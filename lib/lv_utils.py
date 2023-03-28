@@ -8,7 +8,7 @@
 #
 #        SDL.init(auto_refresh=False)
 #        # Register SDL display driver.
-#        # Regsiter SDL mouse driver
+#        # Register SDL mouse driver
 #        event_loop = lv_utils.event_loop()
 #
 #
@@ -16,7 +16,7 @@
 #
 #        SDL.init(auto_refresh=False)
 #        # Register SDL display driver.
-#        # Regsiter SDL mouse driver
+#        # Register SDL mouse driver
 #        event_loop = lv_utils.event_loop(asynchronous=True)
 #        uasyncio.Loop.run_forever()
 #

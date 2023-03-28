@@ -256,7 +256,7 @@ STATIC mp_obj_t calibrate(mp_uint_t n_args, const mp_obj_t *args)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// RTCH implemenation
+// RTCH implementation
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -317,7 +317,7 @@ STATIC mp_obj_t mp_rtch_init(mp_obj_t self_in)
 
     BaseType_t xReturned = xTaskCreate(rtch_task, "RTCH Task", RTCH_TASK_STACK_SIZE, self, RTCH_TASK_PRIORITY, &self->rtch_task_handle);
     if (xReturned != pdPASS){
-        ESP_LOGE(TAG, "Failed createing RTCH task!");
+        ESP_LOGE(TAG, "Failed creating RTCH task!");
         vTaskDelete(self->rtch_task_handle);
         nlr_raise(
                 mp_obj_new_exception_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed creating RTCH task")));

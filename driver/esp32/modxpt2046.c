@@ -205,7 +205,7 @@ static uint8_t tp_spi_xchg(xpt2046_obj_t *self, uint8_t data_send);
  * Get the current position and state of the touchpad
  * @param indev_drv pointer to the caller input device driver
  * @param data store the read data here
- * @return false: because no ore data to be read
+ * @return false: because no more data to be read
  */
 static void xpt2046_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {

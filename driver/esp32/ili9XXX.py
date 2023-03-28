@@ -35,8 +35,8 @@
 #   (make parameter) to configure LVGL use the same color format as ili9341
 #   and prevent the need to loop over all pixels to translate them.
 #
-#   Default SPI freq is set to 60MHz as that is the maximum the tested dislay
-#   would suport despite the datasheet suggesting that higher freqs would be
+#   Default SPI freq is set to 60MHz as that is the maximum the tested display
+#   would support despite the datasheet suggesting that higher freqs would be
 #   supported
 #
 # For st7789 display:
@@ -528,7 +528,7 @@ class ili9XXX:
         if rotation >= 0:
             return rotation | colormode
 
-        # otherwise use abs(rotation)-1 as index to retreive value from rotations set
+        # otherwise use abs(rotation)-1 as index to retrieve value from rotations set
 
         index = abs(rotation) - 1
         if index > len(rotations):
