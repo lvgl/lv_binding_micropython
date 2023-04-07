@@ -12,13 +12,13 @@ class Timer:
 
     def init(self, mode=PERIODIC, period=-1, callback=None):
         self.mode = mode
-        if mode == PERIODIC:
+        if mode == Timer.PERIODIC:
            self.id = jswindow.setInterval(callback, period)
         else:
            self.id = jswindow.setTimeout(callback, period)
 
     def deinit(self):
-        if self.mode == PERIODIC:
+        if self.mode == Timer.PERIODIC:
            jswindow.clearInterval(self.id)
         else:
            jswindow.clearTimeout(self.id)
