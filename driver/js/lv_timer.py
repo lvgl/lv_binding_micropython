@@ -20,5 +20,5 @@ class Timer:
     def deinit(self):
         if self.mode == PERIODIC:
            jswindow.clearInterval(self.id)
-        else
+        else:
            jswindow.clearTimeout(self.id)
