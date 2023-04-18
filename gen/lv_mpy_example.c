@@ -6806,14 +6806,14 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_obj_get_style_flex_grow_mpobj, 2, mp
 
 /*
  * Function NOT generated:
- * Missing convertion from const lv_coord_t *
+ * Missing conversion from const lv_coord_t *
  * inline static const lv_coord_t *lv_obj_get_style_grid_row_dsc_array(const lv_obj_t *obj, uint32_t part)
  */
     
 
 /*
  * Function NOT generated:
- * Missing convertion from const lv_coord_t *
+ * Missing conversion from const lv_coord_t *
  * inline static const lv_coord_t *lv_obj_get_style_grid_column_dsc_array(const lv_obj_t *obj, uint32_t part)
  */
     
@@ -14503,7 +14503,7 @@ STATIC MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_animimg_set_repeat_count_mpobj, 2, m
 
 /*
  * Function NOT generated:
- * Missing convertion from const void **
+ * Missing conversion from const void **
  * const void **lv_animimg_get_src(lv_obj_t *img)
  */
     

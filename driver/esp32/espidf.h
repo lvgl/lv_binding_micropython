@@ -47,7 +47,7 @@ typedef void *intr_handle_t;
 #define _SOC_SPI_PERIPH_H_
 typedef void *spi_dev_t;
 
-// TODO: Check why lldesc_t causes inifinite recursion on gen_mpy.py
+// TODO: Check why lldesc_t causes infinite recursion on gen_mpy.py
 #define _ROM_LLDESC_H_
 typedef void *lldesc_t;
 
@@ -144,7 +144,7 @@ static inline void esp_http_client_register_event_handler(esp_http_client_config
 void task_delay_ms(int ms);
 
 // The binding only publishes structs that are used in some function. We need spi_transaction_ext_t
-// TOOD: Find some way to mark structs for binding export instead of new function.
+// TODO: Find some way to mark structs for binding export instead of new function.
 static inline void set_spi_transaction_ext(
         spi_transaction_ext_t *ext_trans,
         spi_transaction_t *trans,

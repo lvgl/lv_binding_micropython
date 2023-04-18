@@ -57,7 +57,7 @@ class driver:
             self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous, exception_sink=self.exception_sink)
 
         if self.orientation == ORIENT_PORTRAIT:
-            print ("Running the ili9341 lvgl version in portait mode")
+            print ("Running the ili9341 lvgl version in portrait mode")
 
             # Initialize ILI9341 display in prtrait mode
             # the following are the settings for the Lolin tft 2.4 display

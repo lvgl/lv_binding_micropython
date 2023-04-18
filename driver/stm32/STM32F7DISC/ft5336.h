@@ -462,7 +462,7 @@ void ft5336_TS_ClearIT (uint16_t DeviceAddr);
 void ft5336_TS_GetGestureID(uint16_t DeviceAddr, uint32_t * pGestureId);
 
 /**
- * @brief  Get the touch detailed informations on touch number 'touchIdx' (0..1)
+ * @brief  Get the touch detailed information on touch number 'touchIdx' (0..1)
  *         This touch detailed information contains :
  *         - weight that was applied to this touch
  *         - sub-area of the touch in the touch panel

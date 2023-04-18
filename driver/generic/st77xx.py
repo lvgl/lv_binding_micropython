@@ -180,7 +180,7 @@ class St77xx_hw(object):
         * *model*: display model, to account for variations in products
         * *rst*: optional reset pin
         * *res*: resolution tuple; (width,height) with zero rotation
-        * *rot*: display orientation (0: portrait, 1: landscape, 2: inverted protrait, 3: inverted landscape); the constants ST77XX_PORTRAIT, ST77XX_LANDSCAPE, ST77XX_INV_POTRAIT, ST77XX_INV_LANDSCAPE may be used.
+        * *rot*: display orientation (0: portrait, 1: landscape, 2: inverted portrait, 3: inverted landscape); the constants ST77XX_PORTRAIT, ST77XX_LANDSCAPE, ST77XX_INV_POTRAIT, ST77XX_INV_LANDSCAPE may be used.
         * *bgr*: color order if BGR (not RGB)
         * *rp2_dma*: optional DMA object for the rp2 port
 

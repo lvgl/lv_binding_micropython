@@ -66,7 +66,7 @@ class CustomWidgetClass():
         obj.add_flag(obj.FLAG.CLICKABLE)
         obj.add_flag(obj.FLAG.CHECKABLE)
         obj.add_flag(obj.FLAG.SCROLL_ON_FOCUS)
-        # print("Contructor called!")
+        # print("Constructor called!")
 
     def destructor(self, lv_cls, obj):
         pass
@@ -155,7 +155,7 @@ class CustomWidget():
             # Associates the LVGL object with CustomWidget wrapper
             self.lv_obj.set_user_data(self)
 
-            # Initalize the object
+            # Initialize the object
             self.lv_obj.class_init_obj()
 
 

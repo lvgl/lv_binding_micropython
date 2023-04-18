@@ -44,8 +44,8 @@ class Xpt2046_hw(object):
         *cs*: chip select (GPIO number or machine.Pin instance)
         *bits*: ADC precision, can be 12 or 8; note that 8 will require you to provide different *ranges*
         *ranges*: `(x_min,x_max),(y_min,y_max)` for raw coordinate readings; calibrated values might be provided.
-        *width*: width of the underyling screen in pixels, in natural (rot=0) orientation (0..*width* is the range for reported horizontal coordinate)
-        *height*: height of the underyling screen in pixels
+        *width*: width of the underlying screen in pixels, in natural (rot=0) orientation (0..*width* is the range for reported horizontal coordinate)
+        *height*: height of the underlying screen in pixels
         *rot*: screen rotation (0: portrait, 1: landscape, 2: inverted portrait, 3: inverted landscape); the constants XPT2046_PORTRAIT, XPT2046_LANDSCAPE, XPT2046_INV_PORTRAIT, XPT2046_INV_LANDSCAPE may be used.
         '''
         self.buf = bytearray(3)

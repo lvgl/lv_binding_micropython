@@ -33,7 +33,7 @@ touch = xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES)
 # In order to calibrate in landscape mode please use:
 # touch = xpt2046(cal_x0=0, cal_x1 = HRES, cal_y0=0, cal_y1 = VRES,transpose=False)
 
-# Point class, with both display and touch coordiantes
+# Point class, with both display and touch coordinates
 
 class Tpcal_point():
     def __init__(self, x, y, name):
