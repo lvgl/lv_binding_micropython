@@ -44,8 +44,8 @@ sigval_t = {
 
 sigevent_t = {
     "sigev_value": (0, sigval_t),
-    "sigev_signo": 8 | uctypes.INT32,
-    "sigev_notify": 12 | uctypes.INT32,
+    "sigev_signo": uctypes.sizeof(sigval_t) | uctypes.INT32,
+    "sigev_notify": (uctypes.sizeof(sigval_t) + 4) | uctypes.INT32,
 }
 
 timespec_t = {
