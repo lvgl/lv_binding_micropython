@@ -1026,6 +1026,9 @@ STATIC mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
     }
 }
 
+// Register LVGL root pointers
+MP_REGISTER_ROOT_POINTER(struct lvgl_root_pointers_t *lvgl_root_pointers);
+
 #else // LV_OBJ_T
 
 typedef struct mp_lv_obj_type_t {

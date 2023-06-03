@@ -318,7 +318,8 @@
 #define LV_ENABLE_GC 1
 #if LV_ENABLE_GC != 0
     #define LV_GC_INCLUDE "py/mpstate.h"                           /*Include Garbage Collector related things*/
-    #define LV_GC_ROOT(x) MP_STATE_PORT(x)
+    #define LV_GC_ROOT(x) MP_STATE_PORT(lvgl_root_pointers->x)
+    #define LV_GC_INIT() MP_STATE_VM(lvgl_root_pointers) =  m_new0(lvgl_root_pointers_t, 1)
 #endif /*LV_ENABLE_GC*/
 
 /*Default image cache size. Image caching keeps some images opened.
