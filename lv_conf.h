@@ -728,6 +728,26 @@
 /*1: Enable system monitor component*/
 #define LV_USE_SYSMON 1
 
+/*1: Enable the runtime performance profiler*/
+#define LV_USE_PROFILER 0
+#if LV_USE_PROFILER
+    /*1: Enable the built-in profiler*/
+    #define LV_USE_PROFILER_BUILTIN 1
+    #if LV_USE_PROFILER_BUILTIN
+        /*Default profiler trace buffer size*/
+        #define LV_PROFILER_BUILTIN_BUF_SIZE (16 * 1024)     /*[bytes]*/
+    #endif
+
+    /*Header to include for the profiler*/
+    #define LV_PROFILER_INCLUDE "lvgl/src/misc/lv_profiler_builtin.h"
+
+    /*Profiler start point function*/
+    #define LV_PROFILER_BEGIN   LV_PROFILER_BUILTIN_BEGIN
+
+    /*Profiler end point function*/
+    #define LV_PROFILER_END     LV_PROFILER_BUILTIN_END
+#endif
+
 /*1: Enable Monkey test*/
 #define LV_USE_MONKEY 0
 
@@ -795,6 +815,7 @@
     #define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
     #define LV_SDL_PARTIAL_MODE    0    /*Recommended only to emulate a setup with a display controller*/
     #define LV_SDL_FULLSCREEN      0
+    #define LV_SDL_DIRECT_EXIT     0    /*1: Exit the application when all SDL widows are closed*/
 #endif
 
 /*Driver for /dev/fb*/
@@ -808,6 +829,9 @@
 #if LV_USE_LINUX_FBDEV
     #define LV_LINUX_FBDEV_BSD  0
 #endif
+
+/*Driver for /dev/dri/card*/
+#define LV_USE_LINUX_DRM        0
 
 /*Interface for TFT_eSPI*/
 #define LV_USE_TFT_ESPI         0
