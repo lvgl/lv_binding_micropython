@@ -34,11 +34,12 @@ STATIC mp_int_t mp_ptr_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, m
 #define PTR_OBJ(ptr_global) ptr_global ## _obj
 
 #define DEFINE_PTR_OBJ_TYPE(ptr_obj_type, ptr_type_qstr)\
-STATIC const mp_obj_type_t ptr_obj_type = {\
-    { &mp_type_type },\
-    .name = ptr_type_qstr,\
-    .buffer_p = { .get_buffer = mp_ptr_get_buffer }\
-}
+STATIC MP_DEFINE_CONST_OBJ_TYPE(\
+    ptr_obj_type,\
+    ptr_type_qstr,\
+    MP_TYPE_FLAG_NONE,\
+    buffer, mp_ptr_get_buffer\
+);
 
 #define DEFINE_PTR_OBJ(ptr_global)\
 DEFINE_PTR_OBJ_TYPE(ptr_global ## _type, MP_QSTR_ ## ptr_global);\

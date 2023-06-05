@@ -710,14 +710,14 @@ if len(obj_names) > 0:
 #define LV_OBJ_T {obj_type}
 
 typedef struct mp_lv_obj_type_t {{
-    mp_obj_type_t mp_obj_type;
+    mp_obj_full_type_t mp_obj_type;
     const lv_obj_class_t *lv_obj_class;
 }} mp_lv_obj_type_t;
 
 STATIC const mp_lv_obj_type_t mp_lv_{base_obj}_type;
 STATIC const mp_lv_obj_type_t *mp_lv_obj_types[];
 
-STATIC inline const mp_obj_type_t *get_BaseObj_type()
+STATIC inline const mp_obj_full_type_t *get_BaseObj_type()
 {{
     return &mp_lv_{base_obj}_type.mp_obj_type;
 }}
@@ -744,6 +744,8 @@ print("""
 #define GENMPY_UNUSED
 #endif // __GNUC__
 #endif // GENMPY_UNUSED
+ 
+#define MP_DEFINE_CONST_OBJ_FULL_TYPE(...) MP_DEFINE_CONST_OBJ_TYPE_EXPAND(MP_DEFINE_CONST_OBJ_TYPE_NARGS(__VA_ARGS__, _INV, 12, _INV, 11, _INV, 10, _INV, 9, _INV, 8, _INV, 7, _INV, 6, _INV, 5, _INV, 4, _INV, 3, _INV, 2, _INV, 1, _INV, 0)(mp_obj_full_type_t, __VA_ARGS__))
 
 // Custom function mp object
 
@@ -759,23 +761,23 @@ typedef struct mp_lv_obj_fun_builtin_var_t {
 STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
 STATIC mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
 
-GENMPY_UNUSED STATIC const mp_obj_type_t mp_lv_type_fun_builtin_var = {
-    { &mp_type_type },
-    .flags = MP_TYPE_FLAG_BINDS_SELF | MP_TYPE_FLAG_BUILTIN_FUN,
-    .name = MP_QSTR_function,
-    .call = lv_fun_builtin_var_call,
-    .unary_op = mp_generic_unary_op,
-    .buffer_p = { .get_buffer = mp_func_get_buffer }
-};
+GENMPY_UNUSED STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lv_type_fun_builtin_var,
+    MP_QSTR_function,
+    MP_TYPE_FLAG_BINDS_SELF | MP_TYPE_FLAG_BUILTIN_FUN,
+    call, lv_fun_builtin_var_call,
+    unary_op, mp_generic_unary_op,
+    buffer, mp_func_get_buffer
+);
 
-GENMPY_UNUSED STATIC const mp_obj_type_t mp_lv_type_fun_builtin_static_var = {
-    { &mp_type_type },
-    .flags = MP_TYPE_FLAG_BUILTIN_FUN,
-    .name = MP_QSTR_function,
-    .call = lv_fun_builtin_var_call,
-    .unary_op = mp_generic_unary_op,
-    .buffer_p = { .get_buffer = mp_func_get_buffer }
-};
+GENMPY_UNUSED STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lv_type_fun_builtin_static_var,
+    MP_QSTR_function,
+    MP_TYPE_FLAG_BUILTIN_FUN,
+    call, lv_fun_builtin_var_call,
+    unary_op, mp_generic_unary_op,
+    buffer, mp_func_get_buffer
+);
 
 STATIC mp_obj_t lv_fun_builtin_var_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     assert(MP_OBJ_IS_TYPE(self_in, &mp_lv_type_fun_builtin_var) ||
@@ -829,11 +831,11 @@ STATIC mp_obj_t get_native_obj(mp_obj_t mp_obj)
     const mp_obj_type_t *native_type = ((mp_obj_base_t*)mp_obj)->type;
     if (native_type == NULL)
         return NULL;
-    if (native_type->parent == NULL ||
-        (native_type->buffer_p.get_buffer == mp_blob_get_buffer) ||
-        (native_type->buffer_p.get_buffer == mp_lv_obj_get_buffer))
+    if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(native_type, parent) == NULL ||
+        (MP_OBJ_TYPE_GET_SLOT_OR_NULL(native_type, buffer) == mp_blob_get_buffer) ||
+        (MP_OBJ_TYPE_GET_SLOT_OR_NULL(native_type, buffer) == mp_lv_obj_get_buffer))
        return mp_obj;
-    while (native_type->parent) native_type = native_type->parent;
+    while (MP_OBJ_TYPE_GET_SLOT_OR_NULL(native_type, parent)) native_type = MP_OBJ_TYPE_GET_SLOT(native_type, parent);
     return mp_obj_cast_to_native_base(mp_obj, MP_OBJ_FROM_PTR(native_type));
 }
 
@@ -848,7 +850,7 @@ STATIC mp_obj_t make_new_lv_struct(
 STATIC mp_obj_t cast(mp_obj_t mp_obj, const mp_obj_type_t *mp_type)
 {
     mp_obj_t res = NULL;
-    if (mp_obj == mp_const_none && mp_type->make_new == &make_new_lv_struct) {
+    if (mp_obj == mp_const_none && MP_OBJ_TYPE_GET_SLOT_OR_NULL(mp_type, make_new) == &make_new_lv_struct) {
         res = MP_OBJ_FROM_PTR(&mp_lv_null_obj);
     } else if (MP_OBJ_IS_OBJ(mp_obj)) {
         res = get_native_obj(mp_obj);
@@ -856,7 +858,7 @@ STATIC mp_obj_t cast(mp_obj_t mp_obj, const mp_obj_type_t *mp_type)
             const mp_obj_type_t *res_type = ((mp_obj_base_t*)res)->type;
             if (res_type != mp_type){
                 if (res_type == &mp_type_dict &&
-                    mp_type->make_new == &make_new_lv_struct)
+                    MP_OBJ_TYPE_GET_SLOT_OR_NULL(mp_type, make_new) == &make_new_lv_struct)
                         res = dict_to_struct(res, mp_type);
                 else res = NULL;
             }
@@ -883,7 +885,7 @@ STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_obj_t native_obj = get_native_obj(mp_obj);
-    if (mp_obj_get_type(native_obj)->buffer_p.get_buffer != mp_lv_obj_get_buffer)
+    if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(mp_obj_get_type(native_obj), buffer) != mp_lv_obj_get_buffer)
         return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(native_obj);
     if (mp_lv_obj->lv_obj == NULL) {
@@ -906,7 +908,7 @@ STATIC inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
     return mp_lv_obj->callbacks;
 }
 
-STATIC inline const mp_obj_type_t *get_BaseObj_type();
+STATIC inline const mp_obj_full_type_t *get_BaseObj_type();
 
 STATIC void mp_lv_delete_cb(lv_event_t * e)
 {
@@ -926,7 +928,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
     if (!self)
     {
         // Find the object type
-        const mp_obj_type_t *mp_obj_type = get_BaseObj_type();
+        const mp_obj_full_type_t *mp_obj_type = get_BaseObj_type();
         const lv_obj_class_t *lv_obj_class = lv_obj_get_class(lv_obj);
         const mp_lv_obj_type_t **iter = &mp_lv_obj_types[0];
         for (; *iter; iter++) {
@@ -939,7 +941,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         // Create the MP object
         self = m_new_obj(mp_lv_obj_t);
         *self = (mp_lv_obj_t){
-            .base = {mp_obj_type},
+            .base = {(const mp_obj_type_t *)mp_obj_type},
             .lv_obj = lv_obj,
             .callbacks = NULL,
         };
@@ -1028,6 +1030,7 @@ STATIC mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
 
 // Register LVGL root pointers
 MP_REGISTER_ROOT_POINTER(struct lvgl_root_pointers_t *lvgl_root_pointers);
+MP_REGISTER_ROOT_POINTER(void *mp_lv_user_data);
 
 #else // LV_OBJ_T
 
@@ -1069,7 +1072,7 @@ STATIC mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_obj_t native_obj = get_native_obj(mp_obj);
-    if ( (!MP_OBJ_IS_OBJ(native_obj)) || (mp_obj_get_type(native_obj)->make_new != &make_new_lv_struct) ) nlr_raise(
+    if ( (!MP_OBJ_IS_OBJ(native_obj)) || (MP_OBJ_TYPE_GET_SLOT_OR_NULL(mp_obj_get_type(native_obj), make_new) != &make_new_lv_struct) ) nlr_raise(
             mp_obj_new_exception_msg(
                 &mp_type_SyntaxError, MP_ERROR_TEXT("Expected Struct object!")));
     mp_lv_struct_t *mp_lv_struct = MP_OBJ_TO_PTR(native_obj);
@@ -1078,7 +1081,7 @@ STATIC mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 
 STATIC inline size_t get_lv_struct_size(const mp_obj_type_t *type)
 {
-    mp_obj_t size_obj = mp_obj_dict_get(type->locals_dict, MP_OBJ_NEW_QSTR(MP_QSTR___SIZE__));
+    mp_obj_t size_obj = mp_obj_dict_get(MP_OBJ_TYPE_GET_SLOT(type, locals_dict), MP_OBJ_NEW_QSTR(MP_QSTR___SIZE__));
     return (size_t)mp_obj_get_int(size_obj);
 }
 
@@ -1088,7 +1091,7 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t n_kw,
     const mp_obj_t *args)
 {
-    if ((!MP_OBJ_IS_TYPE(type, &mp_type_type)) || type->make_new != &make_new_lv_struct)
+    if ((!MP_OBJ_IS_TYPE(type, &mp_type_type)) || MP_OBJ_TYPE_GET_SLOT_OR_NULL(type, make_new) != &make_new_lv_struct)
         nlr_raise(
             mp_obj_new_exception_msg(
                 &mp_type_SyntaxError, MP_ERROR_TEXT("Argument is not a struct type!")));
@@ -1187,21 +1190,21 @@ STATIC mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
 STATIC void call_parent_methods(mp_obj_t obj, qstr attr, mp_obj_t *dest)
 {
     const mp_obj_type_t *type = mp_obj_get_type(obj);
-    while (type->locals_dict != NULL) {
+    while (MP_OBJ_TYPE_HAS_SLOT(type, locals_dict)) {
         // generic method lookup
         // this is a lookup in the object (ie not class or type)
-        assert(type->locals_dict->base.type == &mp_type_dict); // MicroPython restriction, for now
-        mp_map_t *locals_map = &type->locals_dict->map;
+        assert(MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->base.type == &mp_type_dict); // MicroPython restriction, for now
+        mp_map_t *locals_map = &MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->map;
         mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
         if (elem != NULL) {
             mp_convert_member_lookup(obj, type, elem->value, dest);
             break;
         }
-        if (type->parent == NULL) {
+        if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(type, parent) == NULL) {
             break;
         }
         // search parents
-        type = type->parent;
+        type = MP_OBJ_TYPE_GET_SLOT(type, parent);
     }
 }
 
@@ -1218,7 +1221,7 @@ STATIC mp_obj_t dict_to_struct(mp_obj_t dict, const mp_obj_type_t *type)
         mp_obj_t value = map->table[i].value;
         if (key != MP_OBJ_NULL) {
             mp_obj_t dest[] = {MP_OBJ_SENTINEL, value};
-            type->attr(mp_struct, mp_obj_str_get_qstr(key), dest);
+            MP_OBJ_TYPE_GET_SLOT(type, attr)(mp_struct, mp_obj_str_get_qstr(key), dest);
             if (dest[0]) nlr_raise(
                 mp_obj_new_exception_msg_varg(
                     &mp_type_SyntaxError, MP_ERROR_TEXT("Cannot set field %s on struct %s!"), qstr_str(mp_obj_str_get_qstr(key)), qstr_str(type->name)));
@@ -1318,15 +1321,15 @@ STATIC const mp_rom_map_elem_t mp_blob_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(mp_blob_locals_dict, mp_blob_locals_dict_table);
 
-STATIC const mp_obj_type_t mp_blob_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_Blob,
-    .binary_op = lv_struct_binary_op,
-    .print = mp_blob_print,
-    //.make_new = make_new_blob,
-    .locals_dict = (mp_obj_dict_t*)&mp_blob_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    mp_blob_type,
+    MP_QSTR_Blob,
+    MP_TYPE_FLAG_NONE,
+    binary_op, lv_struct_binary_op,
+    print, mp_blob_print,
+    locals_dict, &mp_blob_locals_dict,
+    buffer, mp_blob_get_buffer
+);
 
 STATIC const mp_lv_struct_t mp_lv_null_obj = { {&mp_blob_type}, NULL };
 
@@ -1536,25 +1539,27 @@ STATIC const mp_rom_map_elem_t mp_base_struct_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(mp_base_struct_locals_dict, mp_base_struct_locals_dict_table);
 
-STATIC const mp_obj_type_t mp_lv_base_struct_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_Struct,
-    .binary_op = lv_struct_binary_op,
-    .subscr = lv_struct_subscr,
-    .locals_dict = (mp_obj_dict_t*)&mp_base_struct_locals_dict,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer }
-};
+MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lv_base_struct_type,
+    MP_QSTR_Struct,
+    MP_TYPE_FLAG_NONE,
+    binary_op, lv_struct_binary_op,
+    subscr, lv_struct_subscr,
+    buffer, mp_blob_get_buffer,
+    locals_dict, &mp_base_struct_locals_dict
+);
 
-STATIC const mp_obj_type_t mp_lv_array_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_C_Array,
-    .print = mp_lv_array_print,
-    .make_new = NULL, // TODO: provide constructor
-    .binary_op = lv_struct_binary_op,
-    .subscr = lv_array_subscr,
-    .buffer_p = { .get_buffer = mp_blob_get_buffer },
-    .locals_dict = (mp_obj_dict_t*)&mp_base_struct_locals_dict,
-};
+// TODO: provide constructor
+MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lv_array_type,
+    MP_QSTR_C_Array,
+    MP_TYPE_FLAG_NONE,
+    print, mp_lv_array_print,
+    binary_op, lv_struct_binary_op,
+    subscr, lv_array_subscr,
+    buffer, mp_blob_get_buffer,
+    locals_dict, &mp_base_struct_locals_dict
+);
 
 GENMPY_UNUSED STATIC mp_obj_t mp_array_from_ptr(void *lv_arr, size_t element_size, bool is_signed)
 {
@@ -1937,18 +1942,19 @@ STATIC void mp_{sanitized_struct_name}_print(const mp_print_t *print,
 
 STATIC const mp_obj_dict_t mp_{sanitized_struct_name}_locals_dict;
 
-STATIC const mp_obj_type_t mp_{sanitized_struct_name}_type = {{
-    {{ &mp_type_type }},
-    .name = MP_QSTR_{sanitized_struct_name},
-    .print = mp_{sanitized_struct_name}_print,
-    .make_new = make_new_lv_struct,
-    .binary_op = lv_struct_binary_op,
-    .subscr = lv_struct_subscr,
-    .attr = mp_{sanitized_struct_name}_attr,
-    .locals_dict = (mp_obj_dict_t*)&mp_{sanitized_struct_name}_locals_dict,
-    .buffer_p = {{ .get_buffer = mp_blob_get_buffer }},
-    .parent = &mp_lv_base_struct_type
-}};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    mp_{sanitized_struct_name}_type,
+    MP_QSTR_{sanitized_struct_name},
+    MP_TYPE_FLAG_NONE,
+    print, mp_{sanitized_struct_name}_print,
+    make_new, make_new_lv_struct,
+    binary_op, lv_struct_binary_op,
+    subscr, lv_struct_subscr,
+    attr, mp_{sanitized_struct_name}_attr,
+    locals_dict, &mp_{sanitized_struct_name}_locals_dict,
+    buffer, mp_blob_get_buffer,
+    parent, &mp_lv_base_struct_type
+);
 
 STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type()
 {{
@@ -2578,7 +2584,7 @@ def gen_obj(obj_name):
         try:
             gen_mp_func(ctor_func, obj_name)
         except MissingConversionException as exp:
-            gen_func_error(cctor_func, exp)
+            gen_func_error(ctor_func, exp)
 
     # print([method.name for method in methods])
     ctor = """
@@ -2616,20 +2622,23 @@ STATIC void {obj}_print(const mp_print_t *print,
 
 {ctor}
 
+STATIC MP_DEFINE_CONST_OBJ_FULL_TYPE(
+    mp_lv_{obj}_type_base,
+    MP_QSTR_{obj},
+    MP_TYPE_FLAG_NONE,
+    print, {obj}_print,
+    {make_new}
+    {binary_op}
+    attr, call_parent_methods,
+    {buffer}
+    {parent}
+    locals_dict, &{obj}_locals_dict
+);
+
 STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
-    {{
-        {{ &mp_type_type }},
-        .name = MP_QSTR_{obj},
-        .print = {obj}_print,
-        {make_new}
-        {binary_op}
-        .attr = call_parent_methods,
-        .locals_dict = (mp_obj_dict_t*)&{obj}_locals_dict,
-        {buffer_p}
-        .parent = {parent}
-    }},
+    .mp_obj_type = mp_lv_{obj}_type_base,
 #ifdef LV_OBJ_T
-    {lv_class}
+    .lv_obj_class = {lv_class}
 #endif
 }};
     """.format(
@@ -2638,10 +2647,10 @@ STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
             base_class = '&mp_%s_type' % base_obj_name if should_add_base_methods else 'NULL',
             locals_dict_entries = ",\n    ".join(gen_obj_methods(obj_name)),
             ctor = ctor.format(obj = obj_name, ctor_name = ctor_func.name) if has_ctor(obj_name) else '',
-            make_new = '.make_new = %s_make_new,' % obj_name if is_obj else '',
-            binary_op = '.binary_op = mp_lv_obj_binary_op,' if is_obj else '',
-            buffer_p = '.buffer_p = { .get_buffer = mp_lv_obj_get_buffer },' if is_obj else '',
-            parent = '&mp_lv_%s_type.mp_obj_type' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else 'NULL',
+            make_new = 'make_new, %s_make_new,' % obj_name if is_obj else '',
+            binary_op = 'binary_op, mp_lv_obj_binary_op,' if is_obj else '',
+            buffer = 'buffer, mp_lv_obj_get_buffer,' if is_obj else '',
+            parent = 'parent, &mp_lv_%s_type.mp_obj_type,' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else '',
             lv_class = '&lv_%s_class' % obj_name if is_obj else 'NULL',
             ))
 
