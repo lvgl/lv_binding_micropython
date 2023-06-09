@@ -17,7 +17,7 @@ import sys
 
 libc = ffi.open("libc.so.6")
 try:
-    librt = ffi.open("librt.so")
+    librt = ffi.open("librt.so.1")
 except OSError as e:
     librt = libc
 
