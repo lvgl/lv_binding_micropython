@@ -710,14 +710,14 @@ if len(obj_names) > 0:
 #define LV_OBJ_T {obj_type}
 
 typedef struct mp_lv_obj_type_t {{
-    mp_obj_full_type_t mp_obj_type;
     const lv_obj_class_t *lv_obj_class;
+    mp_obj_type_t mp_obj_type;
 }} mp_lv_obj_type_t;
 
 STATIC const mp_lv_obj_type_t mp_lv_{base_obj}_type;
 STATIC const mp_lv_obj_type_t *mp_lv_obj_types[];
 
-STATIC inline const mp_obj_full_type_t *get_BaseObj_type()
+STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {{
     return &mp_lv_{base_obj}_type.mp_obj_type;
 }}
@@ -745,8 +745,6 @@ print("""
 #endif // __GNUC__
 #endif // GENMPY_UNUSED
  
-#define MP_DEFINE_CONST_OBJ_FULL_TYPE(...) MP_DEFINE_CONST_OBJ_TYPE_EXPAND(MP_DEFINE_CONST_OBJ_TYPE_NARGS(__VA_ARGS__, _INV, 12, _INV, 11, _INV, 10, _INV, 9, _INV, 8, _INV, 7, _INV, 6, _INV, 5, _INV, 4, _INV, 3, _INV, 2, _INV, 1, _INV, 0)(mp_obj_full_type_t, __VA_ARGS__))
-
 // Custom function mp object
 
 typedef mp_obj_t (*mp_fun_ptr_var_t)(size_t n, const mp_obj_t *, void *ptr);
@@ -908,7 +906,7 @@ STATIC inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
     return mp_lv_obj->callbacks;
 }
 
-STATIC inline const mp_obj_full_type_t *get_BaseObj_type();
+STATIC inline const mp_obj_type_t *get_BaseObj_type();
 
 STATIC void mp_lv_delete_cb(lv_event_t * e)
 {
@@ -928,7 +926,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
     if (!self)
     {
         // Find the object type
-        const mp_obj_full_type_t *mp_obj_type = get_BaseObj_type();
+        const mp_obj_type_t *mp_obj_type = get_BaseObj_type();
         const lv_obj_class_t *lv_obj_class = lv_obj_get_class(lv_obj);
         const mp_lv_obj_type_t **iter = &mp_lv_obj_types[0];
         for (; *iter; iter++) {
@@ -1539,7 +1537,7 @@ STATIC const mp_rom_map_elem_t mp_base_struct_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(mp_base_struct_locals_dict, mp_base_struct_locals_dict_table);
 
-MP_DEFINE_CONST_OBJ_TYPE(
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
     mp_lv_base_struct_type,
     MP_QSTR_Struct,
     MP_TYPE_FLAG_NONE,
@@ -1550,7 +1548,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
 );
 
 // TODO: provide constructor
-MP_DEFINE_CONST_OBJ_TYPE(
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
     mp_lv_array_type,
     MP_QSTR_C_Array,
     MP_TYPE_FLAG_NONE,
@@ -2622,7 +2620,7 @@ STATIC void {obj}_print(const mp_print_t *print,
 
 {ctor}
 
-STATIC MP_DEFINE_CONST_OBJ_FULL_TYPE(
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
     mp_lv_{obj}_type_base,
     MP_QSTR_{obj},
     MP_TYPE_FLAG_NONE,
@@ -2636,10 +2634,10 @@ STATIC MP_DEFINE_CONST_OBJ_FULL_TYPE(
 );
 
 STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
-    .mp_obj_type = mp_lv_{obj}_type_base,
 #ifdef LV_OBJ_T
-    .lv_obj_class = {lv_class}
+    .lv_obj_class = {lv_class},
 #endif
+    .mp_obj_type = mp_lv_{obj}_type_base,
 }};
     """.format(
             module_name = module_name,
