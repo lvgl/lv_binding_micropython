@@ -1,6 +1,6 @@
 #include "py/runtime.h"
 #include "py/mphal.h"
-#include "softtimer.h"
+#include "shared/runtime/softtimer.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include "../../../lvgl/lvgl.h"
