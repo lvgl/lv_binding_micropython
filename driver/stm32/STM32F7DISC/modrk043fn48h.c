@@ -20,6 +20,7 @@
 #define LCD_BL_CTRL_GPIO_CLK_ENABLE()   __HAL_RCC_GPIOK_CLK_ENABLE()
 #define LCD_BL_CTRL_GPIO_CLK_DISABLE()  __HAL_RCC_GPIOK_CLK_DISABLE()
 
+MP_REGISTER_ROOT_POINTER(void* rk043fn48h_fb[2]);
 
 LTDC_HandleTypeDef *hltdc = NULL;           // handle to LTDC, referenced in stm32_it.c
 DMA2D_HandleTypeDef *hdma2d = NULL;         // handle to DMA2D, referenced in stm32_it.c
