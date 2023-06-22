@@ -711,7 +711,7 @@ if len(obj_names) > 0:
 
 typedef struct mp_lv_obj_type_t {{
     const lv_obj_class_t *lv_obj_class;
-    mp_obj_type_t mp_obj_type;
+    const mp_obj_type_t *mp_obj_type;
 }} mp_lv_obj_type_t;
 
 STATIC const mp_lv_obj_type_t mp_lv_{base_obj}_type;
@@ -719,7 +719,7 @@ STATIC const mp_lv_obj_type_t *mp_lv_obj_types[];
 
 STATIC inline const mp_obj_type_t *get_BaseObj_type()
 {{
-    return &mp_lv_{base_obj}_type.mp_obj_type;
+    return mp_lv_{base_obj}_type.mp_obj_type;
 }}
 
 MP_DEFINE_EXCEPTION(LvReferenceError, Exception)
@@ -931,7 +931,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         const mp_lv_obj_type_t **iter = &mp_lv_obj_types[0];
         for (; *iter; iter++) {
             if ((*iter)->lv_obj_class == lv_obj_class) {
-                mp_obj_type = &(*iter)->mp_obj_type;
+                mp_obj_type = (*iter)->mp_obj_type;
                 break;
             }
         }
@@ -1033,7 +1033,7 @@ MP_REGISTER_ROOT_POINTER(void *mp_lv_user_data);
 #else // LV_OBJ_T
 
 typedef struct mp_lv_obj_type_t {
-    mp_obj_type_t mp_obj_type;
+    mp_obj_type_t *mp_obj_type;
 } mp_lv_obj_type_t;
 
 #endif
@@ -2555,7 +2555,7 @@ def gen_obj_methods(obj_name):
     obj_metadata[obj_name]['members'].update({get_enum_member_name(enum_member_name): {'type':'enum_member'} for enum_member_name in get_enum_members(obj_name)})
     # add enums that match object name
     obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
-    enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type.mp_obj_type) }}".
+    enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type_base) }}".
                     format(name=sanitize(method_name_from_func_name(enum_name)), enum=enum_name) for enum_name in obj_enums]
     obj_metadata[obj_name]['members'].update({method_name_from_func_name(enum_name): {'type':'enum_type'} for enum_name in obj_enums})
     for enum_name in obj_enums:
@@ -2633,11 +2633,11 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &{obj}_locals_dict
 );
 
-STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
+GENMPY_UNUSED STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
 #ifdef LV_OBJ_T
     .lv_obj_class = {lv_class},
 #endif
-    .mp_obj_type = mp_lv_{obj}_type_base,
+    .mp_obj_type = &mp_lv_{obj}_type_base,
 }};
     """.format(
             module_name = module_name,
@@ -2648,7 +2648,7 @@ STATIC const mp_lv_obj_type_t mp_lv_{obj}_type = {{
             make_new = 'make_new, %s_make_new,' % obj_name if is_obj else '',
             binary_op = 'binary_op, mp_lv_obj_binary_op,' if is_obj else '',
             buffer = 'buffer, mp_lv_obj_get_buffer,' if is_obj else '',
-            parent = 'parent, &mp_lv_%s_type.mp_obj_type,' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else '',
+            parent = 'parent, &mp_lv_%s_type_base,' % parent_obj_names[obj_name] if obj_name in parent_obj_names and parent_obj_names[obj_name] else '',
             lv_class = '&lv_%s_class' % obj_name if is_obj else 'NULL',
             ))
 
@@ -2888,11 +2888,11 @@ STATIC const mp_rom_map_elem_t {module_name}_globals_table[] = {{
 }};
 """.format(
         module_name = sanitize(module_name),
-        objects = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_lv_{obj}_type.mp_obj_type) }},\n    '.
+        objects = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{obj}), MP_ROM_PTR(&mp_lv_{obj}_type_base) }},\n    '.
             format(obj = sanitize(o)) for o in obj_names]),
         functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_mpobj) }},\n    '.
             format(name = sanitize(simplify_identifier(f.name)), func = f.name) for f in module_funcs]),
-        enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type.mp_obj_type) }},\n    '.
+        enums = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type_base) }},\n    '.
             format(name = sanitize(get_enum_name(enum_name)), enum=enum_name) for enum_name in enums.keys() if enum_name not in enum_referenced]),
         structs = ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{struct_name}_type) }},\n    '.
             format(name = sanitize(simplify_identifier(struct_name)), struct_name = sanitize(struct_name)) for struct_name in generated_structs \
