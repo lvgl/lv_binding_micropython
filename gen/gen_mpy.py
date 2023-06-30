@@ -1331,10 +1331,12 @@ STATIC inline mp_obj_t ptr_to_mp(void *data)
 
 STATIC mp_obj_t mp_lv_cast(mp_obj_t type_obj, mp_obj_t ptr_obj)
 {
+    void *ptr = mp_to_ptr(ptr_obj);
+    if (!ptr) return mp_const_none;
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
     *self = (mp_lv_struct_t){
         .base = {(const mp_obj_type_t*)type_obj}, 
-        .data = mp_to_ptr(ptr_obj)
+        .data = ptr
     };
     return MP_OBJ_FROM_PTR(self);
 }
