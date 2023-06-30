@@ -1079,8 +1079,13 @@ STATIC mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
 
 STATIC inline size_t get_lv_struct_size(const mp_obj_type_t *type)
 {
-    mp_obj_t size_obj = mp_obj_dict_get(MP_OBJ_TYPE_GET_SLOT(type, locals_dict), MP_OBJ_NEW_QSTR(MP_QSTR___SIZE__));
-    return (size_t)mp_obj_get_int(size_obj);
+    mp_obj_dict_t *self = MP_OBJ_TO_PTR(MP_OBJ_TYPE_GET_SLOT(type, locals_dict));
+    mp_map_elem_t *elem = mp_map_lookup(&self->map, MP_OBJ_NEW_QSTR(MP_QSTR___SIZE__), MP_MAP_LOOKUP);
+    if (elem == NULL) {
+        return 0;
+    } else {
+        return (size_t)mp_obj_get_int(elem->value);
+    }
 }
 
 STATIC mp_obj_t make_new_lv_struct(
@@ -1100,7 +1105,7 @@ STATIC mp_obj_t make_new_lv_struct(
     size_t count = (n_args > 0) && (mp_obj_is_int(args[0]))? mp_obj_get_int(args[0]): 1;
     *self = (mp_lv_struct_t){
         .base = {type},
-        .data = (other && other->data == NULL)? NULL: m_malloc(size * count)
+        .data = (size == 0 || (other && other->data == NULL))? NULL: m_malloc(size * count)
     };
     if (self->data) {
         if (other) {
@@ -1141,6 +1146,7 @@ STATIC mp_obj_t lv_struct_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t valu
 
     const mp_obj_type_t *type = mp_obj_get_type(self_in);
     size_t element_size = get_lv_struct_size(type);
+    if (element_size == 0) return mp_const_none;
     size_t element_index = mp_obj_get_int(index);
     void *element_addr = (byte*)self->data + element_size*element_index;
 
@@ -1378,6 +1384,7 @@ STATIC mp_obj_t mp_lv_dereference(size_t argc, const mp_obj_t *argv)
     } else {
         size = (size_t)mp_obj_get_int(size_in);
     }
+    if (size == 0) return mp_const_none;
     mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE,
         size, self->data));
     view->typecode |= 0x80; // used to indicate writable buffer
