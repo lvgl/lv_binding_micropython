@@ -84,8 +84,8 @@ class CustomWidgetClass():
 
         if code == lv.EVENT.DRAW_MAIN:
             # Draw the widget
-            draw_ctx = e.get_draw_ctx()
-            self.draw(obj, draw_ctx)
+            layer = e.get_layer()
+            self.draw(obj, layer)
         elif code in [
                 lv.EVENT.STYLE_CHANGED,
                 lv.EVENT.VALUE_CHANGED,
@@ -99,11 +99,10 @@ class CustomWidgetClass():
         area = lv.area_t()
         obj.get_content_coords(area)
 
-        obj.draw_desc = lv.draw_rect_dsc_t()
+        obj.draw_desc = lv.draw_triangle_dsc_t()
         obj.draw_desc.init()
         obj.draw_desc.bg_opa = lv.OPA.COVER
         obj.draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
-        
         obj.points = [
             {'x':area.x1 + area.get_width()//2,
              'y':area.y2 if obj.get_state() & lv.STATE.CHECKED else area.y1},
@@ -112,16 +111,19 @@ class CustomWidgetClass():
             {'x':area.x1,
              'y':area.y1 + area.get_height()//2},
         ]
+        obj.draw_desc.p[0] = obj.points[0]
+        obj.draw_desc.p[1] = obj.points[1]
+        obj.draw_desc.p[2] = obj.points[2]
 
         obj.valid = True
 
-    def draw(self, obj, draw_ctx):
+    def draw(self, obj, layer):
         # If object invalidated, recalculate its parameters
         if not obj.valid:
             self.calc(obj)
 
         # Draw the custom widget
-        draw_ctx.polygon(obj.draw_desc, obj.points, len(obj.points))
+        lv.draw_triangle(layer, obj.draw_desc)
 
 ##############################################################################
 # A Python class to wrap the LVGL custom widget

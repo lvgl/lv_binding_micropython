@@ -141,7 +141,7 @@ class ili9XXX:
         self.half_duplex = half_duplex
         self.display_type = display_type
 
-        self.buf_size = (self.width * self.height * lv.color_t.__SIZE__) // factor
+        self.buf_size = (self.width * self.height * lv.COLOR_DEPTH // 8) // factor
 
         if invert:
             self.init_cmds.append({'cmd': 0x21})
