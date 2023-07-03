@@ -13,8 +13,8 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_task.h"
-#include "lvgl/src/core/lv_indev.h"
-#include "lvgl/src/core/lv_disp.h"
+#include "lvgl/src/indev/lv_indev.h"
+#include "lvgl/src/disp/lv_disp.h"
 
 #include "esp_log.h"
 #include "soc/adc_channel.h"
