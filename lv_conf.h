@@ -611,7 +611,7 @@
 #endif
 
 /* Built-in TTF decoder */
-#ifndef MICROPY_TINY_TTF
+#ifndef LV_USE_TINY_TTF
 #define LV_USE_TINY_TTF 1
 #endif
 
