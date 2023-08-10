@@ -1027,8 +1027,18 @@ STATIC mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
 }
 
 // Register LVGL root pointers
-MP_REGISTER_ROOT_POINTER(struct lvgl_root_pointers_t *lvgl_root_pointers);
+MP_REGISTER_ROOT_POINTER(void *mp_lv_roots);
 MP_REGISTER_ROOT_POINTER(void *mp_lv_user_data);
+
+void mp_lv_init_gc()
+{
+    MP_STATE_VM(mp_lv_roots) = m_new0(lv_global_t, 1);
+}
+
+lv_global_t *lv_global_default()
+{
+    return MP_STATE_VM(mp_lv_roots);
+}
 
 #else // LV_OBJ_T
 

@@ -140,7 +140,6 @@
     #define LV_OS_CUSTOM_INCLUDE <stdint.h>
 #endif
 
-
 /*=======================
  * FEATURE CONFIGURATION
  *=======================*/
@@ -246,12 +245,16 @@
 
 /*Garbage Collector settings
  *Used if lvgl is bound to higher level language and the memory is managed by that language*/
-#define LV_ENABLE_GC 1
-#if LV_ENABLE_GC != 0 
-    #define LV_GC_INCLUDE "lib/lv_bindings/include/lv_mp_root_pointers.h"   /*Include Garbage Collector related things*/
-    #define LV_GC_ROOT(x) MP_STATE_VM(lvgl_root_pointers->x)
-    #define LV_GC_INIT() MP_STATE_VM(lvgl_root_pointers) =  m_new0(lvgl_root_pointers_t, 1)
+#define LV_ENABLE_GC 0
+#if LV_ENABLE_GC != 0
+    #define LV_GC_INCLUDE "gc.h"                           /*Include Garbage Collector related things*/
 #endif /*LV_ENABLE_GC*/
+
+extern void mp_lv_init_gc();
+#define LV_GC_INIT() mp_lv_init_gc()
+
+/*For custom `lv_global_default()` implementation set to 1*/
+#define LV_GLOBAL_CUSTOM 1
 
 /*Default image cache size. Image caching keeps some images opened.
  *If only the built-in image formats are used there is no real advantage of caching.
@@ -738,11 +741,17 @@
 
 /*Driver for /dev/fb*/
 #ifdef MICROPY_FB
+#define LV_USE_LINUX_FBDEV      1
+#else
 #define LV_USE_LINUX_FBDEV      0
 #endif
 
 #if LV_USE_LINUX_FBDEV
-    #define LV_LINUX_FBDEV_BSD  0
+    #define LV_LINUX_FBDEV_BSD           0
+    #define LV_LINUX_FBDEV_NUTTX         0
+    #define LV_LINUX_FBDEV_RENDER_MODE   LV_DISP_RENDER_MODE_PARTIAL
+    #define LV_LINUX_FBDEV_BUFFER_COUNT  0
+    #define LV_LINUX_FBDEV_BUFFER_SIZE   60
 #endif
 
 /*Driver for /dev/dri/card*/
@@ -750,6 +759,9 @@
 
 /*Interface for TFT_eSPI*/
 #define LV_USE_TFT_ESPI         0
+
+/*Driver for /dev/input*/
+#define LV_USE_NUTTX_TOUCHSCREEN    0
 
 /*==================
 * EXAMPLES
@@ -792,18 +804,18 @@
 #endif
 
 /*Flex layout demo*/
-#define LV_USE_DEMO_FLEX_LAYOUT 0
+#define LV_USE_DEMO_FLEX_LAYOUT     0
 
 /*Smart-phone like multi-language demo*/
-#define LV_USE_DEMO_MULTILANG 0
+#define LV_USE_DEMO_MULTILANG       0
 
 /*Widget transformation demo*/
 #define LV_USE_DEMO_TRANSFORM       0
 
+/*Demonstrate scroll settings*/
+#define LV_USE_DEMO_SCROLL          0
 /*--END OF LV_CONF_H--*/
 
 #endif /*LV_CONF_H*/
 
 #endif /*End of "Content enable"*/
-
-
