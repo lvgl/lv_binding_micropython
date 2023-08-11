@@ -245,16 +245,13 @@
 
 /*Garbage Collector settings
  *Used if lvgl is bound to higher level language and the memory is managed by that language*/
-#define LV_ENABLE_GC 0
-#if LV_ENABLE_GC != 0
-    #define LV_GC_INCLUDE "gc.h"                           /*Include Garbage Collector related things*/
-#endif /*LV_ENABLE_GC*/
 
 extern void mp_lv_init_gc();
 #define LV_GC_INIT() mp_lv_init_gc()
 
-/*For custom `lv_global_default()` implementation set to 1*/
-#define LV_GLOBAL_CUSTOM 1
+/*For custom `lv_global` support by `lv_global_default()`*/
+extern void *mp_lv_roots;
+#define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)
 
 /*Default image cache size. Image caching keeps some images opened.
  *If only the built-in image formats are used there is no real advantage of caching.
