@@ -83,7 +83,7 @@ ta.set_text("")
 kb.set_textarea(ta)
 
 # Create a Spinner object
-spin = lv.spinner(scr2, 1000, 100)
+spin = lv.spinner(scr2) # , 1000, 100)
 spin.set_size(100, 100)
 spin.align(lv.ALIGN.CENTER, 0, 0)
 # spin.set_type(lv.spinner.TYPE.FILLSPIN_ARC)

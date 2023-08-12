@@ -249,9 +249,13 @@
 extern void mp_lv_init_gc();
 #define LV_GC_INIT() mp_lv_init_gc()
 
-/*For custom `lv_global` support by `lv_global_default()`*/
-extern void *mp_lv_roots;
-#define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)
+#define LV_ENABLE_GLOBAL_CUSTOM 1
+#if LV_ENABLE_GLOBAL_CUSTOM
+    /*Header to include for the custom 'lv_global' function"*/
+    // #define LV_GLOBAL_CUSTOM_INCLUDE
+    extern void *mp_lv_roots;
+   #define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)
+#endif
 
 /*Default image cache size. Image caching keeps some images opened.
  *If only the built-in image formats are used there is no real advantage of caching.

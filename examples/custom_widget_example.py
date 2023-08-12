@@ -132,8 +132,8 @@ class CustomWidgetClass():
 class CustomWidget():
 
     # An instance of a widget-class to be used for creating custom widgets
-    d = lv.disp_get_default()
-    dpi = d.get_dpi()
+    # d = lv.disp_get_default()
+    dpi = 130 # d.get_dpi()
     cls = CustomWidgetClass(dpi, dpi)
 
     @staticmethod
@@ -184,7 +184,7 @@ class CustomTheme(lv.theme_t):
             self.set_bg_color(lv.palette_main(lv.PALETTE.GREY))
 
             # Child elements are centered
-            self.set_layout(lv.LAYOUT_FLEX.value)
+            self.set_layout(lv.LAYOUT.FLEX)
             self.set_flex_main_place(lv.FLEX_ALIGN.CENTER)
             self.set_flex_cross_place(lv.FLEX_ALIGN.CENTER)
             self.set_flex_track_place(lv.FLEX_ALIGN.CENTER)
