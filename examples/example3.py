@@ -37,14 +37,14 @@ slider = lv.slider(scr2)
 slider.set_width(150)
 slider.align(lv.ALIGN.TOP_MID, 0, 15)
 
-btn1 = lv.btn(scr1)
-btn1.align(lv.ALIGN.TOP_RIGHT, -5, 5)
-label = lv.label(btn1)
+button1 = lv.button(scr1)
+button1.align(lv.ALIGN.TOP_RIGHT, -5, 5)
+label = lv.label(button1)
 label.set_text(">")
 
-btn2 = lv.btn(scr2)
-btn2.align(lv.ALIGN.TOP_LEFT, 5, 5)
-label2 = lv.label(btn2)
+button2 = lv.button(scr2)
+button2.align(lv.ALIGN.TOP_LEFT, 5, 5)
+label2 = lv.label(button2)
 label2.set_text("<")
 
 led1 = lv.led(scr2)
@@ -57,16 +57,16 @@ led1.set_size(20,20)
 def slider_event_cb(event):
     led1.set_brightness(slider.get_value() * 2)
 
-def btn1_event_cb(event):
+def button1_event_cb(event):
     lv.scr_load(scr2)
 
 
-def btn2_event_cb(event):
+def button2_event_cb(event):
     lv.scr_load(scr1)
 
 slider.add_event(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
-btn1.add_event(btn1_event_cb, lv.EVENT.CLICKED, None)
-btn2.add_event(btn2_event_cb, lv.EVENT.CLICKED, None)
+button1.add_event(button1_event_cb, lv.EVENT.CLICKED, None)
+button2.add_event(button2_event_cb, lv.EVENT.CLICKED, None)
 
 # Create a keyboard
 kb = lv.keyboard(scr1)

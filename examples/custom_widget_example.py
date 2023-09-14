@@ -235,8 +235,8 @@ scr.set_flex_flow(lv.FLEX_FLOW.COLUMN)
 scr.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
 
 # Add a button with a label
-btn = lv.btn(scr)
-l1 = lv.label(btn)
+button = lv.button(scr)
+l1 = lv.label(button)
 l1.set_text("Hello!")
 
 # Add a custom widget with a label
@@ -248,6 +248,6 @@ l2.set_text("Click me!")
 def event_cb(e):
     print("%s Clicked!" % repr(e.get_target_obj()))
 
-for widget in [btn, customWidget]:
+for widget in [button, customWidget]:
     widget.add_event(event_cb, lv.EVENT.CLICKED, None)
 

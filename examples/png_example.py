@@ -1,7 +1,7 @@
 ##############################################################################
 #
 # Example of the PNG image decoder Usage.
-# For dragging to work reasonable, make sure LV_IMG_CACHE_DEF_SIZE is not 0!
+# For dragging to work reasonable, make sure LV_image_CACHE_DEF_SIZE is not 0!
 #
 ##############################################################################
 
@@ -17,7 +17,7 @@ lv.init()
 driver = display_driver_utils.driver()
 
 scr = lv.scr_act()
-lv.img.cache_set_size(2)
+lv.image.cache_set_size(2)
 try:
     script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
 except NameError: 
@@ -28,22 +28,22 @@ except NameError:
 with open('%s/png_decoder_test.png' % script_path, 'rb') as f:
   png_data = f.read()
 
-png_img_dsc = lv.img_dsc_t({
+png_image_dsc = lv.image_dsc_t({
     'data_size': len(png_data),
     'data': png_data 
 })
 
 # Create an image using the decoder
 
-img1 = lv.img(scr)
-img1.set_src(png_img_dsc)
-img1.set_pos(100,50)
+image1 = lv.image(scr)
+image1.set_src(png_image_dsc)
+image1.set_pos(100,50)
 
 # Create an image from a symbol
 
-img2 = lv.img(scr)
-img2.set_src(lv.SYMBOL.OK + " Accept")
-img2.set_pos(100,200)
+image2 = lv.image(scr)
+image2.set_src(lv.SYMBOL.OK + " Accept")
+image2.set_pos(100,200)
 
 # Drag handler
 
@@ -58,8 +58,8 @@ def drag_event_handler(e):
 
 # Register drag handler for images
 
-for img in [img1, img2]:
-    img.add_flag(img.FLAG.CLICKABLE)
-    img.add_event(drag_event_handler, lv.EVENT.PRESSING, None)
+for image in [image1, image2]:
+    image.add_flag(image.FLAG.CLICKABLE)
+    image.add_event(drag_event_handler, lv.EVENT.PRESSING, None)
 
 

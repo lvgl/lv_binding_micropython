@@ -87,7 +87,7 @@ class AdvancedDemoTheme(lv.theme_t):
         lv.disp_get_default().set_theme(self)
     
     def apply(self, theme, obj):
-        if obj.get_class() == lv.btn_class:
+        if obj.get_class() == lv.button_class:
             obj.add_style(self.button_style, lv.PART.MAIN)
             obj.add_style(self.button_pressed_style, lv.PART.MAIN | lv.STATE.PRESSED)
 
@@ -110,7 +110,7 @@ def get_member_name(obj, value):
             return member
 
 
-class SymbolButton(lv.btn):
+class SymbolButton(lv.button):
     def __init__(self, parent, symbol, text):
         super().__init__(parent)
         self.symbol = lv.label(self)
@@ -125,29 +125,29 @@ class Page_Buttons:
     def __init__(self, app, page):
         self.app = app
         self.page = page
-        self.btn_event_count = {'Play': 0, 'Pause': 0}
+        self.button_event_count = {'Play': 0, 'Pause': 0}
 
         self.page.set_flex_flow(lv.FLEX_FLOW.ROW)
         self.page.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.START)
 
-        self.btn1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
-        self.btn1.set_size(80, 80)
+        self.button1 = SymbolButton(page, lv.SYMBOL.PLAY, "Play")
+        self.button1.set_size(80, 80)
 
-        self.btn2 = SymbolButton(page, lv.SYMBOL.PAUSE, "Pause")
-        self.btn2.set_size(80, 80)
+        self.button2 = SymbolButton(page, lv.SYMBOL.PAUSE, "Pause")
+        self.button2.set_size(80, 80)
 
         self.label = lv.label(page)
         self.label.add_flag(lv.obj.FLAG.IGNORE_LAYOUT)
         self.label.align(lv.ALIGN.BOTTOM_LEFT, 0, 0)
 
         def button_cb(event, name):
-            self.btn_event_count[name] += 1
+            self.button_event_count[name] += 1
             event_name = get_member_name(lv.EVENT, event.code)
             if all((not event_name.startswith(s)) for s in ['DRAW', 'GET', 'STYLE', 'REFR']):
-                self.label.set_text('[%d] %s %s' % (self.btn_event_count[name], name, event_name))
+                self.label.set_text('[%d] %s %s' % (self.button_event_count[name], name, event_name))
 
-        for btn, name in [(self.btn1, 'Play'), (self.btn2, 'Pause')]:
-            btn.add_event(lambda event, btn_name=name: button_cb(event, btn_name), lv.EVENT.ALL, None)
+        for button, name in [(self.button1, 'Play'), (self.button2, 'Pause')]:
+            button.add_event(lambda event, button_name=name: button_cb(event, button_name), lv.EVENT.ALL, None)
 
 
 class Page_Simple:
@@ -179,12 +179,12 @@ class Page_Simple:
         self.style_selector.add_event(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
 
         # counter button
-        self.counter_btn = lv.btn(page)
-        self.counter_btn.set_size(80,80)
-        self.counter_label = lv.label(self.counter_btn)
+        self.counter_button = lv.button(page)
+        self.counter_button.set_size(80,80)
+        self.counter_label = lv.label(self.counter_button)
         self.counter_label.set_text("Count")
         self.counter_label.align(lv.ALIGN.CENTER, 0, 0)
-        self.counter_btn.add_event(self.on_counter_btn, lv.EVENT.CLICKED, None)
+        self.counter_button.add_event(self.on_counter_button, lv.EVENT.CLICKED, None)
         self.counter = 0
 
     def on_slider_changed(self, event):
@@ -197,7 +197,7 @@ class Page_Simple:
         self.selected_style = self.styles[selected][1]
         tabview.add_style(self.selected_style, lv.PART.MAIN)
 
-    def on_counter_btn(self, event):
+    def on_counter_button(self, event):
         self.counter += 1
         self.counter_label.set_text(str(self.counter))
 
