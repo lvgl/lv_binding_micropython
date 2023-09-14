@@ -154,11 +154,11 @@ STATIC void mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t
     if (ts_state.touchDetected) {
         data->point.x = lastX = ts_state.touchX[0];
         data->point.y = lastY = ts_state.touchY[0];
-        data->state = LV_INDEV_STATE_PR;
+        data->state = LV_INDEV_STATE_PRESSED;
     } else {
         data->point.x = lastX;
         data->point.y = lastY;
-        data->state = LV_INDEV_STATE_REL;
+        data->state = LV_INDEV_STATE_RELEASED;
     }
 }
 
