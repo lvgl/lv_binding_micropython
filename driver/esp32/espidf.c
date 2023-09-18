@@ -159,7 +159,7 @@ static void ili9xxx_send_data_dma(void *disp_drv, void *data, size_t size, int d
 void ili9xxx_post_cb_isr(spi_transaction_t *trans)
 {
     if (trans->user)
-        lv_disp_flush_ready(trans->user);
+        lv_display_flush_ready(trans->user);
 }
 
 
@@ -177,13 +177,13 @@ typedef struct {
 
 void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
-    lv_disp_t *disp_drv = _disp_drv;
+    lv_display_t *disp_drv = _disp_drv;
     const lv_area_t *area = _area;
     lv_color_t *color_p = _color_p;
     int start_x = 0;
     int start_y = 0;
 
-    void *driver_data = lv_disp_get_driver_data(disp_drv);
+    void *driver_data = lv_display_get_driver_data(disp_drv);
 
     // We use disp_drv->driver_data to pass data from MP to C
     // The following lines extract dc and spi
