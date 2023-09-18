@@ -25,7 +25,7 @@ class xpt2046:
         if not lv.is_initialized():
             lv.init()
 
-        disp = lv.disp_t()
+        disp = lv.display_t()
         self.screen_width = disp.get_hor_res()
         self.screen_height = disp.get_ver_res()
         self.miso = miso

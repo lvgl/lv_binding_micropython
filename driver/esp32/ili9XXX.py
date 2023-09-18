@@ -159,9 +159,9 @@ class ili9XXX:
             raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
 
         self.disp_spi_init()
-        self.disp_drv = lv.disp_create(self.width, self.height)
+        self.disp_drv = lv.display_create(self.width, self.height)
         self.disp_drv.set_flush_cb(esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush)
-        self.disp_drv.set_draw_buffers(self.buf1, self.buf2, self.buf_size, lv.DISP_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_draw_buffers(self.buf1, self.buf2, self.buf_size, lv.DISPLAY_RENDER_MODE.PARTIAL)
 
         self.disp_drv.set_driver_data({
             'dc': self.dc,

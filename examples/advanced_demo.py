@@ -84,7 +84,7 @@ class AdvancedDemoTheme(lv.theme_t):
         self.set_apply_cb(self.apply)
 
         # Activate this theme on default display
-        lv.disp_get_default().set_theme(self)
+        lv.display_get_default().set_theme(self)
     
     def apply(self, theme, obj):
         if obj.get_class() == lv.button_class:
@@ -356,11 +356,11 @@ class AdvancedDemoApplication:
         # Register display driver
         self.event_loop = event_loop()
         lcd.init(w=hres, h=vres)
-        self.disp_drv = lv.disp_create(hres, vres)
+        self.disp_drv = lv.display_create(hres, vres)
         self.disp_drv.set_flush_cb(lcd.flush)
         buf1_1 = bytearray(hres * 50 * lv.color_t.__SIZE__)
         buf1_2 = bytearray(hres * 50 * lv.color_t.__SIZE__)
-        self.disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISP_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISPLAY_RENDER_MODE.PARTIAL)
 
         # Register touch sensor
         self.indev_drv = lv.indev_create()

@@ -74,7 +74,7 @@ class CustomWidgetClass():
     def event_cb(self, lv_cls, e):
         # Call the ancestor's event handler
         res = lv_cls.event_base(e)
-        if res != lv.RES.OK:
+        if res != lv.RESULT.OK:
             return
 
         code = e.get_code()
@@ -213,7 +213,7 @@ class CustomTheme(lv.theme_t):
         self.set_apply_cb(self.apply)
 
         # Activate this theme on the default display
-        lv.disp_get_default().set_theme(self)
+        lv.display_get_default().set_theme(self)
     
     def apply(self, theme, obj):
         # Apply this theme on CustomWidget class
