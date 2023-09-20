@@ -573,15 +573,20 @@ extern void mp_lv_init_gc();
     #define LV_FS_FATFS_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
 
+#define LV_USE_FS_MEMFS 1
+#if LV_USE_FS_MEMFS
+    #define LV_FS_MEMFS_LETTER 'M'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+#endif
+
 /*PNG decoder library*/
-#define LV_USE_PNG 1
+#define LV_USE_LODEPNG 1
 
 /*BMP decoder library*/
 #define LV_USE_BMP 0
 
 /* JPG + split JPG decoder library.
  * Split JPG is a custom format optimized for embedded systems. */
-#define LV_USE_SJPG 1
+#define LV_USE_TJPGD 1
 
 /*GIF decoder library*/
 #define LV_USE_GIF 1
