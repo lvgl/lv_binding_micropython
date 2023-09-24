@@ -77,12 +77,12 @@ class MsgBox(lv.win):
         self.set_pos(x, y)
 
     def __init__(self, parent):
-        super().__init__(parent, 20)
+        super().__init__(parent)
         self.vect = lv.point_t()
 
         self.set_size(100,80)
         self.add_title("Pop")
-        msg_box_close_btn = self.add_btn(lv.SYMBOL.CLOSE, 20)
+        msg_box_close_btn = self.add_button(lv.SYMBOL.CLOSE, 20)
         msg_box_close_btn.add_event(lambda e: self.close_msg_box(), lv.EVENT.RELEASED, None)
 
         header = self.get_header()
@@ -159,7 +159,7 @@ async def btn_event_task(obj=None, event=-1):
 ##################################################################################################
 
 scr = lv.scr_act()
-btn = lv.btn(scr)
+btn = lv.button(scr)
 btn.align(lv.ALIGN.TOP_MID, 0, 10)
 btn.add_event(lambda e: create_task(btn_event_task()), lv.EVENT.CLICKED, None)
 label = lv.label(btn)

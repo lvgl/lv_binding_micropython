@@ -84,10 +84,10 @@ class AdvancedDemoTheme(lv.theme_t):
         self.set_apply_cb(self.apply)
 
         # Activate this theme on default display
-        lv.disp_get_default().set_theme(self)
+        lv.display_get_default().set_theme(self)
     
     def apply(self, theme, obj):
-        if obj.get_class() == lv.btn_class:
+        if obj.get_class() == lv.button_class:
             obj.add_style(self.button_style, lv.PART.MAIN)
             obj.add_style(self.button_pressed_style, lv.PART.MAIN | lv.STATE.PRESSED)
 
@@ -110,7 +110,7 @@ def get_member_name(obj, value):
             return member
 
 
-class SymbolButton(lv.btn):
+class SymbolButton(lv.button):
     def __init__(self, parent, symbol, text):
         super().__init__(parent)
         self.symbol = lv.label(self)
@@ -179,7 +179,7 @@ class Page_Simple:
         self.style_selector.add_event(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
 
         # counter button
-        self.counter_btn = lv.btn(page)
+        self.counter_btn = lv.button(page)
         self.counter_btn.set_size(80,80)
         self.counter_label = lv.label(self.counter_btn)
         self.counter_label.set_text("Count")

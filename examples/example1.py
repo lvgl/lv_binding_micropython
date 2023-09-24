@@ -92,9 +92,9 @@ img_data = b'!fN\xff#WM\xff\x1aC8\xff\x1dbG\xff/\x80a\xff3v^\xff+]O\xff%MF\xff\x
 # Create a screen with a draggable image
 
 scr = lv.obj()
-img = lv.img(scr)
+img = lv.image(scr)
 img.align(lv.ALIGN.CENTER, 0, 0)
-img_dsc = lv.img_dsc_t(
+img_dsc = lv.image_dsc_t(
     {
         "header": {"always_zero": 0, "w": 100, "h": 75, "cf": lv.COLOR_FORMAT.NATIVE},
         "data_size": len(img_data),

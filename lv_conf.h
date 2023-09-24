@@ -653,7 +653,7 @@ extern void mp_lv_init_gc();
 #ifdef MICROPY_RLOTTIE
     #define LV_USE_RLOTTIE 1
 #else
-#define LV_USE_RLOTTIE 0
+    #define LV_USE_RLOTTIE 0
 #endif
 
 /*FFmpeg library for image decoding and playing videos

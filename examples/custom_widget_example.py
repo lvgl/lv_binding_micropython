@@ -74,7 +74,7 @@ class CustomWidgetClass():
     def event_cb(self, lv_cls, e):
         # Call the ancestor's event handler
         res = lv_cls.event_base(e)
-        if res != lv.RES.OK:
+        if res != lv.RESULT.OK:
             return
 
         code = e.get_code()
@@ -130,7 +130,7 @@ class CustomWidgetClass():
 class CustomWidget():
 
     # An instance of a widget-class to be used for creating custom widgets
-    d = lv.disp_get_default()
+    d = lv.display_get_default()
     dpi = d.get_dpi()
     cls = CustomWidgetClass(dpi, dpi)
 
@@ -182,7 +182,7 @@ class CustomTheme(lv.theme_t):
             self.set_bg_color(lv.palette_main(lv.PALETTE.GREY))
 
             # Child elements are centered
-            self.set_layout(lv.LAYOUT_FLEX.value)
+            self.set_layout(lv.LAYOUT.FLEX)
             self.set_flex_main_place(lv.FLEX_ALIGN.CENTER)
             self.set_flex_cross_place(lv.FLEX_ALIGN.CENTER)
             self.set_flex_track_place(lv.FLEX_ALIGN.CENTER)
@@ -211,7 +211,7 @@ class CustomTheme(lv.theme_t):
         self.set_apply_cb(self.apply)
 
         # Activate this theme on the default display
-        lv.disp_get_default().set_theme(self)
+        lv.display_get_default().set_theme(self)
     
     def apply(self, theme, obj):
         # Apply this theme on CustomWidget class
@@ -233,7 +233,7 @@ scr.set_flex_flow(lv.FLEX_FLOW.COLUMN)
 scr.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
 
 # Add a button with a label
-btn = lv.btn(scr)
+btn = lv.button(scr)
 l1 = lv.label(btn)
 l1.set_text("Hello!")
 

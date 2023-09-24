@@ -17,7 +17,6 @@ lv.init()
 driver = display_driver_utils.driver()
 
 scr = lv.scr_act()
-lv.img.cache_set_size(2)
 try:
     script_path = __file__[:__file__.rfind('/')] if __file__.find('/') >= 0 else '.'
 except NameError: 
@@ -28,20 +27,20 @@ except NameError:
 with open('%s/png_decoder_test.png' % script_path, 'rb') as f:
   png_data = f.read()
 
-png_img_dsc = lv.img_dsc_t({
+png_img_dsc = lv.image_dsc_t({
     'data_size': len(png_data),
     'data': png_data 
 })
 
 # Create an image using the decoder
 
-img1 = lv.img(scr)
+img1 = lv.image(scr)
 img1.set_src(png_img_dsc)
 img1.set_pos(100,50)
 
 # Create an image from a symbol
 
-img2 = lv.img(scr)
+img2 = lv.image(scr)
 img2.set_src(lv.SYMBOL.OK + " Accept")
 img2.set_pos(100,200)
 

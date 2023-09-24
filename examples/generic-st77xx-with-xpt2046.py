@@ -28,7 +28,7 @@ lcd.set_backlight(30)
 touch=Xpt2046(spi=spi,cs=16,rot=1,spiPrereadCb=lcd.rp2_wait_dma)
 
 scr=lv.obj()
-btn=lv.btn(scr)
+btn=lv.button(scr)
 lbl=lv.label(btn)
 lbl.set_text("Press me!")
 btn.center()
