@@ -261,7 +261,7 @@ extern void mp_lv_init_gc();
 #define LV_ENABLE_GLOBAL_CUSTOM 1
 #if LV_ENABLE_GLOBAL_CUSTOM
     extern void *mp_lv_roots;
-   #define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)
+    #define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)
 #endif
 
 /*Default cache size in bytes.
@@ -616,7 +616,7 @@ extern void mp_lv_init_gc();
 
 /*FreeType library*/
 #ifdef MICROPY_FREETYPE
-#define LV_USE_FREETYPE 1
+    #define LV_USE_FREETYPE MICROPY_FREETYPE
 #endif
 #if LV_USE_FREETYPE
     /*Memory used by FreeType to cache characters [bytes]*/
@@ -648,7 +648,7 @@ extern void mp_lv_init_gc();
 
 /*Rlottie library*/
 #ifdef MICROPY_RLOTTIE
-    #define LV_USE_RLOTTIE 1
+    #define LV_USE_RLOTTIE MICROPY_RLOTTIE
 #else
     #define LV_USE_RLOTTIE 0
 #endif
@@ -656,7 +656,7 @@ extern void mp_lv_init_gc();
  *Supports all major image formats so do not enable other image decoder with it*/
 
 #ifdef MICROPY_FFMPEG
-    #define LV_USE_FFMPEG 1
+    #define LV_USE_FFMPEG MICROPY_FFMPEG
 #else
     #define LV_USE_FFMPEG 0
 #endif
@@ -754,7 +754,7 @@ extern void mp_lv_init_gc();
 /*Use SDL to open window on PC and handle mouse and keyboard*/
 
 #ifdef MICROPY_SDL
-    #define LV_USE_SDL 1
+    #define LV_USE_SDL MICROPY_SDL
 #else
     #define LV_USE_SDL 0
 #endif
@@ -769,7 +769,7 @@ extern void mp_lv_init_gc();
 
 /*Driver for /dev/fb*/
 #ifdef MICROPY_FB
-    #define LV_USE_LINUX_FBDEV      1
+    #define LV_USE_LINUX_FBDEV      MICROPY_FB
 #else
     #define LV_USE_LINUX_FBDEV      0
 #endif
