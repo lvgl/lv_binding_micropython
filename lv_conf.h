@@ -283,7 +283,13 @@ extern void mp_lv_init_gc();
 #define LV_COLOR_MIX_ROUND_OFS 0
 
 /* Add 2 x 32 bit variables to each lv_obj_t to speed up getting style properties */
-#define  LV_OBJ_STYLE_CACHE 1
+#define LV_OBJ_STYLE_CACHE 1
+
+/* Add `id` field to `lv_obj_t` */
+#define LV_USE_OBJ_ID 0
+
+/* Use lvgl builtin method for obj ID */
+#define LV_USE_OBJ_ID_BUILTIN 0
 
 /*=====================
  *  COMPILER SETTINGS
@@ -334,7 +340,7 @@ extern void mp_lv_init_gc();
 #define LV_FONT_MONTSERRAT_10 0
 #define LV_FONT_MONTSERRAT_12 0
 #define LV_FONT_MONTSERRAT_14 1
-#define LV_FONT_MONTSERRAT_16 0
+#define LV_FONT_MONTSERRAT_16 1
 #define LV_FONT_MONTSERRAT_18 0
 #define LV_FONT_MONTSERRAT_20 0
 #define LV_FONT_MONTSERRAT_22 0
@@ -598,12 +604,19 @@ extern void mp_lv_init_gc();
 /*LODEPNG decoder library*/
 #define LV_USE_LODEPNG 1
 
+/*PNG decoder(libpng) library*/
+#define LV_USE_LIBPNG 0
+
 /*BMP decoder library*/
 #define LV_USE_BMP 1
 
 /* JPG + split JPG decoder library.
  * Split JPG is a custom format optimized for embedded systems. */
 #define LV_USE_TJPGD 1
+
+/* libjpeg-turbo decoder library.
+ * Supports complete JPEG specifications and high-performance JPEG decoding. */
+#define LV_USE_LIBJPEG_TURBO 0
 
 /*GIF decoder library*/
 #define LV_USE_GIF 1
@@ -618,6 +631,10 @@ extern void mp_lv_init_gc();
 #ifdef MICROPY_FREETYPE
     #define LV_USE_FREETYPE MICROPY_FREETYPE
 #endif
+#else
+    #define LV_USE_FREETYPE 0
+#endif
+
 #if LV_USE_FREETYPE
     /*Memory used by FreeType to cache characters [bytes]*/
     #define LV_FREETYPE_CACHE_SIZE (64 * 1024)
@@ -776,11 +793,12 @@ extern void mp_lv_init_gc();
 
 #if LV_USE_LINUX_FBDEV
     #define LV_LINUX_FBDEV_BSD           0
-    #define LV_LINUX_FBDEV_NUTTX         0
     #define LV_LINUX_FBDEV_RENDER_MODE   LV_DISPLAY_RENDER_MODE_PARTIAL
     #define LV_LINUX_FBDEV_BUFFER_COUNT  0
     #define LV_LINUX_FBDEV_BUFFER_SIZE   60
 #endif
+
+#define LV_USE_NUTTX_FBDEV     0
 
 /*Driver for /dev/lcd*/
 #define LV_USE_NUTTX_LCD      0
