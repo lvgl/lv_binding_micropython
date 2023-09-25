@@ -19,23 +19,30 @@
 
 #include <stdint.h>
 
-#define LV_USE_DEV_VERSION 1 
+/*=======================
+ * Development version!
+ * ======================*/
+
+#define LV_USE_DEV_VERSION 1
 
 /*====================
    COLOR SETTINGS
  *====================*/
 
 /*Color depth: 8 (A8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888)*/
-#define LV_COLOR_DEPTH 16
+#ifndef LV_COLOR_DEPTH
+    #define LV_COLOR_DEPTH 32
+#endif
 
 /*=========================
    STDLIB WRAPPER SETTINGS
  *=========================*/
 
 /* Possible values
- * - LV_STDLIB_BUILTIN: LVGL's built in implementation
- * - LV_STDLIB_CLIB:    Standard C functions, like malloc, strlen, etc
- * - LV_STDLIB_CUSTOM:  Implement the functions externally
+ * - LV_STDLIB_BUILTIN:     LVGL's built in implementation
+ * - LV_STDLIB_CLIB:        Standard C functions, like malloc, strlen, etc
+ * - LV_STDLIB_MICROPYTHON: MicroPython implementation
+ * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
 #define LV_USE_STDLIB_MALLOC    LV_STDLIB_MICROPYTHON
 #define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN
@@ -70,17 +77,6 @@
 /*Default display refresh, input device read and animation step period.*/
 #define LV_DEF_REFR_PERIOD  33      /*[ms]*/
 
-/*Use a custom tick source that tells the elapsed time in milliseconds.
- *It removes the need to manually update the tick with `lv_tick_inc()`)*/
-#define LV_TICK_CUSTOM 0
-#if LV_TICK_CUSTOM
-    #define LV_TICK_CUSTOM_INCLUDE "Arduino.h"         /*Header for the system time function*/
-    #define LV_TICK_CUSTOM_SYS_TIME_EXPR (millis())    /*Expression evaluating to current system time in ms*/
-    /*If using lvgl as ESP32 component*/
-    // #define LV_TICK_CUSTOM_INCLUDE "esp_timer.h"
-    // #define LV_TICK_CUSTOM_SYS_TIME_EXPR ((esp_timer_get_time() / 1000LL))
-#endif   /*LV_TICK_CUSTOM*/
-
 /*Default Dot Per Inch. Used to initialize default sizes such as widgets sized, style paddings.
  *(Not so important, you can adjust it to modify default sizes and spaces)*/
 #define LV_DPI_DEF 130     /*[px/inch]*/
@@ -89,6 +85,12 @@
  * RENDERING CONFIGURATION
  *========================*/
 
+/*Align the stride of all layers and images to this bytes*/
+#define LV_DRAW_BUF_STRIDE_ALIGN                1
+
+/*Align the start address of draw_buf addresses to this bytes*/
+#define LV_DRAW_BUF_ALIGN                       4
+
 /* Max. memory to be used for layers */
 #define  LV_LAYER_MAX_MEMORY_USAGE             150       /*[kB]*/
 
@@ -96,7 +98,7 @@
 #if LV_USE_DRAW_SW == 1
     /* Set the number of draw unit.
      * > 1 requires an operating system enabled in `LV_USE_OS`
-     * > 1 means multply threads will render the screen in parallel */
+     * > 1 means multiply threads will render the screen in parallel */
     #define LV_DRAW_SW_DRAW_UNIT_CNT    1
 
     /* If a widget has `style_opa < 255` (not `bg_opa`, `text_opa` etc) or not NORMAL blend mode
@@ -124,6 +126,12 @@
         #define LV_DRAW_SW_CIRCLE_CACHE_SIZE 4
     #endif
 #endif
+
+/* Use NXP's VG-Lite GPU on iMX RTxxx platforms. */
+#define LV_USE_DRAW_VGLITE 0
+
+/* Use NXP's PXP on iMX RTxxx platforms. */
+#define LV_USE_DRAW_PXP 0
 
 /*=================
  * OPERATING SYSTEM
@@ -178,7 +186,8 @@
     #define LV_LOG_TRACE_OBJ_CREATE 1
     #define LV_LOG_TRACE_LAYOUT     1
     #define LV_LOG_TRACE_ANIM       1
-	#define LV_LOG_TRACE_MSG		1
+    #define LV_LOG_TRACE_MSG        1
+    #define LV_LOG_TRACE_CACHE      1
 
 #endif  /*LV_USE_LOG*/
 
@@ -241,7 +250,7 @@
 
 /*Maximum buffer size to allocate for rotation.
  *Only used if software rotation is enabled in the display driver.*/
-#define LV_DISP_ROT_MAX_BUF (10*1024)
+#define LV_DISPLAY_ROT_MAX_BUF (10*1024)
 
 /*Garbage Collector settings
  *Used if lvgl is bound to higher level language and the memory is managed by that language*/
@@ -251,19 +260,19 @@ extern void mp_lv_init_gc();
 
 #define LV_ENABLE_GLOBAL_CUSTOM 1
 #if LV_ENABLE_GLOBAL_CUSTOM
-    /*Header to include for the custom 'lv_global' function"*/
-    // #define LV_GLOBAL_CUSTOM_INCLUDE
     extern void *mp_lv_roots;
    #define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)
 #endif
 
-/*Default image cache size. Image caching keeps some images opened.
- *If only the built-in image formats are used there is no real advantage of caching.
- *With other image decoders (e.g. PNG or JPG) caching save the continuous open/decode of images.
- *However the opened images consume additional RAM.
- *0: to disable caching*/
-#define LV_IMG_CACHE_DEF_SIZE 0
-
+/*Default cache size in bytes.
+ *Used by image decoders such as `lv_lodepng` to keep the decoded image in the memory.
+ *Data larger than the size of the cache also can be allocated but
+ *will be dropped immediately after usage.*/
+#ifdef MICROPY_CACHE_SIZE
+    #define LV_CACHE_DEF_SIZE       MICROPY_CACHE_SIZE
+#else
+    #define LV_CACHE_DEF_SIZE       0
+#endif
 
 /*Number of stops allowed per gradient. Increase this to allow more stops.
  *This adds (sizeof(lv_color_t) + 1) bytes per additional stop*/
@@ -271,7 +280,10 @@ extern void mp_lv_init_gc();
 
 /* Adjust color mix functions rounding. GPUs might calculate color mix (blending) differently.
  * 0: round down, 64: round up from x.75, 128: round up from half, 192: round up from x.25, 254: round up */
-#define lv_color_mix_ROUND_OFS 0
+#define LV_COLOR_MIX_ROUND_OFS 0
+
+/* Add 2 x 32 bit variables to each lv_obj_t to speed up getting style properties */
+#define  LV_OBJ_STYLE_CACHE 1
 
 /*=====================
  *  COMPILER SETTINGS
@@ -286,7 +298,7 @@ extern void mp_lv_init_gc();
 /*Define a custom attribute to `lv_timer_handler` function*/
 #define LV_ATTRIBUTE_TIMER_HANDLER
 
-/*Define a custom attribute to `lv_disp_flush_ready` function*/
+/*Define a custom attribute to `lv_display_flush_ready` function*/
 #define LV_ATTRIBUTE_FLUSH_READY
 
 /*Required alignment size for buffers*/
@@ -417,6 +429,8 @@ extern void mp_lv_init_gc();
 
 /*Documentation of the widgets: https://docs.lvgl.io/latest/en/html/widgets/index.html*/
 
+#define LV_WIDGETS_HAS_DEFAULT_VALUE  0
+
 #define LV_USE_ANIMIMG    1
 
 #define LV_USE_ARC        1
@@ -474,6 +488,8 @@ extern void mp_lv_init_gc();
 #define LV_USE_MSGBOX     1
 
 #define LV_USE_ROLLER     1   /*Requires: lv_label*/
+
+#define LV_USE_SCALE      1
 
 #define LV_USE_SLIDER     1   /*Requires: lv_bar*/
 
@@ -573,16 +589,17 @@ extern void mp_lv_init_gc();
     #define LV_FS_FATFS_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
 
+/*API for memory-mapped file access. */
 #define LV_USE_FS_MEMFS 1
 #if LV_USE_FS_MEMFS
     #define LV_FS_MEMFS_LETTER 'M'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
 #endif
 
-/*PNG decoder library*/
+/*LODEPNG decoder library*/
 #define LV_USE_LODEPNG 1
 
 /*BMP decoder library*/
-#define LV_USE_BMP 0
+#define LV_USE_BMP 1
 
 /* JPG + split JPG decoder library.
  * Split JPG is a custom format optimized for embedded systems. */
@@ -621,7 +638,7 @@ extern void mp_lv_init_gc();
 
 /* Built-in TTF decoder */
 #ifndef LV_USE_TINY_TTF
-#define LV_USE_TINY_TTF 1
+    #define LV_USE_TINY_TTF 1
 #endif
 
 #if LV_USE_TINY_TTF
@@ -631,13 +648,17 @@ extern void mp_lv_init_gc();
 
 /*Rlottie library*/
 #ifdef MICROPY_RLOTTIE
-#define LV_USE_RLOTTIE 1
+    #define LV_USE_RLOTTIE 1
+#else
+    #define LV_USE_RLOTTIE 0
 #endif
 /*FFmpeg library for image decoding and playing videos
  *Supports all major image formats so do not enable other image decoder with it*/
 
 #ifdef MICROPY_FFMPEG
-#define LV_USE_FFMPEG 1
+    #define LV_USE_FFMPEG 1
+#else
+    #define LV_USE_FFMPEG 0
 #endif
 
 #if LV_USE_FFMPEG
@@ -691,7 +712,7 @@ extern void mp_lv_init_gc();
     #define LV_IMGFONT_PATH_MAX_LEN 64
 
     /*1: Use img cache to buffer header information*/
-    #define LV_IMGFONT_USE_IMG_CACHE_HEADER 0
+    #define LV_IMGFONT_USE_IMAGE_CACHE_HEADER 0
 #endif
 
 /*1: Enable a published subscriber based messaging system */
@@ -717,7 +738,7 @@ extern void mp_lv_init_gc();
 
 /*1: Enable file explorer*/
 /*Requires: lv_table*/
-#define LV_USE_FILE_EXPLORER                     1
+#define LV_USE_FILE_EXPLORER                     0
 #if LV_USE_FILE_EXPLORER
     /*Maximum length of path*/
     #define LV_FILE_EXPLORER_PATH_MAX_LEN        (128)
@@ -740,24 +761,32 @@ extern void mp_lv_init_gc();
 
 #if LV_USE_SDL
     #define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
-    #define LV_SDL_PARTIAL_MODE    0    /*Recommended only to emulate a setup with a display controller*/
-    #define LV_SDL_FULLSCREEN      0
-    #define LV_SDL_DIRECT_EXIT     1    /*1: Exit the application when all SDL widows are closed*/
+    #define LV_SDL_RENDER_MODE     LV_DISPLAY_RENDER_MODE_DIRECT   /*LV_DISPLAY_RENDER_MODE_DIRECT is recommended for best performance*/
+    #define LV_SDL_BUF_COUNT       1   /*1 or 2*/
+    #define LV_SDL_FULLSCREEN      0    /*1: Make the window full screen by default*/
+    #define LV_SDL_DIRECT_EXIT     0    /*1: Exit the application when all SDL windows are closed*/
 #endif
 
 /*Driver for /dev/fb*/
 #ifdef MICROPY_FB
-#define LV_USE_LINUX_FBDEV      1
+    #define LV_USE_LINUX_FBDEV      1
 #else
-#define LV_USE_LINUX_FBDEV      0
+    #define LV_USE_LINUX_FBDEV      0
 #endif
 
 #if LV_USE_LINUX_FBDEV
     #define LV_LINUX_FBDEV_BSD           0
     #define LV_LINUX_FBDEV_NUTTX         0
-    #define LV_LINUX_FBDEV_RENDER_MODE   LV_DISP_RENDER_MODE_PARTIAL
+    #define LV_LINUX_FBDEV_RENDER_MODE   LV_DISPLAY_RENDER_MODE_PARTIAL
     #define LV_LINUX_FBDEV_BUFFER_COUNT  0
     #define LV_LINUX_FBDEV_BUFFER_SIZE   60
+#endif
+
+/*Driver for /dev/lcd*/
+#define LV_USE_NUTTX_LCD      0
+#if LV_USE_NUTTX_LCD
+    #define LV_NUTTX_LCD_BUFFER_COUNT    0
+    #define LV_NUTTX_LCD_BUFFER_SIZE     60
 #endif
 
 /*Driver for /dev/dri/card*/
@@ -774,7 +803,7 @@ extern void mp_lv_init_gc();
 *==================*/
 
 /*Enable the examples to be built with the library*/
-#define LV_BUILD_EXAMPLES 1
+#define LV_BUILD_EXAMPLES 0
 
 /*===================
  * DEMO USAGE
