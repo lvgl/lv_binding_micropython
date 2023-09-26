@@ -23,7 +23,7 @@ Micopython's build script (Makefile or CMake) should run `gen_mpy.py` automatica
 - If you would like to see an example of how a generated `lv_mpy.c` looks like, have a look at [`lv_mpy_example.c`](https://raw.githubusercontent.com/lvgl/lv_binding_micropython/master/gen/lv_mpy_example.c). Note that its only exported (non static) symbol is `mp_module_lvgl` which should be registered in Micropython as a module.
 - lv_binding_micropython is usually used as a git submodule of [lv_micropython](https://github.com/lvgl/lv_micropython) which builds Micropython + LVGL + lvgl-bindings, but can also be used on other forks of Micropython.
 
-It's worth noting that the Mircopython Bindings module (`lv_mpy.c`) is dependent on LVGL configuration.
+It's worth noting that the Micropython Bindings module (`lv_mpy.c`) is dependent on LVGL configuration.
 LVGL is configured by `lv_conf.h` where different objects and features could be enabled or disabled. LVGL bindings are generated only for the enabled objects and features. Changing `lv_conf.h` requires re running `gen_mpy.py`, therefore it's useful to run it automatically in the build script, as done by lv_micropython.
 
 ### Memory Management
