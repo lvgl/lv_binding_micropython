@@ -630,7 +630,6 @@ extern void mp_lv_init_gc();
 /*FreeType library*/
 #ifdef MICROPY_FREETYPE
     #define LV_USE_FREETYPE MICROPY_FREETYPE
-#endif
 #else
     #define LV_USE_FREETYPE 0
 #endif
