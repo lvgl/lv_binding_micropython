@@ -96,7 +96,7 @@ The callback will receive a Blob which can be casted to the dict in the last arg
 
 As long as the convention above is followed, the lvgl Micropython binding script would automatically set and use `user_data` when callbacks are set and used.
 
-From the user perspective, any python callable object (such as python regular function, class function, lambda etc.) can be user as an lvgl callbacks. For example:
+From the user perspective, any python callable object (such as python regular function, class function, lambda etc.) can be used as an lvgl callbacks. For example:
 ```python
 lvgl.anim_set_custom_exec_cb(anim, lambda anim, val, obj=obj: obj.set_y(val))
 ```
