@@ -731,8 +731,8 @@ extern void mp_lv_init_gc();
     #define LV_IMGFONT_USE_IMAGE_CACHE_HEADER 0
 #endif
 
-/*1: Enable a published subscriber based messaging system */
-#define LV_USE_MSG 1
+/*1: Enable an observer pattern implementation*/
+#define LV_USE_OBSERVER 1
 
 /*1: Enable Pinyin input method*/
 /*Requires: lv_keyboard*/
