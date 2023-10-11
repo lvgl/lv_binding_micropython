@@ -447,7 +447,7 @@ class St77xx_lvgl(object):
 
         if lv.COLOR_DEPTH!=16: raise RuntimeError(f'LVGL *must* be compiled with LV_COLOR_DEPTH=16 (currently LV_COLOR_DEPTH={lv.COLOR_DEPTH}.')
         
-        bufSize=(self.width*self.height*lv.color_t.__SIZE__)//factor
+        bufSize=(self.width * self.height * lv.COLOR_DEPTH // 8) // factor
 
         if not lv.is_initialized(): lv.init()
         # create event loop if not yet present

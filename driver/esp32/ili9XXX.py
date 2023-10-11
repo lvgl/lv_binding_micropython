@@ -1,5 +1,6 @@
 ##############################################################################
-# Pure/Hybrid micropython lvgl display driver for ili9341 and ili9488 on ESP32
+# Pure/Hybrid micropython lvgl display driver for 
+# ili9341, ili9488, ili9488g, gc9a01, st7789 on ESP32
 #
 # For ili9341 display:
 #
@@ -64,6 +65,8 @@ import lv_utils
 import micropython
 import gc
 
+from micropython import const
+
 micropython.alloc_emergency_exception_buf(256)
 # gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
 
@@ -94,9 +97,10 @@ DISPLAY_TYPE_GC9A01 = const(3)
 DISPLAY_TYPE_ST7789 = const(4)
 DISPLAY_TYPE_ST7735 = const(5)
 
+_TRANS_BUFFER_LEN = const(16)
+
 class ili9XXX:
 
-    TRANS_BUFFER_LEN = const(16)
     display_name = 'ili9XXX'
     init_cmds = [ ]
 
@@ -238,7 +242,7 @@ class ili9XXX:
             ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
             if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
-        self.trans_buffer = esp.heap_caps_malloc(TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
+        self.trans_buffer = esp.heap_caps_malloc(_TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
         self.word_trans_data = self.trans_buffer.__dereference__(4)
 
@@ -353,7 +357,7 @@ class ili9XXX:
 
     def send_data(self, data):
         esp.gpio_set_level(self.dc, 1)	    # Data mode
-        if len(data) > TRANS_BUFFER_LEN: raise RuntimeError('Data too long, please use DMA!')
+        if len(data) > _TRANS_BUFFER_LEN: raise RuntimeError('Data too long, please use DMA!')
         trans_data = self.trans_buffer.__dereference__(len(data))
         trans_data[:] = data[:]
         self.spi_send(trans_data)
@@ -482,7 +486,7 @@ class ili9XXX:
         self.send_cmd(0x2C)
 
         size = (x2 - x1 + 1) * (y2 - y1 + 1)
-        data_view = color_p.__dereference__(size * lv.color_t.__SIZE__)
+        data_view = color_p.__dereference__(size * lv.COLOR_DEPTH // 8)
 
         esp.get_ccount(self.end_time_ptr)
         if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
@@ -547,7 +551,7 @@ class ili9341(ili9XXX):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
-        if lv.color_t.__SIZE__ != 2:
+        if lv.COLOR_DEPTH != 16:
             raise RuntimeError('ili9341 micropython driver requires defining LV_COLOR_DEPTH=16')
 
         self.display_name = 'ILI9341'
@@ -597,7 +601,7 @@ class ili9488(ili9XXX):
         color_format=None, display_type=DISPLAY_TYPE_ILI9488, p16=False
     ):
 
-        if (lv.color_t.__SIZE__ != 4) and not p16:
+        if (lv.COLOR_DEPTH != 32) and not p16:
             raise RuntimeError('ili9488 micropython driver requires defining LV_COLOR_DEPTH=32')
         if not hybrid:
             raise RuntimeError('ili9488 micropython driver do not support non-hybrid driver')
@@ -648,13 +652,13 @@ class ili9488g(ili9488):
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True
     ):
 
-        if lv.color_t.__SIZE__ == 4:
+        if lv.COLOR_DEPTH == 32:
             colormode=COLOR_MODE_RGB
             color_format=None
             display_type=DISPLAY_TYPE_ILI9488 # 24-bit pixel handling
             p16=False
 
-        if lv.color_t.__SIZE__ == 2:
+        if lv.COLOR_DEPTH == 16:
             colormode=COLOR_MODE_BGR
             color_format=lv.COLOR_FORMAT.NATIVE_REVERSE
             display_type=DISPLAY_TYPE_ILI9341 # Force use of 16-bit pixel handling
@@ -677,7 +681,7 @@ class gc9a01(ili9XXX):
         color_format=None
     ):
 
-        if lv.color_t.__SIZE__ != 2:
+        if lv.COLOR_DEPTH != 16:
             raise RuntimeError('gc9a01 micropython driver requires defining LV_COLOR_DEPTH=16')
 
         # This is included as the color mode appears to be reversed from the
@@ -766,7 +770,7 @@ class st7789(ili9XXX):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
-        if lv.color_t.__SIZE__ != 2:
+        if lv.COLOR_DEPTH != 16:
             raise RuntimeError('st7789 micropython driver requires defining LV_COLOR_DEPTH=16')
 
         self.display_name = 'ST7789'
@@ -818,7 +822,7 @@ class st7735(ili9XXX):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
-        if lv.color_t.__SIZE__ != 2:
+        if lv.COLOR_DEPTH != 16:
             raise RuntimeError('st7735 micropython driver requires defining LV_COLOR_DEPTH=16')
 
         self.display_name = 'ST7735'

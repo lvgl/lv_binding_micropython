@@ -358,8 +358,8 @@ class AdvancedDemoApplication:
         lcd.init(w=hres, h=vres)
         self.disp_drv = lv.display_create(hres, vres)
         self.disp_drv.set_flush_cb(lcd.flush)
-        buf1_1 = bytearray(hres * 50 * lv.color_t.__SIZE__)
-        buf1_2 = bytearray(hres * 50 * lv.color_t.__SIZE__)
+        buf1_1 = bytearray(hres * 50 * lv.COLOR_DEPTH // 8)
+        buf1_2 = bytearray(hres * 50 * lv.COLOR_DEPTH // 8)
         self.disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISPLAY_RENDER_MODE.PARTIAL)
 
         # Register touch sensor
