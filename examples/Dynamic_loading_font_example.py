@@ -35,7 +35,7 @@ fs_driver.fs_register(fs_drv, 'S')
 　font-PHT-jp-20.bin:
 　　　lv_font_conv --size 20 --format bin --bpp 1 --font Alibaba-PuHuiTi-Medium.subset.ttf --range 0x3042-0x3093　--no-compress　-o font-PHT-jp-20.bin
 '''
-scr = lv.scr_act()
+scr = lv.screen_active()
 scr.clean()
 
 myfont_cn = lv.font_load("S:%s/font/font-PHT-cn-20.bin" % script_path)

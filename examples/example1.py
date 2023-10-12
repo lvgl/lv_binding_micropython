@@ -107,4 +107,4 @@ image.set_src(image_dsc)
 
 # Load the screen and display image
 
-lv.scr_load(scr)
+lv.screen_load(scr)

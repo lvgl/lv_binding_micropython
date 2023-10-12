@@ -75,7 +75,7 @@ class AdvancedDemoTheme(lv.theme_t):
         self.button_pressed_style = ButtonPressedStyle()
 
         # This theme is based on active theme (material)
-        base_theme = lv.theme_get_from_obj(lv.scr_act())
+        base_theme = lv.theme_get_from_obj(lv.screen_active())
 
         # This theme will be applied only after base theme is applied
         self.set_parent(base_theme)
@@ -405,7 +405,7 @@ class AdvancedDemoApplication:
         # Create the main screen and load it.
 
         self.screen_main = Screen_Main(self)
-        lv.scr_load(self.screen_main)
+        lv.screen_load(self.screen_main)
 
 
 app = AdvancedDemoApplication()

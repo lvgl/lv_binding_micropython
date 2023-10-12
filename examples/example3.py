@@ -31,7 +31,7 @@ except ImportError:
 
 scr1 = lv.obj()
 scr2 = lv.obj()
-lv.scr_load(scr1)
+lv.screen_load(scr1)
 
 slider = lv.slider(scr2)
 slider.set_width(150)
@@ -58,11 +58,11 @@ def slider_event_cb(event):
     led1.set_brightness(slider.get_value() * 2)
 
 def button1_event_cb(event):
-    lv.scr_load(scr2)
+    lv.screen_load(scr2)
 
 
 def button2_event_cb(event):
-    lv.scr_load(scr1)
+    lv.screen_load(scr1)
 
 slider.add_event(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
 button1.add_event(button1_event_cb, lv.EVENT.CLICKED, None)

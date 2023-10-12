@@ -204,7 +204,7 @@ class CustomTheme(lv.theme_t):
         self.custom_pressed_style = CustomTheme.PressedStyle()
 
         # This theme is based on active theme
-        base_theme = lv.theme_get_from_obj(lv.scr_act())
+        base_theme = lv.theme_get_from_obj(lv.screen_active())
 
         # This theme will be applied only after base theme is applied
         self.set_parent(base_theme)
@@ -230,7 +230,7 @@ class CustomTheme(lv.theme_t):
 theme = CustomTheme()
 
 # Create a screen with flex layout
-scr = lv.scr_act()
+scr = lv.screen_active()
 scr.set_flex_flow(lv.FLEX_FLOW.COLUMN)
 scr.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
 

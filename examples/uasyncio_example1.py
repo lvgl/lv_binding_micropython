@@ -158,7 +158,7 @@ async def btn_event_task(obj=None, event=-1):
 # Create objects and screen
 ##################################################################################################
 
-scr = lv.scr_act()
+scr = lv.screen_active()
 btn = lv.button(scr)
 btn.align(lv.ALIGN.TOP_MID, 0, 10)
 btn.add_event(lambda e: create_task(btn_event_task()), lv.EVENT.CLICKED, None)
