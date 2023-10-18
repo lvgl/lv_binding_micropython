@@ -764,7 +764,6 @@ GENMPY_UNUSED STATIC MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_function,
     MP_TYPE_FLAG_BINDS_SELF | MP_TYPE_FLAG_BUILTIN_FUN,
     call, lv_fun_builtin_var_call,
-    unary_op, mp_generic_unary_op,
     buffer, mp_func_get_buffer
 );
 
@@ -773,7 +772,6 @@ GENMPY_UNUSED STATIC MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_function,
     MP_TYPE_FLAG_BUILTIN_FUN,
     call, lv_fun_builtin_var_call,
-    unary_op, mp_generic_unary_op,
     buffer, mp_func_get_buffer
 );
 
@@ -948,7 +946,7 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         lv_obj->user_data = self;
 
         // Register a "Delete" event callback
-        lv_obj_add_event(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
+        lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
     }
     return MP_OBJ_FROM_PTR(self);
 }
@@ -2957,5 +2955,3 @@ if args.metadata:
 
     with open(args.metadata, 'w') as metadata_file:
         json.dump(metadata, metadata_file, indent=4)
-
-
