@@ -96,8 +96,8 @@ class MsgBox(lv.win):
         self.set_style_shadow_color(lv.color_hex3(0x000), lv.PART.MAIN)
         self.set_style_shadow_opa(50, lv.PART.MAIN)
         self.set_style_shadow_width(20, lv.PART.MAIN)
-        self.set_style_shadow_ofs_x(10, lv.PART.MAIN)
-        self.set_style_shadow_ofs_y(10, lv.PART.MAIN)
+        self.set_style_shadow_offset_x(10, lv.PART.MAIN)
+        self.set_style_shadow_offset_y(10, lv.PART.MAIN)
         self.set_style_shadow_spread(0, lv.PART.MAIN)
         self.set_style_radius(10, lv.PART.MAIN)
 

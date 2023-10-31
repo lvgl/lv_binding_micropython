@@ -146,8 +146,8 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
 
 STATIC void mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t *data) {
     static TS_StateTypeDef ts_state = {0};
-    static lv_coord_t lastX = 0;
-    static lv_coord_t lastY = 0;
+    static int32_t lastX = 0;
+    static int32_t lastY = 0;
 
     BSP_TS_GetState(&ts_state);
     if (ts_state.touchDetected) {

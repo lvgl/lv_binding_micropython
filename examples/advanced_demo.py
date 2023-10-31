@@ -40,8 +40,8 @@ class ShadowStyle(lv.style_t):
         self.set_shadow_opa(lv.OPA.COVER)
         self.set_shadow_width(3)
         self.set_shadow_color(lv.color_hex3(0xAAA))
-        self.set_shadow_ofs_x(5)
-        self.set_shadow_ofs_y(3)
+        self.set_shadow_offset_x(5)
+        self.set_shadow_offset_y(3)
         self.set_shadow_spread(0)
 
 # A square button with a shadow when not pressed
@@ -52,15 +52,15 @@ class ButtonStyle(lv.style_t):
         self.set_shadow_opa(lv.OPA.COVER)
         self.set_shadow_width(lv.dpx(10))
         self.set_shadow_color(lv.color_hex3(0xAAA))
-        self.set_shadow_ofs_x(lv.dpx(10))
-        self.set_shadow_ofs_y(lv.dpx(10))
+        self.set_shadow_offset_x(lv.dpx(10))
+        self.set_shadow_offset_y(lv.dpx(10))
         self.set_shadow_spread(0)
 
 class ButtonPressedStyle(lv.style_t):
     def __init__(self):
         super().__init__()
-        self.set_shadow_ofs_x(lv.dpx(0))
-        self.set_shadow_ofs_y(lv.dpx(0))
+        self.set_shadow_offset_x(lv.dpx(0))
+        self.set_shadow_offset_y(lv.dpx(0))
 
 
 ##############################################################################
