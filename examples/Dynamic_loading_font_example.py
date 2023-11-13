@@ -38,14 +38,16 @@ fs_driver.fs_register(fs_drv, 'S')
 scr = lv.screen_active()
 scr.clean()
 
-myfont_cn = lv.font_load("S:%s/font/font-PHT-cn-20.bin" % script_path)
+myfont_cn = lv.font_t()
+lv.font_load(myfont_cn, "S:%s/font/font-PHT-cn-20.bin" % script_path)
 
 label1 = lv.label(scr)
 label1.set_style_text_font(myfont_cn, 0)  # set the font
 label1.set_text("上中下乎")  
 label1.align(lv.ALIGN.CENTER, 0, -25)
 
-myfont_en = lv.font_load("S:%s/font/font-PHT-en-20.bin" % script_path)
+myfont_en = lv.font_t()
+lv.font_load(myfont_en, "S:%s/font/font-PHT-en-20.bin" % script_path)
 
 label2 = lv.label(scr)
 label2.set_style_text_font(myfont_en, 0)  # set the font
@@ -53,7 +55,8 @@ label2.set_text("Hello LVGL!")
 label2.align(lv.ALIGN.CENTER, 0, 25)
 
 
-myfont_jp = lv.font_load("S:%s/font/font-PHT-jp-20.bin" % script_path)
+myfont_jp= lv.font_t()
+lv.font_load(myfont_jp, "S:%s/font/font-PHT-jp-20.bin" % script_path)
 
 label3 = lv.label(scr)
 label3.set_style_text_font(myfont_jp, 0)  # set the font
