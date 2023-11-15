@@ -300,7 +300,7 @@ class Screen_Main(lv.obj):
         self.app = app
         super().__init__(*args, **kwds)
         self.theme = AdvancedDemoTheme()
-        self.tabview = lv.tabview(self, lv.DIR.TOP, 20)
+        self.tabview = lv.tabview(self)
         self.page_simple = Page_Simple(self.app, self.tabview.add_tab("Simple"))
         self.page_buttons = Page_Buttons(self.app, self.tabview.add_tab("Buttons"))
         self.page_text = Page_Text(self.app, self.tabview.add_tab("Text"))
