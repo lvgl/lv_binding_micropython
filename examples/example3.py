@@ -64,9 +64,9 @@ def button1_event_cb(event):
 def button2_event_cb(event):
     lv.screen_load(scr1)
 
-slider.add_event(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
-button1.add_event(button1_event_cb, lv.EVENT.CLICKED, None)
-button2.add_event(button2_event_cb, lv.EVENT.CLICKED, None)
+slider.add_event_cb(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
+button1.add_event_cb(button1_event_cb, lv.EVENT.CLICKED, None)
+button2.add_event_cb(button2_event_cb, lv.EVENT.CLICKED, None)
 
 # Create a keyboard
 kb = lv.keyboard(scr1)

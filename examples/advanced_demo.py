@@ -147,7 +147,7 @@ class Page_Buttons:
                 self.label.set_text('[%d] %s %s' % (self.button_event_count[name], name, event_name))
 
         for button, name in [(self.button1, 'Play'), (self.button2, 'Pause')]:
-            button.add_event(lambda event, button_name=name: button_cb(event, button_name), lv.EVENT.ALL, None)
+            button.add_event_cb(lambda event, button_name=name: button_cb(event, button_name), lv.EVENT.ALL, None)
 
 
 class Page_Simple:
@@ -163,7 +163,7 @@ class Page_Simple:
         self.slider = lv.slider(page)
         self.slider.set_width(lv.pct(80))
         self.slider_label = lv.label(page)
-        self.slider.add_event(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
+        self.slider.add_event_cb(self.on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
         self.on_slider_changed(None)
 
         # style selector
@@ -176,7 +176,7 @@ class Page_Simple:
         self.style_selector.add_style(ShadowStyle(), lv.PART.MAIN)
         self.style_selector.align(lv.ALIGN.OUT_BOTTOM_LEFT, 0, 40)
         self.style_selector.set_options('\n'.join(x[0] for x in self.styles))
-        self.style_selector.add_event(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
+        self.style_selector.add_event_cb(self.on_style_selector_changed, lv.EVENT.VALUE_CHANGED, None)
 
         # counter button
         self.counter_button = lv.button(page)
@@ -184,7 +184,7 @@ class Page_Simple:
         self.counter_label = lv.label(self.counter_button)
         self.counter_label.set_text("Count")
         self.counter_label.align(lv.ALIGN.CENTER, 0, 0)
-        self.counter_button.add_event(self.on_counter_button, lv.EVENT.CLICKED, None)
+        self.counter_button.add_event_cb(self.on_counter_button, lv.EVENT.CLICKED, None)
         self.counter = 0
 
     def on_slider_changed(self, event):
@@ -293,7 +293,7 @@ class Page_Chart:
         self.slider.set_size(10, lv.pct(100))
         self.slider.set_range(10, 200)
         self.slider.set_value(self.chart.factor, 0)
-        self.slider.add_event(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
+        self.slider.add_event_cb(on_slider_changed, lv.EVENT.VALUE_CHANGED, None)
 
 class Screen_Main(lv.obj):
     def __init__(self, app, *args, **kwds):
