@@ -1,0 +1,2 @@
+TIMEOUT = 10000
+WAIT = 0
