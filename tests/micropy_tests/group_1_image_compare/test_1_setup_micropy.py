@@ -33,7 +33,7 @@ def flush(disp, area, color_p):
         chunk_size = min(size - byte_count, 512)
         chunk = data_view[byte_count:chunk_size + byte_count]
         byte_count += chunk_size
-        print(ubinascii.hexlify(bytes(chunk)))
+        print(ubinascii.hexlify(bytes(chunk)).decode('utf-8'))
 
     print('FRAME END')
     disp.flush_ready()
@@ -93,14 +93,8 @@ def create_ui():
 
     chart.set_ext_y_array(series, chart_y_array)
 
-    def _cb(*args):
-        print('chart_type_observer_cb(chart, chart_type_subject)')
-        print(*args)
-        print()
-        chart_type_observer_cb(chart, chart_type_subject)
-
     # Add custom observer callback
-    chart_type_subject.add_observer_obj(_cb, chart, None)
+    chart_type_subject.add_observer_obj(lambda _, __: chart_type_observer_cb(chart, chart_type_subject), chart, None)
 
     # Manually set the subject's value
     chart_type_subject.set_int(1)
@@ -133,14 +127,8 @@ def create_ui():
     # Add style to non main part and non default state
     btnmatrix.add_style(style_big_font, lv.PART.ITEMS | lv.STATE.CHECKED)
 
-    def _cb(*args):
-        print('buttonmatrix_event_cb(btnmatrix, label)')
-        print(*args)
-        print()
-        buttonmatrix_event_cb(btnmatrix, label)
-
     btnmatrix.set_selected_button(1)
-    btnmatrix.add_event_cb(_cb, lv.EVENT.VALUE_CHANGED, None)
+    btnmatrix.add_event_cb(lambda _: buttonmatrix_event_cb(btnmatrix, label), lv.EVENT.VALUE_CHANGED, None)
     btnmatrix.send_event(lv.EVENT.VALUE_CHANGED, None)
 
     # Create a base object
@@ -150,6 +138,14 @@ def create_ui():
 
     # Apply flex layout
     cont.set_flex_flow(lv.FLEX_FLOW.COLUMN)
+
+    class anim_callback:
+
+        def __init__(self, _btn):
+            self._btn = _btn
+
+        def __call__(self, _, val):
+            opa_anim_cb(self._btn, val)
 
     # For loop
     for i in range(10):
@@ -162,50 +158,31 @@ def create_ui():
             a.init()
             # a.set_var(btn)
             a.set_values(lv.OPA.COVER, lv.OPA._50)
-
-            def _cb(*args):
-                x = args[-1]
-                print('opa_anim_cb(btn, x)')
-                print(*args)
-                print()
-                opa_anim_cb(btn, x)
-
-            a.set_custom_exec_cb(_cb)  # Pass a callback
+            a.set_custom_exec_cb(anim_callback(btn))  # Pass a callback
             a.set_time(300)
             a.set_path_cb(a.path_ease_out)
-            # a.start()
-
-        if i == 1:
+            a.start()
+        elif i == 1:
             # Use flags
             btn.add_flag(lv.obj.FLAG.HIDDEN)
-
-        if i == 2:
+        elif i == 2:
             btn_label = btn.get_child(0)
             btn_label.set_text("A multi-line text with a ° symbol")
             btn_label.set_width(lv.pct(100))
-
-        if i == 3:
+        elif i == 3:
             # Start an infinite animation and delete this button later
             a = lv.anim_t()
             a.init()
             # a.set_var(btn)
             a.set_values(lv.OPA.COVER, lv.OPA._50)
-
-            def _cb(*args):
-                x = args[-1]
-                print('opa_anim_cb(btn, x)')
-                print(*args)
-                print()
-                opa_anim_cb(btn, x)
-
-            a.set_custom_exec_cb(_cb)  # Pass a callback
+            a.set_custom_exec_cb(anim_callback(btn))  # Pass a callback
             a.set_path_cb(a.path_ease_out)
             a.set_time(300)
             a.set_repeat_count(lv.ANIM_REPEAT_INFINITE)
-            # a.start()
+            a.start()
 
     # Wait and delete the button with the animation
-    # time.sleep_ms(300)
+    time.sleep_ms(300)
     cont.get_child(3).delete()
 
     # Large byte array
@@ -420,8 +397,8 @@ def list_button_create(parent):
     return btn
 
 
-def opa_anim_cb(label, value):
-    label.set_style_opa(value, 0)
+def opa_anim_cb(button, value):
+    lv.button.set_style_opa(button, value, 0)
 
 
 def draw_to_canvas(canvas):
@@ -580,7 +557,7 @@ def draw_to_canvas(canvas):
 
     test_img_lvgl_logo_png = lv.image_dsc_t(
         dict(
-            # header=dict(cf=lv.COLOR_FORMAT.RAW_ALPHA, w=105, h=33),
+            header=dict(cf=lv.COLOR_FORMAT.RAW_ALPHA, w=105, h=33),
             data_size=1873,
             data=test_img_lvgl_logo_png_data
         )
@@ -620,11 +597,10 @@ def draw_to_canvas(canvas):
 
 disp_drv = lv.display_create(WIDTH, HEIGHT)
 disp_drv.set_flush_cb(flush)
-
-buf = bytearray(WIDTH * HEIGHT * 3)
-
-disp_drv.set_draw_buffers(buf, None, WIDTH * HEIGHT * 3, lv.DISPLAY_RENDER_MODE.FULL)
 disp_drv.set_color_format(lv.COLOR_FORMAT.RGB888)
+
+buf = bytearray(WIDTH * HEIGHT * lv.color_format_get_size(disp_drv.get_color_format()))
+disp_drv.set_draw_buffers(buf, None, WIDTH * HEIGHT * 3, lv.DISPLAY_RENDER_MODE.FULL)
 
 create_ui()
 # end

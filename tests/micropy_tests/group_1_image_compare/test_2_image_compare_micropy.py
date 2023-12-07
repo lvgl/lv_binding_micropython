@@ -1,5 +1,3 @@
-import lvgl as lv
-import time
 
 start_time = time.time_ns()
 

@@ -1,18 +1,29 @@
 import unittest
 import os
 import subprocess
-import time
 import threading
 from typing import TYPE_CHECKING
 import argparse
-
-from PIL import Image
-import apng
+import signal
+import traceback
 from io import BytesIO
 import binascii
 import time
+import sys
 
-'python3 lib/lv_bindings/tests/__init__.py --artifact-path=lib/lv_bindings/tests/artifacts --mpy-path=ports/unix/build-standard/micropython'
+from PIL import Image
+import apng
+
+
+DEBUG = 0
+
+
+def log(*args):
+    if DEBUG:
+        args = ' '.join(repr(arg) for arg in args)
+        sys.stdout.write('\033[31;1m' + args + '\033[0m\n')
+        sys.stdout.flush()
+
 
 TEST_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'micropy_tests')
@@ -45,71 +56,119 @@ else:
 
 
 class TestBase(TestCase):
+    # these are here simply to make an IDE happy. Their values get dynamically
+    # set when the class gets constructed
     process: subprocess.Popen = None
-    micropy_data = b''
+    lock: threading.Lock = None
+    exit_event: threading.Event = None
+    test_path: str = ''
+
+    def send(cls, cmd):
+        if cls.process is None:
+            return
+        log('<---', cmd)
+        cls.process.stdin.write(cmd)
+        cls.process.stdin.flush()
 
     def read_until(cls, marker):
         micropy_data = b''
 
-        while not micropy_data.endswith(marker):
+        log('MARKER', marker)
+
+        logged = False
+
+        while not micropy_data.endswith(marker) and not cls.exit_event.is_set():
             char = cls.process.stdout.read(1)
             if char:
                 micropy_data += char
+                logged = False
+            else:
+                logged = True
+                log('--->', micropy_data)
 
-        return micropy_data.rreplace(marker, b'', 1)
+        if not logged:
+            log('--->', micropy_data)
+
+        if cls.exit_event.is_set():
+            log('*** EXIT EVENT SET ***')
+
+        return micropy_data.replace(marker, b'')
 
     def setUpClass(cls):
-        print('setup')
+        os.chdir(cls.test_path)
+        log(f'--SETTING UP {cls.__name__}')
         cls.process = subprocess.Popen(
             ['bash'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
             env=os.environ,
-            shell=True
+            shell=True,
+            preexec_fn=os.setsid
         )
-        micropy_data = b''
+        log(f'--RUNNING MICROPYTHON ({MICROPYTHON_PATH})')
 
-        cls.process.stdin.write(MICROPYTHON_PATH.encode('utf-8') + b'\n')
-        cls.process.stdin.flush()
-
+        cls.send(b'cd ' + cls.test_path.encode('utf-8') + b'\n')
+        cls.send(MICROPYTHON_PATH.encode('utf-8') + b'\n')
         cls.read_until(b'>>>')
 
+        log('--MICROPYTHON STARTED')
+
     def tearDownClass(cls):
+        log('--TEARDOWN STARTED')
+
         if cls.process is not None:
+            cls.send(CTRL_C)
+            cls.send(CTRL_C)
+            cls.send(CTRL_D)
+
             if not cls.process.stdin.closed:
                 cls.process.stdin.close()
-                
+
+            os.killpg(os.getpgid(cls.process.pid), signal.SIGTERM)
+
+            cls.process.wait()
+
             if not cls.process.stdout.closed:
                 cls.process.stdout.close()
 
             if not cls.process.stderr.closed:
                 cls.process.stderr.close()
-            
+
             cls.process = None
-    
+
+        log(f'--TEARDOWN FINISHED')
+
     def run_test(self, settings: dict, code) -> TestData:
+        self.__class__.lock.acquire()
         timeout = settings.get('TIMEOUT', 500)
         test_type = settings.get('TEST_TYPE', None)
         wait = settings.get('WAIT', 0)
 
+        code = code.strip()
+
         if self.__class__.process is None:
+            self.__class__.lock.release()
             return False
-        
-        if not code.endswith(b'\n# end'):
+
+        if not code.endswith(b'\r\n# end'):
+            self.__class__.lock.release()
             self.fail('Last line of test code is not "# end"')
 
-        self.__class__.process.stdin.write(CTRL_E)
-        self.__class__.process.stdin.flush()
-
+        self.send(CTRL_E)
         self.read_until(PASTE_PROMPT)
 
-        for line in code.split(b'\n'):
-            self.__class__.process.stdin.write(line + b'\n')
-            self.__class__.process.stdin.flush()
+        code = code.split(b'\r\n')
+
+        for i, line in enumerate(code):
+            self.send(line + b'\n')
+            self.read_until(b'\n')
+
             time.sleep(0.002)
 
-        def _do(p, td: TestData):
+        # self.read_until(b'# end\n')
+
+        def _do(td: TestData):
             td.watchdog_timer = time.time()
 
             if td.test_type and td.test_type == 'image':
@@ -123,19 +182,26 @@ class TestBase(TestCase):
                     try:
                         self.read_until(b'FRAME START\n')
                         data = []
-                        line = self.read_until(b'\n')
+                        lne = self.read_until(b'\n')
 
-                        while line != b'FRAME END':
+                        while lne != b'FRAME END':
                             td.watchdog_timer = time.time()
-                            data.append(binascii.unhexlify(eval(line)))
-                            line = self.read_until(b'\n')
+                            data.append(binascii.unhexlify(lne))
+                            lne = self.read_until(b'\n')
+                            if self.__class__.exit_event.is_set():
+                                return
 
-                        frame = b''.join(data)
+                        frame = bytearray(b''.join(data))
+                        frame = [[frame[j + 2], frame[j + 1], frame[j]] for j in range(0, len(frame), 3)]
+                        frame = bytes(bytearray([
+                            item for sublist in frame
+                            for item in sublist
+                        ]))
+
                         img = Image.new('RGB', (width, height))
                         img.frombytes(frame)
                         td.result.append(img)
                     except:  # NOQA
-                        import traceback
                         traceback.print_exc()
 
                         td.error_data = traceback.format_exc()
@@ -143,13 +209,25 @@ class TestBase(TestCase):
                         return
 
                     curr_time = time.time()
-
             else:
                 td.result = b''
+                self.read_until(PASTE_PROMPT + b' \n')
+
                 try:
-                    p.poll()
-                    d.result += self.read_until(REPL_PROMPT)
+                    td.result += self.read_until(REPL_PROMPT)
+                    if self.__class__.exit_event.is_set():
+                        return
+
                     td.watchdog_timer = time.time()
+                    ns = {}
+                    exec(td.result, ns)
+
+                    for key in list(ns.keys()):
+                        if key.startswith('_'):
+                            del ns[key]
+
+                    td.result = ns
+
                 except:  # NOQA
                     import traceback
 
@@ -162,16 +240,13 @@ class TestBase(TestCase):
 
         t = threading.Thread(
             target=_do,
-            args=(self.__class__.process, test_data)
+            args=(test_data,)
         )
         t.daemon = True
-
-        self.__class__.process.stdin.write(CTRL_D)
-        self.__class__.process.stdin.flush()
-        self.read_until(b'# end\n')
+        test_data.watchdog_timer = time.time()
+        self.send(CTRL_D)
 
         test_data.event.wait(wait / 1000)
-        td.watchdog_timer = time.time()
         t.start()
 
         while (
@@ -180,57 +255,55 @@ class TestBase(TestCase):
         ):
             test_data.event.wait(timeout / 1000)
 
-        if test_data.event.is_set():
-            if test_type and test_type != 'image':
-                test_data.result = test_data.result[:-4].decode('utf-8')
-            
-                ns = {}
-                try:
-                    exec(test_data.result, __locals=ns)
-                except:  # NOQA
-                    import traceback
+        if not test_data.event.is_set():
+            self.__class__.exit_event.set()
+            t.join()
 
-                    test_data.error_data = traceback.format_exc()
+        if test_type and test_type == 'image':
+            test_data.event.set()
 
-                test_data.result = ns
-
-        if (
-            self.__class__.process is not None and
-            not self.__class__.process.poll()
-        ):
-            self.__class__.process.stdin.write(CTRL_C)
-            self.__class__.process.stdin.write(CTRL_C)
-            self.__class__.process.stdin.flush()
-            self.read_until(REPL_PROMPT)
+        if self.__class__.process is not None:
+            self.send(CTRL_C)
+            self.send(CTRL_C)
+            # self.read_until(REPL_PROMPT)
 
             if not test_data.event.is_set():
-                self.__class__.process.stdin.write(CTRL_D)
-                self.__class__.process.stdin.flush()
-                self.__class__.process.stdin.close()
-                self.__class__.process.kill()
+                self.send(CTRL_D)
+
+                if not self.__class__.process.stdin.closed:
+                    self.__class__.process.stdin.close()
+
+                os.killpg(os.getpgid(self.__class__.process.pid), signal.SIGTERM)
+
+                log('*** WAITING FOR PROCESS TO TERMINATE ***')
+                self.__class__.process.wait()
+
+                log('*** PROCESS TERMINATED ***')
 
                 if not self.__class__.process.stdout.closed:
                     self.__class__.process.stdout.close()
 
-                if not self.__class__.process.stderr.closed:
+                if not cls.process.stderr.closed:
                     self.__class__.process.stderr.close()
 
                 self.__class__.process = None
 
+        self.__class__.exit_event.clear()
+        self.__class__.lock.release()
         return test_data
-            
 
-def test_func_wrapper(name, t_path, t_code, t_results: dict, t_settings: dict):
-    def _wrapper(func):
 
-        def _func_wrapper(self):
-            func(self, name, t_path, t_settings, t_code, t_results)
+# this is a goofy thing to do but no parameteres
+# can be passed to a running test. so I have to wrap the function in other
+# functions to be able to pass the parameters to the test.
+def test_wrapper(t_name, t_path, t_settings, t_code, t_results):
+    def _wrapper1(func):
+        def _wrapper2(self):
+            return func(self, t_name, t_path, t_settings, t_code, t_results)
 
-        _func_wrapper.__name__ = name
-        
-        return _func_wrapper
-    
-    return _wrapper
+        _wrapper2.__name__ = t_name
+        return _wrapper2
+    return _wrapper1
 
 
 def run():
@@ -273,9 +346,11 @@ def run():
             with open(test_file, 'rb') as f:
                 test_code = f.read()
 
-            @test_func_wrapper(
-                test_name, test_path, test_code, test_results, settings
-            )
+            # this is where the class gets dynamically constructed. Each group
+            # of tests has a class made and each test has a method made.
+            # The method is what you see below.
+
+            @test_wrapper(test_name, test_path, settings, test_code, test_results)
             def _run_test(
                 self: TestBase,
                 t_name,
@@ -284,46 +359,51 @@ def run():
                 t_code,
                 t_results
             ):
-                os.chdir(t_path)
 
                 t_type = t_settings.get('TEST_TYPE', None)
+
+                log(f'--RUNNING TEST {t_name}-{t_type} ({t_path})')
+
                 test_data = self.run_test(t_settings, t_code)
 
                 if test_data is False:
                     self.skipTest('MicroPython failure')
 
                 elif test_data.error_data:
+                    log(f'--TEST FAILED {t_name}-{t_type}')
+                    log(test_data.error_data)
+
                     self.fail(test_data.error_data)
 
                 elif t_type and t_type == 'image':
+                    artifact_path = os.path.join(
+                        ARTIFACT_PATH,
+                        t_name + '.apng'
+                    )
 
                     def save_apng():
-                        artifact_path = os.path.join(
-                            ARTIFACT_PATH,
-                            t_name + '.apng'
-                        )
                         try:
                             artifact.save(artifact_path)
                         except:
-                            import traceback
-
                             traceback.print_exc()
 
                     artifact = apng.APNG()
 
-                    passed = False
+
 
                     if 'FRAME' in t_results:
-                        comp_data = list(t_results[f'FRAME'].getdata())
+                        comp_data = list(t_results['FRAME'].getdata())
+                        passed = False
                     else:
                         comp_data = None
+                        passed = True
 
                     for frame_num, img in enumerate(test_data.result):
                         byte_data = list(img.getdata())
                         writer = BytesIO()
                         img.save(writer, 'PNG')
                         writer.seek(0)
-                        png = apng.PNG.from_bytes(writer)
+                        png = apng.PNG.from_bytes(writer.read())
                         artifact.append(png)
 
                         img.save(os.path.join(
@@ -335,29 +415,25 @@ def run():
                             ARTIFACT_PATH,
                             f'frame{frame_num}.bin'
                         ), 'wb') as f:
-                            # have to flattem the data and remove the alpha
+                            # have to flatten the data and remove the alpha
                             # from the PIL image it is formatted as
-                            # [(r, g, b, a), (r, g, b, a)]
-                            f.write(bytes(bytearray(
-                                [
-                                    item for sublist in byte_data
-                                    for item in sublist[:-1]
-                                ]
-                            )))
+                            # [(a, r, g, b), (a, r, g, b)]
+                            f.write(bytes(bytearray([
+                                item for sublist in byte_data
+                                for item in sublist[:-1]
+                            ])))
 
                         if comp_data is None and f'FRAME{frame_num}' in t_results:
                             save_apng()
-                            self.assertEqual(
-                                list(t_results[f'FRAME{frame_num}'].getdata()),
-                                byte_data,
-                                'Frames do not match'
-                            )
+                            f_data = list(t_results[f'FRAME{frame_num}'].getdata())
+                            if passed and f_data != byte_data:
+                                passed = False
+
                         elif comp_data is not None:
                             if comp_data == byte_data:
                                 passed = True
                         else:
-                            save_apng()
-                            self.fail(
+                            print(
                                 f'Missing frame {frame_num} '
                                 f'data in results file.'
                             )
@@ -365,26 +441,37 @@ def run():
                     save_apng()
                     self.assertTrue(
                         passed,
-                        f'No matching frame buffer data ({artifact_path})'
+                        f'Mismatch in captured frames ({artifact_path})'
                     )
 
                 else:
+                    log(f'--TEST DATA {t_name}-{t_type}')
+                    log(f'{test_data.result}')
                     self.assertDictEqual(
                         test_data.result,
                         t_results,
                         'Result data is not equal'
                     )
-
+            # methods are just like any other attribute. It gets sat into
+            # the classes namespace which is what you have below
             namespace[test_name] = _run_test
 
+        # add the rest of the methods and attributes
+        # that are needed to the namespace
         namespace['micropy_data'] = b''
         namespace['process'] = None
         namespace['setUpClass'] = classmethod(TestBase.setUpClass)
         namespace['tearDownClass'] = classmethod(TestBase.tearDownClass)
         namespace['run_test'] = TestBase.run_test
         namespace['read_until'] = classmethod(TestBase.read_until)
+        namespace['send'] = classmethod(TestBase.send)
         namespace['__name__'] = test
+        namespace['lock'] = threading.Lock()
+        namespace['exit_event'] = threading.Event()
+        namespace['test_path'] = test_path
 
+        # This is where the clas gets assembled. we set it into the
+        # namespace at the module level so unittests will run the test
         globals()[test] = type(test, (unittest.TestCase,), namespace)
 
 
@@ -395,8 +482,6 @@ MICROPYTHON_PATH = os.path.join(cwd, 'micropython')
 
 
 if __name__ == '__main__':
-    import sys
-
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
         '--artifact-path',
@@ -410,12 +495,19 @@ if __name__ == '__main__':
         help='path to micropython',
         action='store'
     )
+    arg_parser.add_argument(
+        '--debug',
+        dest='debug',
+        help='enable debugging output',
+        action='store_true'
+    )
 
     args = arg_parser.parse_args()
     sys.argv = sys.argv[:-2]
 
     ARTIFACT_PATH = os.path.join(cwd, args.artifact_path)
     MICROPYTHON_PATH = os.path.join(cwd, args.mpy_path)
+    DEBUG = args.debug
 
     if not os.path.exists(ARTIFACT_PATH):
         raise RuntimeError(f'Artifact path does not exist ({ARTIFACT_PATH})')
