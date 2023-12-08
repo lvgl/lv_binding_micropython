@@ -1,18 +1,18 @@
 import unittest
 import os
 import subprocess
+import time
 import threading
 from typing import TYPE_CHECKING
 import argparse
 import signal
-import traceback
+
+from PIL import Image
+import apng
 from io import BytesIO
 import binascii
 import time
 import sys
-
-from PIL import Image
-import apng
 
 
 DEBUG = 0
@@ -24,6 +24,8 @@ def log(*args):
         sys.stdout.write('\033[31;1m' + args + '\033[0m\n')
         sys.stdout.flush()
 
+
+'python3 lib/lv_bindings/tests/__init__.py --artifact-path=lib/lv_bindings/tests/artifacts --mpy-path=ports/unix/build-standard/micropython'
 
 TEST_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'micropy_tests')
@@ -144,6 +146,7 @@ class TestBase(TestCase):
         timeout = settings.get('TIMEOUT', 500)
         test_type = settings.get('TEST_TYPE', None)
         wait = settings.get('WAIT', 0)
+        stop_test_at_end = settings.get('STOP_TEST_AT_END', True)
 
         code = code.strip()
 
@@ -172,40 +175,36 @@ class TestBase(TestCase):
             td.watchdog_timer = time.time()
 
             if td.test_type and td.test_type == 'image':
-                width = settings['IMG_WIDTH']
-                height = settings['IMG_HEIGHT']
                 duration = settings['DURATION']
                 curr_time = capture_start = time.time()
                 td.result = []
 
-                while (curr_time - capture_start) * 1000 <= duration:
+                while (
+                    (curr_time - capture_start) * 1000 <= duration and
+                    not self.__class__.exit_event.is_set()
+                ):
                     try:
                         self.read_until(b'FRAME START\n')
-                        data = []
+                        fd = []
                         lne = self.read_until(b'\n')
 
                         while lne != b'FRAME END':
                             td.watchdog_timer = time.time()
-                            data.append(binascii.unhexlify(lne))
+                            fd.append(lne)
                             lne = self.read_until(b'\n')
                             if self.__class__.exit_event.is_set():
-                                return
+                                break
 
-                        frame = bytearray(b''.join(data))
-                        frame = [[frame[j + 2], frame[j + 1], frame[j]] for j in range(0, len(frame), 3)]
-                        frame = bytes(bytearray([
-                            item for sublist in frame
-                            for item in sublist
-                        ]))
+                        td.result.append(fd[:])
 
-                        img = Image.new('RGB', (width, height))
-                        img.frombytes(frame)
-                        td.result.append(img)
+                        if self.__class__.exit_event.is_set():
+                            break
+
                     except:  # NOQA
+                        import traceback
                         traceback.print_exc()
 
                         td.error_data = traceback.format_exc()
-
                         return
 
                     curr_time = time.time()
@@ -244,10 +243,11 @@ class TestBase(TestCase):
         )
         t.daemon = True
         test_data.watchdog_timer = time.time()
+
+        t.start()
         self.send(CTRL_D)
 
         test_data.event.wait(wait / 1000)
-        t.start()
 
         while (
             (time.time() - test_data.watchdog_timer) * 1000 <= timeout and
@@ -260,11 +260,32 @@ class TestBase(TestCase):
             t.join()
 
         if test_type and test_type == 'image':
+            width = settings['IMG_WIDTH']
+            height = settings['IMG_HEIGHT']
             test_data.event.set()
 
+            data = test_data.result[:]
+            test_data.result = []
+
+            for frame_data in data:
+
+                try:
+                    frame = bytearray(b''.join(binascii.unhexlify(lne) for lne in frame_data))
+                    frame = bytes(bytearray([
+                        item for j in range(0, len(frame), 3)
+                        for item in [frame[j + 2], frame[j + 1], frame[j]]
+                    ]))
+                    img = Image.new('RGB', (width, height))
+                    img.frombytes(frame)
+                    test_data.result.append(img)
+                except:  # NOQA
+                    test_data.result.append(None)
+                    continue
+
         if self.__class__.process is not None:
-            self.send(CTRL_C)
-            self.send(CTRL_C)
+            if stop_test_at_end or not test_data.event.is_set():
+                self.send(CTRL_C)
+                self.send(CTRL_C)
             # self.read_until(REPL_PROMPT)
 
             if not test_data.event.is_set():
@@ -376,29 +397,50 @@ def run():
                     self.fail(test_data.error_data)
 
                 elif t_type and t_type == 'image':
-                    artifact_path = os.path.join(
+                    group_artifact_path = os.path.join(
                         ARTIFACT_PATH,
-                        t_name + '.apng'
+                        self.__class__.__name__
                     )
+
+                    if not os.path.exists(group_artifact_path):
+                        os.mkdir(group_artifact_path)
+
+                    test_artifact_path = os.path.join(
+                        group_artifact_path,
+                        t_name
+                    )
+
+                    if not os.path.exists(test_artifact_path):
+                        os.mkdir(test_artifact_path)
+
+                    a_png_path = os.path.join(group_artifact_path, t_name + '.apng')
 
                     def save_apng():
                         try:
-                            artifact.save(artifact_path)
+                            artifact.save(a_png_path)
                         except:
+                            import traceback
+
                             traceback.print_exc()
 
                     artifact = apng.APNG()
 
-
+                    passed = False
 
                     if 'FRAME' in t_results:
-                        comp_data = list(t_results['FRAME'].getdata())
-                        passed = False
+                        res_img = t_results['FRAME'].convert('RGB')
+                        comp_data = list(res_img.getdata())
                     else:
                         comp_data = None
-                        passed = True
 
                     for frame_num, img in enumerate(test_data.result):
+                        if img is None:
+                            if f'FRAME{frame_num}' in t_results:
+                                self.fail(f'Frame buffer {frame_num} is None')
+
+                            continue
+
+                        img = img.convert('RGB')
                         byte_data = list(img.getdata())
                         writer = BytesIO()
                         img.save(writer, 'PNG')
@@ -407,33 +449,42 @@ def run():
                         artifact.append(png)
 
                         img.save(os.path.join(
-                            ARTIFACT_PATH,
+                            test_artifact_path,
                             f'frame{frame_num}.png'
                         ), 'PNG')
 
                         with open(os.path.join(
-                            ARTIFACT_PATH,
+                            test_artifact_path,
                             f'frame{frame_num}.bin'
                         ), 'wb') as f:
                             # have to flatten the data and remove the alpha
                             # from the PIL image it is formatted as
-                            # [(a, r, g, b), (a, r, g, b)]
+                            # [(r, g, b), (r, g, b)]
                             f.write(bytes(bytearray([
                                 item for sublist in byte_data
-                                for item in sublist[:-1]
+                                for item in sublist
                             ])))
 
                         if comp_data is None and f'FRAME{frame_num}' in t_results:
                             save_apng()
-                            f_data = list(t_results[f'FRAME{frame_num}'].getdata())
-                            if passed and f_data != byte_data:
-                                passed = False
+
+                            res_img = t_results[f'FRAME{frame_num}'].convert('RGB')
+                            res_data = list(res_img.getdata())
+
+                            if res_data !=  byte_data:
+                                self.assertEqual(
+                                    res_data,
+                                    byte_data,
+                                    'Frames do not match'
+                                )
+                            passed = True
 
                         elif comp_data is not None:
                             if comp_data == byte_data:
                                 passed = True
                         else:
-                            print(
+                            save_apng()
+                            self.fail(
                                 f'Missing frame {frame_num} '
                                 f'data in results file.'
                             )
@@ -441,7 +492,7 @@ def run():
                     save_apng()
                     self.assertTrue(
                         passed,
-                        f'Mismatch in captured frames ({artifact_path})'
+                        f'No matching frame buffer data ({test_artifact_path})'
                     )
 
                 else:
@@ -482,6 +533,8 @@ MICROPYTHON_PATH = os.path.join(cwd, 'micropython')
 
 
 if __name__ == '__main__':
+    import sys
+
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
         '--artifact-path',
@@ -498,16 +551,22 @@ if __name__ == '__main__':
     arg_parser.add_argument(
         '--debug',
         dest='debug',
-        help='enable debugging output',
+        help='debug output',
         action='store_true'
     )
 
     args = arg_parser.parse_args()
-    sys.argv = sys.argv[:-2]
 
     ARTIFACT_PATH = os.path.join(cwd, args.artifact_path)
     MICROPYTHON_PATH = os.path.join(cwd, args.mpy_path)
     DEBUG = args.debug
+
+    if '--debug' in sys.argv:
+        sys.argv.remove('--debug')
+
+    sys.argv = sys.argv[:-2]
+
+    sys.argv.append('-v')
 
     if not os.path.exists(ARTIFACT_PATH):
         raise RuntimeError(f'Artifact path does not exist ({ARTIFACT_PATH})')

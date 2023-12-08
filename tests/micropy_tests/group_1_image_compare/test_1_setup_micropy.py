@@ -5,6 +5,14 @@ import fs_driver
 import time
 
 
+try:
+    lv.log_register_print_cb  # NOQA
+
+    raise RuntimeError('Logging in LVGL MUST be disabled to run the tests.')
+except AttributeError:
+    pass
+
+
 if not lv.is_initialized():
     lv.init()
 
@@ -37,6 +45,16 @@ def flush(disp, area, color_p):
 
     print('FRAME END')
     disp.flush_ready()
+
+
+disp_drv = lv.display_create(WIDTH, HEIGHT)
+disp_drv.set_flush_cb(flush)
+disp_drv.set_color_format(lv.COLOR_FORMAT.RGB888)
+
+color_size = lv.color_format_get_size(disp_drv.get_color_format())
+
+buf = bytearray(WIDTH * HEIGHT * color_size)
+disp_drv.set_draw_buffers(buf, None, WIDTH * HEIGHT * color_size, lv.DISPLAY_RENDER_MODE.FULL)
 
 
 def GRID_FR(x):
@@ -139,53 +157,47 @@ def create_ui():
     # Apply flex layout
     cont.set_flex_flow(lv.FLEX_FLOW.COLUMN)
 
-    class anim_callback:
+    btn1 = list_button_create(cont)
+    btn2 = list_button_create(cont)
+    btn3 = list_button_create(cont)
+    btn4 = list_button_create(cont)
+    btn5 = list_button_create(cont)
+    btn6 = list_button_create(cont)
+    btn7 = list_button_create(cont)
+    btn8 = list_button_create(cont)
+    btn9 = list_button_create(cont)
+    btn10 = list_button_create(cont)
 
-        def __init__(self, _btn):
-            self._btn = _btn
+    a = lv.anim_t()
+    a.init()
+    a.set_var(btn1)
+    a.set_values(lv.OPA.COVER, lv.OPA._50)
+    a.set_custom_exec_cb(lambda _, v: opa_anim_cb(btn1, v))  # Pass a callback
+    a.set_time(300)
+    a.set_path_cb(lv.anim_t.path_ease_out)
+    a.start()
 
-        def __call__(self, _, val):
-            opa_anim_cb(self._btn, val)
+    btn2.add_flag(lv.obj.FLAG.HIDDEN)
 
-    # For loop
-    for i in range(10):
-        # Call a function implemented in the binding which returns a widget
-        btn = list_button_create(cont)
+    btn_label = btn3.get_child(0)
+    btn_label.set_text("A multi-line text with a ° symbol")
+    btn_label.set_width(lv.pct(100))
 
-        if i == 0:
-            # Start an animation
-            a = lv.anim_t()
-            a.init()
-            # a.set_var(btn)
-            a.set_values(lv.OPA.COVER, lv.OPA._50)
-            a.set_custom_exec_cb(anim_callback(btn))  # Pass a callback
-            a.set_time(300)
-            a.set_path_cb(a.path_ease_out)
-            a.start()
-        elif i == 1:
-            # Use flags
-            btn.add_flag(lv.obj.FLAG.HIDDEN)
-        elif i == 2:
-            btn_label = btn.get_child(0)
-            btn_label.set_text("A multi-line text with a ° symbol")
-            btn_label.set_width(lv.pct(100))
-        elif i == 3:
-            # Start an infinite animation and delete this button later
-            a = lv.anim_t()
-            a.init()
-            # a.set_var(btn)
-            a.set_values(lv.OPA.COVER, lv.OPA._50)
-            a.set_custom_exec_cb(anim_callback(btn))  # Pass a callback
-            a.set_path_cb(a.path_ease_out)
-            a.set_time(300)
-            a.set_repeat_count(lv.ANIM_REPEAT_INFINITE)
-            a.start()
+    a = lv.anim_t()
+    a.init()
+    a.set_var(btn4)
+    a.set_values(lv.OPA.COVER, lv.OPA._50)
+    a.set_custom_exec_cb(lambda _, v: opa_anim_cb(btn4, v))  # Pass a callback
+    a.set_path_cb(lv.anim_t.path_ease_out)
+    a.set_time(300)
+    a.set_repeat_count(lv.ANIM_REPEAT_INFINITE)
+    a.start()
 
     # Wait and delete the button with the animation
-    time.sleep_ms(300)
-    cont.get_child(3).delete()
 
+    cont.get_child(3).delete()
     # Large byte array
+
     canvas_buf = bytearray(CANVAS_BUF_SIZE(400, 100, 16, 1))
 
     canvas = lv.canvas(scr)
@@ -398,7 +410,10 @@ def list_button_create(parent):
 
 
 def opa_anim_cb(button, value):
-    lv.button.set_style_opa(button, value, 0)
+    try:
+        button.set_style_opa(value, 0)
+    except:  # NOQA
+        pass
 
 
 def draw_to_canvas(canvas):
@@ -594,13 +609,6 @@ def draw_to_canvas(canvas):
     for i in range(50):
         canvas.set_px(100 + i * 2, 10, c, lv.OPA.COVER)
 
-
-disp_drv = lv.display_create(WIDTH, HEIGHT)
-disp_drv.set_flush_cb(flush)
-disp_drv.set_color_format(lv.COLOR_FORMAT.RGB888)
-
-buf = bytearray(WIDTH * HEIGHT * lv.color_format_get_size(disp_drv.get_color_format()))
-disp_drv.set_draw_buffers(buf, None, WIDTH * HEIGHT * 3, lv.DISPLAY_RENDER_MODE.FULL)
 
 create_ui()
 # end
