@@ -443,7 +443,7 @@ extern void mp_lv_init_gc();
 
 #define LV_USE_BAR        1
 
-#define LV_USE_BTN        1
+#define LV_USE_BUTTON        1
 
 #define LV_USE_BUTTONMATRIX  1
 
