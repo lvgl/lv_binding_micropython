@@ -96,7 +96,7 @@ image = lv.image(scr)
 image.align(lv.ALIGN.CENTER, 0, 0)
 image_dsc = lv.image_dsc_t(
     {
-        "header": {"always_zero": 0, "w": 100, "h": 75, "cf": lv.COLOR_FORMAT.NATIVE},
+        "header": {"w": 100, "h": 75, "cf": lv.COLOR_FORMAT.NATIVE},
         "data_size": len(image_data),
         "data": image_data,
     }
