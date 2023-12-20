@@ -157,11 +157,7 @@
  *-----------*/
 
 /*Enable the log module*/
-#ifdef MICROPY_LV_USE_LOG
-#define LV_USE_LOG MICROPY_LV_USE_LOG
-#else
-#define LV_USE_LOG 1
-#endif
+#define LV_USE_LOG 0
 
 #if LV_USE_LOG
 
