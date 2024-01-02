@@ -689,10 +689,12 @@ extern void mp_lv_init_gc();
 #endif
 
 /* Built-in TTF decoder */
-#define LV_USE_TINY_TTF 0
+#ifndef LV_USE_TINY_TTF
+    #define LV_USE_TINY_TTF 1
+#endif
 #if LV_USE_TINY_TTF
     /* Enable loading TTF data from files */
-    #define LV_TINY_TTF_FILE_SUPPORT 0
+    #define LV_TINY_TTF_FILE_SUPPORT 1
 #endif
 
 /*Rlottie library*/
