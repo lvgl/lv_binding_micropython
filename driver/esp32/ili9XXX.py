@@ -111,7 +111,7 @@ class ili9XXX:
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         invert=False, double_buffer=True, half_duplex=True, display_type=0, asynchronous=False, initialize=True,
-        color_format=None
+        color_format=None, swap_rgb565_bytes=False
     ):
 
         # Initializations
@@ -144,6 +144,7 @@ class ili9XXX:
         self.hybrid = hybrid
         self.half_duplex = half_duplex
         self.display_type = display_type
+        self.swap_rgb565_bytes = swap_rgb565_bytes
 
         self.buf_size = (self.width * self.height * lv.COLOR_DEPTH // 8) // factor
 
@@ -171,6 +172,7 @@ class ili9XXX:
             'dc': self.dc,
             'spi': self.spi,
             'dt': self.display_type,
+            'swap_rgb565_bytes': self.swap_rgb565_bytes,
             'start_x': self.start_x,
             'start_y': self.start_y})
 
@@ -446,6 +448,7 @@ class ili9XXX:
     end_time_ptr = esp.C_Pointer()
     flush_acc_setup_cycles = 0
     flush_acc_dma_cycles = 0
+    _rgb565_swap = lv.draw_sw_rgb565_swap
 
     def flush(self, disp_drv, area, color_p):
 
@@ -487,6 +490,9 @@ class ili9XXX:
 
         size = (x2 - x1 + 1) * (y2 - y1 + 1)
         data_view = color_p.__dereference__(size * lv.COLOR_DEPTH // 8)
+
+        if self.swap_rgb565_bytes:
+            self._rgb565_swap(data_view, size)
 
         esp.get_ccount(self.end_time_ptr)
         if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
@@ -546,7 +552,7 @@ class ili9341(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE, swap_rgb565_bytes=True
     ):
 
         # Make sure Micropython was built such that color won't require processing before DMA
@@ -590,7 +596,7 @@ class ili9341(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ILI9341, asynchronous=asynchronous, initialize=initialize,
-            color_format=color_format)
+            color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)
 
 class ili9488(ili9XXX):
 
@@ -642,7 +648,8 @@ class ili9488(ili9XXX):
         super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
-            display_type=display_type, asynchronous=asynchronous, initialize=initialize, color_format=color_format)
+            display_type=display_type, asynchronous=asynchronous, initialize=initialize, 
+            color_format=color_format)
 
 class ili9488g(ili9488):
 
@@ -766,7 +773,7 @@ class st7789(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=320, height=240, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE, swap_rgb565_bytes=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -805,7 +812,7 @@ class st7789(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7789, asynchronous=asynchronous,
-            initialize=initialize, color_format=color_format)
+            initialize=initialize, color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)
 
 class st7735(ili9XXX):
 
@@ -818,7 +825,7 @@ class st7735(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE, swap_rgb565_bytes=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -861,4 +868,4 @@ class st7735(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7735, asynchronous=asynchronous,
-            initialize=initialize, color_format=color_format)
+            initialize=initialize, color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)

@@ -441,6 +441,7 @@ class St77xx_lvgl(object):
         # blit in background
         self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),color.__dereference__(2*w*h),is_blocking=False)
         self.disp_drv.flush_ready()
+    
     def __init__(self,doublebuffer=True,factor=4):
         import lvgl as lv
         import lv_utils
@@ -457,7 +458,7 @@ class St77xx_lvgl(object):
         self.disp_drv = lv.disp_create(self.width, self.height)
         self.disp_drv.set_flush_cb(self.disp_drv_flush_cb)
         self.disp_drv.set_draw_buffers(bytearray(bufSize), bytearray(bufSize) if doublebuffer else None, bufSize, lv.DISP_RENDER_MODE.PARTIAL)
-        self.disp_drv.set_color_format(lv.COLOR_FORMAT.NATIVE if self.bgr else lv.COLOR_FORMAT.NATIVE)
+        self.disp_drv.set_color_format(lv.COLOR_FORMAT.NATIVE)
 
 class St7735(St7735_hw,St77xx_lvgl):
     def __init__(self,res,doublebuffer=True,factor=4,**kw):

@@ -173,7 +173,7 @@
  *-----------*/
 
 /*Enable the log module*/
-#define LV_USE_LOG 0
+#define LV_USE_LOG 1
 #if LV_USE_LOG
 
     /*How important log should be added:
@@ -289,7 +289,7 @@ extern void mp_lv_init_gc();
 #ifdef MICROPY_CACHE_SIZE
     #define LV_CACHE_DEF_SIZE MICROPY_CACHE_SIZE
 #else
-    #define LV_CACHE_DEF_SIZE 256 * 1024
+    #define LV_CACHE_DEF_SIZE 1024 * 1024
 #endif
 
 /*Number of stops allowed per gradient. Increase this to allow more stops.
