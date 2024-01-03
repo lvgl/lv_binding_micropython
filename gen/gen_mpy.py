@@ -308,8 +308,17 @@ for t in typedefs:
             synonym[t.declname] = t.type.name
             # eprint('%s === struct %s' % (t.declname, t.type.name))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
-structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
 structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) for decl in ast.ext if hasattr(decl, 'type') and is_struct(decl.type))
+
+# for typedefs that referenced to a forward declaration struct, replace it with the real definition.
+for typedef in struct_typedefs:
+    if typedef.type.decls is None: # None means it's a forward declaration
+        struct_name = typedef.type.name
+        # check if it's found in `structs_without_typedef`. It actually has the typedef. Replace type with it.
+        if typedef.type.name in structs_without_typedef:
+            typedef.type = structs_without_typedef[struct_name]
+
+structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
 opaque_structs = collections.OrderedDict((typedef.declname, c_ast.Struct(name=typedef.declname, decls=[])) for typedef in typedefs if isinstance(typedef.type, c_ast.Struct) and typedef.type.decls == None)
@@ -744,7 +753,7 @@ print("""
 #define GENMPY_UNUSED
 #endif // __GNUC__
 #endif // GENMPY_UNUSED
- 
+
 // Custom function mp object
 
 typedef mp_obj_t (*mp_fun_ptr_var_t)(size_t n, const mp_obj_t *, void *ptr);
