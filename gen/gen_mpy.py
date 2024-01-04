@@ -1888,10 +1888,10 @@ def try_generate_struct(struct_name, struct):
                     gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_%s_callback'" % (struct_name, func_name))
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}, NULL, NULL, NULL); break; // converting to callback {type_name}'.
-                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
-            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_mpobj, {cast}data->{field}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
-                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
+            write_cases.append('case MP_QSTR_{field}: data->{decl_name} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}, NULL, NULL, NULL); break; // converting to callback {type_name}'.
+                format(struct_name = struct_name, field = sanitize(decl.name), decl_name = decl.name, lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
+            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_mpobj, {cast}data->{decl_name}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
+                format(struct_name = struct_name, field = sanitize(decl.name), decl_name = decl.name, lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
         else:
             user_data = None
             # Only allow write to non-const members
@@ -1900,16 +1900,16 @@ def try_generate_struct(struct_name, struct):
             if isinstance(decl.type, c_ast.ArrayDecl):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), gen.visit(decl.type.dim))
                 if is_writeable:
-                    write_cases.append('case MP_QSTR_{field}: memcpy((void*)&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
-                        format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
-                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
-                    format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                    write_cases.append('case MP_QSTR_{field}: memcpy((void*)&data->{decl_name}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
+                        format(field = sanitize(decl.name), decl_name = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{decl_name}); break; // converting from {type_name}'.
+                    format(field = sanitize(decl.name), decl_name = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
             else:
                 if is_writeable:
-                    write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
-                        format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
-                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
-                    format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                    write_cases.append('case MP_QSTR_{field}: data->{decl_name} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
+                        format(field = sanitize(decl.name), decl_name = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{decl_name}); break; // converting from {type_name}'.
+                    format(field = sanitize(decl.name), decl_name = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
     print('''
 /*
  * Struct {struct_name}
