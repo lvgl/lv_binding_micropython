@@ -15,8 +15,8 @@ try:
     lcd.init(w=hres, h=vres)
     disp_drv = lv.disp_create(hres, vres)
     disp_drv.set_flush_cb(lcd.flush)
-    buf1_1 = bytearray(hres * 10 * lv.color_t.__SIZE__)
-    buf1_2 = bytearray(hres * 10 * lv.color_t.__SIZE__)
+    buf1_1 = bytearray(hres * 10 * lv.COLOR_DEPTH // 8)
+    buf1_2 = bytearray(hres * 10 * lv.COLOR_DEPTH // 8)
     disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISP_RENDER_MODE.PARTIAL)
 
     # disp_drv.gpu_blend_cb = lcd.gpu_blend

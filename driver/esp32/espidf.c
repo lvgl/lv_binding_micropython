@@ -9,6 +9,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "soc/cpu.h"
+#include "lvgl/src/draw/sw/lv_draw_sw.h"
 
 
 // ESP IDF has some functions that are declared but not implemented.
@@ -231,6 +232,11 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 
     size_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
     uint8_t color_size = 2;
+
+    bool swap_rgb565_bytes = mp_obj_get_int(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_swap_rgb565_bytes)));
+    if ( swap_rgb565_bytes == true ) {
+        lv_draw_sw_rgb565_swap(color_p, size);
+    }
 
     if ( dt == DISPLAY_TYPE_ILI9488 ) {
         color_size = 3;

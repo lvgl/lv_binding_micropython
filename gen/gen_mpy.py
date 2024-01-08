@@ -2113,7 +2113,7 @@ def get_arg_name(arg):
     if isinstance(arg, c_ast.PtrDecl) or isinstance(arg, c_ast.FuncDecl):
         return get_arg_name(arg.type)
     if hasattr(arg, 'declname'): return arg.declname
-    if hasattr(arg, 'name'): return name
+    if hasattr(arg, 'name'): return arg.name
     return 'unnamed_arg'
 
 # print("// Typedefs: " + ", ".join(get_arg_name(t) for t in typedefs))
