@@ -685,7 +685,7 @@ class gc9a01(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=60, factor=4, hybrid=True, width=240, height=240, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=None
+        color_format=None, swap_rgb565_bytes=True
     ):
 
         if lv.COLOR_DEPTH != 16:
@@ -760,7 +760,8 @@ class gc9a01(ili9XXX):
         super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
-            display_type=DISPLAY_TYPE_GC9A01, asynchronous=asynchronous, initialize=initialize, color_format=color_format)
+            display_type=DISPLAY_TYPE_GC9A01, asynchronous=asynchronous, initialize=initialize, color_format=color_format,
+            swap_rgb565_bytes=swap_rgb565_bytes)
 
 class st7789(ili9XXX):
 

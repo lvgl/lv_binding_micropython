@@ -289,7 +289,7 @@ extern void mp_lv_init_gc();
 #ifdef MICROPY_CACHE_SIZE
     #define LV_CACHE_DEF_SIZE MICROPY_CACHE_SIZE
 #else
-    #define LV_CACHE_DEF_SIZE 1024 * 1024
+    #define LV_CACHE_DEF_SIZE   0
 #endif
 
 /*Number of stops allowed per gradient. Increase this to allow more stops.
@@ -592,7 +592,7 @@ extern void mp_lv_init_gc();
 /*API for fopen, fread, etc*/
 #define LV_USE_FS_STDIO 0
 #if LV_USE_FS_STDIO
-    #define LV_FS_STDIO_LETTER 'A'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+    #define LV_FS_STDIO_LETTER 'A'      /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_STDIO_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
     #define LV_FS_STDIO_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
@@ -675,26 +675,20 @@ extern void mp_lv_init_gc();
     /*Let FreeType to use LVGL memory and file porting*/
     #define LV_FREETYPE_USE_LVGL_PORT 0
 
-    /*FreeType cache type:
-     * LV_FREETYPE_CACHE_TYPE_IMAGE    - Image cache
-     * LV_FREETYPE_CACHE_TYPE_SBIT     - Sbit cache
-     * LV_FREETYPE_CACHE_TYPE_OUTLINE  - Outline cache*/
-    #define LV_FREETYPE_CACHE_TYPE LV_FREETYPE_CACHE_TYPE_IMAGE
-
     /* Maximum number of opened FT_Face/FT_Size objects managed by this cache instance. */
     /* (0:use system defaults) */
     #define LV_FREETYPE_CACHE_FT_FACES 8
     #define LV_FREETYPE_CACHE_FT_SIZES 8
-    #define LV_FREETYPE_CACHE_FT_OUTLINES 256
+    #define LV_FREETYPE_CACHE_FT_GLYPH_CNT 256
 #endif
 
 /* Built-in TTF decoder */
 #ifndef LV_USE_TINY_TTF
-    #define LV_USE_TINY_TTF 1
+    #define LV_USE_TINY_TTF 0
 #endif
 #if LV_USE_TINY_TTF
     /* Enable loading TTF data from files */
-    #define LV_TINY_TTF_FILE_SUPPORT 1
+    #define LV_TINY_TTF_FILE_SUPPORT 0
 #endif
 
 /*Rlottie library*/
@@ -897,7 +891,7 @@ extern void mp_lv_init_gc();
 *==================*/
 
 /*Enable the examples to be built with the library*/
-#define LV_BUILD_EXAMPLES 0
+#define LV_BUILD_EXAMPLES 1
 
 /*===================
  * DEMO USAGE
