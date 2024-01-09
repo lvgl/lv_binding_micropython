@@ -1,7 +1,7 @@
 ##############################################################################
 #
 # Example of the PNG image decoder Usage.
-# For dragging to work reasonable, make sure LV_image_CACHE_DEF_SIZE is not 0!
+# For dragging to work reasonable, make sure LV_CACHE_DEF_SIZE is not 0!
 #
 ##############################################################################
 
