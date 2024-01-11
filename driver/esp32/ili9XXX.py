@@ -14,29 +14,6 @@
 # color convert). Pure MicroPython is only supported for ili9341 and
 # gc9a01 displays!
 #
-#
-# Display configurations:
-#
-# ili9341:
-# -
-#
-# ili9488:
-# - SPI frequency: 40 MHz
-#   This means cca 9fps of full screen
-#   redraw. to increase FPS, you can use 80MHz SPI - easily add parameter
-#   mhz=80 in initialization of driver.
-#
-# ili9488g (gCore):
-# - SPI frequency: 80 MHz
-#
-# gc9a01:
-# - SPI frequency: 60 MHz, as that is the maximum the tested display
-#   would support despite the datasheet suggesting that higher freqs would be
-#   supported
-#
-# st7789:
-# -
-#
 ##############################################################################
 
 import espidf as esp
@@ -89,7 +66,7 @@ class ili9XXX:
         invert=False, double_buffer=True, half_duplex=True, display_type=0, asynchronous=False, initialize=True,
         color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=False
     ):
-
+        
         # Initializations
 
         if not lv.is_initialized():
@@ -126,6 +103,9 @@ class ili9XXX:
         self.swap_rgb565_bytes = swap_rgb565_bytes
         self.rgb565_swap_func = lv.draw_sw_rgb565_swap if swap_rgb565_bytes else None
 
+        if not color_format:
+            raise RuntimeError("No color format is defined")
+
         # SPI
         self.start_time_ptr = esp.C_Pointer()
         self.end_time_ptr = esp.C_Pointer()
@@ -143,28 +123,38 @@ class ili9XXX:
         self.monitor_count = 0
         self.cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
 
-        self.buf_size = (self.width * self.height * self.pixel_size) // factor
-
         if invert:
             self.init_cmds.append({'cmd': 0x21})
 
-        # Register display driver
+        # Allocate display buffer(s)
 
-        self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
-        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA) if double_buffer else None
-
-        if self.buf1 and self.buf2:
-            print("Double buffer")
-        elif self.buf1:
-            print("Single buffer")
-        else:
+        buf_size = (self.width * self.height * self.pixel_size) // factor
+        self.buf_size = buf_size
+        self.draw_buf1 = lv.draw_buf_t()
+        self.draw_buf2 = None
+        
+        buf1 = esp.heap_caps_malloc(buf_size, esp.MALLOC_CAP.DMA)
+        if not buf1:
             raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
+
+        if self.draw_buf1.init(width, height // factor, color_format, 0, buf1, buf_size) != lv.RESULT.OK:
+            raise RuntimeError("Draw buffer 1 initialization failed")
+        
+        if double_buffer:
+            buf2 = esp.heap_caps_malloc(buf_size, esp.MALLOC_CAP.DMA)
+            if buf2:
+                self.draw_buf2 = lv.draw_buf_t()
+                if self.draw_buf2.init(width, height // factor, color_format, 0, buf2, buf_size) != lv.RESULT.OK:
+                    raise RuntimeError("Draw buffer 2 initialization failed")
+
+        # Register display driver
 
         self.disp_spi_init()
         self.disp_drv = lv.display_create(self.width, self.height)
         self.disp_drv.set_flush_cb(esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush)
-        self.disp_drv.set_draw_buffers(self.buf1, self.buf2, self.buf_size, lv.DISPLAY_RENDER_MODE.PARTIAL)
-
+        self.disp_drv.set_draw_buffers(self.draw_buf1, self.draw_buf2)
+        self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_color_format(color_format)
         self.disp_drv.set_driver_data({
             'dc': self.dc,
             'spi': self.spi,
@@ -173,9 +163,6 @@ class ili9XXX:
             'start_x': self.start_x,
             'start_y': self.start_y
         })
-
-        if color_format:
-            self.disp_drv.set_color_format(color_format)
 
         if self.initialize:
             self.init()
@@ -312,13 +299,18 @@ class ili9XXX:
 
         # Free RAM
 
-        if self.buf1:
-            esp.heap_caps_free(self.buf1)
-            self.buf1 = None
+        if self.draw_buf1:
 
-        if self.buf2:
-            esp.heap_caps_free(self.buf2)
-            self.buf2 = None
+            esp.heap_caps_free(self.draw_buf1.unaligned_data)
+            self.draw_buf1.unaligned_data = None
+            lv.draw_buf_destroy(self.draw_buf1)
+            self.draw_buf1 = None
+
+        if self.draw_buf2:
+            esp.heap_caps_free(self.draw_buf2.unaligned_data)
+            self.draw_buf2.unaligned_data = None
+            lv.draw_buf_destroy(self.draw_buf2)
+            self.draw_buf2 = None
 
         if self.trans_buffer:
             esp.heap_caps_free(self.trans_buffer)

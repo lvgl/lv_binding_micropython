@@ -357,13 +357,15 @@ class AdvancedDemoApplication:
         # Register display driver
         self.event_loop = event_loop()
         lcd.init(w=hres, h=vres)
+        
+        draw_buf1 = lv.draw_buf_create(hres, 50, color_format, 0)
+        draw_buf2 = lv.draw_buf_create(hres, 50, color_format, 0)
+
         self.disp_drv = lv.display_create(hres, vres)
         self.disp_drv.set_flush_cb(lcd.flush)
         self.disp_drv.set_color_format(color_format)
-        buf_size = hres * 50 * lv.color_format_get_size(color_format)
-        buf1_1 = bytearray(buf_size)
-        buf1_2 = bytearray(buf_size)
-        self.disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISPLAY_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
+        self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
 
         # Register touch sensor
         self.indev_drv = lv.indev_create()

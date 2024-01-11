@@ -447,16 +447,21 @@ class St77xx_lvgl(object):
         import lv_utils
 
         color_format = lv.COLOR_FORMAT.RGB565
-        bufSize=(self.width * self.height * lv.color_format_get_size(color_format)) // factor
 
         if not lv.is_initialized(): lv.init()
+
         # create event loop if not yet present
         if not lv_utils.event_loop.is_running(): self.event_loop=lv_utils.event_loop()
 
+        # create display buffer(s)
+        draw_buf1 = lv.draw_buf_create(self.width, self.height // factor, color_format, 0)
+        draw_buf2 = lv.draw_buf_create(self.width, self.height // factor, color_format, 0) if doublebuffer else None
+        
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
         self.disp_drv = lv.disp_create(self.width, self.height)
         self.disp_drv.set_flush_cb(self.disp_drv_flush_cb)
-        self.disp_drv.set_draw_buffers(bytearray(bufSize), bytearray(bufSize) if doublebuffer else None, bufSize, lv.DISP_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
+        self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
         self.disp_drv.set_color_format(color_format)
 
 class St7735(St7735_hw,St77xx_lvgl):
