@@ -145,6 +145,10 @@
 
 /* Enable VG-Lite assert. */
 #define LV_VG_LITE_USE_ASSERT 0
+
+/* Simulate VG-Lite hardware using ThorVG */
+#define LV_USE_VG_LITE_THORVG  0
+
 #endif
 
 /*=================
@@ -287,7 +291,7 @@ extern void mp_lv_init_gc();
  *If size is not set to 0, the decoder will fail to decode when the cache is full.
  *If size is 0, the cache function is not enabled and the decoded mem will be released immediately after use.*/
 #ifdef MICROPY_CACHE_SIZE
-    #define LV_CACHE_DEF_SIZE MICROPY_CACHE_SIZE
+    #define LV_CACHE_DEF_SIZE   MICROPY_CACHE_SIZE
 #else
     #define LV_CACHE_DEF_SIZE   0
 #endif
@@ -513,8 +517,6 @@ extern void mp_lv_init_gc();
 #define LV_USE_LIST       1
 
 #define LV_USE_MENU       1
-
-#define LV_USE_METER      1
 
 #define LV_USE_MSGBOX     1
 
