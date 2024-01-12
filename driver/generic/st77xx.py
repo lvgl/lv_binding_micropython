@@ -459,10 +459,10 @@ class St77xx_lvgl(object):
         
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
         self.disp_drv = lv.disp_create(self.width, self.height)
-        self.disp_drv.set_flush_cb(self.disp_drv_flush_cb)
+        self.disp_drv.set_color_format(color_format)
         self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
         self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
-        self.disp_drv.set_color_format(color_format)
+        self.disp_drv.set_flush_cb(self.disp_drv_flush_cb)
 
 class St7735(St7735_hw,St77xx_lvgl):
     def __init__(self,res,doublebuffer=True,factor=4,**kw):
