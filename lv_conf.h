@@ -187,7 +187,12 @@
  *-----------*/
 
 /*Enable the log module*/
-#define LV_USE_LOG 0
+#ifdef MICROPY_LV_USE_LOG
+    #define LV_USE_LOG MICROPY_LV_USE_LOG 
+#else
+    #define LV_USE_LOG 1
+#endif
+
 #if LV_USE_LOG
 
     /*How important log should be added:
