@@ -39,7 +39,7 @@ class driver:
 
         hres = 480
         vres = 272
-        color_format = lv.COLOR_FORMAT.XRGB8888
+        color_format = lv.COLOR_FORMAT.RGB8888
 
         # Register display driver
         event_loop = lv_utils.event_loop()
@@ -47,18 +47,11 @@ class driver:
         
         buf1 = lcd.framebuffer(1)
         buf2 = lcd.framebuffer(2)
-        draw_buf1 = lv.draw_buf_t()
-        draw_buf2 = lv.draw_buf_t()
-        if draw_buf1.init(hres, vres, color_format, 0, buf1, len(buf1)) != lv.RESULT.OK:
-            raise RuntimeError("Draw buffer 1 initialization failed")
-        if draw_buf2.init(hres, vres, color_format, 0, buf2, len(buf2)) != lv.RESULT.OK:
-            raise RuntimeError("Draw buffer 2 initialization failed")
         
         self.disp_drv = lv.disp_create(hres, vres)
         self.disp_drv.set_flush_cb(lcd.flush)
         self.disp_drv.set_color_format(color_format)
-        self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
-        self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_buffers(buf1, buf2, len(buf1), lv.DISPLAY_RENDER_MODE.PARTIAL)
 
         # disp_drv.gpu_blend_cb = lcd.gpu_blend
         # disp_drv.gpu_fill_cb = lcd.gpu_fill
@@ -107,7 +100,7 @@ image = lv.image(scr)
 image.align(lv.ALIGN.CENTER, 0, 0)
 image_dsc = lv.image_dsc_t(
     {
-        "header": {"w": 100, "h": 75, "cf": lv.COLOR_FORMAT.NATIVE},
+        "header": {"w": 100, "h": 75, "cf": lv.COLOR_FORMAT.ARGB8888},
         "data_size": len(image_data),
         "data": image_data,
     }
