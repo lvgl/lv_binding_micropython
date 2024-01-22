@@ -1,6 +1,6 @@
 /**
  * @file lv_conf.h
- * Configuration file for v9.0.0-rc
+ * Configuration file for v9.0.0
  */
 
 /*
@@ -190,7 +190,7 @@
 #ifdef MICROPY_LV_USE_LOG
     #define LV_USE_LOG MICROPY_LV_USE_LOG 
 #else
-    #define LV_USE_LOG 1
+    #define LV_USE_LOG 0
 #endif
 
 #if LV_USE_LOG
@@ -283,6 +283,14 @@ extern void mp_lv_init_gc();
     #define LV_CACHE_DEF_SIZE   MICROPY_CACHE_SIZE
 #else
     #define LV_CACHE_DEF_SIZE   0
+#endif
+
+/*Default number of image header cache entries. The cache is used to store the headers of images
+ *The main logic is like `LV_CACHE_DEF_SIZE` but for image headers.*/
+#ifdef MICROPY_IMAGE_HEADER_CACHE_COUNT
+    #define LV_IMAGE_HEADER_CACHE_DEF_CNT   MICROPY_IMAGE_HEADER_CACHE_COUNT
+#else
+    #define LV_IMAGE_HEADER_CACHE_DEF_CNT   32
 #endif
 
 /*Number of stops allowed per gradient. Increase this to allow more stops.
@@ -750,6 +758,8 @@ extern void mp_lv_init_gc();
 #define LV_USE_SYSMON   0
 
 #if LV_USE_SYSMON
+    /*Get the idle percentage. E.g. uint32_t my_get_idle(void);*/
+    #define LV_SYSMON_GET_IDLE lv_timer_get_idle
 
     /*1: Show CPU usage and FPS count
      * Requires `LV_USE_SYSMON = 1`*/
