@@ -197,7 +197,7 @@ static bool lvgl_pointer_kscan_read(lv_indev_t *drv, lv_indev_data_t *data)
 
 	/* adjust kscan coordinates */
 	if (IS_ENABLED(CONFIG_LVGL_POINTER_KSCAN_SWAP_XY)) {
-		lv_coord_t x;
+		int32_t x;
 
 		x = prev.point.x;
 		prev.point.x = prev.point.y;
@@ -224,7 +224,7 @@ static bool lvgl_pointer_kscan_read(lv_indev_t *drv, lv_indev_data_t *data)
 
 	/* rotate touch point to match display rotation */
 	if (cap.current_orientation == DISPLAY_ORIENTATION_ROTATED_90) {
-		lv_coord_t x;
+		int32_t x;
 
 		x = prev.point.x;
 		prev.point.x = prev.point.y;
@@ -233,7 +233,7 @@ static bool lvgl_pointer_kscan_read(lv_indev_t *drv, lv_indev_data_t *data)
 		prev.point.x = cap.x_resolution - prev.point.x;
 		prev.point.y = cap.y_resolution - prev.point.y;
 	} else if (cap.current_orientation == DISPLAY_ORIENTATION_ROTATED_270) {
-		lv_coord_t x;
+		int32_t x;
 
 		x = prev.point.x;
 		prev.point.x = cap.x_resolution - prev.point.y;

@@ -10,14 +10,19 @@ try:
 
     hres = 480
     vres = 272
+    color_format = lv.COLOR_FORMAT.ARGB8888
+
     lv.init()
     event_loop = lv_utils.event_loop()
     lcd.init(w=hres, h=vres)
+
+    buf1 = lcd.framebuffer(1)
+    buf2 = lcd.framebuffer(2)
+    
     disp_drv = lv.disp_create(hres, vres)
     disp_drv.set_flush_cb(lcd.flush)
-    buf1_1 = bytearray(hres * 10 * lv.color_t.__SIZE__)
-    buf1_2 = bytearray(hres * 10 * lv.color_t.__SIZE__)
-    disp_drv.set_draw_buffers(buf1_1, buf1_2, len(buf1_1), lv.DISP_RENDER_MODE.PARTIAL)
+    disp_drv.set_color_format(color_format)
+    disp_drv.set_buffers(buf1, buf2, len(buf1), lv.DISPLAY_RENDER_MODE.PARTIAL)
 
     # disp_drv.gpu_blend_cb = lcd.gpu_blend
     # disp_drv.gpu_fill_cb = lcd.gpu_fill
@@ -31,20 +36,20 @@ except ImportError:
 
 scr1 = lv.obj()
 scr2 = lv.obj()
-lv.scr_load(scr1)
+lv.screen_load(scr1)
 
 slider = lv.slider(scr2)
 slider.set_width(150)
 slider.align(lv.ALIGN.TOP_MID, 0, 15)
 
-btn1 = lv.btn(scr1)
-btn1.align(lv.ALIGN.TOP_RIGHT, -5, 5)
-label = lv.label(btn1)
+button1 = lv.button(scr1)
+button1.align(lv.ALIGN.TOP_RIGHT, -5, 5)
+label = lv.label(button1)
 label.set_text(">")
 
-btn2 = lv.btn(scr2)
-btn2.align(lv.ALIGN.TOP_LEFT, 5, 5)
-label2 = lv.label(btn2)
+button2 = lv.button(scr2)
+button2.align(lv.ALIGN.TOP_LEFT, 5, 5)
+label2 = lv.label(button2)
 label2.set_text("<")
 
 led1 = lv.led(scr2)
@@ -57,16 +62,16 @@ led1.set_size(20,20)
 def slider_event_cb(event):
     led1.set_brightness(slider.get_value() * 2)
 
-def btn1_event_cb(event):
-    lv.scr_load(scr2)
+def button1_event_cb(event):
+    lv.screen_load(scr2)
 
 
-def btn2_event_cb(event):
-    lv.scr_load(scr1)
+def button2_event_cb(event):
+    lv.screen_load(scr1)
 
-slider.add_event(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
-btn1.add_event(btn1_event_cb, lv.EVENT.CLICKED, None)
-btn2.add_event(btn2_event_cb, lv.EVENT.CLICKED, None)
+slider.add_event_cb(slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
+button1.add_event_cb(button1_event_cb, lv.EVENT.CLICKED, None)
+button2.add_event_cb(button2_event_cb, lv.EVENT.CLICKED, None)
 
 # Create a keyboard
 kb = lv.keyboard(scr1)
@@ -83,7 +88,8 @@ ta.set_text("")
 kb.set_textarea(ta)
 
 # Create a Spinner object
-spin = lv.spinner(scr2, 1000, 100)
+spin = lv.spinner(scr2)
+spin.set_anim_params(1000, 100)
 spin.set_size(100, 100)
 spin.align(lv.ALIGN.CENTER, 0, 0)
 # spin.set_type(lv.spinner.TYPE.FILLSPIN_ARC)

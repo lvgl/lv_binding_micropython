@@ -49,7 +49,7 @@ class ExceptionHandler:
 lv.init()
 exception_handler = ExceptionHandler()
 driver = display_driver_utils.driver(exception_sink = exception_handler.handle_exceptions)
-scr = lv.scr_act()
+scr = lv.screen_active()
 objects = []
 
 def collect_objects(obj, user_data):
@@ -91,7 +91,7 @@ def run():
             exec(file_string, {'__file__': script_name, 'lv': lv})
             time.sleep_ms(DELAY_MS * 2)
             gc.collect()
-            lv.scr_act().tree_walk(collect_objects, None)
+            lv.screen_active().tree_walk(collect_objects, None)
             send_events()
             time.sleep_ms(DELAY_MS)
             exception_handler.reraise()

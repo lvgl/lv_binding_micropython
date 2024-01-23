@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../../../lvgl/lvgl.h"
-#include "../../../lv_conf.h"
 #include "../../include/common.h"
 #include "stm32746g_discovery_ts.h"
 #include "rk043fn48h.h"
@@ -25,7 +24,7 @@ MP_REGISTER_ROOT_POINTER(void* rk043fn48h_fb[2]);
 LTDC_HandleTypeDef *hltdc = NULL;           // handle to LTDC, referenced in stm32_it.c
 DMA2D_HandleTypeDef *hdma2d = NULL;         // handle to DMA2D, referenced in stm32_it.c
 i2c_t *i2c_ts = NULL;                       // I2C handle for touchscreen
-lv_disp_t *dma2d_disp_drv = NULL;  // handle to display driver
+lv_display_t *dma2d_disp_drv = NULL;  // handle to display driver
 lv_color_t *fb[2] = {NULL, NULL};           // framebuffer pointers
 uint32_t w = 0;                             // display width
 uint32_t h = 0;                             // display height
@@ -115,7 +114,7 @@ STATIC mp_obj_t mp_rk043fn48h_deinit() {
     return mp_const_none;
 }
 
-STATIC void mp_rk043fn48h_flush(lv_disp_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
+STATIC void mp_rk043fn48h_flush(lv_display_t *disp_drv, const lv_area_t *area, lv_color_t *color_p) {
     if ((lv_area_get_width(area) == w) && (lv_area_get_height(area) == h)) {
         dma2d_disp_drv = disp_drv;
         SCB_CleanInvalidateDCache();
@@ -137,28 +136,28 @@ STATIC void mp_rk043fn48h_flush(lv_disp_t *disp_drv, const lv_area_t *area, lv_c
 }
 
 void DMA2D_TransferComplete(DMA2D_HandleTypeDef *hdma2d) {
-    lv_disp_flush_ready(dma2d_disp_drv);
+    lv_display_flush_ready(dma2d_disp_drv);
     dma2d_pend = false;
 }
 
 void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
-    lv_disp_flush_ready(dma2d_disp_drv);
+    lv_display_flush_ready(dma2d_disp_drv);
 }
 
 STATIC void mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t *data) {
     static TS_StateTypeDef ts_state = {0};
-    static lv_coord_t lastX = 0;
-    static lv_coord_t lastY = 0;
+    static int32_t lastX = 0;
+    static int32_t lastY = 0;
 
     BSP_TS_GetState(&ts_state);
     if (ts_state.touchDetected) {
         data->point.x = lastX = ts_state.touchX[0];
         data->point.y = lastY = ts_state.touchY[0];
-        data->state = LV_INDEV_STATE_PR;
+        data->state = LV_INDEV_STATE_PRESSED;
     } else {
         data->point.x = lastX;
         data->point.y = lastY;
-        data->state = LV_INDEV_STATE_REL;
+        data->state = LV_INDEV_STATE_RELEASED;
     }
 }
 

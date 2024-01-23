@@ -159,7 +159,7 @@ static void ili9xxx_send_data_dma(void *disp_drv, void *data, size_t size, int d
 void ili9xxx_post_cb_isr(spi_transaction_t *trans)
 {
     if (trans->user)
-        lv_disp_flush_ready(trans->user);
+        lv_display_flush_ready(trans->user);
 }
 
 
@@ -177,13 +177,13 @@ typedef struct {
 
 void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 {
-    lv_disp_t *disp_drv = _disp_drv;
+    lv_display_t *disp_drv = _disp_drv;
     const lv_area_t *area = _area;
     lv_color_t *color_p = _color_p;
     int start_x = 0;
     int start_y = 0;
 
-    void *driver_data = lv_disp_get_driver_data(disp_drv);
+    void *driver_data = lv_display_get_driver_data(disp_drv);
 
     // We use disp_drv->driver_data to pass data from MP to C
     // The following lines extract dc and spi
@@ -231,6 +231,11 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 
     size_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
     uint8_t color_size = 2;
+
+    bool swap_rgb565_bytes = mp_obj_get_int(mp_obj_dict_get(driver_data, MP_OBJ_NEW_QSTR(MP_QSTR_swap_rgb565_bytes)));
+    if ( swap_rgb565_bytes == true ) {
+        lv_draw_sw_rgb565_swap(color_p, size);
+    }
 
     if ( dt == DISPLAY_TYPE_ILI9488 ) {
         color_size = 3;

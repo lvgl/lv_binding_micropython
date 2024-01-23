@@ -16,11 +16,11 @@ lv.linux_fbdev_set_file(disp, "/dev/fb0")
 
 # Register mouse device and crosshair cursor
 
-mouse = evdev.mouse_indev(lv.scr_act())
+mouse = evdev.mouse_indev(lv.screen_active())
 
 # Create a screen and a button
 
-btn = lv.btn(lv.scr_act())
+btn = lv.button(lv.screen_active())
 btn.align(lv.ALIGN.CENTER, 0, 0)
 label = lv.label(btn)
 label.set_text("Hello World!")

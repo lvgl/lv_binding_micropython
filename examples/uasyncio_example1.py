@@ -77,12 +77,12 @@ class MsgBox(lv.win):
         self.set_pos(x, y)
 
     def __init__(self, parent):
-        super().__init__(parent, 20)
+        super().__init__(parent)
         self.vect = lv.point_t()
 
         self.set_size(100,80)
         self.add_title("Pop")
-        msg_box_close_btn = self.add_btn(lv.SYMBOL.CLOSE, 20)
+        msg_box_close_btn = self.add_button(lv.SYMBOL.CLOSE, 20)
         msg_box_close_btn.add_event(lambda e: self.close_msg_box(), lv.EVENT.RELEASED, None)
 
         header = self.get_header()
@@ -96,8 +96,8 @@ class MsgBox(lv.win):
         self.set_style_shadow_color(lv.color_hex3(0x000), lv.PART.MAIN)
         self.set_style_shadow_opa(50, lv.PART.MAIN)
         self.set_style_shadow_width(20, lv.PART.MAIN)
-        self.set_style_shadow_ofs_x(10, lv.PART.MAIN)
-        self.set_style_shadow_ofs_y(10, lv.PART.MAIN)
+        self.set_style_shadow_offset_x(10, lv.PART.MAIN)
+        self.set_style_shadow_offset_y(10, lv.PART.MAIN)
         self.set_style_shadow_spread(0, lv.PART.MAIN)
         self.set_style_radius(10, lv.PART.MAIN)
 
@@ -158,8 +158,8 @@ async def btn_event_task(obj=None, event=-1):
 # Create objects and screen
 ##################################################################################################
 
-scr = lv.scr_act()
-btn = lv.btn(scr)
+scr = lv.screen_active()
+btn = lv.button(scr)
 btn.align(lv.ALIGN.TOP_MID, 0, 10)
 btn.add_event(lambda e: create_task(btn_event_task()), lv.EVENT.CLICKED, None)
 label = lv.label(btn)

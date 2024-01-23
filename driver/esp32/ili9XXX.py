@@ -1,50 +1,7 @@
 ##############################################################################
-# Pure/Hybrid micropython lvgl display driver for ili9341 and ili9488 on ESP32
+# Pure/Hybrid MicroPython LVGL display driver for 
+# ili9341, ili9488, ili9488g, gc9a01, st7789 on ESP32
 #
-# For ili9341 display:
-#
-#   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16"
-#   (make parameter) to configure LVGL use the same color format as ili9341
-#   and prevent the need to loop over all pixels to translate them.
-#
-# For ili9488 display:
-#
-#   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=32"
-#   (make parameter) to configure LVGL use the ARGB color format, which can be
-#   easily converted to RGB format used by ili9488 display.
-#
-#   Default SPI freq is set to 40MHz. This means cca 9fps of full screen
-#   redraw. to increase FPS, you can use 80MHz SPI - easily add parameter
-#   mhz=80 in initialization of driver.
-#
-# For ili9488g (gCore) display:
-#
-#   Build micropython with either
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=32"
-#   or
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1"
-#
-#   Default SPI freq is set to 80MHz.
-#
-# For gc9a01 display:
-#
-#   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16"
-#   (make parameter) to configure LVGL use the same color format as ili9341
-#   and prevent the need to loop over all pixels to translate them.
-#
-#   Default SPI freq is set to 60MHz as that is the maximum the tested display
-#   would support despite the datasheet suggesting that higher freqs would be
-#   supported
-#
-# For st7789 display:
-#
-#   Build micropython with
-#     LV_CFLAGS="-DLV_COLOR_DEPTH=16"
-#   (make parameter) to configure LVGL use the same color format as ili9341
-#   and prevent the need to loop over all pixels to translate them.
 #
 # Critical function for high FPS are flush and ISR.
 # when "hybrid=True", use C implementation for these functions instead of
@@ -54,21 +11,21 @@
 # Pure Micropython could be viable when ESP32 supports Viper code emitter.
 #
 # ili9488 driver DO NOT support pure micropython now (because of required
-# color convert). Pure micropython is only supported the for ili9341 and
+# color convert). Pure MicroPython is only supported for ili9341 and
 # gc9a01 displays!
+#
 ##############################################################################
 
 import espidf as esp
 import lvgl as lv
 import lv_utils
 import micropython
-import gc
+
+from micropython import const
 
 micropython.alloc_emergency_exception_buf(256)
-# gc.threshold(0x10000) # leave enough room for SPI master TX DMA buffers
 
 # Constants
-
 COLOR_MODE_RGB = const(0x00)
 COLOR_MODE_BGR = const(0x08)
 
@@ -94,11 +51,9 @@ DISPLAY_TYPE_GC9A01 = const(3)
 DISPLAY_TYPE_ST7789 = const(4)
 DISPLAY_TYPE_ST7735 = const(5)
 
-class ili9XXX:
+_TRANSFER_BUFFER_LENGTH = const(16)
 
-    TRANS_BUFFER_LEN = const(16)
-    display_name = 'ili9XXX'
-    init_cmds = [ ]
+class ili9XXX:
 
     # Default values of "power" and "backlight" are reversed logic! 0 means ON.
     # You can change this by setting backlight_on and power_on arguments.
@@ -107,7 +62,7 @@ class ili9XXX:
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         invert=False, double_buffer=True, half_duplex=True, display_type=0, asynchronous=False, initialize=True,
-        color_format=None
+        color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=False
     ):
 
         # Initializations
@@ -115,6 +70,8 @@ class ili9XXX:
         if not lv.is_initialized():
             lv.init()
 
+        self.display_name = self.display_name or 'ili9XXX'
+        self.init_cmds = self.init_cmds or [ ]
         self.asynchronous = asynchronous
         self.initialize = initialize
 
@@ -140,40 +97,59 @@ class ili9XXX:
         self.hybrid = hybrid
         self.half_duplex = half_duplex
         self.display_type = display_type
+        self.color_format = color_format
+        self.pixel_size = lv.color_format_get_size(color_format)
+        self.swap_rgb565_bytes = swap_rgb565_bytes
+        self.rgb565_swap_func = lv.draw_sw_rgb565_swap if swap_rgb565_bytes else None
 
-        self.buf_size = (self.width * self.height * lv.color_t.__SIZE__) // factor
+        if not color_format:
+            raise RuntimeError(f"No color format defined for display {self.display_name}")
+
+        # SPI
+
+        self.start_time_ptr = esp.C_Pointer()
+        self.end_time_ptr = esp.C_Pointer()
+        self.trans_result_ptr = esp.C_Pointer()
+        self.trans = esp.spi_transaction_t()
+        self.flush_acc_setup_cycles = 0
+        self.flush_acc_dma_cycles = 0
+
+        # Monitor
+
+        self.monitor_acc_time = 0
+        self.monitor_acc_px = 0
+        self.monitor_count = 0
+        self.cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
 
         if invert:
             self.init_cmds.append({'cmd': 0x21})
 
-        # Register display driver
+        # Allocate display buffer(s)
 
+        self.buf_size = (self.width * self.height * self.pixel_size) // factor
         self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
+        if not self.buf1:
+            free = esp.heap_caps_get_largest_free_block(esp.MALLOC_CAP.DMA)
+            raise RuntimeError(f"Not enough DMA-capable memory to allocate display buffer. Needed: {self.buf_size} bytes, largest free block: {free} bytes")
         self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA) if double_buffer else None
 
-        if self.buf1 and self.buf2:
-            print("Double buffer")
-        elif self.buf1:
-            print("Single buffer")
-        else:
-            raise RuntimeError("Not enough DMA-able memory to allocate display buffer")
+        # Register display driver
 
         self.disp_spi_init()
-        self.disp_drv = lv.disp_create(self.width, self.height)
+        self.disp_drv = lv.display_create(self.width, self.height)
+        self.disp_drv.set_color_format(color_format)
+        self.disp_drv.set_buffers(self.buf1, self.buf2, self.buf_size, lv.DISPLAY_RENDER_MODE.PARTIAL)
         self.disp_drv.set_flush_cb(esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush)
-        self.disp_drv.set_draw_buffers(self.buf1, self.buf2, self.buf_size, lv.DISP_RENDER_MODE.PARTIAL)
-
         self.disp_drv.set_driver_data({
             'dc': self.dc,
             'spi': self.spi,
             'dt': self.display_type,
+            'swap_rgb565_bytes': self.swap_rgb565_bytes,
             'start_x': self.start_x,
-            'start_y': self.start_y})
+            'start_y': self.start_y
+        })
 
-        # TODO: enable monitor by listening to LV_EVENT_RENDER_READY
-        # self.disp_drv.monitor_cb = self.monitor
-        if color_format:
-            self.disp_drv.set_color_format(color_format)
+        # Initialize display
 
         if self.initialize:
             self.init()
@@ -238,7 +214,7 @@ class ili9XXX:
             ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
             if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
-        self.trans_buffer = esp.heap_caps_malloc(TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
+        self.trans_buffer = esp.heap_caps_malloc(_TRANSFER_BUFFER_LENGTH, esp.MALLOC_CAP.DMA)
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
         self.word_trans_data = self.trans_buffer.__dereference__(4)
 
@@ -256,7 +232,6 @@ class ili9XXX:
         def post_isr(arg):
             reported_transmitted = self.bytes_transmitted
             if reported_transmitted > 0:
-                print('- Completed DMA of %d bytes (mem_free=0x%X)' % (reported_transmitted , gc.mem_free()))
                 self.bytes_transmitted -= reported_transmitted
 
         # Called in ISR context!
@@ -279,18 +254,15 @@ class ili9XXX:
     # This function is called from finilizer during gc sweep - therefore must not allocate memory!
     #
 
-    trans_result_ptr = esp.C_Pointer()
-
     def deinit(self):
-
-        print('Deinitializing {}..'.format(self.display_name))
 
         # Prevent callbacks to lvgl, which refer to the buffers we are about to delete
 
         if lv_utils.event_loop.is_running():
             self.event_loop.deinit()
 
-        self.disp.remove()
+        if self.disp_drv:
+            self.disp_drv.delete()
 
         if self.spi:
 
@@ -324,13 +296,8 @@ class ili9XXX:
             esp.heap_caps_free(self.trans_buffer)
             self.trans_buffer = None
 
-
     ######################################################
-
-    trans = esp.spi_transaction_t() # .__cast__(
-#                esp.heap_caps_malloc(
-#                    esp.spi_transaction_t.__SIZE__, esp.MALLOC_CAP.DMA))
-
+            
     def spi_send(self, data):
         self.trans.length = len(data) * 8   # Length is in bytes, transaction length is in bits.
         self.trans.tx_buffer = data         # data should be allocated as DMA-able memory
@@ -344,7 +311,6 @@ class ili9XXX:
         esp.spi_device_queue_trans(self.spi, self.trans, -1)
 
     ######################################################
-    ######################################################
 
     def send_cmd(self, cmd):
         esp.gpio_set_level(self.dc, 0)	    # Command mode
@@ -353,7 +319,7 @@ class ili9XXX:
 
     def send_data(self, data):
         esp.gpio_set_level(self.dc, 1)	    # Data mode
-        if len(data) > TRANS_BUFFER_LEN: raise RuntimeError('Data too long, please use DMA!')
+        if len(data) > _TRANSFER_BUFFER_LENGTH: raise RuntimeError('Data too long, please use DMA!')
         trans_data = self.trans_buffer.__dereference__(len(data))
         trans_data[:] = data[:]
         self.spi_send(trans_data)
@@ -405,12 +371,9 @@ class ili9XXX:
             if 'delay' in cmd:
                 await sleep_func(cmd['delay'])
 
-        print("{} initialization completed".format(self.display_name))
-
         # Enable backlight
 
         if self.backlight != -1:
-            print("Enable backlight")
             esp.gpio_set_level(self.backlight, self.backlight_on)
 
     def init(self):
@@ -435,13 +398,7 @@ class ili9XXX:
         if self.backlight != -1:
             esp.gpio_set_level(self.backlight, 1 - self.backlight_on)
 
-
     ######################################################
-
-    start_time_ptr = esp.C_Pointer()
-    end_time_ptr = esp.C_Pointer()
-    flush_acc_setup_cycles = 0
-    flush_acc_dma_cycles = 0
 
     def flush(self, disp_drv, area, color_p):
 
@@ -465,7 +422,6 @@ class ili9XXX:
         self.send_trans_word()
 
         # Page addresses
-
         self.send_cmd(0x2B)
 
         y1 = area.y1 + self.start_y
@@ -478,11 +434,13 @@ class ili9XXX:
         self.send_trans_word()
 
         # Memory write by DMA, disp_flush_ready when finished
-
         self.send_cmd(0x2C)
 
         size = (x2 - x1 + 1) * (y2 - y1 + 1)
-        data_view = color_p.__dereference__(size * lv.color_t.__SIZE__)
+        data_view = color_p.__dereference__(size * self.pixel_size)
+
+        if self.rgb565_swap_func:
+            self.rgb565_swap_func(data_view, size)
 
         esp.get_ccount(self.end_time_ptr)
         if self.end_time_ptr.int_val > self.start_time_ptr.int_val:
@@ -492,12 +450,6 @@ class ili9XXX:
         self.send_data_dma(data_view)
 
     ######################################################
-
-    monitor_acc_time = 0
-    monitor_acc_px = 0
-    monitor_count = 0
-
-    cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
 
     def monitor(self, disp_drv, time, px):
         self.monitor_acc_time += time
@@ -542,13 +494,13 @@ class ili9341(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSED
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True
     ):
 
-        # Make sure Micropython was built such that color won't require processing before DMA
+        # Make sure MicroPython was built such that color won't require processing before DMA
 
-        if lv.color_t.__SIZE__ != 2:
-            raise RuntimeError('ili9341 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if lv.color_format_get_bpp(color_format) != 16:
+            raise RuntimeError('ili9341 micropython driver requires 16 bit color format')
 
         self.display_name = 'ILI9341'
 
@@ -586,7 +538,7 @@ class ili9341(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ILI9341, asynchronous=asynchronous, initialize=initialize,
-            color_format=color_format)
+            color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)
 
 class ili9488(ili9XXX):
 
@@ -594,11 +546,11 @@ class ili9488(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=8, hybrid=True, width=320, height=480, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=None, display_type=DISPLAY_TYPE_ILI9488, p16=False
+        color_format=lv.COLOR_FORMAT.XRGB8888, display_type=DISPLAY_TYPE_ILI9488, p16=False, swap_rgb565_bytes=False
     ):
 
-        if (lv.color_t.__SIZE__ != 4) and not p16:
-            raise RuntimeError('ili9488 micropython driver requires defining LV_COLOR_DEPTH=32')
+        if (lv.color_format_get_bpp(color_format) != 32) and not p16:
+            raise RuntimeError('ili9488 micropython driver requires 32 bit color format')
         if not hybrid:
             raise RuntimeError('ili9488 micropython driver do not support non-hybrid driver')
 
@@ -638,32 +590,36 @@ class ili9488(ili9XXX):
         super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
-            display_type=display_type, asynchronous=asynchronous, initialize=initialize, color_format=color_format)
+            display_type=display_type, asynchronous=asynchronous, initialize=initialize, 
+            color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)
 
 class ili9488g(ili9488):
 
     def __init__(self,
         miso=-1, mosi=23, clk=18, cs=5, dc=27, rst=-1, power=-1, backlight=-1, backlight_on=0, power_on=0,
         spihost=esp.VSPI_HOST, spimode=0, mhz=80, factor=8, hybrid=True, width=320, height=480,
-        rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True
+        rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
+        color_format=lv.COLOR_FORMAT.XRGB8888, swap_rgb565_bytes=False
     ):
 
-        if lv.color_t.__SIZE__ == 4:
+        if lv.color_format_get_bpp(color_format) == 32:
             colormode=COLOR_MODE_RGB
-            color_format=None
+            color_format=lv.COLOR_FORMAT.XRGB8888
             display_type=DISPLAY_TYPE_ILI9488 # 24-bit pixel handling
             p16=False
 
-        if lv.color_t.__SIZE__ == 2:
+        if lv.color_format_get_bpp(color_format) == 16:
             colormode=COLOR_MODE_BGR
-            color_format=lv.COLOR_FORMAT.NATIVE_REVERSE
+            color_format=lv.COLOR_FORMAT.RGB565
+            swap_rgb565_bytes=True
             display_type=DISPLAY_TYPE_ILI9341 # Force use of 16-bit pixel handling
             p16=True
 
         super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, colormode=colormode, rot=rot, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
-            asynchronous=asynchronous, initialize=initialize, color_format=color_format, display_type=display_type, p16=p16)
+            asynchronous=asynchronous, initialize=initialize, color_format=color_format, display_type=display_type, p16=p16, 
+            swap_rgb565_bytes=swap_rgb565_bytes)
 
 class gc9a01(ili9XXX):
 
@@ -674,11 +630,11 @@ class gc9a01(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=60, factor=4, hybrid=True, width=240, height=240, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=None
+        color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True
     ):
 
-        if lv.color_t.__SIZE__ != 2:
-            raise RuntimeError('gc9a01 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if lv.color_format_get_bpp(color_format) != 16:
+            raise RuntimeError('gc9a01 micropython driver requires 16 bit color format')
 
         # This is included as the color mode appears to be reversed from the
         # datasheet and the ili9XXX driver values
@@ -749,7 +705,8 @@ class gc9a01(ili9XXX):
         super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, invert=invert, double_buffer=double_buffer, half_duplex=half_duplex,
-            display_type=DISPLAY_TYPE_GC9A01, asynchronous=asynchronous, initialize=initialize, color_format=color_format)
+            display_type=DISPLAY_TYPE_GC9A01, asynchronous=asynchronous, initialize=initialize, color_format=color_format,
+            swap_rgb565_bytes=swap_rgb565_bytes)
 
 class st7789(ili9XXX):
 
@@ -762,12 +719,12 @@ class st7789(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=5, dc=16, rst=23, power=-1, backlight=4, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=320, height=240, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSED):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
-        if lv.color_t.__SIZE__ != 2:
-            raise RuntimeError('st7789 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if lv.color_format_get_bpp(color_format) != 16:
+            raise RuntimeError('st7789 micropython driver requires 16 bit color format')
 
         self.display_name = 'ST7789'
 
@@ -801,7 +758,7 @@ class st7789(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7789, asynchronous=asynchronous,
-            initialize=initialize, color_format=color_format)
+            initialize=initialize, color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)
 
 class st7735(ili9XXX):
 
@@ -814,12 +771,12 @@ class st7735(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSED):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
-        if lv.color_t.__SIZE__ != 2:
-            raise RuntimeError('st7735 micropython driver requires defining LV_COLOR_DEPTH=16')
+        if lv.color_format_get_bpp(color_format) != 16:
+            raise RuntimeError('st7735 micropython driver requires 16 bit color format')
 
         self.display_name = 'ST7735'
 
@@ -857,4 +814,4 @@ class st7735(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7735, asynchronous=asynchronous,
-            initialize=initialize, color_format=color_format)
+            initialize=initialize, color_format=color_format, swap_rgb565_bytes=swap_rgb565_bytes)

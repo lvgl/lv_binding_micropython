@@ -441,23 +441,28 @@ class St77xx_lvgl(object):
         # blit in background
         self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),color.__dereference__(2*w*h),is_blocking=False)
         self.disp_drv.flush_ready()
+    
     def __init__(self,doublebuffer=True,factor=4):
         import lvgl as lv
         import lv_utils
 
-        if lv.COLOR_DEPTH!=16: raise RuntimeError(f'LVGL *must* be compiled with LV_COLOR_DEPTH=16 (currently LV_COLOR_DEPTH={lv.COLOR_DEPTH}.')
-        
-        bufSize=(self.width*self.height*lv.color_t.__SIZE__)//factor
+        color_format = lv.COLOR_FORMAT.RGB565
 
         if not lv.is_initialized(): lv.init()
+
         # create event loop if not yet present
         if not lv_utils.event_loop.is_running(): self.event_loop=lv_utils.event_loop()
 
+        # create display buffer(s)
+        draw_buf1 = lv.draw_buf_create(self.width, self.height // factor, color_format, 0)
+        draw_buf2 = lv.draw_buf_create(self.width, self.height // factor, color_format, 0) if doublebuffer else None
+        
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
         self.disp_drv = lv.disp_create(self.width, self.height)
+        self.disp_drv.set_color_format(color_format)
+        self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
+        self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
         self.disp_drv.set_flush_cb(self.disp_drv_flush_cb)
-        self.disp_drv.set_draw_buffers(bytearray(bufSize), bytearray(bufSize) if doublebuffer else None, bufSize, lv.DISP_RENDER_MODE.PARTIAL)
-        self.disp_drv.set_color_format(lv.COLOR_FORMAT.NATIVE if self.bgr else lv.COLOR_FORMAT.NATIVE_REVERSED)
 
 class St7735(St7735_hw,St77xx_lvgl):
     def __init__(self,res,doublebuffer=True,factor=4,**kw):

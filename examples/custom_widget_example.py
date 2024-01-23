@@ -74,7 +74,7 @@ class CustomWidgetClass():
     def event_cb(self, lv_cls, e):
         # Call the ancestor's event handler
         res = lv_cls.event_base(e)
-        if res != lv.RES.OK:
+        if res != lv.RESULT.OK:
             return
 
         code = e.get_code()
@@ -84,8 +84,8 @@ class CustomWidgetClass():
 
         if code == lv.EVENT.DRAW_MAIN:
             # Draw the widget
-            draw_ctx = e.get_draw_ctx()
-            self.draw(obj, draw_ctx)
+            layer = e.get_layer()
+            self.draw(obj, layer)
         elif code in [
                 lv.EVENT.STYLE_CHANGED,
                 lv.EVENT.VALUE_CHANGED,
@@ -99,11 +99,10 @@ class CustomWidgetClass():
         area = lv.area_t()
         obj.get_content_coords(area)
 
-        obj.draw_desc = lv.draw_rect_dsc_t()
+        obj.draw_desc = lv.draw_triangle_dsc_t()
         obj.draw_desc.init()
         obj.draw_desc.bg_opa = lv.OPA.COVER
         obj.draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
-        
         obj.points = [
             {'x':area.x1 + area.get_width()//2,
              'y':area.y2 if obj.get_state() & lv.STATE.CHECKED else area.y1},
@@ -112,16 +111,19 @@ class CustomWidgetClass():
             {'x':area.x1,
              'y':area.y1 + area.get_height()//2},
         ]
+        obj.draw_desc.p[0] = obj.points[0]
+        obj.draw_desc.p[1] = obj.points[1]
+        obj.draw_desc.p[2] = obj.points[2]
 
         obj.valid = True
 
-    def draw(self, obj, draw_ctx):
+    def draw(self, obj, layer):
         # If object invalidated, recalculate its parameters
         if not obj.valid:
             self.calc(obj)
 
         # Draw the custom widget
-        draw_ctx.polygon(obj.draw_desc, obj.points, len(obj.points))
+        lv.draw_triangle(layer, obj.draw_desc)
 
 ##############################################################################
 # A Python class to wrap the LVGL custom widget
@@ -130,8 +132,8 @@ class CustomWidgetClass():
 class CustomWidget():
 
     # An instance of a widget-class to be used for creating custom widgets
-    d = lv.disp_get_default()
-    dpi = d.get_dpi()
+    # d = lv.disp_get_default()
+    dpi = 130 # d.get_dpi()
     cls = CustomWidgetClass(dpi, dpi)
 
     @staticmethod
@@ -182,7 +184,7 @@ class CustomTheme(lv.theme_t):
             self.set_bg_color(lv.palette_main(lv.PALETTE.GREY))
 
             # Child elements are centered
-            self.set_layout(lv.LAYOUT_FLEX.value)
+            self.set_layout(lv.LAYOUT.FLEX)
             self.set_flex_main_place(lv.FLEX_ALIGN.CENTER)
             self.set_flex_cross_place(lv.FLEX_ALIGN.CENTER)
             self.set_flex_track_place(lv.FLEX_ALIGN.CENTER)
@@ -202,7 +204,7 @@ class CustomTheme(lv.theme_t):
         self.custom_pressed_style = CustomTheme.PressedStyle()
 
         # This theme is based on active theme
-        base_theme = lv.theme_get_from_obj(lv.scr_act())
+        base_theme = lv.theme_get_from_obj(lv.screen_active())
 
         # This theme will be applied only after base theme is applied
         self.set_parent(base_theme)
@@ -211,7 +213,7 @@ class CustomTheme(lv.theme_t):
         self.set_apply_cb(self.apply)
 
         # Activate this theme on the default display
-        lv.disp_get_default().set_theme(self)
+        lv.display_get_default().set_theme(self)
     
     def apply(self, theme, obj):
         # Apply this theme on CustomWidget class
@@ -228,13 +230,13 @@ class CustomTheme(lv.theme_t):
 theme = CustomTheme()
 
 # Create a screen with flex layout
-scr = lv.scr_act()
+scr = lv.screen_active()
 scr.set_flex_flow(lv.FLEX_FLOW.COLUMN)
 scr.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
 
 # Add a button with a label
-btn = lv.btn(scr)
-l1 = lv.label(btn)
+button = lv.button(scr)
+l1 = lv.label(button)
 l1.set_text("Hello!")
 
 # Add a custom widget with a label
@@ -246,6 +248,6 @@ l2.set_text("Click me!")
 def event_cb(e):
     print("%s Clicked!" % repr(e.get_target_obj()))
 
-for widget in [btn, customWidget]:
-    widget.add_event(event_cb, lv.EVENT.CLICKED, None)
+for widget in [button, customWidget]:
+    widget.add_event_cb(event_cb, lv.EVENT.CLICKED, None)
 
