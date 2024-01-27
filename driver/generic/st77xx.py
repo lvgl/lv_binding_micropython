@@ -435,11 +435,15 @@ class St77xx_lvgl(object):
     * sets the driver callback to the disp_drv_flush_cb method.
 
     '''
-    def disp_drv_flush_cb(self,disp_drv,area,color):
+    def disp_drv_flush_cb(self,disp_drv,area,color_p):
         # print(f"({area.x1},{area.y1}..{area.x2},{area.y2})")
         self.rp2_wait_dma() # wait if not yet done and DMA is being used
         # blit in background
-        self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),color.__dereference__(2*w*h),is_blocking=False)
+        size = w * h
+        data_view = color_p.__dereference__(size * self.pixel_size)
+        if self.rgb565_swap_func:
+            self.rgb565_swap_func(data_view, size)
+        self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),data_view,is_blocking=False)
         self.disp_drv.flush_ready()
     
     def __init__(self,doublebuffer=True,factor=4):
@@ -447,6 +451,8 @@ class St77xx_lvgl(object):
         import lv_utils
 
         color_format = lv.COLOR_FORMAT.RGB565
+        self.pixel_size = lv.color_format_get_size(color_format)
+        self.rgb565_swap_func = None if self.bgr else lv.draw_sw_rgb565_swap
 
         if not lv.is_initialized(): lv.init()
 
