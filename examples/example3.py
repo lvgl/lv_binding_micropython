@@ -19,7 +19,7 @@ try:
     buf1 = lcd.framebuffer(1)
     buf2 = lcd.framebuffer(2)
     
-    disp_drv = lv.disp_create(hres, vres)
+    disp_drv = lv.display_create(hres, vres)
     disp_drv.set_flush_cb(lcd.flush)
     disp_drv.set_color_format(color_format)
     disp_drv.set_buffers(buf1, buf2, len(buf1), lv.DISPLAY_RENDER_MODE.PARTIAL)

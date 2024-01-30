@@ -464,7 +464,7 @@ class St77xx_lvgl(object):
         draw_buf2 = lv.draw_buf_create(self.width, self.height // factor, color_format, 0) if doublebuffer else None
         
         # attach all to self to avoid objects' refcount dropping to zero when the scope is exited
-        self.disp_drv = lv.disp_create(self.width, self.height)
+        self.disp_drv = lv.display_create(self.width, self.height)
         self.disp_drv.set_color_format(color_format)
         self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
         self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
