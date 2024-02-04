@@ -389,7 +389,7 @@ extern void mp_lv_init_gc();
 #define LV_FONT_MONTSERRAT_18 0
 #define LV_FONT_MONTSERRAT_20 0
 #define LV_FONT_MONTSERRAT_22 0
-#define LV_FONT_MONTSERRAT_24 1
+#define LV_FONT_MONTSERRAT_24 0
 #define LV_FONT_MONTSERRAT_26 0
 #define LV_FONT_MONTSERRAT_28 0
 #define LV_FONT_MONTSERRAT_30 0
@@ -587,10 +587,10 @@ extern void mp_lv_init_gc();
 #endif /*LV_USE_THEME_DEFAULT*/
 
 /*A very simple theme that is a good starting point for a custom theme*/
-#define LV_USE_THEME_SIMPLE 1
+#define LV_USE_THEME_SIMPLE 0
 
 /*A theme designed for monochrome displays*/
-#define LV_USE_THEME_MONO 1
+#define LV_USE_THEME_MONO 0
 
 /*==================
  * LAYOUTS
@@ -811,7 +811,7 @@ extern void mp_lv_init_gc();
 #define LV_USE_MONKEY 0
 
 /*1: Enable grid navigation*/
-#define LV_USE_GRIDNAV 1
+#define LV_USE_GRIDNAV 0
 
 /*1: Enable lv_obj fragment*/
 #define LV_USE_FRAGMENT 0
@@ -824,7 +824,7 @@ extern void mp_lv_init_gc();
 
 /*1: Enable Pinyin input method*/
 /*Requires: lv_keyboard*/
-#define LV_USE_IME_PINYIN 1
+#define LV_USE_IME_PINYIN 0
 #if LV_USE_IME_PINYIN
     /*1: Use default thesaurus*/
     /*If you do not use the default thesaurus, be sure to use `lv_ime_pinyin` after setting the thesauruss*/
@@ -842,13 +842,13 @@ extern void mp_lv_init_gc();
 
 /*1: Enable file explorer*/
 /*Requires: lv_table*/
-#define LV_USE_FILE_EXPLORER                     1
+#define LV_USE_FILE_EXPLORER 0
 #if LV_USE_FILE_EXPLORER
     /*Maximum length of path*/
-    #define LV_FILE_EXPLORER_PATH_MAX_LEN        (128)
+    #define LV_FILE_EXPLORER_PATH_MAX_LEN (128)
     /*Quick access bar, 1:use, 0:not use*/
     /*Requires: lv_list*/
-    #define LV_FILE_EXPLORER_QUICK_ACCESS        1
+    #define LV_FILE_EXPLORER_QUICK_ACCESS 1
 #endif
 
 /*==================
@@ -938,7 +938,7 @@ extern void mp_lv_init_gc();
 *==================*/
 
 /*Enable the examples to be built with the library*/
-#define LV_BUILD_EXAMPLES 1
+#define LV_BUILD_EXAMPLES 0
 
 /*===================
  * DEMO USAGE
