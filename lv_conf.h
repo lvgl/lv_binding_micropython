@@ -811,7 +811,9 @@ extern void mp_lv_init_gc();
 #define LV_USE_MONKEY 0
 
 /*1: Enable grid navigation*/
-#define LV_USE_GRIDNAV 0
+#ifndef LV_USE_GRIDNAV
+    #define LV_USE_GRIDNAV 0
+#endif
 
 /*1: Enable lv_obj fragment*/
 #define LV_USE_FRAGMENT 0
@@ -824,7 +826,9 @@ extern void mp_lv_init_gc();
 
 /*1: Enable Pinyin input method*/
 /*Requires: lv_keyboard*/
-#define LV_USE_IME_PINYIN 0
+#ifndef LV_USE_IME_PINYIN
+    #define LV_USE_IME_PINYIN 0
+#endif
 #if LV_USE_IME_PINYIN
     /*1: Use default thesaurus*/
     /*If you do not use the default thesaurus, be sure to use `lv_ime_pinyin` after setting the thesauruss*/
@@ -842,7 +846,9 @@ extern void mp_lv_init_gc();
 
 /*1: Enable file explorer*/
 /*Requires: lv_table*/
-#define LV_USE_FILE_EXPLORER 0
+#ifndef LV_USE_FILE_EXPLORER
+    #define LV_USE_FILE_EXPLORER 0
+#endif
 #if LV_USE_FILE_EXPLORER
     /*Maximum length of path*/
     #define LV_FILE_EXPLORER_PATH_MAX_LEN (128)
@@ -938,7 +944,9 @@ extern void mp_lv_init_gc();
 *==================*/
 
 /*Enable the examples to be built with the library*/
-#define LV_BUILD_EXAMPLES 0
+#ifndef LV_BUILD_EXAMPLES
+    #define LV_BUILD_EXAMPLES 0
+#endif
 
 /*===================
  * DEMO USAGE
