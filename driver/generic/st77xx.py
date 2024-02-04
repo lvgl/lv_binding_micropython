@@ -436,14 +436,17 @@ class St77xx_lvgl(object):
 
     '''
     def disp_drv_flush_cb(self,disp_drv,area,color_p):
-        # print(f"({area.x1},{area.y1}..{area.x2},{area.y2})")
         self.rp2_wait_dma() # wait if not yet done and DMA is being used
-        # blit in background
+        
+        w = area.x2 - area.x1 + 1
+        h = area.y2 - area.y1 + 1
         size = w * h
         data_view = color_p.__dereference__(size * self.pixel_size)
         if self.rgb565_swap_func:
             self.rgb565_swap_func(data_view, size)
-        self.blit(area.x1,area.y1,w:=(area.x2-area.x1+1),h:=(area.y2-area.y1+1),data_view,is_blocking=False)
+        
+        # blit in background
+        self.blit(area.x1, area.y1, w, h, data_view, is_blocking=False)
         self.disp_drv.flush_ready()
     
     def __init__(self,doublebuffer=True,factor=4):
