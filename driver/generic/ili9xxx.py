@@ -161,7 +161,6 @@ class Ili9341_hw(st77xx.St77xx_hw):
 class Ili9341(Ili9341_hw, st77xx.St77xx_lvgl):
     def __init__(self, doublebuffer=True, factor=4, **kw):
         """See :obj:`Ili9341_hw` for the meaning of the parameters."""
-        import lvgl as lv
 
         Ili9341_hw.__init__(self, **kw)
         st77xx.St77xx_lvgl.__init__(self, doublebuffer, factor)
