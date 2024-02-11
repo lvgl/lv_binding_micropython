@@ -52,6 +52,7 @@ DISPLAY_TYPE_ST7789 = const(4)
 DISPLAY_TYPE_ST7735 = const(5)
 
 _TRANSFER_BUFFER_LENGTH = const(16)
+_MALLOC_DMA = esp.MALLOC_CAP.DMA | esp.MALLOC_CAP.INTERNAL
 
 class ili9XXX:
 
@@ -102,6 +103,8 @@ class ili9XXX:
         self.swap_rgb565_bytes = swap_rgb565_bytes
         self.rgb565_swap_func = lv.draw_sw_rgb565_swap if swap_rgb565_bytes else None
 
+        flush_cb = esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush
+
         if not color_format:
             raise RuntimeError(f"No color format defined for display {self.display_name}")
 
@@ -127,11 +130,11 @@ class ili9XXX:
         # Allocate display buffer(s)
 
         self.buf_size = (self.width * self.height * self.pixel_size) // factor
-        self.buf1 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA)
+        self.buf1 = esp.heap_caps_malloc(self.buf_size, _MALLOC_DMA)
         if not self.buf1:
-            free = esp.heap_caps_get_largest_free_block(esp.MALLOC_CAP.DMA)
+            free = esp.heap_caps_get_largest_free_block(_MALLOC_DMA)
             raise RuntimeError(f"Not enough DMA-capable memory to allocate display buffer. Needed: {self.buf_size} bytes, largest free block: {free} bytes")
-        self.buf2 = esp.heap_caps_malloc(self.buf_size, esp.MALLOC_CAP.DMA) if double_buffer else None
+        self.buf2 = esp.heap_caps_malloc(self.buf_size, _MALLOC_DMA) if double_buffer else None
 
         # Register display driver
 
@@ -139,7 +142,7 @@ class ili9XXX:
         self.disp_drv = lv.display_create(self.width, self.height)
         self.disp_drv.set_color_format(color_format)
         self.disp_drv.set_buffers(self.buf1, self.buf2, self.buf_size, lv.DISPLAY_RENDER_MODE.PARTIAL)
-        self.disp_drv.set_flush_cb(esp.ili9xxx_flush if hybrid and hasattr(esp, 'ili9xxx_flush') else self.flush)
+        self.disp_drv.set_flush_cb(flush_cb)
         self.disp_drv.set_driver_data({
             'dc': self.dc,
             'spi': self.spi,
@@ -214,7 +217,7 @@ class ili9XXX:
             ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
             if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
-        self.trans_buffer = esp.heap_caps_malloc(_TRANSFER_BUFFER_LENGTH, esp.MALLOC_CAP.DMA)
+        self.trans_buffer = esp.heap_caps_malloc(_TRANSFER_BUFFER_LENGTH, _MALLOC_DMA)
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
         self.word_trans_data = self.trans_buffer.__dereference__(4)
 
