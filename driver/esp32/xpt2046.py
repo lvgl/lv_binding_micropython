@@ -1,13 +1,16 @@
-from machine import Pin
+from micropython import const
+
 import espidf as esp
 import lvgl as lv
 
 # TODO: Viper/native emmitters don't behave well when module is frozen.
 
+_STATE_PRESSED = lv.INDEV_STATE.PRESSED
+_STATE_RELEASED = lv.INDEV_STATE.RELEASED
+
 class xpt2046:
     
     # Command is 8 bit, but we add another bit as a space before xpt2046 stats sending the response, See Figure 12 on the datasheet
-
     CMD_X_READ  = const(0b100100000)
     CMD_Y_READ  = const(0b110100000)
     CMD_Z1_READ = const(0b101100000)
@@ -21,13 +24,14 @@ class xpt2046:
                  transpose = True, samples = 3):
 
         # Initializations
-
         if not lv.is_initialized():
             lv.init()
+            disp = lv.display_t()
+        else:
+            disp = lv.display_get_default()
 
-        disp = lv.display_t()
-        self.screen_width = disp.get_hor_res()
-        self.screen_height = disp.get_ver_res()
+        self.screen_width = disp.get_horizontal_resolution()
+        self.screen_height = disp.get_vertical_resolution()
         self.miso = miso
         self.mosi = mosi
         self.clk = clk
@@ -43,6 +47,11 @@ class xpt2046:
         self.transpose = transpose
         self.samples = samples
 
+        self.trans_result_ptr = esp.C_Pointer()
+        self.start_time_ptr = esp.C_Pointer()
+        self.end_time_ptr = esp.C_Pointer()
+        self.cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
+
         self.touch_count = 0
         self.touch_cycles = 0
         
@@ -50,8 +59,9 @@ class xpt2046:
 
         self.indev_drv = lv.indev_create()
         self.indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev_drv.set_display(disp)
         self.indev_drv.set_read_cb(self.read)
-        
+
     def calibrate(self, x0, y0, x1, y1):
         self.cal_x0 = x0
         self.cal_y0 = y0
@@ -59,53 +69,52 @@ class xpt2046:
         self.cal_y1 = y1
 
     def spi_init(self):
-	buscfg = esp.spi_bus_config_t({
+        buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
-	    "mosi_io_num": self.mosi,
-	    "sclk_io_num": self.clk,
-	    "quadwp_io_num": -1,
-	    "quadhd_io_num": -1,
-	    "max_transfer_sz": 4,
-	})
+            "mosi_io_num": self.mosi,
+            "sclk_io_num": self.clk,
+            "quadwp_io_num": -1,
+            "quadhd_io_num": -1,
+            "max_transfer_sz": 4,
+        })
 
         devcfg_flags = 0 # esp.SPI_DEVICE.NO_DUMMY
         if self.half_duplex:
             devcfg_flags |= esp.SPI_DEVICE.HALFDUPLEX
 
-	devcfg = esp.spi_device_interface_config_t({
-            "command_bits": 9,                      # Actually 8, but need another cycle before xpt starts transmitting response, see Figure 12 on the datasheet.
-            "clock_speed_hz": self.mhz*1000*1000,   
-            "mode": 0,                              # SPI mode 0
-            "spics_io_num": self.cs,                # CS pin
-            "queue_size": self.max_cmds,
-            "flags": devcfg_flags,
-            "duty_cycle_pos": 128,
-	})
+        devcfg = esp.spi_device_interface_config_t({
+                "command_bits": 9,                      # Actually 8, but need another cycle before xpt starts transmitting response, see Figure 12 on the datasheet.
+                "clock_speed_hz": self.mhz*1000*1000,   
+                "mode": 0,                              # SPI mode 0
+                "spics_io_num": self.cs,                # CS pin
+                "queue_size": self.max_cmds,
+                "flags": devcfg_flags,
+                "duty_cycle_pos": 128,
+        })
 
         esp.gpio_pad_select_gpio(self.cs)
 
-	# Initialize the SPI bus, if needed
+        # Initialize the SPI bus, if needed
 
         if buscfg.miso_io_num >= 0 and \
            buscfg.mosi_io_num >= 0 and \
            buscfg.sclk_io_num >= 0:
 
-                esp.gpio_pad_select_gpio(self.miso)
-                esp.gpio_pad_select_gpio(self.mosi)
-                esp.gpio_pad_select_gpio(self.clk)
+            esp.gpio_pad_select_gpio(self.miso)
+            esp.gpio_pad_select_gpio(self.mosi)
+            esp.gpio_pad_select_gpio(self.clk)
 
-                esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
-                esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
-                esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
-                esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
+            esp.gpio_set_direction(self.miso, esp.GPIO_MODE.INPUT)
+            esp.gpio_set_pull_mode(self.miso, esp.GPIO.PULLUP_ONLY)
+            esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
+            esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
 
-                ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
-                if ret != 0: raise RuntimeError("Failed initializing SPI bus")
+            ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
+            if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
-	# Attach the xpt2046 to the SPI bus
-
+        # Attach the xpt2046 to the SPI bus
         ptr_to_spi = esp.C_Pointer()
-	ret = esp.spi_bus_add_device(self.spihost, devcfg, ptr_to_spi)
+        ret = esp.spi_bus_add_device(self.spihost, devcfg, ptr_to_spi)
         if ret != 0: raise RuntimeError("Failed adding SPI device")
         self.spi = ptr_to_spi.ptr_val
         
@@ -117,7 +126,6 @@ class xpt2046:
             'rxlength': 16
             }) for i in range(0, self.max_cmds)]
 
-    trans_result_ptr = esp.C_Pointer()
 
     #
     # Deinitalize SPI device and bus
@@ -193,9 +201,6 @@ class xpt2046:
         if int(z1) == 0: return -1
         return ( (int(x)*factor) / 4096)*( int(z2)/int(z1) - 1)
 
-    start_time_ptr = esp.C_Pointer()
-    end_time_ptr = esp.C_Pointer()
-    cycles_in_ms = esp.esp_clk_cpu_freq() // 1000
 
     # @micropython.native
     def read(self, indev_drv, data) -> int:
@@ -210,9 +215,9 @@ class xpt2046:
 
         if coords:
             data.point.x ,data.point.y = coords
-            data.state = lv.INDEV_STATE.PRESSED
+            data.state = _STATE_PRESSED
             return False
-        data.state = lv.INDEV_STATE.RELEASED
+        data.state = _STATE_RELEASED
         return False
 
     def stat(self):
