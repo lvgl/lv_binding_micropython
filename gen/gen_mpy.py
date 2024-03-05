@@ -293,6 +293,58 @@ parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
 
+
+# *************** Fix ***********************************
+# this is a fix for structures not getting populated properly from
+# forward declarations. pycparser doesn't make the connection between
+# a forwrd declaration and the actual declaration so the structures get created
+# without any fields. Since there are no fields things like callbacks break
+# because the generation code looks for specific field names
+# to know if it is valid to be used as a callback.
+forward_struct_decls = {}
+
+for item in ast.ext[:]:
+    # Locate a forward declaration
+    if (
+        isinstance(item, c_ast.Decl) and
+        item.name is None and
+        isinstance(item.type, c_ast.Struct) and
+        item.type.name is not None
+    ):
+        # check to see if there are no fields , and of not store the structure
+        # as a foward declaration. If it does have fields then build a single
+        # object that represents the structure with the fiels.
+        if item.type.decls is None:
+            forward_struct_decls[item.type.name] = [item]
+        else:
+            if item.type.name in forward_struct_decls:
+                decs = forward_struct_decls[item.type.name]
+                if len(decs) == 2:
+                    decl, td = decs
+
+                    td.type.type.decls = item.type.decls[:]
+
+                    ast.ext.remove(decl)
+                    ast.ext.remove(item)
+    # there are 3 objects that get created for a formard declaration.
+    # a structure without any fields, a typedef pointing to that structure.
+    # and the last is another structure that has fields. So we need to capture
+    # all 3 parts to build a single object that represents a structure.
+    elif (
+        isinstance(item, c_ast.Typedef) and
+        isinstance(item.type, c_ast.TypeDecl) and
+        item.name and
+        item.type.declname and
+        item.name == item.type.declname and
+        isinstance(item.type.type, c_ast.Struct) and
+        item.type.type.decls is None
+    ):
+        if item.type.type.name in forward_struct_decls:
+            forward_struct_decls[item.type.type.name].append(item)
+
+# ********************************************************************
+
+
 # Types and structs
 
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
