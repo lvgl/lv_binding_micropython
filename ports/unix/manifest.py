@@ -1,0 +1,6 @@
+module("evdev.py", base_path="../../driver/linux")
+module("lv_timer.py", base_path="../../driver/linux")
+module("display_driver_utils.py", base_path="../../lib")
+module("display_driver.py", base_path="../../lib")
+module("fs_driver.py", base_path="../../lib")
+module("lv_utils.py", base_path="../../lib")
