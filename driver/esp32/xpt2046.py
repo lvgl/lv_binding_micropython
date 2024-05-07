@@ -1,5 +1,7 @@
 from micropython import const
 
+import machine
+
 import espidf as esp
 import lvgl as lv
 
@@ -11,10 +13,10 @@ _STATE_RELEASED = lv.INDEV_STATE.RELEASED
 class xpt2046:
     
     # Command is 8 bit, but we add another bit as a space before xpt2046 stats sending the response, See Figure 12 on the datasheet
-    CMD_X_READ  = const(0b100100000)
-    CMD_Y_READ  = const(0b110100000)
-    CMD_Z1_READ = const(0b101100000)
-    CMD_Z2_READ = const(0b110000000)
+    CMD_X_READ  = 0b100100000
+    CMD_Y_READ  = 0b110100000
+    CMD_Z1_READ = 0b101100000
+    CMD_Z2_READ = 0b110000000
 
     MAX_RAW_COORD = const((1<<12) - 1)
 
@@ -192,7 +194,7 @@ class xpt2046:
             x = ((int(raw_x) - int(self.cal_x0)) * int(self.screen_width)) // (int(self.cal_x1) - int(self.cal_x0))
             y = ((int(raw_y) - int(self.cal_y0)) * int(self.screen_height)) // (int(self.cal_y1) - int(self.cal_y0))
             # print('(%d, %d) ==> (%d, %d)' % (raw_x, raw_y, x, y))
-            return x,y
+            return min(max(0, x), self.screen_width),min(max(0, y), self.screen_height)
         else: return None
 
     # @micropython.native
@@ -223,4 +225,51 @@ class xpt2046:
     def stat(self):
         return self.touch_cycles / (self.touch_count * self.cycles_in_ms) 
 
+class xpt2046_softspi(xpt2046):
+    # Reduce back to 8 bit, as SoftSPI does not support 9 commandbits option
+    # (See also comment in parent class)
+    CMD_X_READ  = 0b10010000
+    CMD_Y_READ  = 0b11010000
+    CMD_Z1_READ = 0b10110000
+    CMD_Z2_READ = 0b11000000
 
+    def __init__(self, miso=-1, mosi=-1, clk=-1, cs=25,
+                 spihost=esp.HSPI_HOST, half_duplex=True, mhz=5, max_cmds=16,
+                 cal_x0 = 3783, cal_y0 = 3948, cal_x1 = 242, cal_y1 = 423, 
+                 transpose = True, samples = 3):
+
+        # Create SOFTSPI buffers
+        self.softSpiTxBuf = bytearray(3)
+        self.softSpiRxBuf = bytearray(3)
+
+        super().__init__(miso = miso, mosi = mosi, clk = clk, cs = cs,
+                 half_duplex = half_duplex, mhz = mhz, max_cmds = max_cmds,
+                 cal_x0 = cal_x0, cal_y0 = cal_y0, cal_x1 = cal_x1, cal_y1 = cal_y1, 
+                 transpose = transpose, samples = samples)
+
+    def spi_init(self):
+        self.spi = machine.SoftSPI(baudrate=self.mhz*1000*1000, bits=8, sck=machine.Pin(self.clk), mosi=machine.Pin(self.mosi), miso=machine.Pin(self.miso))
+        self.cs = machine.Pin(self.cs)
+
+    def deinit(self):
+        self.spi.deinit()
+
+    # @micropython.viper
+    def xpt_cmds(self, cmds):
+        cmd_count = int(len(cmds))
+        result = []
+        rx = self.softSpiRxBuf
+        tx = self.softSpiTxBuf
+        for i in range(0, cmd_count):
+            tx[0] = cmds[i]
+            self.cs(0)
+            self.spi.write_readinto(tx, rx)
+            self.cs(1)
+            # Due to SoftSPI not supporting 9 command bits, the received 12 bits are delayed by 1 bit
+            value = (int(rx[1]) << 5) + (int(rx[2]) >> 3) # value is in the 12 higher bits, network order
+                
+            if value == int(self.MAX_RAW_COORD):
+                value = 0
+            result.append(value)
+
+        return tuple(result)
