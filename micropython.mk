@@ -3,7 +3,7 @@
 # LVGL unix optional libraries
 # Update CFLAGS_EXTMOD and LDFLAGS_EXTMOD for LVGL extenral library,
 # but do that only on the unix port, for unix specific dependencies
-
+ifeq ($(notdir $(CURDIR)),unix)
 ifneq ($(UNAME_S),Darwin)
 CFLAGS_EXTMOD += -DMICROPY_FB=1
 endif
@@ -35,6 +35,7 @@ FFMPEG_LDFLAGS_EXTMOD := $(shell pkg-config --silence-errors --libs   $(FFMPEG_L
 ifneq ($(FFMPEG_LDFLAGS_EXTMOD),)
 CFLAGS_EXTMOD += $(FFMPEG_CFLAGS_EXTMOD) -DMICROPY_FFMPEG=1
 LDFLAGS_EXTMOD += $(FFMPEG_LDFLAGS_EXTMOD)
+endif
 endif
 
 ################################################################################
