@@ -1,0 +1,2 @@
+MODE = "interactive"
+POINTER = False
