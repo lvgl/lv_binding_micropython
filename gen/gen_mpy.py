@@ -15,6 +15,7 @@ import copy
 from itertools import chain
 from functools import lru_cache
 import json
+import os
 
 def memoize(func):
     @lru_cache(maxsize=1000000)
@@ -722,6 +723,18 @@ register_int_ptr_type('i64ptr',
 # Emit Header
 #
 
+headers = args.input
+for header in headers:
+    if 'lvgl.h' in header:
+        path, _ = os.path.split(header)
+        if path and path != 'lvgl.h':
+            path = os.path.join(path, 'src', 'lvgl_private.h')
+        else:
+            path = 'src/lvgl_private.h'
+        
+        headers.append(path)
+        break
+
 print ("""
 /*
  * Auto-Generated file, DO NOT EDIT!
@@ -760,7 +773,7 @@ print ("""
         cmd_line=' '.join(argv),
         pp_cmd=pp_cmd,
         objs=", ".join(['%s(%s)' % (objname, parent_obj_names[objname]) for objname in obj_names]),
-        lv_headers='\n'.join('#include "%s"' % header for header in args.input)))
+        lv_headers='\n'.join('#include "%s"' % header for header in headers)))
 
 #
 # Enable objects, if supported
