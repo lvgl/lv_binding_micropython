@@ -18,7 +18,7 @@ typedef struct mp_ptr_t
 
 STATIC mp_int_t mp_ptr_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags)
 {
-    mp_ptr_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_ptr_t *self = (mp_ptr_t*)MP_OBJ_TO_PTR(self_in);
 
     if (flags & MP_BUFFER_WRITE) {
         // read-only ptr

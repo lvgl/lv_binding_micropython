@@ -253,3 +253,22 @@ void ili9xxx_flush(void *_disp_drv, const void *_area, void *_color_p)
 
     ili9xxx_send_data_dma(disp_drv, color_p, size * color_size, dc, *spi_ptr);
 }
+
+#if CONFIG_IDF_TARGET_ESP32S3
+// Cheat linker :)
+// Related issue:
+//     https://github.com/espressif/esp-idf/issues/10203
+//     https://github.com/espressif/esp-idf/issues/10204
+//     https://github.com/espressif/esp-idf/issues/10205
+
+uint32_t gpio_input_get_high(void) {
+    return 0;
+}
+
+void gpio_output_set_high(uint32_t set_mask, uint32_t clear_mask, uint32_t enable_mask, uint32_t disable_mask) {
+}
+
+esp_err_t rtc_gpio_force_hold_all(void) {
+    return ESP_OK;
+}
+#endif
