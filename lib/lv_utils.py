@@ -180,4 +180,3 @@ class event_loop():
 
     def default_exception_sink(self, e):
         sys.print_exception(e)
-        event_loop.current_instance().deinit()

@@ -1108,17 +1108,53 @@ static mp_obj_t mp_lv_obj_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t
 // Register LVGL root pointers
 MP_REGISTER_ROOT_POINTER(void *mp_lv_roots);
 MP_REGISTER_ROOT_POINTER(void *mp_lv_user_data);
+MP_REGISTER_ROOT_POINTER(int mp_lv_roots_initialized);
+MP_REGISTER_ROOT_POINTER(int lvgl_mod_initialized);
 
 void *mp_lv_roots;
+void *mp_lv_user_data;
+int mp_lv_roots_initialized = 0;
+int lvgl_mod_initialized = 0;
 
 void mp_lv_init_gc()
 {
-    static bool mp_lv_roots_initialized = false;
-    if (!mp_lv_roots_initialized) {
+    if (!MP_STATE_VM(mp_lv_roots_initialized)) {
+        // mp_printf(&mp_plat_print, "[ INIT GC ]");
         mp_lv_roots = MP_STATE_VM(mp_lv_roots) = m_new0(lv_global_t, 1);
-        mp_lv_roots_initialized = true;
+        mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 1;
     }
 }
+
+void mp_lv_deinit_gc()
+{
+
+    // mp_printf(&mp_plat_print, "[ DEINIT GC ]");
+    mp_lv_roots = MP_STATE_VM(mp_lv_roots) = NULL;
+    mp_lv_user_data = MP_STATE_VM(mp_lv_user_data) = NULL;
+    mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 0;
+    lvgl_mod_initialized = MP_STATE_VM(lvgl_mod_initialized) = 0;
+
+}
+
+static mp_obj_t lvgl_mod___init__(void) {
+    if (!MP_STATE_VM(lvgl_mod_initialized)) {
+        // __init__ for builtins is called each time the module is imported,
+        //   so ensure that initialisation only happens once.
+        MP_STATE_VM(lvgl_mod_initialized) = true;
+        lv_init();
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(lvgl_mod___init___obj, lvgl_mod___init__);
+
+
+static mp_obj_t lvgl_mod___del__(void) {
+    if (MP_STATE_VM(lvgl_mod_initialized)) {
+        lv_deinit();
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(lvgl_mod___del___obj, lvgl_mod___del__);
 
 #else // LV_OBJ_T
 
@@ -2982,6 +3018,8 @@ print("""
 
 static const mp_rom_map_elem_t {module_name}_globals_table[] = {{
     {{ MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_{module_name}) }},
+    {{ MP_ROM_QSTR(MP_QSTR___init__), MP_ROM_PTR(&lvgl_mod___init___obj) }},
+    {{ MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&lvgl_mod___del___obj) }},
     {objects}
     {functions}
     {enums}
