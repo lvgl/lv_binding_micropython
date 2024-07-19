@@ -47,11 +47,12 @@ argParser = ArgumentParser()
 argParser.add_argument('-I', '--include', dest='include', help='Preprocesor include path', metavar='<Include Path>', action='append')
 argParser.add_argument('-D', '--define', dest='define', help='Define preprocessor macro', metavar='<Macro Name>', action='append')
 argParser.add_argument('-E', '--external-preprocessing', dest='ep', help='Prevent preprocessing. Assume input file is already preprocessed', metavar='<Preprocessed File>', action='store')
+argParser.add_argument('-J', '--lvgl-json', dest='json', help='Provde a JSON from the LVGL JSON generator for missing information', metavar='<JSON file>', action='store')
 argParser.add_argument('-M', '--module_name', dest='module_name', help='Module name', metavar='<Module name string>', action='store')
 argParser.add_argument('-MP', '--module_prefix', dest='module_prefix', help='Module prefix that starts every function name', metavar='<Prefix string>', action='store')
 argParser.add_argument('-MD', '--metadata', dest='metadata', help='Optional file to emit metadata (introspection)', metavar='<MetaData File Name>', action='store')
 argParser.add_argument('input', nargs='+')
-argParser.set_defaults(include=[], define=[], ep=None, input=[])
+argParser.set_defaults(include=[], define=[], ep=None, json=None, input=[])
 args = argParser.parse_args()
 
 module_name = args.module_name
@@ -210,7 +211,7 @@ lv_func_pattern = re.compile('^{prefix}_(.+)'.format(prefix=module_prefix), re.I
 create_obj_pattern = re.compile('^{prefix}_(.+)_create$'.format(prefix=module_prefix))
 lv_method_pattern = re.compile('^{prefix}_[^_]+_(.+)'.format(prefix=module_prefix), re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){{0,1}}{prefix}_{base_name}_t( [*]){{0,1}}'.format(prefix=module_prefix, base_name = base_obj_name))
-lv_str_enum_pattern = re.compile('^_{prefix}_STR_(.+)'.format(prefix=module_prefix.upper()))
+lv_str_enum_pattern = re.compile('^_?{prefix}_STR_(.+)'.format(prefix=module_prefix.upper()))
 lv_callback_type_pattern = re.compile('({prefix}_){{0,1}}(.+)_cb(_t){{0,1}}'.format(prefix=module_prefix))
 lv_global_callback_pattern = re.compile('.*g_cb_t')
 lv_func_returns_array = re.compile('.*_array$')
@@ -294,6 +295,14 @@ parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 ast = parser.parse(s, filename='<none>')
 
+if args.json is not None:
+    with open(args.json, "r") as f:
+        lvgl_json = json.load(f)
+    if not lvgl_json:
+        # if the json is an empty dictionary
+        lvgl_json = None
+else:
+    lvgl_json = None
 
 # *************** Fix ***********************************
 # this is a fix for structures not getting populated properly from
@@ -1860,6 +1869,10 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
             user_data = 'user_data'
             user_data_found = user_data in [decl.name for decl in flatten_struct_decls]
             # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
+            if not user_data_found and lvgl_json is not None:
+                containing_struct_j = next((struct for struct in lvgl_json["structures"] if struct["name"] == struct_arg_type_name), None)
+                if containing_struct_j is not None:
+                    user_data_found = any(user_data == field["name"] for field in containing_struct_j["fields"])
     return (user_data if user_data_found else None), *get_user_data_accessors(containing_struct, containing_struct_name)
 
 #
