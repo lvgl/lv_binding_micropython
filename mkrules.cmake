@@ -66,14 +66,48 @@ function(lv_bindings)
         set(LV_PP_FILTERED ${LV_PP})
     endif()
 
+    set(LV_JSON ${CMAKE_BINARY_DIR}/lvgl_all.json)
+
+    if (EXISTS ${LVGL_DIR}/scripts/gen_json/gen_json.py)
+        set(LVGL_ALL_H ${CMAKE_BINARY_DIR}/lvgl_all.h)
+        add_custom_command(
+            OUTPUT
+                ${LVGL_ALL_H}
+            COMMAND
+                echo "\"#include\"" "\"\\\"${LVGL_DIR}/lvgl.h\\\"\"" > ${LVGL_ALL_H}
+            COMMAND
+                echo "\"#include\"" "\"\\\"${LVGL_DIR}/src/lvgl_private.h\\\"\"" >> ${LVGL_ALL_H}
+            COMMAND_EXPAND_LISTS
+        )
+        add_custom_command(
+            OUTPUT
+                ${LV_JSON}
+            COMMAND
+                ${Python3_EXECUTABLE} ${LVGL_DIR}/scripts/gen_json/gen_json.py --target-header ${LVGL_ALL_H} > ${LV_JSON}
+            DEPENDS
+                ${LVGL_DIR}/scripts/gen_json/gen_json.py
+                ${LVGL_ALL_H}
+            COMMAND_EXPAND_LISTS
+        )
+    else()
+        add_custom_command(
+            OUTPUT
+                ${LV_JSON}
+            COMMAND
+                echo "{}" > ${LV_JSON}
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
+
     add_custom_command(
         OUTPUT
             ${LV_OUTPUT}
         COMMAND
-            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
+            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} -J ${LV_JSON} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
         DEPENDS
             ${LV_BINDINGS_DIR}/gen/gen_mpy.py
             ${LV_PP_FILTERED}
+            ${LV_JSON}
         COMMAND_EXPAND_LISTS
     )
 
