@@ -12,19 +12,19 @@
 #        event_loop = lv_utils.event_loop()
 #
 #
-# uasyncio example with SDL:
+# asyncio example with SDL:
 #
 #        SDL.init(auto_refresh=False)
 #        # Register SDL display driver.
 #        # Register SDL mouse driver
 #        event_loop = lv_utils.event_loop(asynchronous=True)
-#        uasyncio.Loop.run_forever()
+#        asyncio.Loop.run_forever()
 #
-# uasyncio example with ili9341:
+# asyncio example with ili9341:
 #
 #        event_loop = lv_utils.event_loop(asynchronous=True) # Optional!
 #        self.disp = ili9341(asynchronous=True)
-#        uasyncio.Loop.run_forever()
+#        asyncio.Loop.run_forever()
 #
 # MIT license; Copyright (c) 2021 Amir Gonnen
 #
@@ -32,7 +32,7 @@
 
 import lvgl as lv
 import micropython
-import usys
+import sys
 
 # Try standard machine.Timer, or custom timer from lv_timer, if available
 
@@ -42,34 +42,45 @@ except:
     try:
         from lv_timer import Timer
     except:
-        raise RuntimeError("Missing machine.Timer implementation!")
+        if sys.platform != "darwin":
+            raise RuntimeError("Missing machine.Timer implementation!")
+        Timer = False
 
 # Try to determine default timer id
 
 default_timer_id = 0
-if usys.platform == 'pyboard':
+if sys.platform == "pyboard":
     # stm32 only supports SW timer -1
     default_timer_id = -1
-    
-if usys.platform == 'rp2':
+
+if sys.platform == "rp2":
     # rp2 only supports SW timer -1
     default_timer_id = -1
 
-# Try importing uasyncio, if available
+# Try importing asyncio, if available
 
 try:
-    import uasyncio
-    uasyncio_available = True
+    import asyncio
+
+    asyncio_available = True
 except:
-    uasyncio_available = False
+    asyncio_available = False
 
 ##############################################################################
 
-class event_loop():
 
+class event_loop:
     _current_instance = None
 
-    def __init__(self, freq=25, timer_id=default_timer_id, max_scheduled=2, refresh_cb=None, asynchronous=False, exception_sink=None):
+    def __init__(
+        self,
+        freq=25,
+        timer_id=default_timer_id,
+        max_scheduled=2,
+        refresh_cb=None,
+        asynchronous=False,
+        exception_sink=None,
+    ):
         if self.is_running():
             raise RuntimeError("Event loop is already running!")
 
@@ -80,28 +91,41 @@ class event_loop():
 
         self.delay = 1000 // freq
         self.refresh_cb = refresh_cb
-        self.exception_sink = exception_sink if exception_sink else self.default_exception_sink
+        self.exception_sink = (
+            exception_sink if exception_sink else self.default_exception_sink
+        )
 
         self.asynchronous = asynchronous
         if self.asynchronous:
-            if not uasyncio_available:
-                raise RuntimeError("Cannot run asynchronous event loop. uasyncio is not available!")
-            self.refresh_event = uasyncio.Event()
-            self.refresh_task = uasyncio.create_task(self.async_refresh())
-            self.timer_task = uasyncio.create_task(self.async_timer())
+            if not asyncio_available:
+                raise RuntimeError(
+                    "Cannot run asynchronous event loop. asyncio is not available!"
+                )
+            self.refresh_event = asyncio.Event()
+            self.refresh_task = asyncio.create_task(self.async_refresh())
+            self.timer_task = asyncio.create_task(self.async_timer())
         else:
-            self.timer = Timer(timer_id)
+            if Timer:
+                self.timer = Timer(timer_id)
+                self.timer.init(
+                    mode=Timer.PERIODIC, period=self.delay, callback=self.timer_cb
+                )
             self.task_handler_ref = self.task_handler  # Allocation occurs here
-            self.timer.init(mode=Timer.PERIODIC, period=self.delay, callback=self.timer_cb)
             self.max_scheduled = max_scheduled
             self.scheduled = 0
+
+    def init_async(self):
+        self.refresh_event = asyncio.Event()
+        self.refresh_task = asyncio.create_task(self.async_refresh())
+        self.timer_task = asyncio.create_task(self.async_timer())
 
     def deinit(self):
         if self.asynchronous:
             self.refresh_task.cancel()
             self.timer_task.cancel()
         else:
-            self.timer.deinit()
+            if Timer:
+                self.timer.deinit()
         event_loop._current_instance = None
 
     def disable(self):
@@ -122,11 +146,20 @@ class event_loop():
         try:
             if lv._nesting.value == 0:
                 lv.task_handler()
-                if self.refresh_cb: self.refresh_cb()
+                if self.refresh_cb:
+                    self.refresh_cb()
             self.scheduled -= 1
         except Exception as e:
             if self.exception_sink:
                 self.exception_sink(e)
+
+    def tick(self):
+        self.timer_cb(None)
+
+    def run(self):
+        if sys.platform == "darwin":
+            while True:
+                self.tick()
 
     def timer_cb(self, t):
         # Can be called in Interrupt context
@@ -149,15 +182,15 @@ class event_loop():
                 except Exception as e:
                     if self.exception_sink:
                         self.exception_sink(e)
-                if self.refresh_cb: self.refresh_cb()
+                if self.refresh_cb:
+                    self.refresh_cb()
 
     async def async_timer(self):
         while True:
-            await uasyncio.sleep_ms(self.delay)
+            await asyncio.sleep_ms(self.delay)
             lv.tick_inc(self.delay)
             self.refresh_event.set()
-            
 
     def default_exception_sink(self, e):
-        usys.print_exception(e)
-        event_loop.current_instance().deinit()
+        sys.print_exception(e)
+        # event_loop.current_instance().deinit()

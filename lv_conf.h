@@ -299,7 +299,9 @@
 /*Garbage Collector settings
  *Used if LVGL is bound to higher level language and the memory is managed by that language*/
 extern void mp_lv_init_gc();
+extern void mp_lv_deinit_gc();
 #define LV_GC_INIT() mp_lv_init_gc()
+#define LV_GC_DEINIT() mp_lv_deinit_gc()
 
 #define LV_ENABLE_GLOBAL_CUSTOM 1
 #if LV_ENABLE_GLOBAL_CUSTOM
