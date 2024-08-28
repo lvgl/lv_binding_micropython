@@ -1871,6 +1871,12 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
             # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
             if not user_data_found and lvgl_json is not None:
                 containing_struct_j = next((struct for struct in lvgl_json["structures"] if struct["name"] == struct_arg_type_name), None)
+                if (containing_struct_j is None
+                    and struct_arg_type_name.startswith("lv_")
+                    and None is not next((fwd_decl for fwd_decl in lvgl_json["forward_decls"] if fwd_decl["name"] == struct_arg_type_name), None)
+                ):
+                    struct_arg_type_name_with_underscore = "_" + struct_arg_type_name
+                    containing_struct_j = next((struct for struct in lvgl_json["structures"] if struct["name"] == struct_arg_type_name_with_underscore), None)
                 if containing_struct_j is not None:
                     user_data_found = any(user_data == field["name"] for field in containing_struct_j["fields"])
     return (user_data if user_data_found else None), *get_user_data_accessors(containing_struct, containing_struct_name)
