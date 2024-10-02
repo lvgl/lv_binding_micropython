@@ -144,7 +144,7 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     lv_display_flush_ready(dma2d_disp_drv);
 }
 
-STATIC void mp_rk043fn48h_ts_read(struct _lv_indev_t *indev_drv, lv_indev_data_t *data) {
+STATIC void mp_rk043fn48h_ts_read(lv_indev_t *indev_drv, lv_indev_data_t *data) {
     static TS_StateTypeDef ts_state = {0};
     static int32_t lastX = 0;
     static int32_t lastY = 0;
