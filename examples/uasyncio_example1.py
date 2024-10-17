@@ -15,19 +15,26 @@
 
 # Workaround for including frozen modules when running micropython with a script argument
 # https://github.com/micropython/micropython/issues/6419
-import usys as sys
+import sys
 sys.path.append('')
 
 # Imports
 
-from urandom import getrandbits, seed
-from utime import ticks_us
-from uasyncio import sleep, create_task, Loop, CancelledError
+from random import getrandbits, seed
+from time import ticks_us
+from asyncio import sleep, create_task, Loop, CancelledError
 import lv_utils
 import lvgl as lv
 
+try:
+    import aiorepl
+except ImportError:
+    aiorepl = None
+
 seed(ticks_us())
-lv.init()
+
+event_loop = lv_utils.event_loop(asynchronous=True)
+
 
 ##################################################################################################
 # Display initialization
@@ -43,8 +50,6 @@ try:
 
     disp_drv = lv.sdl_window_create(HOR_RES, VER_RES)
     mouse = lv.sdl_mouse_create()
-
-    event_loop = lv_utils.event_loop(asynchronous=True)
 
 except AttributeError:
     pass
@@ -66,24 +71,28 @@ except ImportError:
 # Stylized Message Box class
 ##################################################################################################
 
+popup_msg = "Pop"
+
 class MsgBox(lv.win):
 
     def drag_event_handler(self, e):
         self.move_foreground()
-        indev = lv.indev_get_act()
+        # obj = lv.event_get_target(e)
+        indev = lv.indev_active()
         indev.get_vect(self.vect)
-        x = self.get_x() + self.vect.x
-        y = self.get_y() + self.vect.y
+        x = self.get_x_aligned() + self.vect.x
+        y = self.get_y_aligned() + self.vect.y
         self.set_pos(x, y)
 
     def __init__(self, parent):
+        global popup_msg
         super().__init__(parent)
         self.vect = lv.point_t()
 
         self.set_size(100,80)
-        self.add_title("Pop")
+        self.add_title(popup_msg)
         msg_box_close_btn = self.add_button(lv.SYMBOL.CLOSE, 20)
-        msg_box_close_btn.add_event(lambda e: self.close_msg_box(), lv.EVENT.RELEASED, None)
+        msg_box_close_btn.add_event_cb(lambda e: self.close_msg_box(), lv.EVENT.RELEASED, None)
 
         header = self.get_header()
         header.set_style_bg_color(lv.color_hex3(0xFEE), lv.PART.MAIN)
@@ -104,7 +113,7 @@ class MsgBox(lv.win):
         self.label = lv.label(content)
 
         for element in [content, header]:
-            element.add_event(self.drag_event_handler, lv.EVENT.PRESSING, None)
+            element.add_event_cb(self.drag_event_handler, lv.EVENT.PRESSING, None)
 
         self.opened = True
 
@@ -121,7 +130,7 @@ class MsgBox(lv.win):
             self.anim.set_custom_exec_cb(lambda obj, val:
                     self.set_style_opa(val, lv.PART.MAIN))
             self.anim.set_path_cb(lv.anim_t.path_ease_in)
-            self.anim.set_ready_cb(lambda a: self.del_async())
+            self.anim.set_completed_cb(lambda a: self.delete_async())
             lv.anim_t.start(self.anim)
             self.opened = False
 
@@ -161,13 +170,16 @@ async def btn_event_task(obj=None, event=-1):
 scr = lv.screen_active()
 btn = lv.button(scr)
 btn.align(lv.ALIGN.TOP_MID, 0, 10)
-btn.add_event(lambda e: create_task(btn_event_task()), lv.EVENT.CLICKED, None)
+btn.add_event_cb(lambda e: create_task(btn_event_task()), lv.EVENT.CLICKED, None)
 label = lv.label(btn)
 label.set_text('Click Me Again!')
 
 ##################################################################################################
 # Start event loop
 ##################################################################################################
+
+if aiorepl:
+    create_task(aiorepl.task())
 
 Loop.run_forever()
 
