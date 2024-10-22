@@ -1,9 +1,12 @@
+################################################################################
+# LVGL port Support
+MICROPY_PORT = $(notdir $(CURDIR))
 
+ifeq ($(MICROPY_PORT),unix)
 ################################################################################
 # LVGL unix optional libraries
 # Update CFLAGS_USERMOD and LDFLAGS_USERMOD for LVGL extenral library,
 # but do that only on the unix port, for unix specific dependencies
-ifeq ($(notdir $(CURDIR)),unix)
 ifneq ($(UNAME_S),Darwin)
 CFLAGS_USERMOD += -DMICROPY_FB=1
 endif
@@ -15,7 +18,7 @@ CFLAGS_USERMOD += $(SDL_CFLAGS_USERMOD) -DMICROPY_SDL=1
 LDFLAGS_USERMOD += $(SDL_LDFLAGS_USERMOD)
 endif
 
-# Avoid including unwanted local headers other than sdl2 
+# Avoid including unwanted local headers other than sdl2
 ifeq ($(UNAME_S),Darwin)
 CFLAGS_USERMOD:=$(filter-out -I/usr/local/include,$(CFLAGS_USERMOD))
 endif
@@ -43,7 +46,22 @@ endif
 # LDFLAGS_USERMOD += $(FFMPEG_LDFLAGS_USERMOD)
 # endif
 
-endif
+endif # unix support
+
+ifeq ($(MICROPY_PORT),mimxrt)
+CFLAGS_USERMOD += -DLV_USE_PXP=1 -DLV_USE_DRAW_PXP=1 -DLV_USE_GPU_NXP_PXP=1 -DLV_USE_GPU_NXP_PXP_AUTO_INIT=1
+
+# Depending on how the USER_C_MODULE is declared the object files inside build can be based on
+# absolute or relative paths under this directory.
+MOD_ABSPATH := $(abspath $(USERMOD_DIR))
+MOD_DIRNAME := $(notdir $(MOD_ABSPATH))
+$(BUILD)/$(MOD_ABSPATH)/lvgl/src/draw/nxp/pxp/lv_draw_pxp.o: CFLAGS_USERMOD += -Wno-error=unused-variable
+$(BUILD)/$(MOD_DIRNAME)/lvgl/src/draw/nxp/pxp/lv_draw_pxp.o: CFLAGS_USERMOD += -Wno-error=unused-variable
+$(BUILD)/$(MOD_ABSPATH)/lvgl/src/draw/nxp/pxp/lv_draw_pxp_img.o: CFLAGS_USERMOD += -Wno-error=float-conversion
+$(BUILD)/$(MOD_DIRNAME)/lvgl/src/draw/nxp/pxp/lv_draw_pxp_img.o: CFLAGS_USERMOD += -Wno-error=float-conversion
+
+endif # mimxrt support
+
 
 ################################################################################
 
@@ -76,7 +94,7 @@ CFLAGS_USERMOD += -DLV_CONF_PATH='"$(LV_CONF_PATH)"'
 # CFLAGS DEBUG
 $(info CFLAGS_USERMOD is $(CFLAGS_USERMOD))
 
-$(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
+$(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py
 	$(ECHO) "LVGL-GEN $@"
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CPP) $(CFLAGS_USERMOD) -DPYCPARSER -x c -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
