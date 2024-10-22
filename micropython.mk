@@ -61,6 +61,15 @@ FROZEN_MANIFEST += $(LVGL_BINDING_DIR)/manifest.py
 # Per-port Support 
 
 MICROPY_PORT = $(notdir $(CURDIR))
+$(info MICROPY_PORT: $(MICROPY_PORT))
+
+ifeq ($(MICROPY_PORT),mimxrt)
+CFLAGS_USERMOD += -DLV_USE_PXP=1 -DLV_USE_DRAW_PXP=1 -DLV_USE_GPU_NXP_PXP=1 -DLV_USE_GPU_NXP_PXP_AUTO_INIT=1
+
+$(BUILD)/$(MOD_DIRNAME)/lvgl/src/draw/nxp/pxp/lv_draw_pxp.o: CFLAGS_USERMOD += -Wno-error=unused-variable
+$(BUILD)/$(MOD_DIRNAME)/lvgl/src/draw/nxp/pxp/lv_draw_pxp_img.o: CFLAGS_USERMOD += -Wno-error=float-conversion
+
+endif
 
 ifeq ($(MICROPY_PORT),unix)
 # This section only included when building the micropython unix port
