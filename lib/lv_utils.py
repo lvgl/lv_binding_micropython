@@ -45,19 +45,10 @@ except:
     except:
         Timer = False
 
-# Try to determine default timer id
-
-default_timer_id = 0
-if sys.platform == 'pyboard':
-    # stm32 only supports SW timer -1
-    default_timer_id = -1
-    
-if sys.platform == 'rp2':
-    # rp2 only supports SW timer -1
-    default_timer_id = -1
+# By default use soft timer
+default_timer_id = -1
 
 # Try importing asyncio, if available
-
 try:
     import asyncio
     asyncio_available = True
