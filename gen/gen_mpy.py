@@ -1127,16 +1127,21 @@ void mp_lv_init_gc()
 
 void mp_lv_deinit_gc()
 {
-
-    // mp_printf(&mp_plat_print, "[ DEINIT GC ]");
-    mp_lv_roots = MP_STATE_VM(mp_lv_roots) = NULL;
-    mp_lv_user_data = MP_STATE_VM(mp_lv_user_data) = NULL;
-    mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 0;
-    lvgl_mod_initialized = MP_STATE_VM(lvgl_mod_initialized) = 0;
-
+    if (MP_STATE_VM(mp_lv_roots_initialized)) {
+        // mp_printf(&mp_plat_print, "[ DEINIT GC ]");
+        mp_lv_roots = MP_STATE_VM(mp_lv_roots) = NULL;
+        mp_lv_user_data = MP_STATE_VM(mp_lv_user_data) = NULL;
+        mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 0;
+        lvgl_mod_initialized = MP_STATE_VM(lvgl_mod_initialized) = 0;
+    }
 }
 
-static mp_obj_t lvgl_mod___init__(void) {
+#if !MICROPY_MODULE_BUILTIN_INIT
+#error MICROPY_MODULE_BUILTIN_INIT required to be set in build.
+#endif
+
+static mp_obj_t lvgl_mod___init__(void)
+{
     if (!MP_STATE_VM(lvgl_mod_initialized)) {
         // __init__ for builtins is called each time the module is imported,
         //   so ensure that initialisation only happens once.
@@ -1147,8 +1152,8 @@ static mp_obj_t lvgl_mod___init__(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(lvgl_mod___init___obj, lvgl_mod___init__);
 
-
-static mp_obj_t lvgl_mod___del__(void) {
+static mp_obj_t lvgl_mod___del__(void)
+{
     if (MP_STATE_VM(lvgl_mod_initialized)) {
         lv_deinit();
     }
