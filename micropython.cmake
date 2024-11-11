@@ -1,5 +1,11 @@
 # This file is to be given as "make USER_C_MODULES=..." when building Micropython port
 
+if(ECHO_SUBMODULES)
+    string(CONCAT GIT_SUBMODULES "${GIT_SUBMODULES} " ${CMAKE_CURRENT_LIST_DIR}/lvgl ${CMAKE_CURRENT_LIST_DIR}/pycparser)
+elseif(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/lvgl/README.md)
+    message(FATAL_ERROR " lvgl not initialized.\n Run 'make BOARD=${MICROPY_BOARD} submodules'")
+endif()
+
 # Include LVGL component, ignore KCONFIG
 
 idf_build_set_property(LV_MICROPYTHON 1)
