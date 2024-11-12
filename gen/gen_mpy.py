@@ -845,7 +845,7 @@ lv_to_mp = {
     "long int": "mp_obj_new_int",
     "long long": "mp_obj_new_int_from_ll",
     "long long int": "mp_obj_new_int_from_ll",
-    "float": "mp_obj_new_float",
+    "float": "mp_obj_new_float_from_f",
 }
 
 lv_mp_type = {
