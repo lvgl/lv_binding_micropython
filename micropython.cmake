@@ -12,6 +12,11 @@ idf_build_set_property(COMPILE_OPTIONS "-Wno-unused-function" APPEND)
 idf_build_set_property(SRCS "${LV_SRC}" APPEND)
 idf_build_set_property(INCLUDE_DIRS "${LV_INCLUDE}" APPEND)
 
+# Fix for idf 5.2.x
+idf_build_get_property(component_targets __COMPONENT_TARGETS)
+string(REPLACE "___idf_lvgl" "" component_targets "${component_targets}")
+idf_build_set_property(__COMPONENT_TARGETS "${component_targets}")
+
 include(${CMAKE_CURRENT_LIST_DIR}/mkrules_usermod.cmake)
 
 # Add lv_bindings rules
