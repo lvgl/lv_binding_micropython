@@ -88,6 +88,7 @@
  * - LV_OS_CMSIS_RTOS2
  * - LV_OS_RTTHREAD
  * - LV_OS_WINDOWS
+ * - LV_OS_MQX
  * - LV_OS_CUSTOM */
 #define LV_USE_OS   LV_OS_NONE
 
@@ -112,6 +113,11 @@
 
 /*The target buffer size for simple layer chunks.*/
 #define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (24 * 1024)   /*[bytes]*/
+
+/* The stack size of the drawing thread.
+ * NOTE: If FreeType or ThorVG is enabled, it is recommended to set it to 32KB or more.
+ */
+#define LV_DRAW_THREAD_STACK_SIZE    (8 * 1024)   /*[bytes]*/
 
 #define LV_USE_DRAW_SW 1
 #if LV_USE_DRAW_SW == 1
@@ -151,7 +157,9 @@
 #endif
 
 /* Use NXP's VG-Lite GPU on iMX RTxxx platforms. */
+#ifndef LV_USE_DRAW_VGLITE
 #define LV_USE_DRAW_VGLITE 0
+#endif
 
 #if LV_USE_DRAW_VGLITE
     /* Enable blit quality degradation workaround recommended for screen's dimension > 352 pixels. */
@@ -167,7 +175,9 @@
 #endif
 
 /* Use NXP's PXP on iMX RTxxx platforms. */
+#ifndef LV_USE_DRAW_PXP
 #define LV_USE_DRAW_PXP 0
+#endif
 
 #if LV_USE_DRAW_PXP
     /* Enable PXP asserts. */
@@ -201,7 +211,7 @@
 /* VG-Lite linear gradient image maximum cache number.
  * NOTE: The memory usage of a single gradient image is 4K bytes.
  */
-#define LV_VG_LITE_LINEAER_GRAD_CACHE_CNT 32
+#define LV_VG_LITE_LINEAR_GRAD_CACHE_CNT 32
 
 /* VG-Lite radial gradient image maximum cache size.
  * NOTE: The memory usage of a single gradient image is radial grad radius * 4 bytes.
@@ -240,6 +250,11 @@
     *0: User need to register a callback with `lv_log_register_print_cb()`*/
     #define LV_LOG_PRINTF 0
 
+    /*Set callback to print the logs.
+     *E.g `my_print`. The prototype should be `void my_print(lv_log_level_t level, const char * buf)`
+     *Can be overwritten by `lv_log_register_print_cb`*/
+    //#define LV_LOG_PRINT_CB
+
     /*1: Enable print timestamp;
      *0: Disable print timestamp*/
     #define LV_LOG_USE_TIMESTAMP 1
@@ -247,6 +262,7 @@
     /*1: Print file and line number of the log;
      *0: Do not print file and line number of the log*/
     #define LV_LOG_USE_FILE_LINE 1
+
 
     /*Enable/disable LV_LOG_TRACE in modules that produces a huge number of logs*/
     #define LV_LOG_TRACE_MEM        1
@@ -424,7 +440,7 @@ extern void mp_lv_deinit_gc();
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_16 1
 #define LV_FONT_MONTSERRAT_18 0
-#define LV_FONT_MONTSERRAT_20 0
+#define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_22 0
 #define LV_FONT_MONTSERRAT_24 1
 #define LV_FONT_MONTSERRAT_26 0
@@ -432,7 +448,7 @@ extern void mp_lv_deinit_gc();
 #define LV_FONT_MONTSERRAT_30 0
 #define LV_FONT_MONTSERRAT_32 0
 #define LV_FONT_MONTSERRAT_34 0
-#define LV_FONT_MONTSERRAT_36 0
+#define LV_FONT_MONTSERRAT_36 1
 #define LV_FONT_MONTSERRAT_38 0
 #define LV_FONT_MONTSERRAT_40 0
 #define LV_FONT_MONTSERRAT_42 0
@@ -443,6 +459,7 @@ extern void mp_lv_deinit_gc();
 /*Demonstrate special features*/
 #define LV_FONT_MONTSERRAT_28_COMPRESSED 0  /*bpp = 3*/
 #define LV_FONT_DEJAVU_16_PERSIAN_HEBREW 0  /*Hebrew, Arabic, Persian letters and all their forms*/
+#define LV_FONT_SIMSUN_14_CJK            0  /*1000 most common CJK radicals*/
 #define LV_FONT_SIMSUN_16_CJK            0  /*1000 most common CJK radicals*/
 
 /*Pixel perfect monospace fonts*/
@@ -541,6 +558,7 @@ extern void mp_lv_deinit_gc();
     #define LV_CALENDAR_DEFAULT_MONTH_NAMES {"January", "February", "March",  "April", "May",  "June", "July", "August", "September", "October", "November", "December"}
     #define LV_USE_CALENDAR_HEADER_ARROW 1
     #define LV_USE_CALENDAR_HEADER_DROPDOWN 1
+    #define LV_USE_CALENDAR_CHINESE 0
 #endif  /*LV_USE_CALENDAR*/
 
 #define LV_USE_CANVAS     1
@@ -646,7 +664,7 @@ extern void mp_lv_deinit_gc();
 /*File system interfaces for common APIs */
 
 /*API for fopen, fread, etc*/
-#define LV_USE_FS_STDIO 0
+#define LV_USE_FS_STDIO 1
 #if LV_USE_FS_STDIO
     #define LV_FS_STDIO_LETTER 'A'      /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_STDIO_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
@@ -654,9 +672,9 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /*API for open, read, etc*/
-#define LV_USE_FS_POSIX 0
+#define LV_USE_FS_POSIX 1
 #if LV_USE_FS_POSIX
-    #define LV_FS_POSIX_LETTER '\0'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+    #define LV_FS_POSIX_LETTER 'P'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_POSIX_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
     #define LV_FS_POSIX_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
@@ -677,7 +695,7 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /*API for memory-mapped file access. */
-#define LV_USE_FS_MEMFS 1
+#define LV_USE_FS_MEMFS 0
 #if LV_USE_FS_MEMFS
     #define LV_FS_MEMFS_LETTER 'M'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
 #endif
@@ -692,6 +710,14 @@ extern void mp_lv_deinit_gc();
 #define LV_USE_FS_ARDUINO_ESP_LITTLEFS 0
 #if LV_USE_FS_ARDUINO_ESP_LITTLEFS
     #define LV_FS_ARDUINO_ESP_LITTLEFS_LETTER '\0'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+#endif
+
+/*API for Arduino Sd. */
+#define LV_USE_FS_ARDUINO_SD 0
+#if LV_USE_FS_ARDUINO_SD
+    #define LV_FS_ARDUINO_SD_LETTER '\0'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+    #define LV_FS_ARDUINO_SD_CS_PIN 0     /*Set the pin connected to the chip select line of the SD card */
+    #define LV_FS_ARDUINO_SD_FREQUENCY 40000000     /*Set the frequency used by the chip of the SD CARD */
 #endif
 
 /*LODEPNG decoder library*/
@@ -718,6 +744,7 @@ extern void mp_lv_deinit_gc();
 #define LV_GIF_CACHE_DECODE_DATA 0
 #endif
 
+
 /*Decode bin images to RAM*/
 #define LV_BIN_DECODER_RAM_LOAD 0
 
@@ -725,10 +752,10 @@ extern void mp_lv_deinit_gc();
 #define LV_USE_RLE 0
 
 /*QR code library*/
-#define LV_USE_QRCODE 1
+#define LV_USE_QRCODE 0
 
 /*Barcode code library*/
-#define LV_USE_BARCODE 1
+#define LV_USE_BARCODE 0
 
 /*FreeType library*/
 #ifdef MICROPY_FREETYPE
@@ -771,18 +798,14 @@ extern void mp_lv_deinit_gc();
 #define LV_USE_THORVG_EXTERNAL 0
 
 /*Use lvgl built-in LZ4 lib*/
-#define LV_USE_LZ4_INTERNAL  0
+#define LV_USE_LZ4_INTERNAL  1
 
 /*Use external LZ4 library*/
 #define LV_USE_LZ4_EXTERNAL  0
 
 /*FFmpeg library for image decoding and playing videos
  *Supports all major image formats so do not enable other image decoder with it*/
-#ifdef MICROPY_FFMPEG
-    #define LV_USE_FFMPEG MICROPY_FFMPEG
-#else
     #define LV_USE_FFMPEG 0
-#endif
 #if LV_USE_FFMPEG
     /*Dump input information to stderr*/
     #define LV_FFMPEG_DUMP_FORMAT 0
@@ -793,7 +816,7 @@ extern void mp_lv_deinit_gc();
  *==================*/
 
 /*1: Enable API to take snapshot for object*/
-#define LV_USE_SNAPSHOT 1
+#define LV_USE_SNAPSHOT 0
 
 /*1: Enable system monitor component*/
 #define LV_USE_SYSMON   0
@@ -908,7 +931,7 @@ extern void mp_lv_deinit_gc();
     #define LV_USE_SDL 0
 #endif
 #if LV_USE_SDL
-    #define LV_SDL_INCLUDE_PATH     <SDL2/SDL.h>
+    #define LV_SDL_INCLUDE_PATH     <SDL.h>
     #define LV_SDL_RENDER_MODE      LV_DISPLAY_RENDER_MODE_DIRECT   /*LV_DISPLAY_RENDER_MODE_DIRECT is recommended for best performance*/
     #define LV_SDL_BUF_COUNT        1    /*1 or 2*/
     #define LV_SDL_FULLSCREEN       0    /*1: Make the window full screen by default*/
@@ -983,10 +1006,10 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /*Drivers for LCD devices connected via SPI/parallel port*/
-#define LV_USE_ST7735		0
-#define LV_USE_ST7789		0
-#define LV_USE_ST7796		0
-#define LV_USE_ILI9341		0
+#define LV_USE_ST7735        0
+#define LV_USE_ST7789        0
+#define LV_USE_ST7796        0
+#define LV_USE_ILI9341       0
 
 #define LV_USE_GENERIC_MIPI (LV_USE_ST7735 | LV_USE_ST7789 | LV_USE_ST7796 | LV_USE_ILI9341)
 
