@@ -295,6 +295,9 @@
 /*-------------
  * Others
  *-----------*/
+/* PRIVATE API */
+
+#define LV_USE_PRIVATE_API 1
 
 /*Garbage Collector settings
  *Used if LVGL is bound to higher level language and the memory is managed by that language*/
