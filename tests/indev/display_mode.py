@@ -1,2 +1,0 @@
-MODE = "interactive"
-POINTER = False

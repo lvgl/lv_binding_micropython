@@ -52,9 +52,12 @@ async def demo(scr, display=None):
 __file__ = globals().get("__file__", "test")
 
 try:
-    from display_mode import MODE as _mode
-except Exception:
-    _mode = None
+    import display_config
 
-testrunner.run(demo, __file__, mode=_mode)
+    display_config.MODE = "sim"
+    display_config.POINTER = "sim"
+except Exception:
+    display_config = testrunner.display_config
+
+testrunner.run(demo, __file__, disp_config=display_config)
 testrunner.devicereset()

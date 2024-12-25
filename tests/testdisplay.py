@@ -9,6 +9,14 @@ import sys
 import asyncio
 
 
+class TestDisplayConfig:
+    WIDTH = 240
+    HEIGHT = 320
+    MODE = "sim"
+    POINTER = "sim"
+    COLOR_FORMAT = lv.COLOR_FORMAT.RGB888
+
+
 class TestDisplayDriver:
     def __init__(
         self,
@@ -16,7 +24,7 @@ class TestDisplayDriver:
         frame_buffer1,
         frame_buffer2,
         color_format=lv.COLOR_FORMAT.RGB565,
-        mode="test",
+        mode="sim",
         pointer="sim",
         fps=25,
     ):
@@ -45,7 +53,7 @@ class TestDisplayDriver:
         if not lv.is_initialized():
             lv.init()
 
-        if mode == "test" or (
+        if mode == "sim" or (
             mode == "interactive" and not isinstance(display_drv, DummyDisplay)
         ):
             if hasattr(display_drv, "blit"):
@@ -212,16 +220,16 @@ class DummyDisplay:
 
 tdisp = DummyDisplay(color_format=lv.COLOR_FORMAT.RGB888)
 
+display_config = TestDisplayConfig
+# alloc_buffer = lambda buffersize: memoryview(bytearray(buffer_size))
 
-alloc_buffer = lambda buffersize: memoryview(bytearray(buffer_size))
+# factor = 10  ### Must be 1 if using an RGBBus
+# double_buf = True  ### Must be False if using an RGBBus
 
-factor = 10  ### Must be 1 if using an RGBBus
-double_buf = True  ### Must be False if using an RGBBus
+# buffer_size = tdisp.width * tdisp.height * (tdisp.color_depth // 8) // factor
 
-buffer_size = tdisp.width * tdisp.height * (tdisp.color_depth // 8) // factor
-
-fbuf1 = alloc_buffer(buffer_size)
-fbuf2 = alloc_buffer(buffer_size) if double_buf else None
+# fbuf1 = alloc_buffer(buffer_size)
+# fbuf2 = alloc_buffer(buffer_size) if double_buf else None
 
 
 def get_display(
@@ -229,19 +237,39 @@ def get_display(
     height=320,
     disp=tdisp,
     color_format=lv.COLOR_FORMAT.RGB888,
-    mode="test",
+    mode="sim",
     pointer="sim",
 ):
-    if mode == "test":
+    print(f"DISPLAY_MODE: {mode.upper()}")
+    print(f"INDEV_MODE: {pointer.upper()}")
+    if mode == "sim":
         disp = tdisp
     elif mode == "interactive":
-        print("DISPLAY_MODE: INTERACTIVE")
         try:
-            from hwdisplay import display as disp
+            from hwdisplay import HwDisplayDriver
+
+            disp = HwDisplayDriver(
+                width=width, height=height, color_format=color_format
+            )
         except Exception as e:
             if sys.platform not in ["darwin", "linux"]:
                 sys.print_exception(e)
-    if hasattr(disp, "width") and hasattr(disp, "height"):
-        disp.width = width
-        disp.height = height
+    assert hasattr(disp, "width") is True, "expected width attribute in display driver"
+    assert (
+        hasattr(disp, "height") is True
+    ), "expected height attribute in display driver"
+
+    assert (
+        hasattr(disp, "color_depth") is True
+    ), "expected color_depth attribute in display driver"
+
+    alloc_buffer = lambda buffersize: memoryview(bytearray(buffer_size))
+
+    factor = 10  ### Must be 1 if using an RGBBus
+    double_buf = True  ### Must be False if using an RGBBus
+
+    buffer_size = disp.width * disp.height * (disp.color_depth // 8) // factor
+
+    fbuf1 = alloc_buffer(buffer_size)
+    fbuf2 = alloc_buffer(buffer_size) if double_buf else None
     return TestDisplayDriver(disp, fbuf1, fbuf2, color_format, mode, pointer)

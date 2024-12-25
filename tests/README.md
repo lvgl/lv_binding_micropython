@@ -29,7 +29,7 @@ e.g. in unix port a display will appear to allow user input.
 
 All tests are intended/expected to be run both in desktop (unix port) and in devices with the same result.
 
-For devices `testrunner.py`, `testdisplay.py` and `display_mode.py` need to be
+For devices `testrunner.py`, `testdisplay.py` and `display_config.py` need to be
 uploaded. Also for display/indev testing a `hwdisplay.py` with a display driver
 called `display` is expected. This `display` driver is expected to have at least a 
 ```py
