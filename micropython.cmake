@@ -12,6 +12,11 @@ idf_build_set_property(COMPILE_OPTIONS "-Wno-unused-function" APPEND)
 idf_build_set_property(SRCS "${LV_SRC}" APPEND)
 idf_build_set_property(INCLUDE_DIRS "${LV_INCLUDE}" APPEND)
 
+# idf_build_set_property(INCLUDE_DIRS "${LV_INCLUDE}" APPEND)
+
+# DEBUG LV_CONF_PATH
+message(STATUS "LV_CONF_PATH=${LV_CONF_PATH}")
+
 # Fix for idf 5.2.x
 idf_build_get_property(component_targets __COMPONENT_TARGETS)
 string(REPLACE "___idf_lvgl" "" component_targets "${component_targets}")
@@ -40,7 +45,9 @@ target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
 add_library(usermod_lvgl INTERFACE)
 target_sources(usermod_lvgl INTERFACE ${LV_SRC})
 target_include_directories(usermod_lvgl INTERFACE ${LV_INCLUDE})
-
+if (DEFINED LV_CONF_DIR)
+    target_include_directories(usermod_lvgl INTERFACE ${LV_CONF_DIR})
+endif()
 
 file(WRITE ${LV_MP} "")
 
@@ -48,5 +55,9 @@ target_link_libraries(usermod_lvgl INTERFACE lvgl_interface)
 
 # # # make usermod (target declared by Micropython for all user compiled modules) link to bindings
 # # # this way the bindings (and transitively lvgl_interface) get proper compilation flags
+if (DEFINED LV_CONF_DIR)
+    target_include_directories(usermod INTERFACE ${LV_CONF_DIR})
+endif()
+target_compile_options(usermod INTERFACE -DLV_CONF_PATH=${LV_CONF_PATH})
 target_link_libraries(usermod INTERFACE usermod_lvgl)
 

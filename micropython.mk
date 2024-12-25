@@ -15,6 +15,11 @@ CFLAGS_EXTMOD += $(SDL_CFLAGS_EXTMOD) -DMICROPY_SDL=1
 LDFLAGS_EXTMOD += $(SDL_LDFLAGS_EXTMOD)
 endif
 
+# Avoid including unwanted local headers other than sdl2 
+ifeq ($(UNAME_S),Darwin)
+CFLAGS_EXTMOD:=$(filter-out -I/usr/local/include,$(CFLAGS_EXTMOD))
+endif
+
 RLOTTIE_CFLAGS_EXTMOD :=  $(shell pkg-config --silence-errors --cflags rlottie)
 RLOTTIE_LDFLAGS_EXTMOD := $(shell pkg-config --silence-errors --libs   rlottie)
 ifneq ($(RLOTTIE_LDFLAGS_EXTMOD),)
@@ -29,13 +34,15 @@ CFLAGS_EXTMOD += $(FREETYPE_CFLAGS_EXTMOD) -DMICROPY_FREETYPE=1
 LDFLAGS_EXTMOD += $(FREETYPE_LDFLAGS_EXTMOD)
 endif
 
-FFMPEG_LIBS := libavformat libavcodec libswscale libavutil
-FFMPEG_CFLAGS_EXTMOD :=  $(shell pkg-config --silence-errors --cflags $(FFMPEG_LIBS))
-FFMPEG_LDFLAGS_EXTMOD := $(shell pkg-config --silence-errors --libs   $(FFMPEG_LIBS))
-ifneq ($(FFMPEG_LDFLAGS_EXTMOD),)
-CFLAGS_EXTMOD += $(FFMPEG_CFLAGS_EXTMOD) -DMICROPY_FFMPEG=1
-LDFLAGS_EXTMOD += $(FFMPEG_LDFLAGS_EXTMOD)
-endif
+# Enable FFMPEG
+# FFMPEG_LIBS := libavformat libavcodec libswscale libavutil
+# FFMPEG_CFLAGS_EXTMOD :=  $(shell pkg-config --silence-errors --cflags $(FFMPEG_LIBS))
+# FFMPEG_LDFLAGS_EXTMOD := $(shell pkg-config --silence-errors --libs   $(FFMPEG_LIBS))
+# ifneq ($(FFMPEG_LDFLAGS_EXTMOD),)
+# CFLAGS_EXTMOD += $(FFMPEG_CFLAGS_EXTMOD) -DMICROPY_FFMPEG=1
+# LDFLAGS_EXTMOD += $(FFMPEG_LDFLAGS_EXTMOD)
+# endif
+
 endif
 
 ################################################################################
@@ -44,15 +51,27 @@ endif
 
 
 LVGL_BINDING_DIR := $(USERMOD_DIR)
+ifeq ($(LV_CONF_PATH),)
+LV_CONF_PATH = $(LVGL_BINDING_DIR)/lv_conf.h
+endif
+
+# LV_CONF_PATH DEBUG
+$(info    LV_CONF_PATH is $(LV_CONF_PATH))
+
 
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
 LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
 INC += -I$(LVGL_BINDING_DIR)
-ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)/lv_conf.h
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LV_CONF_PATH)
 LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
 LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
 LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
 CFLAGS_EXTMOD += $(LV_CFLAGS) 
+CFLAGS_EXTMOD += -DLV_CONF_PATH=$(LV_CONF_PATH)
+
+
+# CFLAGS DEBUG
+$(info CFLAGS_EXTMOD is $(CFLAGS_EXTMOD))
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
