@@ -242,9 +242,14 @@ def get_display(
 ):
     print(f"DISPLAY_MODE: {mode.upper()}")
     print(f"INDEV_MODE: {pointer.upper()}")
+
+    _cf = {v: k for k, v in lv.COLOR_FORMAT.__dict__.items() if k != "NATIVE"}
+    # print(f"COLOR_FORMAT: {_cf.get(color_format, 'UNKNOWN')}")
     if mode == "sim":
         disp = tdisp
     elif mode == "interactive":
+        disp.width = width
+        disp.height = height
         try:
             from hwdisplay import HwDisplayDriver
 

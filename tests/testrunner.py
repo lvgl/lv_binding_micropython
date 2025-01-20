@@ -33,11 +33,14 @@ def run(func, filename, disp_config=display_config, **kwargs):
     # micropython.mem_info()
 
     async def _run(func, disp_config=disp_config, **kwargs):
+        if hasattr(disp_config, "COLOR_FORMAT"):
+            display_config.COLOR_FORMAT = disp_config.COLOR_FORMAT
         display = get_display(
             disp_config.WIDTH,
             disp_config.HEIGHT,
             mode=disp_config.MODE if disp_config.MODE is not None else _mode,
             pointer=disp_config.POINTER,
+            color_format=display_config.COLOR_FORMAT,
         )
 
         if display.mode == "sim":
