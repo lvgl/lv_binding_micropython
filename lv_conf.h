@@ -457,7 +457,7 @@ extern void mp_lv_deinit_gc();
 #define LV_FONT_MONTSERRAT_42 0
 #define LV_FONT_MONTSERRAT_44 0
 #define LV_FONT_MONTSERRAT_46 0
-#define LV_FONT_MONTSERRAT_48 0
+#define LV_FONT_MONTSERRAT_48 1
 
 /*Demonstrate special features*/
 #define LV_FONT_MONTSERRAT_28_COMPRESSED 0  /*bpp = 3*/
@@ -667,7 +667,7 @@ extern void mp_lv_deinit_gc();
 /*File system interfaces for common APIs */
 
 /*API for fopen, fread, etc*/
-#define LV_USE_FS_STDIO 1
+#define LV_USE_FS_STDIO 0
 #if LV_USE_FS_STDIO
     #define LV_FS_STDIO_LETTER 'A'      /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_STDIO_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
@@ -675,7 +675,7 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /*API for open, read, etc*/
-#define LV_USE_FS_POSIX 1
+#define LV_USE_FS_POSIX 0
 #if LV_USE_FS_POSIX
     #define LV_FS_POSIX_LETTER 'P'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_POSIX_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
@@ -698,7 +698,7 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /*API for memory-mapped file access. */
-#define LV_USE_FS_MEMFS 0
+#define LV_USE_FS_MEMFS 1
 #if LV_USE_FS_MEMFS
     #define LV_FS_MEMFS_LETTER 'M'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
 #endif
