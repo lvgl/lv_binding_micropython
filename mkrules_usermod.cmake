@@ -38,7 +38,7 @@ function(lv_bindings)
         OUTPUT 
             ${LV_PP}
         COMMAND
-        ${CMAKE_C_COMPILER} -E -DPYCPARSER -DLV_CONF_PATH=${LV_CONF_PATH} ${LV_COMPILE_OPTIONS} ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
+        ${CMAKE_C_COMPILER} -E -DPYCPARSER -DLV_CONF_PATH="${LV_CONF_PATH}" ${LV_COMPILE_OPTIONS} ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
         DEPENDS
             ${LV_INPUT}
             ${LV_DEPENDS}
@@ -89,7 +89,7 @@ function(lv_bindings)
         OUTPUT
             ${LV_OUTPUT}
         COMMAND
-            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -DLV_CONF_PATH=${LV_CONF_PATH} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
+            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -DLV_CONF_PATH="${LV_CONF_PATH}" -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
         DEPENDS
             ${LV_BINDINGS_DIR}/gen/gen_mpy.py
             ${LV_PP_FILTERED}
