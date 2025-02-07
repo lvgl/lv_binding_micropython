@@ -5,6 +5,14 @@ find_program(AWK awk mawk gawk)
 
 set(LV_BINDINGS_DIR ${CMAKE_CURRENT_LIST_DIR})
 
+# first check
+if(NOT DEFINED LV_CONF_PATH)
+    set(LV_CONF_PATH "${LV_BINDINGS_DIR}/lv_conf.h")
+
+    message(STATUS "LV_CONF_PATH=${LV_CONF_PATH}")
+endif()
+get_filename_component(LV_CONF_PATH "${LV_CONF_PATH}" ABSOLUTE)
+
 # Common function for creating LV bindings
 
 function(lv_bindings)
@@ -25,13 +33,15 @@ function(lv_bindings)
         OUTPUT 
             ${LV_PP}
         COMMAND
-        ${CMAKE_C_COMPILER} -E -DPYCPARSER ${LV_COMPILE_OPTIONS} ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
+        ${CMAKE_C_COMPILER} -E -DPYCPARSER -DLV_CONF_PATH="${LV_CONF_PATH}" ${LV_COMPILE_OPTIONS} ${LV_PP_OPTIONS} "${LV_CFLAGS}" -I ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include ${MICROPY_CPP_FLAGS} ${LV_INPUT} > ${LV_PP}
         DEPENDS
             ${LV_INPUT}
             ${LV_DEPENDS}
             ${LV_BINDINGS_DIR}/pycparser/utils/fake_libc_include
         IMPLICIT_DEPENDS
             C ${LV_INPUT}
+        COMMENT
+            "LV_BINDINGS CPP"
         VERBATIM
         COMMAND_EXPAND_LISTS
     )
@@ -60,6 +70,9 @@ function(lv_bindings)
                 ${AWK} ${LV_AWK_COMMAND} ${LV_PP} > ${LV_PP_FILTERED}
             DEPENDS
                 ${LV_PP}
+
+            COMMENT
+                "LV_BINDINGS: FILTER"
             VERBATIM
             COMMAND_EXPAND_LISTS
         )
@@ -71,10 +84,13 @@ function(lv_bindings)
         OUTPUT
             ${LV_OUTPUT}
         COMMAND
-            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
+            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -DLV_CONF_PATH="${LV_CONF_PATH}" -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
         DEPENDS
             ${LV_BINDINGS_DIR}/gen/gen_mpy.py
             ${LV_PP_FILTERED}
+
+        COMMENT
+            "LV_BINDINGS GEN MPY"
         COMMAND_EXPAND_LISTS
     )
 
@@ -95,7 +111,7 @@ function(all_lv_bindings)
 
     # LVGL bindings
 
-    file(GLOB_RECURSE LVGL_HEADERS ${LVGL_DIR}/src/*.h ${LV_BINDINGS_DIR}/lv_conf.h)
+    file(GLOB_RECURSE LVGL_HEADERS ${LVGL_DIR}/src/*.h ${LV_CONF_PATH})
     lv_bindings(
         OUTPUT
             ${LV_MP}

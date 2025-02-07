@@ -8,11 +8,17 @@ LVGL_BINDING_DIR := $(USERMOD_DIR)
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
 LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
 
+ifeq ($(LV_CONF_PATH),)
+LV_CONF_PATH = $(LVGL_BINDING_DIR)/lv_conf.h
+endif
+$(info    LV_CONF_PATH is $(LV_CONF_PATH))
+CFLAGS_USERMOD += -DLV_CONF_PATH="<$(abspath $(LV_CONF_PATH))>"
+
 ifeq ($(wildcard $(LVGL_DIR)/.),,)
 $(info lvgl submodule not init)
 else
 # This listing of all lvgl src files is used by make to track when the bindings need to be regenerated
-ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)/lv_conf.h
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LV_CONF_PATH)
 endif
 
 LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
