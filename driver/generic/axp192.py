@@ -190,7 +190,7 @@ class AXP192():
             self.twiddle(DCDC13_LDO23_CONTROL, BIT_LDO3_ENABLE, BIT_LDO3_ENABLE)
             return
 
-        if type(data) != "bytes":
+        if not isinstance(data, bytes):
             self.write_byte(reg_addr, data)
         else:
             self.i2c.writeto_mem(self.i2c_addr, reg_addr, data)
