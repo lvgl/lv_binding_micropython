@@ -15,7 +15,7 @@ from machine import I2C, Pin
 
 SDA                        = 21
 SCL                        = 22
-I2C_ADDRESS	               = 0x34
+I2C_ADDRESS                = 0x34
 
 # Power control registers 
 POWER_STATUS               = 0x00
