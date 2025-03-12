@@ -1,0 +1,140 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master, release/v8.* ]
+  pull_request:
+    branches: [ master, release/v8.* ]
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        # A valid option parameter to the cmake file.
+        # See BUILD_OPTIONS in tests/CMakeLists.txt.
+        build_option: ['OPTIONS_16BIT',
+                       'OPTIONS_24BIT',
+                       'OPTIONS_FULL_32BIT',
+                       'OPTIONS_VG_LITE',
+                       'OPTIONS_SDL']
+    name: Build ${{ matrix.build_option }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ammaraskar/gcc-problem-matcher@master
+    - name: Install prerequisites
+      run: scripts/install-prerequisites.sh
+    - name: Building ${{ matrix.build_option }}
+      run: python tests/main.py --build-option=${{ matrix.build_option }} build
+
+  build-windows-GCC:
+    runs-on: windows-2022
+    name: Build Windows GCC
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ammaraskar/gcc-problem-matcher@master
+    - name: Install prerequisites
+      run: scripts\install-prerequisites.bat
+    - name: Build
+      run: python tests/main.py build
+      env:
+        CC: gcc
+
+  build-windows-MSVC:
+    runs-on: windows-2022
+    name: Build Windows MSVC
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install prerequisites
+      run: scripts\install-prerequisites.bat
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 'mswin'
+    - name: Build
+      run: python tests/main.py build
+      env:
+        CC: cl
+
+  build-esp32s3:
+    runs-on: ubuntu-22.04
+    name: Build ESP IDF ESP32S3
+    container: espressif/idf:v5.3.1
+    steps:
+    - name: Clone LVGL as a Component
+      uses: actions/checkout@v4
+      with:
+        path: components/lvgl
+    - name: Copy IDF Project Example
+      run: . /opt/esp/idf/export.sh && cp -r $IDF_PATH/examples/get-started/hello_world/* .
+    - name: Set Target ESP32S3
+      run: . /opt/esp/idf/export.sh && idf.py set-target esp32s3
+    - name: Build
+      run: . /opt/esp/idf/export.sh && idf.py build
+
+  test-native:
+    runs-on: ubuntu-22.04
+    strategy:
+     matrix:
+       # A valid option parameter to the cmake file.
+       # See BUILD_OPTIONS in tests/CMakeLists.txt.
+       build_config: ['64bit build',
+                      '32bit build']
+    name: Run tests with ${{ matrix.build_config }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ammaraskar/gcc-problem-matcher@master
+    - name: Install prerequisites
+      run: scripts/install-prerequisites.sh
+    - name: Fix kernel mmap rnd bits
+      # Asan in llvm 14 provided in ubuntu 22.04 is incompatible with
+      # high-entropy ASLR in much newer kernels that GitHub runners are
+      # using leading to random crashes: https://reviews.llvm.org/D148280
+      run: sudo sysctl vm.mmap_rnd_bits=28
+    - name: Set environment variables for 32-bit build
+      if: matrix.build_config == '32bit build'
+      run: echo "NON_AMD64_BUILD=1" >> $GITHUB_ENV
+    - name: Run tests
+      run: python tests/main.py --report --update-image test
+    - name: Archive screenshot errors
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshot-errors-amd64
+        path: |
+             tests/ref_imgs*/**/*_err.png
+             test_screenshot_error.h
+    - id: check_untracked_ref_imgs
+      name: Check for new files and upload them as artifacts if found
+      run: |
+        NEW_REF_IMGS=$(git status --porcelain -- tests/ref_imgs* | grep '^??' | awk '{print $2}')
+
+        if [ -n "$NEW_REF_IMGS" ]; then
+          echo "New files were added during the build process."
+          echo "Uploading untracked ref. images as artifacts..."
+          for file in $NEW_REF_IMGS; do
+            echo "Found new file: $file"
+          done
+          zip -r untracked_ref_imgs.zip $NEW_REF_IMGS
+          echo "::set-output name=new_ref_imgs_found::true"
+        else
+          echo "No new files were found."
+          echo "::set-output name=new_ref_imgs_found::false"
+        fi
+
+    - name: Upload untracked reference images
+      if: steps.check_untracked_ref_imgs.outputs.new_ref_imgs_found == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Untracked Reference Images
+        path: untracked_ref_imgs.zip
+
+    - name: Fail the build if new files were found
+      if: steps.check_untracked_ref_imgs.outputs.new_ref_imgs_found == 'true'
+      run: |
+        echo "Failing the build due to newly generated reference images."
+        exit 1
+
