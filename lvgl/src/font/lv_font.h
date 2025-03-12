@@ -288,6 +288,10 @@ LV_FONT_DECLARE(lv_font_unscii_8)
 LV_FONT_DECLARE(lv_font_unscii_16)
 #endif
 
+#if LV_FONT_SIYUAN_HEITI_MEDIUM_16
+LV_FONT_DECLARE(lv_font_siyuan_heiti_medium_16)
+#endif
+
 /*Declare the custom (user defined) fonts*/
 #ifdef LV_FONT_CUSTOM_DECLARE
 LV_FONT_CUSTOM_DECLARE

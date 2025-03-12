@@ -276,6 +276,48 @@ extern "C" {
 #define LV_SYMBOL_NEW_LINE        "\xEF\xA2\xA2" /*63650, 0xF8A2*/
 #endif
 
+#define LV_SYMBOL_BATTERYFULL           "\xEF\x89\x80" /*F240*/
+#define LV_SYMBOL_BATTERYTHREEQUARTERS  "\xEF\x89\x81" /*F241*/
+#define LV_SYMBOL_BATTERYHALF           "\xEF\x89\x82" /*F242*/
+#define LV_SYMBOL_BATTERYQUARTER        "\xEF\x89\x83" /*F243*/
+#define LV_SYMBOL_BATTERYEMPTY          "\xEF\x89\x84" /*F244*/
+#define LV_SYMBOL_SATELLITEDISH         "\xEF\x9F\x80" /*F7C0*/
+#define LV_SYMBOL_WINDOWRESTORE         "\xEF\x8B\x92" /*F2D2*/
+#define LV_SYMBOL_LAYERGROUP            "\xEF\x97\xBD" /*F5FD*/
+#define LV_SYMBOL_ROBOT                 "\xEF\x95\x84" /*F544*/
+#define LV_SYMBOL_LINK                  "\xEF\x83\x81" /*F0C1*/
+#define LV_SYMBOL_THLARGE               "\xEF\x80\x89" /*F009*/
+#define LV_SYMBOL_COG                   "\xEF\x80\x93" /*F013*/
+#define LV_SYMBOL_GAMEPAD               "\xEF\x84\x9B" /*F11B*/
+#define LV_SYMBOL_LAUGHWINK             "\xEF\x96\x9C" /*F59C*/
+#define LV_SYMBOL_CHEVRONRIGHT          "\xEF\x81\x94" /*F054*/
+#define LV_SYMBOL_LEFTWARDSARROW        "\xEF\x81\xA0" /*F060*/
+#define LV_SYMBOL_UPWARDSARROW          "\xEF\x81\xA2" /*F062*/
+#define LV_SYMBOL_DOWNWARDSARROW        "\xEF\x81\xA3" /*F063*/
+#define LV_SYMBOL_FOLDER                "\xEF\x81\xBB" /*F07B*/
+#define LV_SYMBOL_FOLDEROPEN            "\xEF\x81\xBC" /*F07C*/
+#define LV_SYMBOL_FILE2                 "\xEF\x85\x9B" /*F15B*/
+#define LV_SYMBOL_SHOEPRINTS            "\xEF\x95\x8B" /*F54B*/
+#define LV_SYMBOL_COMPASS               "\xEF\x85\x8E" /*F14E*/
+#define LV_SYMBOL_MUSIC                 "\xEF\x80\x81" /*F001*/
+#define LV_SYMBOL_VIDEO2                "\xEF\x80\xBD" /*F03D*/
+#define LV_SYMBOL_CALENDARALT           "\xEF\x81\xB3" /*F073*/
+// #define LV_SYMBOL_PLAY                  "\xEF\x81\x8B" /*F04B*/
+#define LV_SYMBOL_REDOALT               "\xEF\x8B\xB9" /*F2F9*/
+#define LV_SYMBOL_SYNCALT               "\xEF\x8B\xB1" /*F2F1*/
+#define LV_SYMBOL_RANDOM                "\xEF\x81\xB4" /*F074*/
+#define LV_SYMBOL_STEPBACKWARD          "\xEF\x81\x88" /*F048*/
+// #define LV_SYMBOL_STOP                  "\xEF\x81\x8D" /*F04D*/
+#define LV_SYMBOL_STEPFORWARD           "\xEF\x81\x91" /*F051*/
+#define LV_SYMBOL_LIST2                 "\xEF\x80\xBA" /*F03A*/
+#define LV_SYMBOL_NETWORKWIRED          "\xEF\x9B\xBF" /*F6FF*/
+// #define LV_SYMBOL_BLUETOOTH             "\xEF\x8A\x93" /*F293*/
+#define LV_SYMBOL_WHITESUNWITHRAYS      "\xEF\x86\x85" /*F185*/
+#define LV_SYMBOL_VOLUMEDOWN            "\xEF\x80\xA7" /*F027*/
+#define LV_SYMBOL_VOLUMEMUTE            "\xEF\x9A\xA9" /*F6A9*/
+#define LV_SYMBOL_VOLUMEUP              "\xEF\x80\xA8" /*F028*/
+#define LV_SYMBOL_TOGGLEON              "\xEF\x88\x85" /*F205*/
+
 #if !defined LV_SYMBOL_DUMMY
 /** Invalid symbol at (U+F8FF). If written before a string then `lv_img` will show it as a label*/
 #define LV_SYMBOL_DUMMY           "\xEF\xA3\xBF"
