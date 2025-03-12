@@ -1,6 +1,0 @@
-[submodule "lvgl"]
-	path = lvgl
-	url = https://github.com/lvgl/lvgl.git
-[submodule "micropython/pycparser"]
-	path = pycparser
-	url = https://github.com/eliben/pycparser.git
