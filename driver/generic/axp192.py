@@ -15,7 +15,7 @@ from machine import I2C, Pin
 
 SDA                        = 21
 SCL                        = 22
-I2C_ADDRESS	               = 0x34
+I2C_ADDRESS                = 0x34
 
 # Power control registers 
 POWER_STATUS               = 0x00
@@ -190,7 +190,7 @@ class AXP192():
             self.twiddle(DCDC13_LDO23_CONTROL, BIT_LDO3_ENABLE, BIT_LDO3_ENABLE)
             return
 
-        if type(data) != "bytes":
+        if not isinstance(data, bytes):
             self.write_byte(reg_addr, data)
         else:
             self.i2c.writeto_mem(self.i2c_addr, reg_addr, data)
