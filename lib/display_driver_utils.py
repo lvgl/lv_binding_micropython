@@ -51,7 +51,7 @@ class driver:
 
         from ili9XXX import ili9341,LANDSCAPE
         from xpt2046 import xpt2046
-        import espidf as esp
+        #import espidf as esp
 
         if lv_utils_available:
             self.event_loop = lv_utils.event_loop(asynchronous=self.asynchronous, exception_sink=self.exception_sink)

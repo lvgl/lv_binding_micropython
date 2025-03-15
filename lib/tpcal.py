@@ -7,7 +7,7 @@ lv.init()
 
 # Initialize ILI9341 display
 
-import espidf as esp
+#import espidf as esp
 from ili9XXX import ili9341,COLOR_MODE_BGR,LANDSCAPE,PORTRAIT
     
 disp = ili9341(dc=32, cs=33, power=-1, backlight=-1)
