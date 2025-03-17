@@ -7,7 +7,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Install Dependencies
@@ -33,7 +33,7 @@ jobs:
     - name: Build mpy-cross
       run: make -j $(nproc) -C mpy-cross
     - name: Build the unix port
-      run: make -j $(nproc) -C ports/unix DEBUG=1
+      run: make -j $(nproc) -C ports/unix DEBUG=1 VARIANT=lvgl
     - name: Run tests      
       run: |
         export XDG_RUNTIME_DIR=/tmp
