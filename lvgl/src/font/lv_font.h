@@ -288,7 +288,7 @@ LV_FONT_DECLARE(lv_font_unscii_8)
 LV_FONT_DECLARE(lv_font_unscii_16)
 #endif
 
-#if LV_FONT_SIYUAN_HEITI_MEDIUM_16
+#if LV_FONT_SIYUAN_HEITI_MEDIUM_24
 LV_FONT_DECLARE(lv_font_siyuan_heiti_medium_24)
 #endif
 
