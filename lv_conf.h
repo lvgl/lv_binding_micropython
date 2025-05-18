@@ -306,6 +306,10 @@ extern void mp_lv_deinit_gc();
 #define LV_GC_INIT() mp_lv_init_gc()
 #define LV_GC_DEINIT() mp_lv_deinit_gc()
 
+// include lv_conf.h in "mpconfigboard.h" for this to take effect.
+extern void mp_deinit_lvgl_mod();
+#define MICROPY_PORT_DEINIT_FUNC mp_deinit_lvgl_mod()
+
 #define LV_ENABLE_GLOBAL_CUSTOM 1
 #if LV_ENABLE_GLOBAL_CUSTOM
     extern void *mp_lv_roots;
