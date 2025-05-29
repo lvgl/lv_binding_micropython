@@ -49,6 +49,8 @@ async def demo(scr, display=None):
         )
 
     await asyncio.sleep_ms(500)  # await so the frame can be rendered
+    display._save_frame = False
+
     # simulate touch events
     if display:
         print("INDEV + SLIDER TEST:")

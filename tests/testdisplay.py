@@ -183,6 +183,7 @@ class DummyDisplay:
         self._header_set = False
         self._save_frame = sys.platform in ["darwin", "linux"]
         self._debug = True
+        self._pbuff = bytearray(self.color_size)
 
     @property
     def debug(self):
@@ -193,14 +194,29 @@ class DummyDisplay:
         self._debug = x
         self._save_frame = x
 
-    def save_frame(self, data):
+    def reverse_pixel(self, a):
+        for i in range(len(a) - 1, -1, -1):
+            self._pbuff[len(a) - 1 - i] = a[i]
+        return self._pbuff
+
+    def save_frame(self, data, w, h):
         if not self._header_set:
             self._header_set = True
             with open(f"{self.test_name}.bin", "wb") as fr:
                 fr.write(f"{self.width}:{self.height}:{self.color_size}\n".encode())
 
         with open(f"{self.test_name}.bin", "ab") as fr:
-            fr.write(data)
+            pi = 0
+            for py in range(0, h):
+                for px in range(0, w):
+                    try:
+                        pixel = data[pi : pi + self.color_size]
+
+                        fr.write(self.reverse_pixel(pixel))
+                        pi += self.color_size
+                    except Exception:
+                        print(pi)
+            # fr.write(data)
 
     def _shasum_frame(self, data):
         _hash = hashlib.sha256()
@@ -214,7 +230,7 @@ class DummyDisplay:
             print(f"\nFRAME: {self.n} {(x1, y1, w, h, len(buff[:]))}")
             print(self._shasum_frame(bytes(buff[:])))
         if self._save_frame:
-            self.save_frame(buff[:])
+            self.save_frame(buff[:], w, h)
         self.n += 1
 
 
@@ -260,13 +276,13 @@ def get_display(
             if sys.platform not in ["darwin", "linux"]:
                 sys.print_exception(e)
     assert hasattr(disp, "width") is True, "expected width attribute in display driver"
-    assert (
-        hasattr(disp, "height") is True
-    ), "expected height attribute in display driver"
+    assert hasattr(disp, "height") is True, (
+        "expected height attribute in display driver"
+    )
 
-    assert (
-        hasattr(disp, "color_depth") is True
-    ), "expected color_depth attribute in display driver"
+    assert hasattr(disp, "color_depth") is True, (
+        "expected color_depth attribute in display driver"
+    )
 
     alloc_buffer = lambda buffersize: memoryview(bytearray(buffer_size))
 

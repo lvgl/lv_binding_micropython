@@ -41,6 +41,7 @@ async def demo(scr, display=None):
         )
 
     await asyncio.sleep_ms(500)  # await so the frame can be rendered
+    display._save_frame = False
     print("EVENT TEST:")
     for _btn, name in _all_btns:
         _btn.send_event(lv.EVENT.CLICKED, None)
