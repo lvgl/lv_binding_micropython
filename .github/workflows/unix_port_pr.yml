@@ -1,0 +1,63 @@
+name: Build lv_micropython unix port
+
+on:
+  pull_request:
+
+jobs:
+  unix-build-lvgl-micropython:
+
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Install Dependencies
+      run: |
+        sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe restricted multiverse"
+        sudo apt-get update -y -qq
+        sudo apt-get install libsdl2-dev parallel libfreetype-dev librlottie-dev libavformat-dev libavcodec-dev libswscale-dev libavutil-dev build-essential libc-bin
+        python3 -m pip install pillow
+    - name: Clone lv_micropython
+      run: |
+        git clone https://github.com/lvgl/lv_micropython.git .
+        git checkout master
+    - name: Initialize lv_bindings submodule
+      run: git submodule update --init --recursive user_modules/lv_binding_micropython
+    - name: Update Unix port submodules
+      run: make -C ports/unix DEBUG=1 submodules
+
+    # - name: Debug GitHub Event 
+    #   run: -${{ tojson(github.event) }}
+    #   shell: cat {0}
+
+    - name: Checkout lv_bindings
+      working-directory: ./user_modules/lv_binding_micropython
+      run: |
+
+        git fetch --force ${{ github.event.repository.html_url }} "+refs/pull/${{github.event.pull_request.number}}/head:refs/remotes/origin/${{github.event.pull_request.head.ref}}"
+        git checkout ${{ github.event.pull_request.head.sha }}
+        git submodule update --init --recursive
+    - name: Build mpy-cross
+      run: make -j $(nproc) -C mpy-cross
+    - name: Build the unix port
+      run: make -j $(nproc) -C ports/unix DEBUG=1 VARIANT=lvgl
+
+    - name: Run MicroPython Tests
+      run: MICROPY_MICROPYTHON=ports/unix/build-lvgl/micropython ./tests/run-tests.py -d tests/basics
+
+    - name: Run MicroPython-LVGL API Tests
+      run: MICROPY_MICROPYTHON=ports/unix/build-lvgl/micropython ./tests/run-tests.py -d user_modules/lv_binding_micropython/tests/api
+      
+    - name: Process Tests Artifacts
+      working-directory: ./user_modules/lv_binding_micropython/tests
+      run: ./imageconvert.py api/*.bin
+    
+    - name: Upload Test Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: API Tests Screenshots
+        path: ./user_modules/lv_binding_micropython/tests/api/*.png
+      
+    # TODO: Fix run.sh catchsegv not found command
+    - name: Run tests      
+      run: |
+        export XDG_RUNTIME_DIR=/tmp
+        user_modules/lv_binding_micropython/tests/run.sh
