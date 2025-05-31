@@ -12,7 +12,7 @@ if _int in ("-id", "-d"):
     _mode = "interactive"
 
 
-async def run_test(func, display=None):
+async def run_test(func, display=None, **kwargs):
     import lvgl as lv  # noqa
 
     lv.init()
@@ -21,7 +21,7 @@ async def run_test(func, display=None):
     scr.set_style_bg_color(lv.color_black(), 0)
     lv.screen_load(scr)
 
-    resp = await func(scr, display)
+    resp = await func(scr, display, **kwargs)
     return scr, resp
 
 
@@ -48,7 +48,7 @@ def run(func, filename, disp_config=display_config, **kwargs):
             await run_test(func, display)
             await asyncio.sleep_ms(100)
         elif display.mode == "interactive":
-            await run_test(func, display)
+            await run_test(func, display, **kwargs)
             if _int == "-id":
                 while True:
                     try:
