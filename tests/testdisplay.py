@@ -68,11 +68,18 @@ class TestDisplayDriver:
                     len(self._frame_buffer1),
                     render_mode,
                 )
+            if hasattr(display_drv, "set_frame_buffer"):
+                display_drv.set_frame_buffer(self._frame_buffer1)
             self.indev_test = lv.indev_create()
             self.indev_test.set_display(lv.display_get_default())
             self.indev_test.set_group(lv.group_get_default())
             # TODO: test other types of indev
-            self.indev_test.set_type(lv.INDEV_TYPE.POINTER)
+            if pointer in ("sim", "interactive"):
+                _indev_type = lv.INDEV_TYPE.POINTER
+            else:
+                _indev_type = getattr(lv.INDEV_TYPE, pointer.upper())
+
+            self.indev_test.set_type(_indev_type)
             if hasattr(display_drv, "read_cb") and pointer != "sim":
                 self.indev_test.set_read_cb(display_drv.read_cb)
 
@@ -89,14 +96,14 @@ class TestDisplayDriver:
             self.mouse = lv.sdl_mouse_create()
             self.keyboard = lv.sdl_keyboard_create()
             self.keyboard.set_group(self.group)
-            if pointer == "sim":
-                self.indev = lv.indev_create()
-                self.indev.set_display(self.lv_display_int)
-                self.indev.set_group(self.group)
-                self.indev.set_type(lv.INDEV_TYPE.POINTER)
+            if pointer in ("sim", "encoder"):
+                self.indev_test = lv.indev_create()
+                self.indev_test.set_display(self.lv_display_int)
+                self.indev_test.set_group(self.group)
+                self.indev_test.set_type(lv.INDEV_TYPE.POINTER)
                 # NOTE: only one indev pointer allowed, use the keyboard
                 # for interactive control
-                self.indev.set_read_cb(self._read_cb)
+                self.indev_test.set_read_cb(self._read_cb)
 
     def set_test_name(self, name):
         self.display_drv.test_name = name
@@ -171,6 +178,10 @@ class TestDisplayDriver:
                 print(f"[RELEASED]: ({self._x},{self._y})")
             data.state = self._dstate
 
+    def screenshot(self, name="screenshot"):
+        if hasattr(self.display_drv, "screenshot"):
+            return self.display_drv.screenshot(name)
+
 
 class DummyDisplay:
     def __init__(self, width=240, height=320, color_format=lv.COLOR_FORMAT.RGB565):
@@ -182,8 +193,11 @@ class DummyDisplay:
         self.test_name = "testframe"
         self._header_set = False
         self._save_frame = sys.platform in ["darwin", "linux"]
+        # TODO: use framebuf for snapshot
         self._debug = True
-        self._pbuff = bytearray(self.color_size)
+        if self._save_frame:
+            self._pbuff = bytearray(self.color_size)
+        self._save_frame = False
 
     @property
     def debug(self):
@@ -216,7 +230,27 @@ class DummyDisplay:
                         pi += self.color_size
                     except Exception:
                         print(pi)
-            # fr.write(data)
+
+    async def screenshot(self, name="screenshot"):
+        _debug = self._debug
+        self._debug = False
+        self._save_frame = False
+
+        # Reset
+        self._rst_scr = lv.obj()
+        c_scr = lv.screen_active()
+        lv.screen_load(self._rst_scr)
+        await asyncio.sleep_ms(100)
+
+        # Load test screen
+        self._save_frame = sys.platform in ["darwin", "linux"]
+        self._header_set = False
+        self.test_name = f"{self.test_name}@{name}"
+        lv.screen_load(c_scr)
+        await asyncio.sleep_ms(100)
+
+        self._debug = _debug
+        self._save_frame = sys.platform in ["darwin", "linux"]
 
     def _shasum_frame(self, data):
         _hash = hashlib.sha256()
@@ -287,7 +321,7 @@ def get_display(
     alloc_buffer = lambda buffersize: memoryview(bytearray(buffer_size))
 
     factor = 10  ### Must be 1 if using an RGBBus
-    double_buf = True  ### Must be False if using an RGBBus
+    double_buf = False  ### Must be False if using an RGBBus
 
     buffer_size = disp.width * disp.height * (disp.color_depth // 8) // factor
 

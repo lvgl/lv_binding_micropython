@@ -11,7 +11,7 @@ import testrunner
 # RGB colors, layout aligment and events.
 
 
-async def demo(scr, display=None):
+async def buttons(scr, display=None):
     def get_button(scr, text, align, color):
         _btn = lv.button(scr)
         _btn.set_size(lv.pct(25), lv.pct(10))
@@ -41,7 +41,7 @@ async def demo(scr, display=None):
         )
 
     await asyncio.sleep_ms(500)  # await so the frame can be rendered
-    display._save_frame = False
+    await display.screenshot()
     print("EVENT TEST:")
     for _btn, name in _all_btns:
         _btn.send_event(lv.EVENT.CLICKED, None)
@@ -60,5 +60,5 @@ try:
 except Exception:
     display_config = testrunner.display_config
 
-testrunner.run(demo, __file__, disp_config=display_config)
+testrunner.run(buttons, __file__, disp_config=display_config)
 testrunner.devicereset()
