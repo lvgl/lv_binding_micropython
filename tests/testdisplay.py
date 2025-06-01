@@ -15,6 +15,9 @@ class TestDisplayConfig:
     MODE = "sim"
     POINTER = "sim"
     COLOR_FORMAT = lv.COLOR_FORMAT.RGB888
+    RENDER_MODE = lv.DISPLAY_RENDER_MODE.PARTIAL
+    SHOW_INFO = True
+    WINDOW_POS = (None, None)
 
 
 class TestDisplayDriver:
@@ -26,10 +29,12 @@ class TestDisplayDriver:
         color_format=lv.COLOR_FORMAT.RGB565,
         mode="sim",
         pointer="sim",
+        render_mode=lv.DISPLAY_RENDER_MODE.PARTIAL,
         fps=25,
     ):
         self.display_drv = display_drv
         self._color_size = lv.color_format_get_size(color_format)
+        self._color_format = color_format
         self._frame_buffer1 = frame_buffer1
         self._frame_buffer2 = frame_buffer2
         self._x = 0
@@ -40,8 +45,6 @@ class TestDisplayDriver:
         self._debug_press = True
         self._debug_release = True
         self.mode = mode
-
-        render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL
 
         if not lv_utils.event_loop.is_running():
             self.event_loop = lv_utils.event_loop(freq=fps, asynchronous=True)
@@ -70,40 +73,53 @@ class TestDisplayDriver:
                 )
             if hasattr(display_drv, "set_frame_buffer"):
                 display_drv.set_frame_buffer(self._frame_buffer1)
-            self.indev_test = lv.indev_create()
-            self.indev_test.set_display(lv.display_get_default())
-            self.indev_test.set_group(lv.group_get_default())
+
+            if hasattr(display_drv, "set_display"):
+                display_drv.set_display(self.lv_display)
+            self.indev = lv.indev_create()
+            self.indev.set_display(lv.display_get_default())
+            self.indev.set_group(lv.group_get_default())
             # TODO: test other types of indev
             if pointer in ("sim", "interactive"):
                 _indev_type = lv.INDEV_TYPE.POINTER
+
+                if pointer == "interactive" and hasattr(display_drv, "indev_type"):
+                    _indev_type = display_drv.indev_type
             else:
                 _indev_type = getattr(lv.INDEV_TYPE, pointer.upper())
 
-            self.indev_test.set_type(_indev_type)
+            self.indev.set_type(_indev_type)
             if hasattr(display_drv, "read_cb") and pointer != "sim":
-                self.indev_test.set_read_cb(display_drv.read_cb)
+                self.indev.set_read_cb(display_drv.read_cb)
 
             else:
-                self.indev_test.set_read_cb(self._read_cb)
+                self.indev.set_read_cb(self._read_cb)
 
         else:  # interactive + DummyDisplay -> SDL
             self.group = lv.group_create()
             self.group.set_default()
-            self.lv_display_int = lv.sdl_window_create(
+            self.lv_display = lv.sdl_window_create(
                 display_drv.width, display_drv.height
             )
-            lv.sdl_window_set_title(self.lv_display_int, "MicroPython-LVGL")
+            lv.sdl_window_set_title(self.lv_display, "MicroPython-LVGL")
+            if hasattr(display_drv, "window_pos") and hasattr(
+                lv, "sdl_window_set_position"
+            ):
+                if any(display_drv.window_pos):
+                    lv.sdl_window_set_position(self.lv_display, *display_drv.window_pos)
+                lv.sdl_window_set_opacity(self.lv_display, 1.0)
+                lv.sdl_window_set_bordered(self.lv_display, 1)
             self.mouse = lv.sdl_mouse_create()
             self.keyboard = lv.sdl_keyboard_create()
             self.keyboard.set_group(self.group)
             if pointer in ("sim", "encoder"):
-                self.indev_test = lv.indev_create()
-                self.indev_test.set_display(self.lv_display_int)
-                self.indev_test.set_group(self.group)
-                self.indev_test.set_type(lv.INDEV_TYPE.POINTER)
+                self.indev = lv.indev_create()
+                self.indev.set_display(self.lv_display)
+                self.indev.set_group(self.group)
+                self.indev.set_type(lv.INDEV_TYPE.POINTER)
                 # NOTE: only one indev pointer allowed, use the keyboard
                 # for interactive control
-                self.indev_test.set_read_cb(self._read_cb)
+                self.indev.set_read_cb(self._read_cb)
 
     def set_test_name(self, name):
         self.display_drv.test_name = name
@@ -164,6 +180,8 @@ class TestDisplayDriver:
             color_p.__dereference__(width * height * self._color_size),
         )
         self.lv_display.flush_ready()
+        # FIXME: check if last in partial/direct render and call display.drv
+        # show
 
     def _read_cb(self, indev, data):
         if self._press_event:
@@ -178,9 +196,9 @@ class TestDisplayDriver:
                 print(f"[RELEASED]: ({self._x},{self._y})")
             data.state = self._dstate
 
-    def screenshot(self, name="screenshot"):
+    def screenshot(self, **kwargs):
         if hasattr(self.display_drv, "screenshot"):
-            return self.display_drv.screenshot(name)
+            return self.display_drv.screenshot(**kwargs)
 
 
 class DummyDisplay:
@@ -191,10 +209,10 @@ class DummyDisplay:
         self.color_size = lv.color_format_get_size(color_format)
         self.n = 0
         self.test_name = "testframe"
-        self._header_set = False
+        self._header_set = True
         self._save_frame = sys.platform in ["darwin", "linux"]
         # TODO: use framebuf for snapshot
-        self._debug = True
+        self._debug = False
         if self._save_frame:
             self._pbuff = bytearray(self.color_size)
         self._save_frame = False
@@ -206,7 +224,7 @@ class DummyDisplay:
     @debug.setter
     def debug(self, x):
         self._debug = x
-        self._save_frame = x
+        # self._save_frame = x
 
     def reverse_pixel(self, a):
         for i in range(len(a) - 1, -1, -1):
@@ -216,8 +234,11 @@ class DummyDisplay:
     def save_frame(self, data, w, h):
         if not self._header_set:
             self._header_set = True
+            # print(self.test_name, f"{self.width}:{self.height}:{self.color_size}")
             with open(f"{self.test_name}.bin", "wb") as fr:
                 fr.write(f"{self.width}:{self.height}:{self.color_size}\n".encode())
+        # print(bytes(data))
+        assert len(bytes(data[:])) == w * h * self.color_size
 
         with open(f"{self.test_name}.bin", "ab") as fr:
             pi = 0
@@ -227,11 +248,12 @@ class DummyDisplay:
                         pixel = data[pi : pi + self.color_size]
 
                         fr.write(self.reverse_pixel(pixel))
+                        # fr.write(bytes(pixel))
                         pi += self.color_size
                     except Exception:
                         print(pi)
 
-    async def screenshot(self, name="screenshot"):
+    async def screenshot(self, name="screenshot", debug=False):
         _debug = self._debug
         self._debug = False
         self._save_frame = False
@@ -240,17 +262,22 @@ class DummyDisplay:
         self._rst_scr = lv.obj()
         c_scr = lv.screen_active()
         lv.screen_load(self._rst_scr)
-        await asyncio.sleep_ms(100)
+        await asyncio.sleep_ms(500)
 
         # Load test screen
         self._save_frame = sys.platform in ["darwin", "linux"]
         self._header_set = False
+        self._debug = debug
+        _test_name = self.test_name
         self.test_name = f"{self.test_name}@{name}"
+        print(f"SCREENSHOT @ {self.test_name.rsplit('/')[-1].split('.')[-1]}")
         lv.screen_load(c_scr)
-        await asyncio.sleep_ms(100)
+        await asyncio.sleep_ms(500)
 
         self._debug = _debug
-        self._save_frame = sys.platform in ["darwin", "linux"]
+        self._save_frame = False
+        self._header_set = True
+        self.test_name = _test_name
 
     def _shasum_frame(self, data):
         _hash = hashlib.sha256()
@@ -260,12 +287,12 @@ class DummyDisplay:
         return result
 
     def blit(self, x1, y1, w, h, buff):
-        if self.debug:
-            print(f"\nFRAME: {self.n} {(x1, y1, w, h, len(buff[:]))}")
-            print(self._shasum_frame(bytes(buff[:])))
         if self._save_frame:
-            self.save_frame(buff[:], w, h)
-        self.n += 1
+            self.save_frame(buff, w, h)
+        if self.debug:
+            print(f"\nFRAME: {self.n} {(x1, y1, w, h, len(buff))}")
+            print(self._shasum_frame(bytes(buff)))
+            self.n += 1
 
 
 tdisp = DummyDisplay(color_format=lv.COLOR_FORMAT.RGB888)
@@ -289,14 +316,18 @@ def get_display(
     color_format=lv.COLOR_FORMAT.RGB888,
     mode="sim",
     pointer="sim",
+    show_display_info=False,
+    render_mode=lv.DISPLAY_RENDER_MODE.PARTIAL,
+    window_pos=(None, None),
 ):
     print(f"DISPLAY_MODE: {mode.upper()}")
     print(f"INDEV_MODE: {pointer.upper()}")
 
-    _cf = {v: k for k, v in lv.COLOR_FORMAT.__dict__.items() if k != "NATIVE"}
-    # print(f"COLOR_FORMAT: {_cf.get(color_format, 'UNKNOWN')}")
     if mode == "sim":
+        show_display_info = True
         disp = tdisp
+        disp.width = width
+        disp.height = height
     elif mode == "interactive":
         disp.width = width
         disp.height = height
@@ -309,6 +340,8 @@ def get_display(
         except Exception as e:
             if sys.platform not in ["darwin", "linux"]:
                 sys.print_exception(e)
+            else:
+                disp.window_pos = window_pos
     assert hasattr(disp, "width") is True, "expected width attribute in display driver"
     assert hasattr(disp, "height") is True, (
         "expected height attribute in display driver"
@@ -318,13 +351,30 @@ def get_display(
         "expected color_depth attribute in display driver"
     )
 
+    if show_display_info:
+        _cf = {v: k for k, v in lv.COLOR_FORMAT.__dict__.items() if k != "NATIVE"}
+        print(f"COLOR_FORMAT: {_cf.get(color_format, 'UNKNOWN')}")
+        print(f"DISPLAY_SIZE: {width} x {height}")
+
     alloc_buffer = lambda buffersize: memoryview(bytearray(buffer_size))
 
-    factor = 10  ### Must be 1 if using an RGBBus
+    if render_mode == lv.DISPLAY_RENDER_MODE.PARTIAL:
+        factor = 10  ### Must be 1 if using an RGBBus
+    else:
+        factor = 1
+
     double_buf = False  ### Must be False if using an RGBBus
 
-    buffer_size = disp.width * disp.height * (disp.color_depth // 8) // factor
+    buffer_size = (
+        disp.width * disp.height * (lv.color_format_get_size(color_format)) // factor
+    )
+    if color_format == lv.COLOR_FORMAT.I1:
+        buffer_size //= 8
+        # see https://docs.lvgl.io/master/details/main-modules/display/color_format.html#monochrome-displays
+        buffer_size += 8
 
     fbuf1 = alloc_buffer(buffer_size)
     fbuf2 = alloc_buffer(buffer_size) if double_buf else None
-    return TestDisplayDriver(disp, fbuf1, fbuf2, color_format, mode, pointer)
+    return TestDisplayDriver(
+        disp, fbuf1, fbuf2, color_format, mode, pointer, render_mode
+    )

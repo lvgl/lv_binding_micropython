@@ -52,7 +52,7 @@ async def demo(scr, display=None):
     # simulate touch events
     if display:
         print("INDEV + SLIDER TEST:")
-        display.debug_indev(press=False)
+        display.debug_indev(press=False, release=False)
         display.debug_display(False)
         for _btn, name in _all_btns:
             pos = _btn.get_x(), _btn.get_y()
@@ -73,6 +73,7 @@ try:
 
     display_config.MODE = "interactive"
     display_config.POINTER = "sim"
+    display_config.SHOW_INFO = False
 except Exception:
     display_config = testrunner.display_config
 
