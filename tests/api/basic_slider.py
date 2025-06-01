@@ -12,6 +12,8 @@ import testrunner  # noqa
 
 
 async def sliders(scr, display=None):
+    display.debug_display(True)
+
     def get_slider(scr, text, align, color):
         scr.set_style_pad_all(10, 0)
         slider = lv.slider(scr)
@@ -49,7 +51,7 @@ async def sliders(scr, display=None):
         )
 
     await asyncio.sleep_ms(500)  # await so the frame can be rendered
-    await display.screenshot()
+    await display.screenshot(name="start")
 
     # simulate touch events
     if display:
@@ -65,7 +67,7 @@ async def sliders(scr, display=None):
             await display.swipe(x1 + 5, y_mid, x2 + (y2 - y1), y_mid, ms=500)
             await asyncio.sleep_ms(100)
 
-    await display.screenshot("final")
+    await display.screenshot(name="end")
     return _all_objs
 
 
@@ -76,6 +78,9 @@ try:
 
     display_config.MODE = "sim"
     display_config.POINTER = "sim"
+    display_config.COLOR_FORMAT = lv.COLOR_FORMAT.RGB888
+    display_config.WIDTH = 240
+    display_config.HEIGHT = 320
 except Exception:
     display_config = testrunner.display_config
 

@@ -12,6 +12,8 @@ import testrunner
 
 
 async def buttons(scr, display=None):
+    display.debug_display(True)
+
     def get_button(scr, text, align, color):
         _btn = lv.button(scr)
         _btn.set_size(lv.pct(25), lv.pct(10))
@@ -57,6 +59,9 @@ try:
 
     display_config.MODE = "sim"
     display_config.POINTER = "sim"
+    display_config.COLOR_FORMAT = lv.COLOR_FORMAT.RGB888
+    display_config.WIDTH = 240
+    display_config.HEIGHT = 320
 except Exception:
     display_config = testrunner.display_config
 
