@@ -1,0 +1,124 @@
+name: MicroPython-LVGL CI
+
+on:
+  push:
+  pull_request:
+
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }} 
+  cancel-in-progress: true
+
+jobs:
+  build-lvgl-micropython:
+
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        port: ['unix', 'stm32', 'rp2', 'esp32']
+    steps:
+    - uses: ammaraskar/gcc-problem-matcher@master
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe restricted multiverse"
+        sudo apt-get update -y -qq
+        sudo apt-get install libsdl2-dev parallel libfreetype-dev librlottie-dev libavformat-dev libavcodec-dev libswscale-dev libavutil-dev build-essential libc-bin
+        python3 -m pip install pillow
+
+    - name: Clone lv_micropython
+      run: |
+        git clone https://github.com/lvgl/lv_micropython.git .
+        git checkout master
+
+    - name: Initialize lv_bindings submodule
+      run: git submodule update --init --recursive user_modules/lv_binding_micropython
+
+    - name: Update ${{ matrix.port }} port submodules
+      run: make -C ports/${{ matrix.port}} DEBUG=1 submodules
+
+    # - name: Debug GitHub Event 
+    #   run: -${{ tojson(github.event) }}
+    #   shell: cat {0}
+
+    - name: Checkout lv_bindings (push)
+      working-directory: ./user_modules/lv_binding_micropython
+      if: ${{github.event_name == 'push'}}
+      run: |
+
+        git fetch --force ${{ github.event.repository.html_url }} "+${{github.event.ref}}:refs/remotes/origin/${{github.event.head_commit.author.username}}-${{github.event.head_commit.id}}"
+        git checkout ${{ github.event.head_commit.id }}
+        git submodule update --init --recursive
+
+    - name: Checkout lv_bindings (pull_request)
+      working-directory: ./user_modules/lv_binding_micropython
+      if: ${{github.event_name == 'pull_request'}}
+      run: |
+
+        git fetch --force ${{ github.event.repository.html_url }} "+refs/pull/${{github.event.pull_request.number}}/head:refs/remotes/origin/${{github.event.pull_request.head.ref}}"
+        git checkout ${{ github.event.pull_request.head.sha }}
+        git submodule update --init --recursive
+
+
+    - name: Build mpy-cross
+      run: make -j $(nproc) -C mpy-cross
+
+    # STM32 port
+    - name: Build stm32 port
+      if: matrix.port == 'stm32'
+      run: |
+        source tools/ci.sh && ci_stm32_setup
+        make -C ports/stm32 BOARD=PYBV11 submodules
+        make -j $(nproc) -C ports/stm32 BOARD=PYBV11 USER_C_MODULES=../../user_modules LV_CONF_PATH=../../user_modules/lv_binding_micropython/ports/stm32/lv_conf_stm32.h
+    # Raspberry Pi Pico port
+    - name: Build rp2 port
+      if: matrix.port == 'rp2'
+      run: |
+        source tools/ci.sh && ci_rp2_setup
+        make -C ports/rp2 BOARD=RPI_PICO submodules
+        make -j $(nproc) -C ports/rp2 BOARD=RPI_PICO USER_C_MODULES=../../user_modules/lv_binding_micropython/micropython.cmake
+
+    # ESP32 port
+    - name: Build esp32 port
+      if: matrix.port == 'esp32'
+      run: |
+        source tools/ci.sh && ci_esp32_idf_setup
+        source tools/ci.sh && ci_esp32_build_common
+        make -C ports/esp32 BOARD=ESP32_GENERIC_S3 USER_C_MODULES=../../user_modules/lv_binding_micropython/micropython.cmake
+
+    # Unix port
+    - name: Build unix port
+      if: matrix.port == 'unix'
+      run: make -j $(nproc) -C ports/unix DEBUG=1 VARIANT=lvgl
+
+    - name: Run MicroPython Tests
+      if: matrix.port == 'unix'
+      run: MICROPY_MICROPYTHON=ports/unix/build-lvgl/micropython ./tests/run-tests.py -d tests/basics
+
+    - name: Run MicroPython-LVGL API Tests
+      if: matrix.port == 'unix'
+      run: MICROPY_MICROPYTHON=ports/unix/build-lvgl/micropython ./tests/run-tests.py -d user_modules/lv_binding_micropython/tests/api
+      
+    - name: Process Tests Artifacts
+
+      if: matrix.port == 'unix'
+      working-directory: ./user_modules/lv_binding_micropython/tests
+      run: ./imageconvert.py api/*.bin
+    
+    - name: Upload Test Artifacts
+      if: matrix.port == 'unix'
+      uses: actions/upload-artifact@v4
+      with:
+        name: API Tests Screenshots
+        path: ./user_modules/lv_binding_micropython/tests/api/*.png
+      
+    # TODO: Fix run.sh catchsegv not found command
+    - name: Run tests      
+      if: matrix.port == 'unix'
+      run: |
+        export XDG_RUNTIME_DIR=/tmp
+        user_modules/lv_binding_micropython/tests/run.sh
