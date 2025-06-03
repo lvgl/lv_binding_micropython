@@ -10,6 +10,7 @@ if(ESP_PLATFORM)
     idf_build_set_property(COMPILE_DEFINITIONS "-DLV_KCONFIG_IGNORE" APPEND)
     idf_build_set_property(COMPILE_DEFINITIONS "${LV_CFLAGS}" APPEND)
     idf_build_set_property(COMPILE_OPTIONS "-Wno-unused-function" APPEND)
+    idf_build_set_property(COMPILE_OPTIONS "-Wno-format" APPEND)
     idf_build_set_property(SRCS "${LV_SRC}" APPEND)
     idf_build_set_property(INCLUDE_DIRS "${LV_INCLUDE}" APPEND)
 

@@ -1345,6 +1345,11 @@ void *mp_lv_user_data;
 int mp_lv_roots_initialized = 0;
 int lvgl_mod_initialized = 0;
 
+void mp_lv_log_cb(lv_log_level_t level, const char * buf){
+
+    mp_printf(&mp_plat_print, buf);
+}
+
 void mp_lv_init_gc()
 {
     if (!MP_STATE_VM(mp_lv_roots_initialized)) {
