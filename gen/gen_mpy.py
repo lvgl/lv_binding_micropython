@@ -3884,6 +3884,35 @@ def parse_doxygen_comment(comment_text):
         'returns': returns
     }
 
+def wrap_text(text, width=85, indent=0):
+    """Wrap text to specified width with optional indentation."""
+    if not text:
+        return []
+    
+    import textwrap
+    
+    # Split on existing newlines first
+    paragraphs = text.split('\n')
+    wrapped_lines = []
+    
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
+            wrapped_lines.append('')
+            continue
+            
+        # Wrap each paragraph
+        wrapper = textwrap.TextWrapper(
+            width=width,
+            initial_indent=' ' * indent,
+            subsequent_indent=' ' * indent,
+            break_long_words=False,
+            break_on_hyphens=False
+        )
+        wrapped_lines.extend(wrapper.wrap(paragraph))
+    
+    return wrapped_lines
+
 def format_python_docstring(func_name, doc_info, args_info):
     """Format parsed documentation into a Python docstring."""
     if not doc_info:
@@ -3891,9 +3920,10 @@ def format_python_docstring(func_name, doc_info, args_info):
     
     lines = []
     
-    # Add description
+    # Add description with text wrapping
     if doc_info.get('description'):
-        lines.append(doc_info['description'])
+        desc_lines = wrap_text(doc_info['description'], width=85)
+        lines.extend(desc_lines)
         lines.append('')
     
     # Add parameters section
@@ -3907,15 +3937,47 @@ def format_python_docstring(func_name, doc_info, args_info):
             # Get description from documentation
             param_desc = params_from_doc.get(arg_name, '')
             if param_desc:
-                lines.append(f'    {arg_name} ({arg_type}): {param_desc}')
+                # Format parameter with proper indentation
+                param_header = f'    {arg_name} ({arg_type}): '
+                
+                # Wrap the description text separately to maintain indentation
+                desc_wrapper = textwrap.TextWrapper(
+                    width=85,
+                    initial_indent=param_header,
+                    subsequent_indent=' ' * (len(param_header)),
+                    break_long_words=False,
+                    break_on_hyphens=False
+                )
+                wrapped_param_lines = desc_wrapper.wrap(param_desc)
+                lines.extend(wrapped_param_lines)
             else:
                 lines.append(f'    {arg_name} ({arg_type}): Parameter description not available.')
         lines.append('')
     
-    # Add returns section
+    # Add returns section with proper formatting
     if doc_info.get('returns'):
         lines.append('Returns:')
-        lines.append(f'    {doc_info["returns"]}')
+        # Split return description on periods and dashes for better formatting
+        return_desc = doc_info["returns"]
+        
+        # Handle common patterns in LVGL return descriptions
+        if ' - ' in return_desc:
+            # Split on ' - ' for bullet-point style returns
+            parts = return_desc.split(' - ')
+            first_part = parts[0].strip()
+            if first_part:
+                wrapped_first = wrap_text(first_part, width=81, indent=4)
+                lines.extend(wrapped_first)
+            
+            for part in parts[1:]:
+                part = part.strip()
+                if part:
+                    wrapped_part = wrap_text(f'- {part}', width=81, indent=4)
+                    lines.extend(wrapped_part)
+        else:
+            # Regular return description - wrap normally
+            wrapped_return = wrap_text(return_desc, width=81, indent=4)
+            lines.extend(wrapped_return)
         lines.append('')
     
     if lines and lines[-1] == '':
