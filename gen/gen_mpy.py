@@ -35,6 +35,7 @@ from sys import argv
 from argparse import ArgumentParser
 import subprocess
 import re
+import os
 from os.path import dirname, abspath
 from os.path import commonprefix
 
@@ -3808,6 +3809,195 @@ static const mp_lv_obj_type_t *mp_lv_obj_types[] = {{
 # Python stub file generation functions
 #
 
+def parse_doxygen_comment(comment_text):
+    """Parse a Doxygen comment and extract description and parameters."""
+    if not comment_text:
+        return None
+    
+    # Remove comment markers and normalize whitespace
+    lines = []
+    for line in comment_text.split('\n'):
+        # Remove /** */ and * prefixes
+        line = line.strip()
+        if line.startswith('/**'):
+            line = line[3:].strip()
+        elif line.startswith('*/'):
+            continue
+        elif line.startswith('*'):
+            line = line[1:].strip()
+        elif line.startswith('//'):
+            line = line[2:].strip()
+        
+        if line:
+            lines.append(line)
+    
+    if not lines:
+        return None
+    
+    # Parse the content
+    description_lines = []
+    params = []
+    returns = None
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        
+        if line.startswith('@param'):
+            # Parse parameter: @param name description
+            parts = line.split(None, 2)
+            if len(parts) >= 3:
+                param_name = parts[1]
+                param_desc = parts[2]
+                
+                # Collect multi-line parameter descriptions
+                i += 1
+                while i < len(lines) and not lines[i].startswith('@'):
+                    param_desc += ' ' + lines[i]
+                    i += 1
+                i -= 1  # Back up one since loop will increment
+                
+                params.append((param_name, param_desc.strip()))
+            
+        elif line.startswith('@return'):
+            # Parse return: @return description
+            returns = line[7:].strip()
+            
+            # Collect multi-line return descriptions
+            i += 1
+            while i < len(lines) and not lines[i].startswith('@'):
+                returns += ' ' + lines[i]
+                i += 1
+            i -= 1  # Back up one since loop will increment
+            
+        elif not line.startswith('@'):
+            # Regular description line
+            description_lines.append(line)
+        
+        i += 1
+    
+    description = ' '.join(description_lines).strip() if description_lines else None
+    
+    return {
+        'description': description,
+        'params': params,
+        'returns': returns
+    }
+
+def format_python_docstring(func_name, doc_info, args_info):
+    """Format parsed documentation into a Python docstring."""
+    if not doc_info:
+        return None
+    
+    lines = []
+    
+    # Add description
+    if doc_info.get('description'):
+        lines.append(doc_info['description'])
+        lines.append('')
+    
+    # Add parameters section
+    params_from_doc = {name: desc for name, desc in doc_info.get('params', [])}
+    if args_info and (params_from_doc or any(arg.get('name') for arg in args_info)):
+        lines.append('Args:')
+        for arg in args_info:
+            arg_name = arg.get('name', 'arg')
+            arg_type = c_type_to_python_type(arg.get('type', 'Any'))
+            
+            # Get description from documentation
+            param_desc = params_from_doc.get(arg_name, '')
+            if param_desc:
+                lines.append(f'    {arg_name} ({arg_type}): {param_desc}')
+            else:
+                lines.append(f'    {arg_name} ({arg_type}): Parameter description not available.')
+        lines.append('')
+    
+    # Add returns section
+    if doc_info.get('returns'):
+        lines.append('Returns:')
+        lines.append(f'    {doc_info["returns"]}')
+        lines.append('')
+    
+    if lines and lines[-1] == '':
+        lines.pop()  # Remove trailing empty line
+    
+    return lines
+
+def extract_function_docs(source_lines, func_name):
+    """Extract documentation for a specific function from source lines."""
+    # Look for the function declaration and preceding comment
+    func_pattern = rf'\b{re.escape(func_name)}\s*\('
+    
+    for i, line in enumerate(source_lines):
+        if re.search(func_pattern, line):
+            # Found function declaration, look backwards for documentation
+            comment_lines = []
+            j = i - 1
+            
+            # Skip empty lines and whitespace
+            while j >= 0 and source_lines[j].strip() == '':
+                j -= 1
+            
+            # Collect comment lines
+            while j >= 0:
+                line_stripped = source_lines[j].strip()
+                if line_stripped.endswith('*/'):
+                    # End of comment block, collect backwards
+                    while j >= 0:
+                        comment_line = source_lines[j].strip()
+                        comment_lines.insert(0, comment_line)
+                        if comment_line.startswith('/**'):
+                            break
+                        j -= 1
+                    break
+                elif line_stripped.startswith('*') or line_stripped.startswith('//'):
+                    comment_lines.insert(0, line_stripped)
+                    j -= 1
+                else:
+                    break
+            
+            if comment_lines:
+                comment_text = '\n'.join(comment_lines)
+                return parse_doxygen_comment(comment_text)
+    
+    return None
+
+def find_function_docs_in_sources(func_name, source_files):
+    """Find documentation for a function in the source files."""
+    for file_path, source_lines in source_files.items():
+        doc_info = extract_function_docs(source_lines, func_name)
+        if doc_info:
+            return doc_info
+    return None
+
+def load_lvgl_source_files(lvgl_dir):
+    """Load LVGL header files for documentation extraction."""
+    import os
+    source_files = {}
+    
+    # Look for header files in widget directories and core
+    search_dirs = [
+        os.path.join(lvgl_dir, "src", "widgets"),
+        os.path.join(lvgl_dir, "src", "core"),
+        os.path.join(lvgl_dir, "src", "misc"),
+        os.path.join(lvgl_dir, "src", "draw"),
+    ]
+    
+    for search_dir in search_dirs:
+        if os.path.exists(search_dir):
+            for root, dirs, files in os.walk(search_dir):
+                for file in files:
+                    if file.endswith('.h'):
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                source_files[file_path] = f.readlines()
+                        except (UnicodeDecodeError, IOError):
+                            # Skip files that can't be read
+                            continue
+    
+    return source_files
+
 def c_type_to_python_type(c_type):
     """Convert C types to Python type hints."""
     if not c_type:
@@ -3846,14 +4036,14 @@ def c_type_to_python_type(c_type):
     else:
         return "Any"  # Unknown types
 
-def generate_function_stub(func_name, func_info):
+def generate_function_stub(func_name, func_info, doc_info=None, is_class_method=False):
     """Generate a Python stub for a function."""
     args = func_info.get("args", [])
     return_type = c_type_to_python_type(func_info.get("return_type", "None"))
     
     # Format arguments
     arg_strs = []
-    for arg in args:
+    for i, arg in enumerate(args):
         # Handle both dict and direct name cases
         if isinstance(arg, dict):
             arg_name = arg.get("name", "arg")
@@ -3862,14 +4052,38 @@ def generate_function_stub(func_name, func_info):
             # Fallback for unexpected format
             arg_name = str(arg) if arg else "arg"
             arg_type = "Any"
+        
+        # For class methods, rename first parameter to 'self'
+        if is_class_method and i == 0 and arg_name in ['obj', 'object', 'this']:
+            arg_name = "self"
+            arg_type = "Self"  # Use Self type hint for the instance
+        
         arg_strs.append(f"{arg_name}: {arg_type}")
     
     args_str = ", ".join(arg_strs)
     
-    # Generate function signature
-    return f"def {func_name}({args_str}) -> {return_type}: ..."
+    # Generate function signature and docstring
+    lines = [f"def {func_name}({args_str}) -> {return_type}:"]
+    
+    # Add docstring if available
+    if doc_info:
+        # For class methods, adjust docstring to exclude 'self' parameter
+        args_for_docstring = args[1:] if is_class_method and args else args
+        docstring_lines = format_python_docstring(func_name, doc_info, args_for_docstring)
+        if docstring_lines:
+            lines.append('    """')
+            for line in docstring_lines:
+                if line:
+                    lines.append(f"    {line}")
+                else:
+                    lines.append("    ")
+            lines.append('    """')
+    
+    lines.append("    ...")
+    
+    return "\n".join(lines)
 
-def generate_class_stub(class_name, class_info):
+def generate_class_stub(class_name, class_info, source_files=None):
     """Generate a Python stub for a class."""
     lines = [f"class {class_name}:"]
     
@@ -3878,27 +4092,39 @@ def generate_class_stub(class_name, class_info):
         lines.append("    pass")
         return "\n".join(lines)
     
+    # Add constructor if not present
+    lines.append("    def __init__(self, *args, **kwargs) -> None: ...")
+    lines.append("")
+    
     # Group methods and properties
     methods = []
     properties = []
     
     for member_name, member_info in members.items():
         if member_info.get("type") == "function":
-            method_stub = generate_function_stub(member_name, member_info)
+            # Try to extract documentation for this method
+            doc_info = None
+            if source_files:
+                # Look for the function in LVGL source files
+                full_func_name = f"lv_{class_name}_{member_name}"
+                doc_info = find_function_docs_in_sources(full_func_name, source_files)
+            
+            method_stub = generate_function_stub(member_name, member_info, doc_info, is_class_method=True)
             # Add proper indentation for class methods
-            method_stub = "    " + method_stub
-            methods.append(method_stub)
+            indented_lines = []
+            for line in method_stub.split('\n'):
+                indented_lines.append("    " + line)
+            methods.append("\n".join(indented_lines))
         else:
             # Treat as property
             prop_type = c_type_to_python_type(member_info.get("type", "Any"))
             properties.append(f"    {member_name}: {prop_type}")
     
-    # Add constructor if not present
-    if "__init__" not in [m.split("(")[0].strip().split()[-1] for m in methods]:
-        lines.append("    def __init__(self, *args, **kwargs) -> None: ...")
-    
     # Add properties first, then methods
-    lines.extend(properties)
+    if properties:
+        lines.extend(properties)
+        lines.append("")
+    
     lines.extend(methods)
     
     return "\n".join(lines)
@@ -3920,7 +4146,7 @@ def generate_enum_stub(enum_name, enum_info):
     
     return "\n".join(lines)
 
-def generate_main_stub(module_name, metadata):
+def generate_main_stub(module_name, metadata, source_files=None):
     """Generate the main module stub file."""
     lines = [
         '"""LVGL MicroPython bindings stub file.',
@@ -3938,19 +4164,25 @@ def generate_main_stub(module_name, metadata):
         '"""',
         "",
         "from typing import Any, Callable, Optional, Union",
+        "from typing_extensions import Self",
         "",
     ]
     
     # Add module-level functions
     functions = metadata.get("functions", {})
     for func_name, func_info in functions.items():
-        lines.append(generate_function_stub(func_name, func_info))
+        # Try to find documentation for this function
+        doc_info = None
+        if source_files:
+            doc_info = find_function_docs_in_sources(func_name, source_files)
+        
+        lines.append(generate_function_stub(func_name, func_info, doc_info))
         lines.append("")
     
     # Add object classes
     objects = metadata.get("objects", {})
     for obj_name, obj_info in objects.items():
-        lines.append(generate_class_stub(obj_name, obj_info))
+        lines.append(generate_class_stub(obj_name, obj_info, source_files))
         lines.append("")
     
     # Add enums
@@ -4050,8 +4282,29 @@ if args.stubs_dir:
             get_enum_name(int_constant) for int_constant in int_constants
         ]
     
+    # Load LVGL source files for documentation extraction
+    # Determine LVGL directory - look for it relative to the script location
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    lvgl_dir = os.path.join(script_dir, "..", "lvgl")
+    if not os.path.exists(lvgl_dir):
+        # Alternative: try to find it relative to input file
+        if args.input:
+            input_dir = os.path.dirname(os.path.abspath(args.input[0]))
+            lvgl_dir = os.path.join(input_dir, "lvgl")
+    
+    source_files = None
+    try:
+        if os.path.exists(lvgl_dir):
+            eprint(f"Loading LVGL source files for documentation extraction from: {lvgl_dir}")
+            source_files = load_lvgl_source_files(lvgl_dir)
+            eprint(f"Loaded {len(source_files)} header files for documentation")
+        else:
+            eprint(f"LVGL directory not found at {lvgl_dir}, generating stubs without documentation")
+    except Exception as e:
+        eprint(f"Warning: Could not load LVGL source files for documentation: {e}")
+    
     # Generate main module stub
-    main_stub_content = generate_main_stub(module_name, metadata)
+    main_stub_content = generate_main_stub(module_name, metadata, source_files)
     main_stub_path = os.path.join(args.stubs_dir, f"{module_name}.pyi")
     
     with open(main_stub_path, "w") as stub_file:
