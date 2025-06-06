@@ -36,6 +36,7 @@ from argparse import ArgumentParser
 import subprocess
 import re
 import os
+import textwrap
 from os.path import dirname, abspath
 from os.path import commonprefix
 
@@ -3866,7 +3867,13 @@ def parse_doxygen_comment(comment_text):
             # Collect multi-line return descriptions
             i += 1
             while i < len(lines) and not lines[i].startswith('@'):
-                returns += ' ' + lines[i]
+                next_line = lines[i].strip()
+                if next_line.startswith('- '):
+                    # Preserve bullet points with line breaks
+                    returns += '\n' + next_line
+                else:
+                    # Regular continuation - join with space
+                    returns += ' ' + next_line
                 i += 1
             i -= 1  # Back up one since loop will increment
             
@@ -3961,8 +3968,25 @@ def format_python_docstring(func_name, doc_info, args_info):
         return_desc = doc_info["returns"]
         
         # Handle common patterns in LVGL return descriptions
-        if ' - ' in return_desc:
-            # Split on ' - ' for bullet-point style returns
+        if '\n- ' in return_desc:
+            # Handle newline-separated bullet points from preserved formatting
+            parts = return_desc.split('\n')
+            first_part = parts[0].strip()
+            if first_part:
+                wrapped_first = wrap_text(first_part, width=81, indent=4)
+                lines.extend(wrapped_first)
+            
+            for part in parts[1:]:
+                part = part.strip()
+                if part and part.startswith('- '):
+                    wrapped_part = wrap_text(part, width=81, indent=4)
+                    lines.extend(wrapped_part)
+                elif part:
+                    # Non-bullet continuation line
+                    wrapped_part = wrap_text(part, width=81, indent=4)
+                    lines.extend(wrapped_part)
+        elif ' - ' in return_desc:
+            # Handle space-separated bullet points (fallback)
             parts = return_desc.split(' - ')
             first_part = parts[0].strip()
             if first_part:
