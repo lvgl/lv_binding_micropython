@@ -4004,6 +4004,29 @@ def format_python_docstring(func_name, doc_info, args_info):
             lines.extend(wrapped_return)
         lines.append('')
     
+    # Add source reference if available
+    if doc_info.get('source_file') and doc_info.get('source_line'):
+        source_file = doc_info['source_file']
+        source_line = doc_info['source_line']
+        
+        # Make path relative to LVGL directory for cleaner display
+        if '/lvgl/src/' in source_file:
+            relative_path = source_file.split('/lvgl/', 1)[1]
+        elif '/lvgl/' in source_file:
+            relative_path = source_file.split('/lvgl/', 1)[1]
+        else:
+            relative_path = os.path.basename(source_file)
+        
+        # Clean up any remaining path artifacts
+        if relative_path.startswith('gen/../lvgl/'):
+            relative_path = relative_path[12:]  # Remove 'gen/../lvgl/'
+        elif relative_path.startswith('../lvgl/'):
+            relative_path = relative_path[8:]   # Remove '../lvgl/'
+        
+        if lines:
+            lines.append('')
+        lines.append(f'Source: {relative_path}:{source_line}')
+    
     if lines and lines[-1] == '':
         lines.pop()  # Remove trailing empty line
     
@@ -4102,6 +4125,9 @@ def process_file_for_docs(file_path):
                 comment_text = '\n'.join(comment_lines)
                 doc_info = parse_doxygen_comment(comment_text)
                 if doc_info:
+                    # Add source file information
+                    doc_info['source_file'] = file_path
+                    doc_info['source_line'] = i + 1  # Line numbers are 1-based
                     func_docs[func_name] = doc_info
         
         i += 1
