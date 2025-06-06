@@ -4048,20 +4048,78 @@ def extract_function_docs(source_lines, func_name):
     
     return None
 
-def find_function_docs_in_sources(func_name, source_files):
-    """Find documentation for a function in the source files."""
-    for file_path, source_lines in source_files.items():
-        doc_info = extract_function_docs(source_lines, func_name)
-        if doc_info:
-            return doc_info
-    return None
+def process_file_for_docs(file_path):
+    """Process a single header file to extract all function documentation."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            source_lines = f.readlines()
+    except (UnicodeDecodeError, IOError):
+        return {}
+    
+    func_docs = {}
+    i = 0
+    while i < len(source_lines):
+        line = source_lines[i]
+        
+        # Look for function declarations
+        # Match patterns like: type func_name(args) or type *func_name(args)
+        func_match = re.search(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', line)
+        if func_match and not line.strip().startswith('*') and not line.strip().startswith('//'):
+            func_name = func_match.group(1)
+            
+            # Skip common false positives
+            if func_name in ['if', 'while', 'for', 'switch', 'sizeof', 'return']:
+                i += 1
+                continue
+            
+            # Look backwards for documentation
+            comment_lines = []
+            j = i - 1
+            
+            # Skip empty lines and whitespace
+            while j >= 0 and source_lines[j].strip() == '':
+                j -= 1
+            
+            # Collect comment lines
+            while j >= 0:
+                line_stripped = source_lines[j].strip()
+                if line_stripped.endswith('*/'):
+                    # End of comment block, collect backwards
+                    while j >= 0:
+                        comment_line = source_lines[j].strip()
+                        comment_lines.insert(0, comment_line)
+                        if comment_line.startswith('/**'):
+                            break
+                        j -= 1
+                    break
+                elif line_stripped.startswith('*') or line_stripped.startswith('//'):
+                    comment_lines.insert(0, line_stripped)
+                    j -= 1
+                else:
+                    break
+            
+            if comment_lines:
+                comment_text = '\n'.join(comment_lines)
+                doc_info = parse_doxygen_comment(comment_text)
+                if doc_info:
+                    func_docs[func_name] = doc_info
+        
+        i += 1
+    
+    return func_docs
+
+def find_function_docs_in_sources(func_name, doc_index):
+    """Find documentation for a function in the pre-built index."""
+    return doc_index.get(func_name)
 
 def load_lvgl_source_files(lvgl_dir):
-    """Load LVGL header files for documentation extraction."""
+    """Load LVGL header files and build documentation index with parallel processing."""
     import os
-    source_files = {}
+    import multiprocessing
+    from concurrent.futures import ProcessPoolExecutor, as_completed
     
-    # Look for header files in widget directories and core
+    # Find all header files
+    header_files = []
     search_dirs = [
         os.path.join(lvgl_dir, "src", "widgets"),
         os.path.join(lvgl_dir, "src", "core"),
@@ -4074,15 +4132,46 @@ def load_lvgl_source_files(lvgl_dir):
             for root, dirs, files in os.walk(search_dir):
                 for file in files:
                     if file.endswith('.h'):
-                        file_path = os.path.join(root, file)
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                source_files[file_path] = f.readlines()
-                        except (UnicodeDecodeError, IOError):
-                            # Skip files that can't be read
-                            continue
+                        header_files.append(os.path.join(root, file))
     
-    return source_files
+    if not header_files:
+        return {}
+    
+    # Process files in parallel
+    doc_index = {}
+    cpu_count = min(multiprocessing.cpu_count(), len(header_files))
+    
+    eprint(f"Processing {len(header_files)} header files using {cpu_count} processes...")
+    
+    try:
+        with ProcessPoolExecutor(max_workers=cpu_count) as executor:
+            # Submit all files for processing
+            future_to_file = {executor.submit(process_file_for_docs, file_path): file_path 
+                            for file_path in header_files}
+            
+            processed = 0
+            for future in as_completed(future_to_file):
+                file_path = future_to_file[future]
+                try:
+                    file_docs = future.result()
+                    doc_index.update(file_docs)
+                    processed += 1
+                    if processed % 50 == 0:
+                        eprint(f"Processed {processed}/{len(header_files)} files...")
+                except Exception as exc:
+                    eprint(f"Warning: Failed to process {file_path}: {exc}")
+    except Exception as e:
+        eprint(f"Warning: Parallel processing failed, falling back to serial: {e}")
+        # Fallback to serial processing
+        for file_path in header_files:
+            try:
+                file_docs = process_file_for_docs(file_path)
+                doc_index.update(file_docs)
+            except Exception as exc:
+                eprint(f"Warning: Failed to process {file_path}: {exc}")
+    
+    eprint(f"Built documentation index with {len(doc_index)} functions")
+    return doc_index
 
 def c_type_to_python_type(c_type):
     """Convert C types to Python type hints."""
@@ -4169,7 +4258,7 @@ def generate_function_stub(func_name, func_info, doc_info=None, is_class_method=
     
     return "\n".join(lines)
 
-def generate_class_stub(class_name, class_info, source_files=None):
+def generate_class_stub(class_name, class_info, doc_index=None):
     """Generate a Python stub for a class."""
     lines = [f"class {class_name}:"]
     
@@ -4190,10 +4279,10 @@ def generate_class_stub(class_name, class_info, source_files=None):
         if member_info.get("type") == "function":
             # Try to extract documentation for this method
             doc_info = None
-            if source_files:
-                # Look for the function in LVGL source files
+            if doc_index:
+                # Look for the function in LVGL documentation index
                 full_func_name = f"lv_{class_name}_{member_name}"
-                doc_info = find_function_docs_in_sources(full_func_name, source_files)
+                doc_info = find_function_docs_in_sources(full_func_name, doc_index)
             
             method_stub = generate_function_stub(member_name, member_info, doc_info, is_class_method=True)
             # Add proper indentation for class methods
@@ -4232,7 +4321,7 @@ def generate_enum_stub(enum_name, enum_info):
     
     return "\n".join(lines)
 
-def generate_main_stub(module_name, metadata, source_files=None):
+def generate_main_stub(module_name, metadata, doc_index=None):
     """Generate the main module stub file."""
     lines = [
         '"""LVGL MicroPython bindings stub file.',
@@ -4259,8 +4348,8 @@ def generate_main_stub(module_name, metadata, source_files=None):
     for func_name, func_info in functions.items():
         # Try to find documentation for this function
         doc_info = None
-        if source_files:
-            doc_info = find_function_docs_in_sources(func_name, source_files)
+        if doc_index:
+            doc_info = find_function_docs_in_sources(func_name, doc_index)
         
         lines.append(generate_function_stub(func_name, func_info, doc_info))
         lines.append("")
@@ -4268,7 +4357,7 @@ def generate_main_stub(module_name, metadata, source_files=None):
     # Add object classes
     objects = metadata.get("objects", {})
     for obj_name, obj_info in objects.items():
-        lines.append(generate_class_stub(obj_name, obj_info, source_files))
+        lines.append(generate_class_stub(obj_name, obj_info, doc_index))
         lines.append("")
     
     # Add enums
@@ -4378,19 +4467,19 @@ if args.stubs_dir:
             input_dir = os.path.dirname(os.path.abspath(args.input[0]))
             lvgl_dir = os.path.join(input_dir, "lvgl")
     
-    source_files = None
+    doc_index = None
     try:
         if os.path.exists(lvgl_dir):
             eprint(f"Loading LVGL source files for documentation extraction from: {lvgl_dir}")
-            source_files = load_lvgl_source_files(lvgl_dir)
-            eprint(f"Loaded {len(source_files)} header files for documentation")
+            doc_index = load_lvgl_source_files(lvgl_dir)
+            eprint(f"Built documentation index with {len(doc_index)} functions")
         else:
             eprint(f"LVGL directory not found at {lvgl_dir}, generating stubs without documentation")
     except Exception as e:
         eprint(f"Warning: Could not load LVGL source files for documentation: {e}")
     
     # Generate main module stub
-    main_stub_content = generate_main_stub(module_name, metadata, source_files)
+    main_stub_content = generate_main_stub(module_name, metadata, doc_index)
     main_stub_path = os.path.join(args.stubs_dir, f"{module_name}.pyi")
     
     with open(main_stub_path, "w") as stub_file:
