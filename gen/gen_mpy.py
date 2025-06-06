@@ -103,8 +103,16 @@ argParser.add_argument(
     metavar="<MetaData File Name>",
     action="store",
 )
+argParser.add_argument(
+    "-S",
+    "--stubs",
+    dest="stubs_dir",
+    help="Optional directory to emit Python stub files (.pyi)",
+    metavar="<Stubs Directory>",
+    action="store",
+)
 argParser.add_argument("input", nargs="+")
-argParser.set_defaults(include=[], define=[], ep=None, json=None, input=[])
+argParser.set_defaults(include=[], define=[], ep=None, json=None, input=[], stubs_dir=None)
 args = argParser.parse_args()
 
 module_name = args.module_name
@@ -3796,6 +3804,180 @@ static const mp_lv_obj_type_t *mp_lv_obj_types[] = {{
         )
     )
 
+#
+# Python stub file generation functions
+#
+
+def c_type_to_python_type(c_type):
+    """Convert C types to Python type hints."""
+    if not c_type:
+        return "None"
+    
+    # Remove pointer and const qualifiers for basic mapping
+    clean_type = c_type.replace("*", "").replace("const", "").strip()
+    
+    # Basic type mappings
+    type_map = {
+        "void": "None",
+        "bool": "bool",
+        "int": "int",
+        "uint8_t": "int",
+        "uint16_t": "int", 
+        "uint32_t": "int",
+        "int8_t": "int",
+        "int16_t": "int",
+        "int32_t": "int",
+        "size_t": "int",
+        "char": "str",
+        "float": "float",
+        "double": "float",
+        "NoneType": "None",
+    }
+    
+    if clean_type in type_map:
+        return type_map[clean_type]
+    elif clean_type.startswith("lv_"):
+        # LVGL objects - keep the type name but remove lv_ prefix for Python
+        if clean_type.endswith("_t"):
+            return clean_type[3:-2]  # Remove "lv_" and "_t"
+        return clean_type[3:]  # Remove "lv_"
+    elif "*" in c_type:
+        return "Any"  # Pointers become Any type
+    else:
+        return "Any"  # Unknown types
+
+def generate_function_stub(func_name, func_info):
+    """Generate a Python stub for a function."""
+    args = func_info.get("args", [])
+    return_type = c_type_to_python_type(func_info.get("return_type", "None"))
+    
+    # Format arguments
+    arg_strs = []
+    for arg in args:
+        # Handle both dict and direct name cases
+        if isinstance(arg, dict):
+            arg_name = arg.get("name", "arg")
+            arg_type = c_type_to_python_type(arg.get("type", "Any"))
+        else:
+            # Fallback for unexpected format
+            arg_name = str(arg) if arg else "arg"
+            arg_type = "Any"
+        arg_strs.append(f"{arg_name}: {arg_type}")
+    
+    args_str = ", ".join(arg_strs)
+    
+    # Generate function signature
+    return f"def {func_name}({args_str}) -> {return_type}: ..."
+
+def generate_class_stub(class_name, class_info):
+    """Generate a Python stub for a class."""
+    lines = [f"class {class_name}:"]
+    
+    members = class_info.get("members", {})
+    if not members:
+        lines.append("    pass")
+        return "\n".join(lines)
+    
+    # Group methods and properties
+    methods = []
+    properties = []
+    
+    for member_name, member_info in members.items():
+        if member_info.get("type") == "function":
+            method_stub = generate_function_stub(member_name, member_info)
+            # Add proper indentation for class methods
+            method_stub = "    " + method_stub
+            methods.append(method_stub)
+        else:
+            # Treat as property
+            prop_type = c_type_to_python_type(member_info.get("type", "Any"))
+            properties.append(f"    {member_name}: {prop_type}")
+    
+    # Add constructor if not present
+    if "__init__" not in [m.split("(")[0].strip().split()[-1] for m in methods]:
+        lines.append("    def __init__(self, *args, **kwargs) -> None: ...")
+    
+    # Add properties first, then methods
+    lines.extend(properties)
+    lines.extend(methods)
+    
+    return "\n".join(lines)
+
+def generate_enum_stub(enum_name, enum_info):
+    """Generate a Python stub for an enum."""
+    lines = [f"class {enum_name}:"]
+    
+    members = enum_info.get("members", {})
+    if not members:
+        lines.append("    pass")
+        return "\n".join(lines)
+    
+    for member_name, member_info in members.items():
+        if isinstance(member_info, dict) and member_info.get("type") == "int_constant":
+            lines.append(f"    {member_name}: int")
+        else:
+            lines.append(f"    {member_name}: int")
+    
+    return "\n".join(lines)
+
+def generate_main_stub(module_name, metadata):
+    """Generate the main module stub file."""
+    lines = [
+        '"""LVGL MicroPython bindings stub file.',
+        "",
+        "This file provides type hints for LVGL MicroPython bindings to enable",
+        "IDE autocompletion and type checking. It is automatically generated",
+        "from the LVGL C headers.",
+        "",
+        f"Generated content:",
+        f"- {len(metadata.get('objects', {}))} widget classes",
+        f"- {len(metadata.get('functions', {}))} module functions", 
+        f"- {len(metadata.get('enums', {}))} enum classes",
+        f"- {len(metadata.get('int_constants', []))} integer constants",
+        f"- {len(metadata.get('structs', []))} struct types",
+        '"""',
+        "",
+        "from typing import Any, Callable, Optional, Union",
+        "",
+    ]
+    
+    # Add module-level functions
+    functions = metadata.get("functions", {})
+    for func_name, func_info in functions.items():
+        lines.append(generate_function_stub(func_name, func_info))
+        lines.append("")
+    
+    # Add object classes
+    objects = metadata.get("objects", {})
+    for obj_name, obj_info in objects.items():
+        lines.append(generate_class_stub(obj_name, obj_info))
+        lines.append("")
+    
+    # Add enums
+    enums = metadata.get("enums", {})
+    for enum_name, enum_info in enums.items():
+        lines.append(generate_enum_stub(enum_name, enum_info))
+        lines.append("")
+    
+    # Add constants
+    int_constants = metadata.get("int_constants", [])
+    if int_constants:
+        lines.append("# Integer constants")
+        for const in int_constants:
+            lines.append(f"{const}: int")
+        lines.append("")
+    
+    # Add structs
+    structs = metadata.get("structs", [])
+    if structs:
+        lines.append("# Struct types")
+        for struct in structs:
+            lines.append(f"class {struct}:")
+            lines.append("    def __init__(self, *args, **kwargs) -> None: ...")
+            lines.append("")
+    
+    return "\n".join(lines)
+
 # Save Metadata File, if specified.
 
 if args.metadata:
@@ -3829,3 +4011,52 @@ if args.metadata:
 
     with open(args.metadata, "w") as metadata_file:
         json.dump(metadata, metadata_file, indent=4)
+
+# Generate Python stub files, if specified
+
+if args.stubs_dir:
+    import os
+    
+    # Create stubs directory if it doesn't exist
+    if not os.path.exists(args.stubs_dir):
+        os.makedirs(args.stubs_dir)
+    
+    # Prepare metadata for stub generation (reuse metadata structure if it exists)
+    if not args.metadata:
+        # Generate metadata if not already created
+        metadata = collections.OrderedDict()
+        metadata["objects"] = {obj_name: obj_metadata[obj_name] for obj_name in obj_names}
+        metadata["functions"] = {
+            simplify_identifier(f.name): func_metadata[f.name] for f in module_funcs
+        }
+        metadata["enums"] = {
+            get_enum_name(enum_name): obj_metadata[enum_name]
+            for enum_name in enums.keys()
+            if enum_name not in enum_referenced
+        }
+        metadata["structs"] = [
+            simplify_identifier(struct_name)
+            for struct_name in generated_structs
+            if struct_name in generated_structs
+        ]
+        metadata["structs"] += [
+            simplify_identifier(struct_aliases[struct_name])
+            for struct_name in struct_aliases.keys()
+        ]
+        metadata["blobs"] = [
+            simplify_identifier(global_name) for global_name in generated_globals
+        ]
+        metadata["int_constants"] = [
+            get_enum_name(int_constant) for int_constant in int_constants
+        ]
+    
+    # Generate main module stub
+    main_stub_content = generate_main_stub(module_name, metadata)
+    main_stub_path = os.path.join(args.stubs_dir, f"{module_name}.pyi")
+    
+    with open(main_stub_path, "w") as stub_file:
+        stub_file.write(main_stub_content)
+    
+    eprint(f"Generated Python stub file: {main_stub_path}")
+    
+    eprint(f"Generated Python stub file with {len(metadata.get('objects', {}))} widgets, {len(metadata.get('functions', {}))} functions, and {len(metadata.get('enums', {}))} enums")
