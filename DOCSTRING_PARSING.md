@@ -1,6 +1,21 @@
-# Docstring Parsing and Generation Summary
+# LVGL Python Stub Generation with Documentation
 
-The LVGL MicroPython bindings now include comprehensive docstring extraction that converts C documentation to Python docstrings. Here's how it works:
+The LVGL MicroPython bindings include comprehensive Python stub file generation with automatic docstring extraction from C headers. This provides full IDE support, autocompletion, and type hints for LVGL development in Python.
+
+## Overview
+
+**Key Features:**
+- 🚀 **Fast Parallel Processing**: 6 seconds vs. minutes (uses all CPU cores)
+- 📝 **Rich Documentation**: Automatic extraction from 1400+ LVGL functions  
+- 🎯 **IDE Integration**: Full autocompletion and type hints (.pyi files)
+- ⚡ **Separate Build**: Doesn't slow down main MicroPython builds
+- 🔧 **Smart Formatting**: Bullet points, text wrapping, proper Python conventions
+
+**Performance:**
+- Processes 209 header files using parallel processing
+- Extracts documentation from 1423 functions
+- Generates type hints for 41 widget classes and 64 enums
+- Uses all available CPU cores with progress feedback
 
 ## 1. **Source File Discovery**
 ```python
@@ -138,34 +153,101 @@ python3 gen/gen_mpy.py -M lvgl -MP lv -S stubs_output_dir -E preprocessed_file.p
 - **Pre-indexing**: Builds function documentation index once, avoids repeated searches
 - **Speed**: ~6 seconds for 209 files and 1423 functions (vs. minutes with old approach)
 
-## 7. **Key Features**
+## 7. **Usage Examples**
 
-- **Automatic**: No manual documentation writing required
-- **Comprehensive**: Processes entire LVGL codebase (200+ headers)
-- **Smart**: Handles class methods vs static methods appropriately
-- **Type-aware**: Converts C types to Python type hints
-- **IDE-friendly**: Generates standard Python docstring format
-- **Custom Implementation**: Uses regex-based parsing, no external dependencies
+### Generated Stub Content
 
-## 8. **Technical Details**
+**Class Methods with Documentation:**
+```python
+class label:
+    def set_text(self: Self, text: str) -> None:
+        """
+        Set a new text for a label. Memory will be allocated to store the text by the label.
+        
+        Args:
+            text (str): '\0' terminated character string. NULL to refresh with the current text.
+        """
+        ...
+    
+    def get_scroll_x(self: Self) -> int:
+        """
+        Get current X scroll position. Identical to `lv_obj_get_scroll_left()`.
+        
+        Returns:
+            current scroll position from left edge
+            - If Widget is not scrolled return 0.
+            - If scrolled return > 0.
+            - If scrolled inside (elastic scroll) return < 0.
+        """
+        ...
+```
+
+**Module Functions:**
+```python
+def task_handler() -> int:
+    """
+    Call it periodically to handle lv_timers and refresh the display.
+    
+    Returns:
+        time till next timer should run
+    """
+    ...
+```
+
+### IDE Benefits
+
+- **Autocompletion**: Full function and method suggestions
+- **Type Hints**: Proper Python type annotations for all parameters
+- **Documentation**: Rich docstrings with parameter descriptions
+- **Error Prevention**: Type checking catches incorrect parameter types
+- **Navigation**: Jump to definition support in modern IDEs
+
+## 8. **Key Features**
+
+- **🚀 Performance**: Parallel processing using all CPU cores
+- **📝 Automatic**: No manual documentation writing required  
+- **🔍 Comprehensive**: Processes entire LVGL codebase (200+ headers)
+- **🎯 Smart**: Handles class methods vs static methods appropriately
+- **📊 Type-aware**: Converts C types to Python type hints
+- **🎨 IDE-friendly**: Generates standard Python docstring format
+- **⚡ Custom Implementation**: Uses regex-based parsing, no external dependencies
+- **🔧 Separate Build**: Optional target that doesn't slow down main builds
+
+## 9. **Technical Details**
+
+### Parallel Processing Architecture
+- **ProcessPoolExecutor**: Distributes file processing across CPU cores
+- **Progress Reporting**: Updates every 50 processed files
+- **Graceful Fallback**: Falls back to serial processing if parallel fails
+- **Pre-indexing**: Builds function documentation index once for O(1) lookups
 
 ### Doxygen Parsing Implementation
 The Doxygen comment parsing is implemented entirely with Python's built-in `re` (regular expressions) module and string manipulation. Key parsing functions:
 
-- `parse_doxygen_comment()`: Main parser using string splitting and pattern matching
-- `extract_function_docs()`: Regex-based function declaration finder
-- `find_function_docs_in_sources()`: File traversal and documentation lookup
+- `process_file_for_docs()`: Extract all function docs from a single file (parallel)
+- `parse_doxygen_comment()`: Main parser using string splitting and pattern matching  
+- `find_function_docs_in_sources()`: O(1) lookup in pre-built documentation index
 
 ### Supported Doxygen Tags
 - `@param name description` - Function parameters
-- `@return description` - Return value documentation
+- `@return description` - Return value documentation (with bullet point formatting)
 - Main description text (everything not starting with @)
-- Multi-line descriptions for all sections
+- Multi-line descriptions for all sections with proper text wrapping
 
 ### File Processing
-- Processes all `.h` files in LVGL source tree
+- Processes all `.h` files in LVGL source tree using parallel workers
 - Handles UTF-8 encoding with fallback for problematic files
-- Caches file contents in memory for efficient lookup
+- Builds documentation index in memory for efficient lookup
 - Gracefully handles missing or malformed documentation
+- Progress feedback and timing information
 
-The result is that Python developers get full IDE autocompletion and documentation for all LVGL functions, automatically extracted from the original C source documentation without requiring external documentation parsing libraries.
+## 10. **Development Impact**
+
+The result is that Python developers get:
+- **Full IDE autocompletion** for all LVGL functions and methods
+- **Rich documentation** automatically extracted from C source comments
+- **Proper type hints** for better code quality and error prevention  
+- **Fast build times** with documentation generation as separate optional step
+- **Professional development experience** matching modern Python libraries
+
+All this without requiring external documentation parsing libraries or manual documentation maintenance.
