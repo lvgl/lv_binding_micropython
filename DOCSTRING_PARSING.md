@@ -166,6 +166,8 @@ class label:
         
         Args:
             text (str): '\0' terminated character string. NULL to refresh with the current text.
+        
+        Source: src/widgets/label/lv_label.h:88
         """
         ...
     
@@ -178,6 +180,8 @@ class label:
             - If Widget is not scrolled return 0.
             - If scrolled return > 0.
             - If scrolled inside (elastic scroll) return < 0.
+        
+        Source: src/core/lv_obj_scroll.h:122
         """
         ...
 ```
@@ -190,6 +194,8 @@ def task_handler() -> int:
     
     Returns:
         time till next timer should run
+    
+    Source: src/core/lv_timer.h:77
     """
     ...
 ```
@@ -199,8 +205,9 @@ def task_handler() -> int:
 - **Autocompletion**: Full function and method suggestions
 - **Type Hints**: Proper Python type annotations for all parameters
 - **Documentation**: Rich docstrings with parameter descriptions
+- **Source Navigation**: File:line references for quick access to C implementation
 - **Error Prevention**: Type checking catches incorrect parameter types
-- **Navigation**: Jump to definition support in modern IDEs
+- **Code Understanding**: Easy navigation between Python API and LVGL internals
 
 ## 8. **Key Features**
 
@@ -210,6 +217,7 @@ def task_handler() -> int:
 - **🎯 Smart**: Handles class methods vs static methods appropriately
 - **📊 Type-aware**: Converts C types to Python type hints
 - **🎨 IDE-friendly**: Generates standard Python docstring format
+- **🔗 Source Navigation**: File:line references to original C implementation
 - **⚡ Custom Implementation**: Uses regex-based parsing, no external dependencies
 - **🔧 Separate Build**: Optional target that doesn't slow down main builds
 
@@ -227,6 +235,12 @@ The Doxygen comment parsing is implemented entirely with Python's built-in `re` 
 - `process_file_for_docs()`: Extract all function docs from a single file (parallel)
 - `parse_doxygen_comment()`: Main parser using string splitting and pattern matching  
 - `find_function_docs_in_sources()`: O(1) lookup in pre-built documentation index
+
+### Source Reference Generation
+- Captures source file path and line number during documentation extraction
+- Cleans paths to show relative LVGL paths (e.g., `src/widgets/label/lv_label.h:88`)
+- Adds `Source: file:line` reference at end of each docstring
+- Uses 1-based line numbering for editor compatibility
 
 ### Supported Doxygen Tags
 - `@param name description` - Function parameters
@@ -246,6 +260,7 @@ The Doxygen comment parsing is implemented entirely with Python's built-in `re` 
 The result is that Python developers get:
 - **Full IDE autocompletion** for all LVGL functions and methods
 - **Rich documentation** automatically extracted from C source comments
+- **Source navigation** with direct file:line references to C implementation
 - **Proper type hints** for better code quality and error prevention  
 - **Fast build times** with documentation generation as separate optional step
 - **Professional development experience** matching modern Python libraries
