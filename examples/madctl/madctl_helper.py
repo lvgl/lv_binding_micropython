@@ -15,7 +15,7 @@ style = lv.style_t()
 style.init()
 style.set_bg_color(lv.palette_main(lv.PALETTE.RED))
 
-btn = lv.button(lv.scr_act())
+btn = lv.button(lv.screen_active())
 btn.set_size(disp.width, disp.height)
 btn.align(lv.ALIGN.CENTER,0,0)
 btn.add_style(style, 0)
