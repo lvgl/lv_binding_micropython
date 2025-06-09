@@ -424,6 +424,7 @@ class AdvancedDemoApplication:
         self.indev_drv.set_read_cb(lcd.ts_read)
 
     def init_gui_rp2(self):
+        import machine
         import xpt2046
         import st77xx
 
