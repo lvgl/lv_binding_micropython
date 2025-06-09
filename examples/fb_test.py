@@ -21,6 +21,6 @@ mouse = evdev.mouse_indev(lv.screen_active())
 # Create a screen and a button
 
 btn = lv.button(lv.screen_active())
-btn.align(lv.ALIGN.CENTER, 0, 0)
+btn.align(lv.ALIGN.CENTER)
 label = lv.label(btn)
 label.set_text("Hello World!")
