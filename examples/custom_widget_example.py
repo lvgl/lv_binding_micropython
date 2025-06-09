@@ -1,5 +1,15 @@
 
-# This example shows how to create a custom widget and a custom theme
+"""
+LVGL Custom Widget Example
+
+This example demonstrates how to create a custom widget class and custom theme in LVGL:
+- Creating a custom widget class with constructor, destructor, and event callbacks
+- Implementing custom drawing for widgets (triangle in this example)
+- Creating and applying custom themes
+- Proper object lifecycle management
+
+The custom widget draws a triangle that points up when unchecked and down when checked.
+"""
 
 ##############################################################################
 # Initializations
@@ -9,9 +19,15 @@ import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
-import display_driver
 
+# Initialize LVGL
 lv.init()
+
+# Initialize display driver
+try:
+    import display_driver
+except ImportError:
+    print("Warning: display_driver not available, using default display")
 
 ##############################################################################
 # Helper debug function to print member name
