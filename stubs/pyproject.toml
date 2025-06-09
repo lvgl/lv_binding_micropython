@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lvgl-stubs"
+description = "Type stubs for LVGL MicroPython bindings"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "LVGL Contributors", email = "lvgl@lvgl.io"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Stubs Only",
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/lvgl/lv_binding_micropython"
+Repository = "https://github.com/lvgl/lv_binding_micropython"
+Issues = "https://github.com/lvgl/lv_binding_micropython/issues"
+
+[tool.setuptools-scm]
+root = ".."
+version_file = "lvgl-stubs/_version.py"
+
+[tool.setuptools.packages.find]
+include = ["lvgl-stubs*"]
+
+[tool.setuptools.package-data]
+"lvgl-stubs" = ["*.pyi", "py.typed"]

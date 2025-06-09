@@ -507,3 +507,66 @@ print('\n'.join(dir(lvgl.btn)))
 ...
 ```
 
+## IDE Support and Type Stubs
+
+For better development experience with IDEs (VS Code, PyCharm, etc.), this repository includes Python type stubs that provide autocompletion, type checking, and documentation hints.
+
+### Installation
+
+The type stubs are automatically generated during the build process and packaged for easy installation:
+
+#### Development Installation (recommended)
+
+For development with the latest stubs:
+
+```bash
+pip install -e /path/to/lv_binding_micropython/stubs
+```
+
+#### From Built Package
+
+After building and packaging:
+
+```bash
+pip install lvgl-stubs
+```
+
+### Features
+
+Once installed, your IDE will automatically provide:
+
+- **Autocompletion** for all LVGL functions, methods, and properties
+- **Type checking** with mypy and other type checkers  
+- **Function signatures** with parameter names and types
+- **Documentation strings** extracted from LVGL C headers
+- **Source location references** to help navigate LVGL documentation
+
+### Building Stubs
+
+The stubs are automatically generated when running the binding generation:
+
+```bash
+# Build with automatic stub generation
+make USER_C_MODULES=/path/to/lv_binding_micropython/micropython.cmake
+
+# Or generate stubs manually
+cd gen
+python gen_mpy.py --stubs /path/to/output/dir [other options...]
+```
+
+The generated `lvgl.pyi` stub file contains type definitions for:
+- All LVGL widget classes (buttons, labels, sliders, etc.)
+- Module-level functions and constants
+- Enum definitions with proper typing
+- Struct types with documented fields
+- Callback function signatures
+
+### Package Structure
+
+The stubs are packaged in `stubs/` directory with:
+- `pyproject.toml` - Package configuration with setuptools-scm versioning
+- `lvgl-stubs/` - Python package containing type stubs
+- `lvgl-stubs/__init__.py` - Package initialization
+- `lvgl-stubs/py.typed` - Marks package as typed
+- `lvgl-stubs/lvgl.pyi` - Generated type stubs (git-ignored)
+
