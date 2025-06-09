@@ -1,5 +1,6 @@
 import sys
 sys.path.append('.')
+import machine
 from st77xx import *
 from xpt2046 import *
 
