@@ -374,6 +374,7 @@ class AdvancedDemoApplication:
         self.indev_drv.set_read_cb(lcd.ts_read)
 
     def init_gui_rp2(self):
+        import machine
         import xpt2046
         import st77xx
         if sys.platform!='rp2': raise ImportError('Only works on the rp2 platform.')
