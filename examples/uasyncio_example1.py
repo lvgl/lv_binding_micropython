@@ -69,8 +69,10 @@ except ImportError:
 class MsgBox(lv.win):
 
     def drag_event_handler(self, e):
-        self.move_foreground()
-        indev = lv.indev_get_act()
+        parent = self.get_parent()
+        if parent:
+            self.move_to_index(parent.get_child_count() - 1)  # Move to foreground
+        indev = lv.indev_active()
         indev.get_vect(self.vect)
         x = self.get_x() + self.vect.x
         y = self.get_y() + self.vect.y
@@ -121,7 +123,7 @@ class MsgBox(lv.win):
             self.anim.set_custom_exec_cb(lambda obj, val:
                     self.set_style_opa(val, lv.PART.MAIN))
             self.anim.set_path_cb(lv.anim_t.path_ease_in)
-            self.anim.set_ready_cb(lambda a: self.del_async())
+            self.anim.set_completed_cb(lambda a: self.delete_async())
             lv.anim_t.start(self.anim)
             self.opened = False
 
