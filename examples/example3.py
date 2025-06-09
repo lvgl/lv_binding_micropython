@@ -16,13 +16,14 @@ try:
     event_loop = lv_utils.event_loop()
     lcd.init(w=hres, h=vres)
 
-    buf1 = lcd.framebuffer(1)
-    buf2 = lcd.framebuffer(2)
+    draw_buf1 = lv.draw_buf_create(hres, 50, color_format, 0)
+    draw_buf2 = lv.draw_buf_create(hres, 50, color_format, 0)
     
     disp_drv = lv.display_create(hres, vres)
     disp_drv.set_flush_cb(lcd.flush)
     disp_drv.set_color_format(color_format)
-    disp_drv.set_buffers(buf1, buf2, len(buf1), lv.DISPLAY_RENDER_MODE.PARTIAL)
+    disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
+    disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
 
     # disp_drv.gpu_blend_cb = lcd.gpu_blend
     # disp_drv.gpu_fill_cb = lcd.gpu_fill
