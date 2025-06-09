@@ -1,4 +1,18 @@
-# init
+"""
+LVGL Example 1: Basic Widget Demonstration
+
+This example demonstrates:
+- LVGL initialization for different platforms (SDL, ESP32, STM32)
+- Basic widget creation (button, label, image)
+- Event handling
+- Style application
+- Loading images from binary data
+
+Supported platforms:
+- Unix port with SDL
+- ESP32 with ILI9341 display
+- STM32 with built-in display
+"""
 
 import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
@@ -95,9 +109,15 @@ image_data = b'!fN\xff#WM\xff\x1aC8\xff\x1dbG\xff/\x80a\xff3v^\xff+]O\xff%MF\xff
 
 # Create a screen with a draggable image
 
+# Create a new screen object (not yet active)
 scr = lv.obj()
+
+# Create an image widget on the screen
 image = lv.image(scr)
-image.align(lv.ALIGN.CENTER, 0, 0)
+image.align(lv.ALIGN.CENTER)
+
+# Create image descriptor with binary data
+# Format: ARGB8888 (32-bit with alpha channel)
 image_dsc = lv.image_dsc_t(
     {
         "header": {"w": 100, "h": 75, "cf": lv.COLOR_FORMAT.ARGB8888},
@@ -106,9 +126,9 @@ image_dsc = lv.image_dsc_t(
     }
 )
 
+# Set the image source to our descriptor
 image.set_src(image_dsc)
-# image.set_drag(True)
+# Note: set_drag() was removed in v9, use FLAG.CLICKABLE + event handlers for dragging
 
 # Load the screen and display image
-
 lv.screen_load(scr)
