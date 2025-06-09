@@ -151,7 +151,7 @@ class Page_Buttons:
 
         self.label = lv.label(page)
         self.label.add_flag(lv.obj.FLAG.IGNORE_LAYOUT)
-        self.label.align(lv.ALIGN.BOTTOM_LEFT, 0, 0)
+        self.label.align(lv.ALIGN.BOTTOM_LEFT)
 
         def button_cb(event, name):
             self.button_event_count[name] += 1
@@ -210,7 +210,7 @@ class Page_Simple:
         self.counter_button.set_size(80, 80)
         self.counter_label = lv.label(self.counter_button)
         self.counter_label.set_text("Count")
-        self.counter_label.align(lv.ALIGN.CENTER, 0, 0)
+        self.counter_label.align(lv.ALIGN.CENTER)
         self.counter_button.add_event_cb(self.on_counter_button, lv.EVENT.CLICKED, None)
         self.counter = 0
 
