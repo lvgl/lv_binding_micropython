@@ -82,8 +82,23 @@ $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py
 	$(Q)$(CPP) $(CFLAGS_USERMOD) -DPYCPARSER -x c -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
 	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
 
-.PHONY: LVGL_MPY
+# Python stub file generation (optional, slow due to documentation parsing)
+LVGL_STUBS_DIR = $(BUILD)/lvgl/stubs
+LVGL_STUBS_FILE = $(LVGL_STUBS_DIR)/lvgl.pyi
+
+$(LVGL_STUBS_FILE): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py
+	$(ECHO) "LVGL-STUBS $@"
+	$(Q)mkdir -p $(dir $@)
+	$(Q)mkdir -p $(dir $(LVGL_PP))
+	$(Q)$(CPP) $(CFLAGS_USERMOD) -DPYCPARSER -x c -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
+	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -S $(LVGL_STUBS_DIR) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > /dev/null
+
+.PHONY: LVGL_MPY lvgl-stubs
 LVGL_MPY: $(LVGL_MPY)
+
+# Generate Python stub files with documentation (slow - parses 200+ header files)
+lvgl-stubs: $(LVGL_STUBS_FILE)
+	@echo "Generated LVGL Python stub files in $(LVGL_STUBS_DIR)/"
 
 CFLAGS_USERMOD += -Wno-unused-function
 CFLAGS_EXTRA += -Wno-unused-function
