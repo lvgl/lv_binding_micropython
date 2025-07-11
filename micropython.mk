@@ -87,5 +87,16 @@ LVGL_MPY: $(LVGL_MPY)
 
 CFLAGS_USERMOD += -Wno-unused-function
 CFLAGS_EXTRA += -Wno-unused-function
-SRC_USERMOD_LIB_C += $(subst $(TOP)/,,$(shell find $(LVGL_DIR)/src $(LVGL_DIR)/examples $(LVGL_GENERIC_DRV_DIR) -type f -name "*.c"))
+
+# LVGL SRC
+SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/src -type f -name "*.c")
+
+# LVGL GENERIC DRIVER
+SRC_USERMOD_LIB_C += $(shell find $(LVGL_GENERIC_DRV_DIR) -type f -name "*.c")
+
+# LVGL EXAMPLES
+ifeq ($(LV_BUILD_EXAMPLES), 1)
+SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/examples -type f -name "*.c")
+endif
+
 SRC_USERMOD_C += $(LVGL_MPY)
