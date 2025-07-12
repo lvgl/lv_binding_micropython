@@ -26,12 +26,22 @@ async def demo(scr, display=None):
         _lab.center()
         _btn.set_style_align(align, 0)
         _btn.set_style_bg_color(lv.color_make(*color), 0)
+
+        if display._color_format == lv.COLOR_FORMAT.I1:
+            _btn.set_style_bg_color(
+                lv.color_make(255, 255, 255), lv.PART.MAIN | lv.STATE.FOCUSED
+            )
+            _btn.set_style_outline_width(1, lv.PART.MAIN | lv.STATE.FOCUSED)
+            _btn.set_style_outline_color(
+                lv.color_make(255, 255, 255), lv.PART.MAIN | lv.STATE.FOCUSED
+            )
+
         return _btn, text
 
     buttons = [
         ("RED", lv.ALIGN.TOP_MID, (255, 0, 0)),
-        ("GREEN", lv.ALIGN.BOTTOM_MID, (0, 255, 0)),
         ("BLUE", lv.ALIGN.CENTER, (0, 0, 255)),
+        ("GREEN", lv.ALIGN.BOTTOM_MID, (0, 255, 0)),
     ]
 
     def button_cb(event, name, button):
@@ -40,6 +50,7 @@ async def demo(scr, display=None):
 
     _all_btns = [get_button(scr, *btn) for btn in buttons]
 
+    wgroup = lv.group_create()
     for btn, name in _all_btns:
         btn.add_event_cb(
             lambda event, button_name=name, button=btn: button_cb(
@@ -49,6 +60,10 @@ async def demo(scr, display=None):
             None,
         )
 
+        wgroup.add_obj(btn)
+
+    if hasattr(display, "indev"):
+        display.indev.set_group(wgroup)
     await asyncio.sleep_ms(500)  # await so the frame can be rendered
     print("PRESS EVENT TEST:")
     for _btn, name in _all_btns:
@@ -63,6 +78,7 @@ try:
 
     display_config.MODE = "interactive"
     display_config.POINTER = "interactive"
+    display_config.SHOW_INFO = False
 except Exception:
     display_config = testrunner.display_config
 

@@ -54,7 +54,7 @@ async def demo(scr, display=None):
         await asyncio.sleep_ms(500)
 
         print("INDEV + BUTTONS TEST:")
-        # display.debug_indev(press=True, release=True)
+        display.debug_indev(press=False, release=False)
         display.debug_display(False)
         for _btn, name in _all_btns:
             pos = _btn.get_x(), _btn.get_y()
@@ -73,6 +73,7 @@ try:
 
     display_config.MODE = "interactive"
     display_config.POINTER = "sim"
+    display_config.SHOW_INFO = False
 except Exception:
     display_config = testrunner.display_config
 
