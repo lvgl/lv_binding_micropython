@@ -219,8 +219,9 @@
  *-----------*/
 
 /*Enable the log module*/
+
 #ifdef MICROPY_LV_USE_LOG
-    #define LV_USE_LOG MICROPY_LV_USE_LOG 
+    #define LV_USE_LOG MICROPY_LV_USE_LOG
 #else
     #define LV_USE_LOG 0
 #endif
@@ -239,6 +240,8 @@
     /*1: Print the log with 'printf';
     *0: User need to register a callback with `lv_log_register_print_cb()`*/
     #define LV_LOG_PRINTF 0
+
+    #define LV_LOG_PRINT_CB mp_lv_log_cb
 
     /*1: Enable print timestamp;
      *0: Disable print timestamp*/
