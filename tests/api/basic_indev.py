@@ -11,7 +11,9 @@ import testrunner
 # RGB colors, layout aligment and events.
 
 
-async def demo(scr, display=None):
+async def buttons_indev(scr, display=None):
+    display.debug_display(True)
+
     def get_button(scr, text, align, color):
         _btn = lv.button(scr)
         _btn.set_size(lv.pct(25), lv.pct(10))
@@ -41,6 +43,7 @@ async def demo(scr, display=None):
         )
 
     await asyncio.sleep_ms(500)  # await so the frame can be rendered
+    await display.screenshot()
     print("EVENT TEST:")
     for _btn, name in _all_btns:
         _btn.send_event(lv.EVENT.CLICKED, None)
@@ -54,8 +57,8 @@ async def demo(scr, display=None):
         await asyncio.sleep_ms(500)
 
         print("INDEV + BUTTONS TEST:")
-        # display.debug_indev(press=False, release=False)
-        display.debug_display(False)
+        display.debug_indev(press=False, release=False)
+        # display.debug_display(False)
         for _btn, name in _all_btns:
             pos = _btn.get_x(), _btn.get_y()
             await display.touch(*pos)
@@ -73,8 +76,11 @@ try:
 
     display_config.MODE = "sim"
     display_config.POINTER = "sim"
+    display_config.COLOR_FORMAT = lv.COLOR_FORMAT.RGB888
+    display_config.WIDTH = 240
+    display_config.HEIGHT = 320
 except Exception:
     display_config = testrunner.display_config
 
-testrunner.run(demo, __file__, disp_config=display_config)
+testrunner.run(buttons_indev, __file__, disp_config=display_config)
 testrunner.devicereset()

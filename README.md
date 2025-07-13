@@ -1,4 +1,4 @@
-![Build lv_micropython unix port](https://github.com/lvgl/lv_binding_micropython/workflows/Build%20lv_micropython%20unix%20port/badge.svg)
+[![MicroPython-LVGL CI](https://github.com/lvgl/lv_binding_micropython/actions/workflows/micropython_lvgl_ci.yml/badge.svg)](https://github.com/lvgl/lv_binding_micropython/actions/workflows/micropython_lvgl_ci.yml)
 
 # Bindings for LVGL
 

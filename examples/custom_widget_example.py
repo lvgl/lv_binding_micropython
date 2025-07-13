@@ -1,4 +1,3 @@
-
 # This example shows how to create a custom widget and a custom theme
 
 ##############################################################################
@@ -6,10 +5,10 @@
 ##############################################################################
 
 import usys as sys
-sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
+
+sys.path.append("")  # See: https://github.com/micropython/micropython/issues/6419
 
 import lvgl as lv
-import display_driver
 
 lv.init()
 
@@ -18,6 +17,7 @@ lv.init()
 ##############################################################################
 
 member_name_cache = {}
+
 
 def get_member_name(obj, value):
     try:
@@ -33,13 +33,14 @@ def get_member_name(obj, value):
                 member_name_cache[id(obj)] = {id(value): member}
             return member
 
+
 ##############################################################################
 # A class that describes a custom widget class
 # An instance of this class can be used to create custom widgets
 ##############################################################################
 
-class CustomWidgetClass():
 
+class CustomWidgetClass:
     def __init__(self, width, height):
         # Define LVGL widget class
         # In this example the class receive parameters (width, height)
@@ -87,10 +88,11 @@ class CustomWidgetClass():
             layer = e.get_layer()
             self.draw(obj, layer)
         elif code in [
-                lv.EVENT.STYLE_CHANGED,
-                lv.EVENT.VALUE_CHANGED,
-                lv.EVENT.PRESSING,
-                lv.EVENT.RELEASED]:
+            lv.EVENT.STYLE_CHANGED,
+            lv.EVENT.VALUE_CHANGED,
+            lv.EVENT.PRESSING,
+            lv.EVENT.RELEASED,
+        ]:
             # Check if need to recalculate widget parameters
             obj.valid = False
 
@@ -101,15 +103,15 @@ class CustomWidgetClass():
 
         obj.draw_desc = lv.draw_triangle_dsc_t()
         obj.draw_desc.init()
-        obj.draw_desc.bg_opa = lv.OPA.COVER
-        obj.draw_desc.bg_color = obj.get_style_bg_color(lv.PART.MAIN)
+        obj.draw_desc.opa = lv.OPA.COVER
+        obj.draw_desc.color = obj.get_style_bg_color(lv.PART.MAIN)
         obj.points = [
-            {'x':area.x1 + area.get_width()//2,
-             'y':area.y2 if obj.get_state() & lv.STATE.CHECKED else area.y1},
-            {'x':area.x2,
-             'y':area.y1 + area.get_height()//2},
-            {'x':area.x1,
-             'y':area.y1 + area.get_height()//2},
+            {
+                "x": area.x1 + area.get_width() // 2,
+                "y": area.y2 if obj.get_state() & lv.STATE.CHECKED else area.y1,
+            },
+            {"x": area.x2, "y": area.y1 + area.get_height() // 2},
+            {"x": area.x1, "y": area.y1 + area.get_height() // 2},
         ]
         obj.draw_desc.p[0] = obj.points[0]
         obj.draw_desc.p[1] = obj.points[1]
@@ -125,15 +127,16 @@ class CustomWidgetClass():
         # Draw the custom widget
         lv.draw_triangle(layer, obj.draw_desc)
 
+
 ##############################################################################
 # A Python class to wrap the LVGL custom widget
 ##############################################################################
 
-class CustomWidget():
 
+class CustomWidget:
     # An instance of a widget-class to be used for creating custom widgets
     # d = lv.display_get_default()
-    dpi = 130 # d.get_dpi()
+    dpi = 130  # d.get_dpi()
     cls = CustomWidgetClass(dpi, dpi)
 
     @staticmethod
@@ -142,15 +145,13 @@ class CustomWidget():
         return CustomWidget.cls.get_class()
 
     def __new__(cls, parent):
-        # Return a new lv object instead of CustomWidget, 
+        # Return a new lv object instead of CustomWidget,
         # but first bind the LVGL object with CustomWidgetWrapper
         wrapper = cls.CustomWidgetWrapper(parent)
         return wrapper.lv_obj
 
-    class CustomWidgetWrapper():
-
+    class CustomWidgetWrapper:
         def __init__(self, parent):
-
             # Create the LVGL object from class
             self.lv_obj = CustomWidget.cls.create(parent)
 
@@ -160,7 +161,6 @@ class CustomWidget():
             # Initialize the object
             self.lv_obj.class_init_obj()
 
-
         def __getattr__(self, attr):
             # Provide access to LVGL object functions
             # print("__getattr__(%s, %s)" % (repr(self), repr(attr)))
@@ -169,12 +169,13 @@ class CustomWidget():
         def __repr__(self):
             return "Custom Widget"
 
+
 ##############################################################################
 # A theme to apply styles to the custom widget
 ##############################################################################
 
-class CustomTheme(lv.theme_t):
 
+class CustomTheme(lv.theme_t):
     class Style(lv.style_t):
         def __init__(self):
             super().__init__()
@@ -197,7 +198,6 @@ class CustomTheme(lv.theme_t):
             # Pressed color is blue
             self.set_bg_color(lv.palette_main(lv.PALETTE.BLUE))
 
-
     def __init__(self):
         super().__init__()
         self.custom_style = CustomTheme.Style()
@@ -214,7 +214,7 @@ class CustomTheme(lv.theme_t):
 
         # Activate this theme on the default display
         lv.display_get_default().set_theme(self)
-    
+
     def apply(self, theme, obj):
         # Apply this theme on CustomWidget class
         if obj.get_class() == CustomWidget.get_class():
@@ -232,7 +232,9 @@ theme = CustomTheme()
 # Create a screen with flex layout
 scr = lv.screen_active()
 scr.set_flex_flow(lv.FLEX_FLOW.COLUMN)
-scr.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
+scr.set_flex_align(
+    lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER
+)
 
 # Add a button with a label
 button = lv.button(scr)
@@ -244,10 +246,11 @@ customWidget = CustomWidget(scr)
 l2 = lv.label(customWidget)
 l2.set_text("Click me!")
 
+
 # Add click events to both button and custom widget
 def event_cb(e):
     print("%s Clicked!" % repr(e.get_target_obj()))
 
+
 for widget in [button, customWidget]:
     widget.add_event_cb(event_cb, lv.EVENT.CLICKED, None)
-
