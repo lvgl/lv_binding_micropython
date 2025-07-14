@@ -143,6 +143,24 @@ function(all_lv_bindings)
     # ESPIDF bindings
 
     if(ESP_PLATFORM)
+        if (IDF_TARGET STREQUAL "esp32s3")
+            # 1. not support Ethernet MAC Interface.
+            # 2. esp32s3.rom.ld not provide lldesc_xxx functions for now.
+            LIST(APPEND FILTER_HEADERS
+                        esp_eth.h
+                        esp_eth_phy.h
+                        esp_eth_netif_glue.h
+                        lldesc.h
+                )
+
+            if (IDF_VERSION_MAJOR EQUAL 4)
+                # xt_clock_freq was deprecated.
+                LIST(APPEND FILTER_HEADERS
+                    FreeRTOSConfig_arch.h
+                )
+            endif(IDF_VERSION_MAJOR EQUAL 4)
+        endif(IDF_TARGET STREQUAL "esp32s3")
+
         file(GLOB_RECURSE LV_ESPIDF_HEADERS ${IDF_PATH}/components/*.h ${LV_BINDINGS_DIR}/driver/esp32/*.h)
         lv_bindings(
             OUTPUT
@@ -162,6 +180,7 @@ function(all_lv_bindings)
                 soc/sens_struct.h
                 soc/rtc.h
                 driver/periph_ctrl.h
+                ${FILTER_HEADERS}
         )
     endif(ESP_PLATFORM)
 
