@@ -1362,11 +1362,23 @@ void mp_lv_init_gc()
 void mp_lv_deinit_gc()
 {
 
-    // mp_printf(&mp_plat_print, "[ DEINIT GC ]");
-    mp_lv_roots = MP_STATE_VM(mp_lv_roots) = NULL;
-    mp_lv_user_data = MP_STATE_VM(mp_lv_user_data) = NULL;
-    mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 0;
-    lvgl_mod_initialized = MP_STATE_VM(lvgl_mod_initialized) = 0;
+
+    if (MP_STATE_VM(lvgl_mod_initialized)) {
+        // mp_printf(&mp_plat_print, "[ DEINIT GC ]");
+        mp_lv_roots = MP_STATE_VM(mp_lv_roots) = NULL;
+        mp_lv_user_data = MP_STATE_VM(mp_lv_user_data) = NULL;
+        mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 0;
+        lvgl_mod_initialized = MP_STATE_VM(lvgl_mod_initialized) = 0;
+    }
+
+}
+
+void mp_deinit_lvgl_mod()
+{
+
+    if (MP_STATE_VM(lvgl_mod_initialized)) {
+        mp_lv_deinit_gc();
+    }
 
 }
 
