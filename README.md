@@ -220,8 +220,9 @@ Here is a procedure for adding lvgl to an existing MicroPython project. (The exa
 ### gen_mpy.py syntax
 ```
 usage: gen_mpy.py [-h] [-I <Include Path>] [-D <Macro Name>]
-                  [-E <Preprocessed File>] [-M <Module name string>]
-                  [-MP <Prefix string>] [-MD <MetaData File Name>]
+                  [-E <Preprocessed File>] [-J <JSON file>]
+                  [-M <Module name string>] [-MP <Prefix string>]
+                  [-MD <MetaData File Name>]
                   input [input ...]
 
 positional arguments:
@@ -236,6 +237,9 @@ optional arguments:
   -E <Preprocessed File>, --external-preprocessing <Preprocessed File>
                         Prevent preprocessing. Assume input file is already
                         preprocessed
+  -J <JSON file>, --lvgl-json <JSON file>
+                        Provde a JSON from the LVGL JSON generator for missing
+                        information
   -M <Module name string>, --module_name <Module name string>
                         Module name
   -MP <Prefix string>, --module_prefix <Prefix string>
@@ -244,10 +248,36 @@ optional arguments:
                         Optional file to emit metadata (introspection)
 ```
 
-Example:
+Example for gen_mpy.py:
 
 ```
 python gen_mpy.py -MD lv_mpy_example.json -M lvgl -MP lv -I../../berkeley-db-1.xx/PORT/include -I../../lv_binding_micropython -I. -I../.. -Ibuild -I../../mp-readline -I ../../lv_binding_micropython/pycparser/utils/fake_libc_include ../../lv_binding_micropython/lvgl/lvgl.h
+```
+
+
+### gen_stubs.py syntax
+```
+usage: gen_stubs.py [-h] --metadata METADATA --stubs-dir STUBS_DIR
+                    [--lvgl-dir LVGL_DIR] [--module-name MODULE_NAME]
+                    [--validate]
+
+Generate LVGL Python stub files
+
+options:
+  -h, --help            show this help message and exit
+  --metadata METADATA   JSON metadata file from gen_mpy.py
+  --stubs-dir STUBS_DIR
+                        Output directory for stub files
+  --lvgl-dir LVGL_DIR   LVGL source directory for documentation
+  --module-name MODULE_NAME
+                        Module name
+  --validate            Enable validation checks
+```
+
+Example for gen_stubs.py:
+
+```
+python gen_stubs.py --metadata lv_mpy_example.json --stubs-dir ./stubs-output --lvgl-dir ../lvgl --module-name lvgl --validate
 ```
 
 ### Binding other C libraries
@@ -528,7 +558,7 @@ pip install -e /path/to/lv_binding_micropython/stubs
 After building and packaging:
 
 ```bash
-pip install lvgl-stubs
+pip install lvgl_stubs
 ```
 
 ### Features
@@ -543,16 +573,43 @@ Once installed, your IDE will automatically provide:
 
 ### Building Stubs
 
-The stubs are automatically generated when running the binding generation:
+The stubs are generated using a separate `gen_stubs.py` module that creates both stub files and distributable wheel packages. Two make targets are available:
 
 ```bash
-# Build with automatic stub generation
-make USER_C_MODULES=/path/to/lv_binding_micropython/micropython.cmake
+# Generate stub files only
+make USER_C_MODULES=/path/to/lv_binding_micropython LVGL_STUBS
 
-# Or generate stubs manually
-cd gen
-python gen_mpy.py --stubs /path/to/output/dir [other options...]
+# Generate stub files and build distributable wheel package
+make USER_C_MODULES=/path/to/lv_binding_micropython LVGL_STUBS_WHEEL
 ```
+
+You can also generate stubs manually:
+
+```bash
+cd gen
+python gen_stubs.py --metadata /path/to/metadata.json --stubs-dir /path/to/output/dir --lvgl-dir /path/to/lvgl --module-name lvgl --validate
+```
+
+### Build Process
+
+The stub package generation uses a template-based approach:
+
+1. **Template Folder**: The `./stubs/` directory contains a complete Python package template with:
+   - `pyproject.toml` - Package configuration 
+   - `lvgl_stubs/` - Python package directory
+   - `lvgl_stubs/__init__.py` - Package initialization
+   - `lvgl_stubs/py.typed` - Marks package as typed
+
+2. **Build Process**: During build, the template is copied to the build directory, then:
+   - LVGL version is extracted from headers (`lv_version.h`)
+   - `__version__.py` file is created with the extracted version
+   - `lvgl.pyi` stub file is generated with all type definitions
+   - Documentation is extracted from 200+ LVGL header files in parallel
+   - Validation ensures stubs match the generated MicroPython API
+
+3. **Package Creation**: The build process creates a distributable wheel package (`lvgl_stubs-X.Y.Z-py3-none-any.whl`) that can be installed with pip.
+
+### Generated Content
 
 The generated `lvgl.pyi` stub file contains type definitions for:
 - All LVGL widget classes (buttons, labels, sliders, etc.)
@@ -561,12 +618,15 @@ The generated `lvgl.pyi` stub file contains type definitions for:
 - Struct types with documented fields
 - Callback function signatures
 
+Documentation is automatically extracted from LVGL C headers using Doxygen-style comment parsing, providing rich IDE tooltips and help text.
+
 ### Package Structure
 
-The stubs are packaged in `stubs/` directory with:
-- `pyproject.toml` - Package configuration with setuptools-scm versioning
-- `lvgl-stubs/` - Python package containing type stubs
-- `lvgl-stubs/__init__.py` - Package initialization
-- `lvgl-stubs/py.typed` - Marks package as typed
-- `lvgl-stubs/lvgl.pyi` - Generated type stubs (git-ignored)
+The stubs are packaged in `stubs/` template directory with:
+- `pyproject.toml` - Package configuration with dynamic versioning
+- `lvgl_stubs/` - Python package containing type stubs
+- `lvgl_stubs/__init__.py` - Package initialization with version import
+- `lvgl_stubs/py.typed` - Marks package as typed
+- `lvgl_stubs/__version__.py` - Version file (generated during build)
+- `lvgl_stubs/lvgl.pyi` - Generated type stubs (created during build)
 
