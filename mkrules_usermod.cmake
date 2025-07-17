@@ -32,6 +32,7 @@ function(lv_bindings)
 
     set(LV_PP ${LV_OUTPUT}.pp)
     set(LV_MPY_METADATA ${LV_OUTPUT}.json)
+    set(LV_JSON ${LV_OUTPUT}.lvgl_api.json)
 
     # message(STATUS "LV_CONF_PATH=${LV_CONF_PATH}")
     # message(STATUS "LV_COMPILE_OPTIONS=${LV_COMPILE_OPTIONS}")
@@ -55,6 +56,35 @@ function(lv_bindings)
         VERBATIM
         COMMAND_EXPAND_LISTS
     )
+
+    # Generate LVGL API JSON for enhanced binding generation
+    if(EXISTS ${LVGL_DIR}/scripts/gen_json/gen_json.py)
+        add_custom_command(
+            OUTPUT
+                ${LV_JSON}
+            COMMAND
+                ${Python3_EXECUTABLE} ${LVGL_DIR}/scripts/gen_json/gen_json.py
+                --output-path ${LV_JSON}
+                --lvgl-config ${LV_CONF_PATH}
+            DEPENDS
+                ${LV_INPUT}
+                ${LV_DEPENDS}
+            COMMENT
+                "LV_BINDINGS JSON"
+            VERBATIM
+        )
+    else()
+        add_custom_command(
+            OUTPUT
+                ${LV_JSON}
+            COMMAND
+                ${CMAKE_COMMAND} -E echo "{}" > ${LV_JSON}
+            COMMAND
+                ${CMAKE_COMMAND} -E echo "Warning: LVGL JSON generator not found, using empty JSON"
+            COMMENT
+                "LV_BINDINGS JSON (empty)"
+        )
+    endif()
 
     # if(ESP_PLATFORM)
     #     target_compile_options(${COMPONENT_LIB} PRIVATE ${LV_COMPILE_OPTIONS})
@@ -94,10 +124,11 @@ function(lv_bindings)
         OUTPUT
             ${LV_OUTPUT}
         COMMAND
-            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -DLV_CONF_PATH="${LV_CONF_PATH}" -MD ${LV_MPY_METADATA} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
+            ${Python3_EXECUTABLE} ${LV_BINDINGS_DIR}/gen/gen_mpy.py ${LV_GEN_OPTIONS} -DLV_CONF_PATH="${LV_CONF_PATH}" -MD ${LV_MPY_METADATA} -J ${LV_JSON} -E ${LV_PP_FILTERED} ${LV_INPUT} > ${LV_OUTPUT} || (rm -f ${LV_OUTPUT} && /bin/false)
         DEPENDS
             ${LV_BINDINGS_DIR}/gen/gen_mpy.py
             ${LV_PP_FILTERED}
+            ${LV_JSON}
 
         COMMENT
             "LV_BINDINGS GEN MPY"
@@ -105,6 +136,7 @@ function(lv_bindings)
     )
 
 endfunction()
+
 
 # Definitions for specific bindings
 
@@ -133,6 +165,25 @@ function(all_lv_bindings)
             -M lvgl -MP lv
         FILTER
             ${LV_INTERNAL_HEADERS}
+    )
+
+    # LVGL stub generation targets (delegated to makefile for simplicity)
+    set(LV_MPY_METADATA ${LV_MP}.json)
+
+    add_custom_target(lvgl_stubs
+        COMMAND
+            ${CMAKE_COMMAND} -E echo "Note: For stub generation, use the makefile targets:"
+        COMMAND  
+            ${CMAKE_COMMAND} -E echo "  make USER_C_MODULES=path/to/lv_binding_micropython LVGL_STUBS"
+        COMMENT "LVGL Python stub generation (see makefile)"
+    )
+
+    add_custom_target(lvgl_stubs_wheel
+        COMMAND
+            ${CMAKE_COMMAND} -E echo "Note: For stub wheel generation, use the makefile targets:"
+        COMMAND
+            ${CMAKE_COMMAND} -E echo "  make USER_C_MODULES=path/to/lv_binding_micropython LVGL_STUBS_WHEEL"
+        COMMENT "LVGL Python stub wheel generation (see makefile)"
     )
 
         
