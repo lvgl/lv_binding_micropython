@@ -35,12 +35,21 @@ from sys import argv
 from argparse import ArgumentParser
 import subprocess
 import re
+import os
+import textwrap
 from os.path import dirname, abspath
 from os.path import commonprefix
 
 script_path = dirname(abspath(__file__))
 sys.path.insert(0, "%s/../pycparser" % script_path)
 from pycparser import c_parser, c_ast, c_generator
+
+#
+# Constants
+#
+
+# Import shared utilities
+from gen_utils import simplify_identifier, get_enum_name, c_type_to_python_type, LVGL_DOC_SEARCH_DIRS
 
 #
 # Argument parsing
@@ -103,6 +112,7 @@ argParser.add_argument(
     metavar="<MetaData File Name>",
     action="store",
 )
+# Stub generation moved to separate gen_stubs.py script
 argParser.add_argument("input", nargs="+")
 argParser.set_defaults(include=[], define=[], ep=None, json=None, input=[])
 args = argParser.parse_args()
@@ -354,9 +364,7 @@ def sanitize(
 
 
 @memoize
-def simplify_identifier(id):
-    match_result = lv_func_pattern.match(id)
-    return match_result.group(1) if match_result else id
+# simplify_identifier is now imported from gen_utils
 
 
 def obj_name_from_ext_name(ext_name):
@@ -382,9 +390,7 @@ def method_name_from_func_name(func_name):
     return res if res != "del" else "delete"  # del is a reserved name, don't use it
 
 
-def get_enum_name(enum):
-    match_result = lv_enum_name_pattern.match(enum)
-    return match_result.group(3) if match_result else enum
+# get_enum_name is now imported from gen_utils
 
 
 def str_enum_to_str(str_enum):
@@ -3801,6 +3807,8 @@ static const mp_lv_obj_type_t *mp_lv_obj_types[] = {{
         )
     )
 
+# Python stub file generation functions moved to gen_stubs.py
+
 # Save Metadata File, if specified.
 
 if args.metadata:
@@ -3834,3 +3842,5 @@ if args.metadata:
 
     with open(args.metadata, "w") as metadata_file:
         json.dump(metadata, metadata_file, indent=4)
+
+# Python stub generation has been moved to separate gen_stubs.py script
