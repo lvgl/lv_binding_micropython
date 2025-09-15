@@ -2564,6 +2564,8 @@ def try_generate_array_type(type_ast):
         .replace("(", "__")
         .replace(")", "__")
         .replace("/", "_div_")
+        .replace("<<", "lsh")
+        .replace(">>", "rsh")
     )
     arr_to_c_convertor_name = "mp_arr_to_%s" % array_convertor_suffix
     arr_to_mp_convertor_name = "mp_arr_from_%s" % array_convertor_suffix
