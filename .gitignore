@@ -6,3 +6,17 @@ yacctab.py
 *.bak
 .history
 .vscode
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+*.pp
+*.pp.c
+
+# Test files
+test_*/
