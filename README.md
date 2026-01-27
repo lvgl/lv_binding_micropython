@@ -1,5 +1,11 @@
 [![MicroPython-LVGL CI](https://github.com/lvgl/lv_binding_micropython/actions/workflows/micropython_lvgl_ci.yml/badge.svg)](https://github.com/lvgl/lv_binding_micropython/actions/workflows/micropython_lvgl_ci.yml)
 
+> [!WARNING]
+> Building this firmware for Esp32 devices currently fails due to this [issue](https://github.com/lvgl/lv_binding_micropython/issues/372).
+
+
+
+
 # Bindings for LVGL
 
 ---
