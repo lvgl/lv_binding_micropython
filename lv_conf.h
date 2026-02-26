@@ -557,7 +557,7 @@ extern void mp_lv_deinit_gc();
 
 #define LV_USE_IMAGE      1   /*Requires: lv_label*/
 
-#define LV_USE_IMAGEBUTTON     1
+#define LV_USE_IMAGEBUTTON     0
 
 #define LV_USE_KEYBOARD   0
 
@@ -716,7 +716,7 @@ extern void mp_lv_deinit_gc();
 #define LV_USE_LIBJPEG_TURBO 0
 
 /*GIF decoder library*/
-#define LV_USE_GIF 1
+#define LV_USE_GIF 0
 #if LV_USE_GIF
 /*GIF decoder accelerate*/
 #define LV_GIF_CACHE_DECODE_DATA 0
