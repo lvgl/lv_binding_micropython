@@ -140,7 +140,7 @@
         * The circumference of 1/4 circle are saved for anti-aliasing
         * radius * 4 bytes are used per circle (the most often used radiuses are saved)
         * 0: to disable caching */
-        #define LV_DRAW_SW_CIRCLE_CACHE_SIZE 4
+        #define LV_DRAW_SW_CIRCLE_CACHE_SIZE 0
     #endif
 
     #define  LV_USE_DRAW_SW_ASM     LV_DRAW_SW_ASM_NONE
@@ -425,11 +425,11 @@ extern void mp_lv_deinit_gc();
 #define LV_FONT_MONTSERRAT_10 0
 #define LV_FONT_MONTSERRAT_12 0
 #define LV_FONT_MONTSERRAT_14 0
-#define LV_FONT_MONTSERRAT_16 1
+#define LV_FONT_MONTSERRAT_16 0
 #define LV_FONT_MONTSERRAT_18 0
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_22 0
-#define LV_FONT_MONTSERRAT_24 1
+#define LV_FONT_MONTSERRAT_24 0
 #define LV_FONT_MONTSERRAT_26 0
 #define LV_FONT_MONTSERRAT_28 0
 #define LV_FONT_MONTSERRAT_30 0
@@ -459,7 +459,7 @@ extern void mp_lv_deinit_gc();
 #define LV_FONT_CUSTOM_DECLARE
 
 /*Always set a default font*/
-#define LV_FONT_DEFAULT &lv_font_montserrat_16
+#define LV_FONT_DEFAULT &lv_font_montserrat_20
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.
@@ -681,7 +681,7 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /*API for memory-mapped file access. */
-#define LV_USE_FS_MEMFS 1
+#define LV_USE_FS_MEMFS 0
 #if LV_USE_FS_MEMFS
     #define LV_FS_MEMFS_LETTER 'M'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
 #endif
@@ -709,7 +709,7 @@ extern void mp_lv_deinit_gc();
 
 /* JPG + split JPG decoder library.
  * Split JPG is a custom format optimized for embedded systems. */
-#define LV_USE_TJPGD 1
+#define LV_USE_TJPGD 0
 
 /* libjpeg-turbo decoder library.
  * Supports complete JPEG specifications and high-performance JPEG decoding. */
@@ -797,7 +797,7 @@ extern void mp_lv_deinit_gc();
  *==================*/
 
 /*1: Enable API to take snapshot for object*/
-#define LV_USE_SNAPSHOT 1
+#define LV_USE_SNAPSHOT 0
 
 /*1: Enable system monitor component*/
 #define LV_USE_SYSMON   0

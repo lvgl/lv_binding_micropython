@@ -16995,32 +16995,12 @@ static const mp_lv_struct_t mp_lv_tree_node_class = {
     
 
 /*
- * lvgl lv_font_montserrat_16 global definitions
- */
-
-static const mp_lv_struct_t mp_lv_font_montserrat_16 = {
-    { &mp_lv_font_t_type },
-    (lv_font_t*)&lv_font_montserrat_16
-};
-    
-
-/*
  * lvgl lv_font_montserrat_20 global definitions
  */
 
 static const mp_lv_struct_t mp_lv_font_montserrat_20 = {
     { &mp_lv_font_t_type },
     (lv_font_t*)&lv_font_montserrat_20
-};
-    
-
-/*
- * lvgl lv_font_montserrat_24 global definitions
- */
-
-static const mp_lv_struct_t mp_lv_font_montserrat_24 = {
-    { &mp_lv_font_t_type },
-    (lv_font_t*)&lv_font_montserrat_24
 };
     
 
@@ -31352,24 +31332,6 @@ static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_binfont_create_mpobj, 1, mp_l
 
 /*
  * lvgl extension definition for:
- * lv_font_t *lv_binfont_create_from_buffer(void *buffer, uint32_t size)
- */
-
-static mp_obj_t mp_lv_binfont_create_from_buffer(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    void *buffer = mp_to_ptr(mp_args[0]);
-    uint32_t size = (uint32_t)mp_obj_get_int(mp_args[1]);
-    lv_font_t * _res = ((lv_font_t *(*)(void *, uint32_t))lv_func_ptr)(buffer, size);
-    return mp_read_ptr_lv_font_t((void*)_res);
-}
-
- 
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_binfont_create_from_buffer_mpobj, 2, mp_lv_binfont_create_from_buffer, lv_binfont_create_from_buffer);
-    
-
-/*
- * lvgl extension definition for:
  * void lv_binfont_destroy(lv_font_t *font)
  */
 
@@ -31383,90 +31345,6 @@ static mp_obj_t mp_lv_binfont_destroy(size_t mp_n_args, const mp_obj_t *mp_args,
  
 
 static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_binfont_destroy_mpobj, 1, mp_lv_binfont_destroy, lv_binfont_destroy);
-    
-
-/*
- * lvgl extension definition for:
- * lv_draw_buf_t *lv_snapshot_take(lv_obj_t *obj, lv_color_format_t cf)
- */
-
-static mp_obj_t mp_lv_snapshot_take(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_color_format_t cf = (int)mp_obj_get_int(mp_args[1]);
-    lv_draw_buf_t * _res = ((lv_draw_buf_t *(*)(lv_obj_t *, lv_color_format_t))lv_func_ptr)(obj, cf);
-    return mp_read_ptr_lv_draw_buf_t((void*)_res);
-}
-
- 
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_snapshot_take_mpobj, 2, mp_lv_snapshot_take, lv_snapshot_take);
-    
-/* Reusing lv_snapshot_take for lv_snapshot_create_draw_buf */
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_snapshot_create_draw_buf_mpobj, 2, mp_lv_snapshot_take, lv_snapshot_create_draw_buf);
-    
-
-/*
- * lvgl extension definition for:
- * lv_result_t lv_snapshot_reshape_draw_buf(lv_obj_t *obj, lv_draw_buf_t *draw_buf)
- */
-
-static mp_obj_t mp_lv_snapshot_reshape_draw_buf(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_draw_buf_t *draw_buf = mp_write_ptr_lv_draw_buf_t(mp_args[1]);
-    lv_result_t _res = ((lv_result_t (*)(lv_obj_t *, lv_draw_buf_t *))lv_func_ptr)(obj, draw_buf);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_snapshot_reshape_draw_buf_mpobj, 2, mp_lv_snapshot_reshape_draw_buf, lv_snapshot_reshape_draw_buf);
-    
-
-/*
- * lvgl extension definition for:
- * lv_result_t lv_snapshot_take_to_draw_buf(lv_obj_t *obj, lv_color_format_t cf, lv_draw_buf_t *draw_buf)
- */
-
-static mp_obj_t mp_lv_snapshot_take_to_draw_buf(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_color_format_t cf = (int)mp_obj_get_int(mp_args[1]);
-    lv_draw_buf_t *draw_buf = mp_write_ptr_lv_draw_buf_t(mp_args[2]);
-    lv_result_t _res = ((lv_result_t (*)(lv_obj_t *, lv_color_format_t, lv_draw_buf_t *))lv_func_ptr)(obj, cf, draw_buf);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_snapshot_take_to_draw_buf_mpobj, 3, mp_lv_snapshot_take_to_draw_buf, lv_snapshot_take_to_draw_buf);
-    
-/* Reusing lv_image_buf_free for lv_snapshot_free */
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_snapshot_free_mpobj, 1, mp_lv_image_buf_free, lv_snapshot_free);
-    
-
-/*
- * lvgl extension definition for:
- * lv_result_t lv_snapshot_take_to_buf(lv_obj_t *obj, lv_color_format_t cf, lv_image_dsc_t *dsc, void *buf, uint32_t buf_size)
- */
-
-static mp_obj_t mp_lv_snapshot_take_to_buf(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
-{
-    lv_obj_t *obj = mp_to_lv(mp_args[0]);
-    lv_color_format_t cf = (int)mp_obj_get_int(mp_args[1]);
-    lv_image_dsc_t *dsc = mp_write_ptr_lv_image_dsc_t(mp_args[2]);
-    void *buf = mp_to_ptr(mp_args[3]);
-    uint32_t buf_size = (uint32_t)mp_obj_get_int(mp_args[4]);
-    lv_result_t _res = ((lv_result_t (*)(lv_obj_t *, lv_color_format_t, lv_image_dsc_t *, void *, uint32_t))lv_func_ptr)(obj, cf, dsc, buf, buf_size);
-    return mp_obj_new_int(_res);
-}
-
- 
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_snapshot_take_to_buf_mpobj, 5, mp_lv_snapshot_take_to_buf, lv_snapshot_take_to_buf);
     
 /* Reusing lv_image_cache_dump for lv_bin_decoder_init */
 
@@ -31488,10 +31366,6 @@ static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_bin_decoder_open_mpobj, 2, mp
 
 static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_bin_decoder_close_mpobj, 2, mp_funcptr_lv_image_decoder_close_f_t, lv_bin_decoder_close);
     
-/* Reusing lv_image_cache_dump for lv_fs_memfs_init */
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_fs_memfs_init_mpobj, 0, mp_lv_image_cache_dump, lv_fs_memfs_init);
-    
 /* Reusing lv_image_cache_dump for lv_lodepng_init */
 
 static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_lodepng_init_mpobj, 0, mp_lv_image_cache_dump, lv_lodepng_init);
@@ -31499,14 +31373,6 @@ static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_lodepng_init_mpobj, 0, mp_lv_
 /* Reusing lv_image_cache_dump for lv_lodepng_deinit */
 
 static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_lodepng_deinit_mpobj, 0, mp_lv_image_cache_dump, lv_lodepng_deinit);
-    
-/* Reusing lv_image_cache_dump for lv_tjpgd_init */
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_tjpgd_init_mpobj, 0, mp_lv_image_cache_dump, lv_tjpgd_init);
-    
-/* Reusing lv_image_cache_dump for lv_tjpgd_deinit */
-
-static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_tjpgd_deinit_mpobj, 0, mp_lv_image_cache_dump, lv_tjpgd_deinit);
     
 
 /*
@@ -32222,24 +32088,14 @@ static const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_indev_search_obj), MP_ROM_PTR(&mp_lv_indev_search_obj_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_refr_now), MP_ROM_PTR(&mp_lv_refr_now_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_binfont_create), MP_ROM_PTR(&mp_lv_binfont_create_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_binfont_create_from_buffer), MP_ROM_PTR(&mp_lv_binfont_create_from_buffer_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_binfont_destroy), MP_ROM_PTR(&mp_lv_binfont_destroy_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_snapshot_take), MP_ROM_PTR(&mp_lv_snapshot_take_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_snapshot_create_draw_buf), MP_ROM_PTR(&mp_lv_snapshot_create_draw_buf_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_snapshot_reshape_draw_buf), MP_ROM_PTR(&mp_lv_snapshot_reshape_draw_buf_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_snapshot_take_to_draw_buf), MP_ROM_PTR(&mp_lv_snapshot_take_to_draw_buf_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_snapshot_free), MP_ROM_PTR(&mp_lv_snapshot_free_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_snapshot_take_to_buf), MP_ROM_PTR(&mp_lv_snapshot_take_to_buf_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_bin_decoder_init), MP_ROM_PTR(&mp_lv_bin_decoder_init_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_bin_decoder_info), MP_ROM_PTR(&mp_lv_bin_decoder_info_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_bin_decoder_get_area), MP_ROM_PTR(&mp_lv_bin_decoder_get_area_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_bin_decoder_open), MP_ROM_PTR(&mp_lv_bin_decoder_open_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_bin_decoder_close), MP_ROM_PTR(&mp_lv_bin_decoder_close_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_fs_memfs_init), MP_ROM_PTR(&mp_lv_fs_memfs_init_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_lodepng_init), MP_ROM_PTR(&mp_lv_lodepng_init_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_lodepng_deinit), MP_ROM_PTR(&mp_lv_lodepng_deinit_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_tjpgd_init), MP_ROM_PTR(&mp_lv_tjpgd_init_mpobj) },
-    { MP_ROM_QSTR(MP_QSTR_tjpgd_deinit), MP_ROM_PTR(&mp_lv_tjpgd_deinit_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_draw_sw_i1_to_argb8888), MP_ROM_PTR(&mp_lv_draw_sw_i1_to_argb8888_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_draw_sw_rgb565_swap), MP_ROM_PTR(&mp_lv_draw_sw_rgb565_swap_mpobj) },
     { MP_ROM_QSTR(MP_QSTR_draw_sw_i1_invert), MP_ROM_PTR(&mp_lv_draw_sw_i1_invert_mpobj) },
@@ -32399,9 +32255,7 @@ static const mp_rom_map_elem_t lvgl_globals_table[] = {
     
     { MP_ROM_QSTR(MP_QSTR_color_filter_shade), MP_ROM_PTR(&mp_lv_color_filter_shade) },
     { MP_ROM_QSTR(MP_QSTR_tree_node_class), MP_ROM_PTR(&mp_lv_tree_node_class) },
-    { MP_ROM_QSTR(MP_QSTR_font_montserrat_16), MP_ROM_PTR(&mp_lv_font_montserrat_16) },
     { MP_ROM_QSTR(MP_QSTR_font_montserrat_20), MP_ROM_PTR(&mp_lv_font_montserrat_20) },
-    { MP_ROM_QSTR(MP_QSTR_font_montserrat_24), MP_ROM_PTR(&mp_lv_font_montserrat_24) },
     { MP_ROM_QSTR(MP_QSTR_font_siyuan_heiti_medium_24), MP_ROM_PTR(&mp_lv_font_siyuan_heiti_medium_24) },
     { MP_ROM_QSTR(MP_QSTR_style_const_prop_id_inv), MP_ROM_PTR(&mp_lv_style_const_prop_id_inv) },
     { MP_ROM_QSTR(MP_QSTR_obj_class), MP_ROM_PTR(&mp_lv_obj_class) },
