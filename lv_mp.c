@@ -8,7 +8,7 @@
  * Preprocessing command:
  * Preprocessing was disabled.
  *
- * Generating Objects: obj(None), image(obj), label(obj), bar(obj), button(obj), chart(obj), line(obj), scale(obj), textarea(obj), table(obj)
+ * Generating Objects: obj(None), image(obj), label(obj), bar(obj), button(obj), canvas(obj), chart(obj), line(obj), scale(obj), textarea(obj), table(obj)
  */
 
 /*
@@ -14916,6 +14916,289 @@ GENMPY_UNUSED static const mp_lv_obj_type_t mp_lv_button_type = {
 
 /*
  * lvgl extension definition for:
+ * void lv_canvas_set_buffer(lv_obj_t *obj, void *buf, int32_t w, int32_t h, lv_color_format_t cf)
+ */
+
+static mp_obj_t mp_lv_canvas_set_buffer(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    void *buf = mp_to_ptr(mp_args[1]);
+    int32_t w = (int32_t)mp_obj_get_int(mp_args[2]);
+    int32_t h = (int32_t)mp_obj_get_int(mp_args[3]);
+    lv_color_format_t cf = (int)mp_obj_get_int(mp_args[4]);
+    ((void (*)(lv_obj_t *, void *, int32_t, int32_t, lv_color_format_t))lv_func_ptr)(obj, buf, w, h, cf);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_buffer_mpobj, 5, mp_lv_canvas_set_buffer, lv_canvas_set_buffer);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_canvas_set_draw_buf(lv_obj_t *obj, lv_draw_buf_t *draw_buf)
+ */
+
+static mp_obj_t mp_lv_canvas_set_draw_buf(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_draw_buf_t *draw_buf = mp_write_ptr_lv_draw_buf_t(mp_args[1]);
+    ((void (*)(lv_obj_t *, lv_draw_buf_t *))lv_func_ptr)(obj, draw_buf);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_draw_buf_mpobj, 2, mp_lv_canvas_set_draw_buf, lv_canvas_set_draw_buf);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_canvas_set_px(lv_obj_t *obj, int32_t x, int32_t y, lv_color_t color, lv_opa_t opa)
+ */
+
+static mp_obj_t mp_lv_canvas_set_px(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    int32_t x = (int32_t)mp_obj_get_int(mp_args[1]);
+    int32_t y = (int32_t)mp_obj_get_int(mp_args[2]);
+    lv_color_t color = mp_write_lv_color_t(mp_args[3]);
+    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[4]);
+    ((void (*)(lv_obj_t *, int32_t, int32_t, lv_color_t, lv_opa_t))lv_func_ptr)(obj, x, y, color, opa);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_px_mpobj, 5, mp_lv_canvas_set_px, lv_canvas_set_px);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_canvas_set_palette(lv_obj_t *obj, uint8_t index, lv_color32_t color)
+ */
+
+static mp_obj_t mp_lv_canvas_set_palette(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    uint8_t index = (uint8_t)mp_obj_get_int(mp_args[1]);
+    lv_color32_t color = mp_write_lv_color32_t(mp_args[2]);
+    ((void (*)(lv_obj_t *, uint8_t, lv_color32_t))lv_func_ptr)(obj, index, color);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_set_palette_mpobj, 3, mp_lv_canvas_set_palette, lv_canvas_set_palette);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_draw_buf_t *lv_canvas_get_draw_buf(lv_obj_t *obj)
+ */
+
+static mp_obj_t mp_lv_canvas_get_draw_buf(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_draw_buf_t * _res = ((lv_draw_buf_t *(*)(lv_obj_t *))lv_func_ptr)(obj);
+    return mp_read_ptr_lv_draw_buf_t((void*)_res);
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_draw_buf_mpobj, 1, mp_lv_canvas_get_draw_buf, lv_canvas_get_draw_buf);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_color32_t lv_canvas_get_px(lv_obj_t *obj, int32_t x, int32_t y)
+ */
+
+static mp_obj_t mp_lv_canvas_get_px(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    int32_t x = (int32_t)mp_obj_get_int(mp_args[1]);
+    int32_t y = (int32_t)mp_obj_get_int(mp_args[2]);
+    lv_color32_t _res = ((lv_color32_t (*)(lv_obj_t *, int32_t, int32_t))lv_func_ptr)(obj, x, y);
+    return mp_read_lv_color32_t(_res);
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_px_mpobj, 3, mp_lv_canvas_get_px, lv_canvas_get_px);
+    
+
+/*
+ * lvgl extension definition for:
+ * lv_image_dsc_t *lv_canvas_get_image(lv_obj_t *canvas)
+ */
+
+static mp_obj_t mp_lv_canvas_get_image(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *canvas = mp_to_lv(mp_args[0]);
+    lv_image_dsc_t * _res = ((lv_image_dsc_t *(*)(lv_obj_t *))lv_func_ptr)(canvas);
+    return mp_read_ptr_lv_image_dsc_t((void*)_res);
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_image_mpobj, 1, mp_lv_canvas_get_image, lv_canvas_get_image);
+    
+/* Reusing lv_image_get_src for lv_canvas_get_buf */
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_get_buf_mpobj, 1, mp_lv_image_get_src, lv_canvas_get_buf);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_canvas_copy_buf(lv_obj_t *obj, const lv_area_t *canvas_area, lv_draw_buf_t *dest_buf, const lv_area_t *dest_area)
+ */
+
+static mp_obj_t mp_lv_canvas_copy_buf(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    const lv_area_t *canvas_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[1]);
+    lv_draw_buf_t *dest_buf = mp_write_ptr_lv_draw_buf_t(mp_args[2]);
+    const lv_area_t *dest_area = (const lv_area_t *)mp_write_ptr_lv_area_t(mp_args[3]);
+    ((void (*)(lv_obj_t *, const lv_area_t *, lv_draw_buf_t *, const lv_area_t *))lv_func_ptr)(obj, canvas_area, dest_buf, dest_area);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_copy_buf_mpobj, 4, mp_lv_canvas_copy_buf, lv_canvas_copy_buf);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_canvas_fill_bg(lv_obj_t *obj, lv_color_t color, lv_opa_t opa)
+ */
+
+static mp_obj_t mp_lv_canvas_fill_bg(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *obj = mp_to_lv(mp_args[0]);
+    lv_color_t color = mp_write_lv_color_t(mp_args[1]);
+    lv_opa_t opa = (uint8_t)mp_obj_get_int(mp_args[2]);
+    ((void (*)(lv_obj_t *, lv_color_t, lv_opa_t))lv_func_ptr)(obj, color, opa);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_fill_bg_mpobj, 3, mp_lv_canvas_fill_bg, lv_canvas_fill_bg);
+    
+
+/*
+ * lvgl extension definition for:
+ * void lv_canvas_init_layer(lv_obj_t *canvas, lv_layer_t *layer)
+ */
+
+static mp_obj_t mp_lv_canvas_init_layer(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    lv_obj_t *canvas = mp_to_lv(mp_args[0]);
+    lv_layer_t *layer = mp_write_ptr_lv_layer_t(mp_args[1]);
+    ((void (*)(lv_obj_t *, lv_layer_t *))lv_func_ptr)(canvas, layer);
+    return mp_const_none;
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_init_layer_mpobj, 2, mp_lv_canvas_init_layer, lv_canvas_init_layer);
+    
+/* Reusing lv_canvas_init_layer for lv_canvas_finish_layer */
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_finish_layer_mpobj, 2, mp_lv_canvas_init_layer, lv_canvas_finish_layer);
+    
+
+/*
+ * lvgl extension definition for:
+ * uint32_t lv_canvas_buf_size(int32_t w, int32_t h, uint8_t bpp, uint8_t stride)
+ */
+
+static mp_obj_t mp_lv_canvas_buf_size(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_func_ptr)
+{
+    int32_t w = (int32_t)mp_obj_get_int(mp_args[0]);
+    int32_t h = (int32_t)mp_obj_get_int(mp_args[1]);
+    uint8_t bpp = (uint8_t)mp_obj_get_int(mp_args[2]);
+    uint8_t stride = (uint8_t)mp_obj_get_int(mp_args[3]);
+    uint32_t _res = ((uint32_t (*)(int32_t, int32_t, uint8_t, uint8_t))lv_func_ptr)(w, h, bpp, stride);
+    return mp_obj_new_int_from_uint(_res);
+}
+
+ 
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(mp_lv_canvas_buf_size_mpobj, 4, mp_lv_canvas_buf_size, lv_canvas_buf_size);
+    
+/* Reusing lv_obj_create for lv_canvas_create */
+
+static MP_DEFINE_CONST_LV_FUN_OBJ_VAR(mp_lv_canvas_create_mpobj, 1, mp_lv_obj_create, lv_canvas_create);
+    
+
+/*
+ * lvgl canvas object definitions
+ */
+    
+
+static const mp_rom_map_elem_t canvas_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_set_buffer), MP_ROM_PTR(&mp_lv_canvas_set_buffer_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_set_draw_buf), MP_ROM_PTR(&mp_lv_canvas_set_draw_buf_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_set_px), MP_ROM_PTR(&mp_lv_canvas_set_px_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_set_palette), MP_ROM_PTR(&mp_lv_canvas_set_palette_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_get_draw_buf), MP_ROM_PTR(&mp_lv_canvas_get_draw_buf_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_get_px), MP_ROM_PTR(&mp_lv_canvas_get_px_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_get_image), MP_ROM_PTR(&mp_lv_canvas_get_image_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_get_buf), MP_ROM_PTR(&mp_lv_canvas_get_buf_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_copy_buf), MP_ROM_PTR(&mp_lv_canvas_copy_buf_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_fill_bg), MP_ROM_PTR(&mp_lv_canvas_fill_bg_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_init_layer), MP_ROM_PTR(&mp_lv_canvas_init_layer_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_finish_layer), MP_ROM_PTR(&mp_lv_canvas_finish_layer_mpobj) },
+    { MP_ROM_QSTR(MP_QSTR_buf_size), MP_ROM_PTR(&mp_lv_canvas_buf_size_mpobj) }
+};
+
+static MP_DEFINE_CONST_DICT(canvas_locals_dict, canvas_locals_dict_table);
+
+static void canvas_print(const mp_print_t *print,
+    mp_obj_t self_in,
+    mp_print_kind_t kind)
+{
+    mp_printf(print, "lvgl canvas");
+}
+
+
+static mp_obj_t canvas_make_new(
+    const mp_obj_type_t *type,
+    size_t n_args,
+    size_t n_kw,
+    const mp_obj_t *args)
+{
+    return make_new(&mp_lv_canvas_create_mpobj, type, n_args, n_kw, args);
+}
+
+
+static MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lv_canvas_type_base,
+    MP_QSTR_canvas,
+    MP_TYPE_FLAG_NONE,
+    print, canvas_print,
+    make_new, canvas_make_new,
+    binary_op, mp_lv_obj_binary_op,
+    attr, call_parent_methods,
+    buffer, mp_lv_obj_get_buffer,
+    parent, &mp_lv_obj_type_base,
+    locals_dict, &canvas_locals_dict
+);
+
+GENMPY_UNUSED static const mp_lv_obj_type_t mp_lv_canvas_type = {
+#ifdef LV_OBJ_T
+    .lv_obj_class = &lv_canvas_class,
+#endif
+    .mp_obj_type = &mp_lv_canvas_type_base,
+};
+    
+
+/*
+ * lvgl extension definition for:
  * void lv_chart_set_type(lv_obj_t *obj, lv_chart_type_t type)
  */
 
@@ -17155,6 +17438,16 @@ static const mp_lv_struct_t mp_lv_bar_class = {
 static const mp_lv_struct_t mp_lv_button_class = {
     { &mp_lv_obj_class_t_type },
     (lv_obj_class_t*)&lv_button_class
+};
+    
+
+/*
+ * lvgl lv_canvas_class global definitions
+ */
+
+static const mp_lv_struct_t mp_lv_canvas_class = {
+    { &mp_lv_obj_class_t_type },
+    (lv_obj_class_t*)&lv_canvas_class
 };
     
 
@@ -31899,6 +32192,7 @@ static const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_label), MP_ROM_PTR(&mp_lv_label_type_base) },
     { MP_ROM_QSTR(MP_QSTR_bar), MP_ROM_PTR(&mp_lv_bar_type_base) },
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&mp_lv_button_type_base) },
+    { MP_ROM_QSTR(MP_QSTR_canvas), MP_ROM_PTR(&mp_lv_canvas_type_base) },
     { MP_ROM_QSTR(MP_QSTR_chart), MP_ROM_PTR(&mp_lv_chart_type_base) },
     { MP_ROM_QSTR(MP_QSTR_line), MP_ROM_PTR(&mp_lv_line_type_base) },
     { MP_ROM_QSTR(MP_QSTR_scale), MP_ROM_PTR(&mp_lv_scale_type_base) },
@@ -32263,6 +32557,7 @@ static const mp_rom_map_elem_t lvgl_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_label_class), MP_ROM_PTR(&mp_lv_label_class) },
     { MP_ROM_QSTR(MP_QSTR_bar_class), MP_ROM_PTR(&mp_lv_bar_class) },
     { MP_ROM_QSTR(MP_QSTR_button_class), MP_ROM_PTR(&mp_lv_button_class) },
+    { MP_ROM_QSTR(MP_QSTR_canvas_class), MP_ROM_PTR(&mp_lv_canvas_class) },
     { MP_ROM_QSTR(MP_QSTR_chart_class), MP_ROM_PTR(&mp_lv_chart_class) },
     { MP_ROM_QSTR(MP_QSTR_line_class), MP_ROM_PTR(&mp_lv_line_class) },
     { MP_ROM_QSTR(MP_QSTR_scale_class), MP_ROM_PTR(&mp_lv_scale_class) },
@@ -32322,6 +32617,7 @@ static const mp_lv_obj_type_t *mp_lv_obj_types[] = {
     &mp_lv_label_type,
     &mp_lv_bar_type,
     &mp_lv_button_type,
+    &mp_lv_canvas_type,
     &mp_lv_chart_type,
     &mp_lv_line_type,
     &mp_lv_scale_type,
