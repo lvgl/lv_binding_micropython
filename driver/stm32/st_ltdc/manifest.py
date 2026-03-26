@@ -1,0 +1,7 @@
+module("lv_utils.py", base_path="../../../lib")
+module("st_ltdc_utils.py", base_path=".")
+module("display_driver.py", base_path=".")
+module("display_conf.py", base_path=".")
+module("panels.py", base_path=".")
+module("boards.py", base_path=".")
+module("board_config.py", base_path=".")
