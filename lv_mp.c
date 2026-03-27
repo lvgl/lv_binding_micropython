@@ -30,9 +30,8 @@
  * lvgl includes
  */
 
-#include "/home/jiang/share/labplus_mpython/labplus_mpython_esp32s3/port/usercmodule/lv_binding_micropython/lvgl/lvgl.h"
-#include "/home/jiang/share/labplus_mpython/labplus_mpython_esp32s3/port/usercmodule/lv_binding_micropython/lvgl/src/lvgl_private.h"
-
+#include "./lvgl/lvgl.h"
+#include "./lvgl/src/lvgl_private.h"
 
 #define LV_OBJ_T lv_obj_t
 
