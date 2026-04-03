@@ -262,6 +262,7 @@ static mp_obj_t mp_ltdc_make_new(const mp_obj_type_t *type,
     MP_STATE_PORT(current_ltdc_obj) = MP_OBJ_NULL;
 
     ltdc_display_obj_t *self = m_new_obj(ltdc_display_obj_t);
+    memset(self, 0, sizeof(*self));
     self->base.type = type;
 
     // Reset pin (optional)
@@ -465,6 +466,10 @@ static mp_obj_t mp_ltdc_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 // unregister the current object so IRQ callbacks become no-ops.
 static mp_obj_t mp_ltdc_deinit(mp_obj_t self_in) {
     ltdc_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    // Nothing to do if init() was never called or deinit() already ran.
+    if (MP_STATE_PORT(current_ltdc_obj) == MP_OBJ_NULL) {
+        return mp_const_none;
+    }
     // Clear self->disp BEFORE clearing current_ltdc_obj so the IRQ callbacks
     // see disp==NULL and bail safely even if an interrupt fires between the
     // two stores (the disp==NULL guard is checked under current_ltdc_obj!=NULL).
@@ -502,6 +507,11 @@ static void lcd_hw_reset(ltdc_display_obj_t *self) {
 // This calls HAL_LTDC_Init() which triggers HAL_LTDC_MspInit() (clocks/GPIO/PLL3).
 static bool config_ltdc(ltdc_display_obj_t *self) {
     LTDC_LayerCfgTypeDef layer_cfg = {0};
+
+    if (self->width == 0 || self->height == 0 ||
+        self->hsync == 0 || self->vsync == 0) {
+        return false;
+    }
 
     hltdc.Instance = LTDC;
     hltdc.Init.HSPolarity = (self->polarity & LTDC_POL_HS_MASK)
