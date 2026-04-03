@@ -467,7 +467,7 @@ static mp_obj_t mp_ltdc_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 static mp_obj_t mp_ltdc_deinit(mp_obj_t self_in) {
     ltdc_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     // Nothing to do if init() was never called or deinit() already ran.
-    if (MP_STATE_PORT(current_ltdc_obj) == MP_OBJ_NULL) {
+    if (MP_STATE_PORT(current_ltdc_obj) == MP_OBJ_NULL && self->disp == NULL) {
         return mp_const_none;
     }
     // Clear self->disp BEFORE clearing current_ltdc_obj so the IRQ callbacks
