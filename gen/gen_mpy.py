@@ -1235,10 +1235,10 @@ static inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
     {
         // Find the object type
         const mp_obj_type_t *mp_obj_type = get_BaseObj_type();
-        const lv_obj_class_t *lv_obj_class = lv_obj_get_class(lv_obj);
+        const lv_obj_class_t *lv_obj_cls = lv_obj_get_class(lv_obj);
         const mp_lv_obj_type_t **iter = &mp_lv_obj_types[0];
         for (; *iter; iter++) {
-            if ((*iter)->lv_obj_class == lv_obj_class) {
+            if ((*iter)->lv_obj_class == lv_obj_cls) {
                 mp_obj_type = (*iter)->mp_obj_type;
                 break;
             }
