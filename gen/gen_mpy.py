@@ -1026,7 +1026,7 @@ typedef struct mp_lv_obj_type_t {{
 static const mp_lv_obj_type_t mp_lv_{base_obj}_type;
 static const mp_lv_obj_type_t *mp_lv_obj_types[];
 
-static inline const mp_obj_type_t *get_BaseObj_type()
+static inline const mp_obj_type_t *get_BaseObj_type(void)
 {{
     return mp_lv_{base_obj}_type.mp_obj_type;
 }}
@@ -1214,7 +1214,7 @@ static inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
     return mp_lv_obj->callbacks;
 }
 
-static inline const mp_obj_type_t *get_BaseObj_type();
+static inline const mp_obj_type_t *get_BaseObj_type(void);
 
 static void mp_lv_delete_cb(lv_event_t * e)
 {
@@ -1345,12 +1345,15 @@ void *mp_lv_user_data;
 int mp_lv_roots_initialized = 0;
 int lvgl_mod_initialized = 0;
 
+/* Prototype definition to make -Werror=missing-prototype happy */
+void mp_lv_log_cb(lv_log_level_t level, const char * buf);
+
 void mp_lv_log_cb(lv_log_level_t level, const char * buf){
 
     mp_printf(&mp_plat_print, buf);
 }
 
-void mp_lv_init_gc()
+void mp_lv_init_gc(void)
 {
     if (!MP_STATE_VM(mp_lv_roots_initialized)) {
         // mp_printf(&mp_plat_print, "[ INIT GC ]");
@@ -1359,7 +1362,7 @@ void mp_lv_init_gc()
     }
 }
 
-void mp_lv_deinit_gc()
+void mp_lv_deinit_gc(void)
 {
 
     // mp_printf(&mp_plat_print, "[ DEINIT GC ]");
@@ -2427,7 +2430,7 @@ def try_generate_struct(struct_name, struct):
  * Struct {struct_name}
  */
 
-static inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type();
+static inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type(void);
 
 static inline void* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
 {{
@@ -2495,7 +2498,7 @@ static MP_DEFINE_CONST_OBJ_TYPE(
     parent, &mp_lv_base_struct_type
 );
 
-static inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type()
+static inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type(void)
 {{
     return &mp_{sanitized_struct_name}_type;
 }}
