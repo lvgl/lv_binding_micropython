@@ -951,15 +951,14 @@ register_int_ptr_type(
 #
 # Emit Header
 #
-
 headers = args.input
 for header in headers:
     if "lvgl.h" in header:
         path, _ = os.path.split(header)
         if path and path != "lvgl.h":
-            path = os.path.join(path, "src", "lvgl_private.h")
+            path = os.path.join(path, "lvgl_private.h")
         else:
-            path = "src/lvgl_private.h"
+            path = "lvgl_private.h"
 
         headers.append(path)
         break
