@@ -11,6 +11,7 @@ if(ESP_PLATFORM)
     idf_build_set_property(COMPILE_DEFINITIONS "${LV_CFLAGS}" APPEND)
     idf_build_set_property(COMPILE_OPTIONS "-Wno-unused-function" APPEND)
     idf_build_set_property(COMPILE_OPTIONS "-Wno-format" APPEND)
+    idf_build_set_property(COMPILE_OPTIONS "-Wno-deprecated-declarations" APPEND) 
     idf_build_set_property(SRCS "${LV_SRC}" APPEND)
     idf_build_set_property(INCLUDE_DIRS "${LV_INCLUDE}" APPEND)
 
@@ -39,7 +40,7 @@ file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/lvgl/src/*.c)
 add_library(lvgl_interface INTERFACE)
 
 target_sources(lvgl_interface INTERFACE ${SOURCES})
-target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
+target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS} -Wno-deprecated-declarations)
 
 # # lvgl bindings target (the mpy module)
 
@@ -59,6 +60,6 @@ target_link_libraries(usermod_lvgl INTERFACE lvgl_interface)
 if (DEFINED LV_CONF_DIR)
     target_include_directories(usermod INTERFACE ${LV_CONF_DIR})
 endif()
-target_compile_options(usermod INTERFACE -DLV_CONF_PATH="${LV_CONF_PATH}")
+target_compile_options(usermod INTERFACE -DLV_CONF_PATH="${LV_CONF_PATH}" -Wno-deprecated-declarations)
 target_link_libraries(usermod INTERFACE usermod_lvgl)
 
