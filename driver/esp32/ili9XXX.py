@@ -214,7 +214,8 @@ class ili9XXX:
             esp.gpio_set_direction(self.mosi, esp.GPIO_MODE.OUTPUT)
             esp.gpio_set_direction(self.clk, esp.GPIO_MODE.OUTPUT)
 
-            ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
+            # USE SPI_DMA_CH_AUTO
+            ret = esp.spi_bus_initialize(self.spihost, buscfg, 3)
             if ret != 0: raise RuntimeError("Failed initializing SPI bus")
 
         self.trans_buffer = esp.heap_caps_malloc(_TRANSFER_BUFFER_LENGTH, _MALLOC_DMA)
