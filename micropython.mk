@@ -105,3 +105,12 @@ SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/examples -type f -name "*.c")
 endif
 
 SRC_USERMOD_C += $(LVGL_MPY)
+
+# include lvgl submodule check in the micropython submodules rule.
+LVGL_SUBMODULES = lvgl pycparser
+submodules: lvgl_submodule
+lvgl_submodule:
+	$(ECHO) "Updating submodules: $(LVGL_SUBMODULES)"
+	$(Q)cd $(LVGL_BINDING_DIR) && git submodule sync $(LVGL_SUBMODULES)
+	$(Q)cd $(LVGL_BINDING_DIR) && git submodule update --init $(LVGL_SUBMODULES)
+.PHONY: lvgl_submodule
