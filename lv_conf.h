@@ -115,7 +115,9 @@
 #define LV_DRAW_BUF_STRIDE_ALIGN                1
 
 /** Align start address of draw_buf addresses to this bytes*/
+#ifndef LV_DRAW_BUF_ALIGN
 #define LV_DRAW_BUF_ALIGN                       4
+#endif
 
 /** Using matrix for transformations.
  * Requirements:
@@ -250,14 +252,20 @@
 #endif
 
 /** Use NXP's PXP on iMX RTxxx platforms. */
+#ifndef LV_USE_PXP
 #define LV_USE_PXP 0
+#endif
 
 #if LV_USE_PXP
     /** Use PXP for drawing.*/
+    #ifndef LV_USE_DRAW_PXP
     #define LV_USE_DRAW_PXP 1
+    #endif
 
     /** Use PXP to rotate display.*/
+    #ifndef LV_USE_ROTATE_PXP
     #define LV_USE_ROTATE_PXP 0
+    #endif
 
     #if LV_USE_DRAW_PXP && LV_USE_OS
         /** Use additional draw thread for PXP processing.*/
