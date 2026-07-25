@@ -1832,7 +1832,7 @@ static unsigned long long mp_obj_get_ull(mp_obj_t obj)
 
     unsigned long long val = 0;
     bool big_endian = !(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
-    mp_obj_int_to_bytes_impl(obj, big_endian, sizeof(val), (byte*)&val);
+    mp_obj_int_to_bytes(obj, sizeof(val), (byte*)&val, big_endian, false, false);
     return val;
 }
 
