@@ -178,6 +178,57 @@ Driver code is under `/driver` directory.
 Drivers can also be implemented in pure MicroPython, by providing callbacks (`disp_drv.flush_cb`, `indev_drv.read_cb` etc.)
 Currently the supported ILI9341, FT6X36 and XPT2046 are pure micropython drivers.
 
+### Wayland driver
+
+On Linux, LVGL also ships a native Wayland driver (`lvgl/src/drivers/wayland`) as
+an alternative to SDL. Usage mirrors the SDL example above:
+
+```python
+import lvgl as lv
+lv.init()
+
+from lv_utils import event_loop
+
+WIDTH = 480
+HEIGHT = 320
+
+event_loop = event_loop()
+disp_drv = lv.wayland_window_create_simple(WIDTH, HEIGHT, "MicroPython-LVGL")
+pointer = lv.wayland_pointer_create()
+keyboard = lv.wayland_keyboard_create()
+
+while lv.wayland_window_is_open(disp_drv):
+    lv.wayland_timer_handler()
+```
+
+`lv.wayland_window_create_simple` takes only `hor_res, ver_res, title` (no
+close-callback - `gen_mpy.py` can't bind `lv_wayland_window_create()`'s C
+callback param, see [gen/lv_mpy_drivers.h](gen/lv_mpy_drivers.h)). Poll
+`lv.wayland_window_is_open()` to detect the window closing instead.
+
+**Why**: `lv_sdl_window_create()` can segfault deep in the NVIDIA GL/EGL
+driver as soon as a real window is presented, on Wayland sessions with the
+proprietary NVIDIA driver - a long-standing upstream issue
+([#46](https://github.com/lvgl/lv_binding_micropython/issues/46)), caused by
+this binding's SDL driver running on MicroPython's own thread rather than a
+dedicated one. LVGL's native Wayland driver avoids it entirely: it presents
+via `wl_shm` and never touches GL/EGL. It was already upstream in LVGL, just
+never wired into this binding's build or exposed to Python.
+
+While wiring it up we also found no LVGL desktop driver (SDL included) has
+been reachable from Python at all since
+[3f32386](https://github.com/lvgl/lv_binding_micropython/commit/3f32386af5f3ee9ba37d9282b1926e39b74162d7)
+(2026-05-02) switched `gen_mpy.py`'s input from `lvgl.h` to
+`lvgl_private.h`, which doesn't pull in `src/drivers/lv_drivers.h` - a silent
+regression, also breaking `tests/testdisplay.py`'s interactive mode. Fixed
+the same way here: gen_mpy now parses
+[gen/lv_mpy_drivers.h](gen/lv_mpy_drivers.h) instead, which includes both.
+
+**Build requirements**: autodetected via `pkg-config` in `micropython.mk`
+like SDL - left disabled if `wayland-client`/`wayland-cursor`/`xkbcommon`/
+`wayland-scanner`/`wayland-protocols` aren't found. `LV_COLOR_DEPTH` must
+stay `32`; see the comment above its definition in `lv_conf.h`.
+
 ### Where are the drivers?
 
 LVGL C drivers and MicroPython drivers (either C or Python) are **separate and independent** from each other.

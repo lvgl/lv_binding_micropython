@@ -28,6 +28,7 @@ jobs:
         sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe restricted multiverse"
         sudo apt-get update -y -qq
         sudo apt-get install libsdl2-dev parallel libfreetype-dev librlottie-dev libavformat-dev libavcodec-dev libswscale-dev libavutil-dev build-essential libc-bin
+        sudo apt-get install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev weston
         python3 -m pip install pillow
 
     - name: Clone lv_micropython
@@ -102,7 +103,24 @@ jobs:
     - name: Run MicroPython-LVGL API Tests
       if: matrix.port == 'unix'
       run: MICROPY_MICROPYTHON=ports/unix/build-lvgl/micropython ./tests/run-tests.py -d user_modules/lv_binding_micropython/tests/api
-      
+
+    # Runs the same tests/display suite as the (manual, HIL-oriented) SDL
+    # path, against the Wayland driver instead, via a headless compositor.
+    # See README.md's "Wayland driver" section for why this driver exists.
+    - name: Run MicroPython-LVGL Wayland Display Tests
+      if: matrix.port == 'unix'
+      run: |
+        mkdir -p /tmp/xdg-runtime && chmod 0700 /tmp/xdg-runtime
+        export XDG_RUNTIME_DIR=/tmp/xdg-runtime
+        weston --backend=headless --socket=wayland-ci --idle-time=0 &
+        WESTON_PID=$!
+        sleep 1
+        WAYLAND_DISPLAY=wayland-ci LV_MP_TEST_DRIVER=wayland \
+          MICROPY_MICROPYTHON=ports/unix/build-lvgl/micropython \
+          ./tests/run-tests.py user_modules/lv_binding_micropython/tests/display/basic*.py -r .
+        kill $WESTON_PID
+
+
     - name: Process Tests Artifacts
 
       if: matrix.port == 'unix'

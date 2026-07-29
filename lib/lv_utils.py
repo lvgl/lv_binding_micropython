@@ -80,6 +80,7 @@ class event_loop:
         refresh_cb=None,
         asynchronous=False,
         exception_sink=None,
+        handler_cb=None,
     ):
         if self.is_running():
             raise RuntimeError("Event loop is already running!")
@@ -91,6 +92,14 @@ class event_loop:
 
         self.delay = 1000 // freq
         self.refresh_cb = refresh_cb
+        # Most drivers (e.g. SDL) self-pump via an lv_timer_t they register
+        # internally, so the plain lv.task_handler() (== lv_timer_handler())
+        # is all that's needed here. Some (e.g. Wayland) instead require a
+        # driver-specific wrapper -- lv.wayland_timer_handler() -- to be
+        # called *instead of* the plain handler, since it does its own
+        # input/window event handling around the same inner call. Pass that
+        # wrapper as handler_cb for those.
+        self.handler_cb = handler_cb if handler_cb else lv.task_handler
         self.exception_sink = (
             exception_sink if exception_sink else self.default_exception_sink
         )
@@ -145,7 +154,7 @@ class event_loop:
     def task_handler(self, _):
         try:
             if lv._nesting.value == 0:
-                lv.task_handler()
+                self.handler_cb()
                 if self.refresh_cb:
                     self.refresh_cb()
             self.scheduled -= 1
@@ -178,7 +187,7 @@ class event_loop:
             if lv._nesting.value == 0:
                 self.refresh_event.clear()
                 try:
-                    lv.task_handler()
+                    self.handler_cb()
                 except Exception as e:
                     if self.exception_sink:
                         self.exception_sink(e)
