@@ -26,8 +26,24 @@
    COLOR SETTINGS
  *====================*/
 
-/** Color depth: 1 (I1), 8 (L8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888) */
-#define LV_COLOR_DEPTH 16
+/** Color depth: 1 (I1), 8 (L8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888)
+ *  lv_wayland_window_create() takes no color-format argument -- it creates
+ *  its display internally and picks the SHM pixel format from whatever
+ *  LV_COLOR_DEPTH is, with no per-call override available. wl_shm's
+ *  XRGB8888/ARGB8888 are the only formats mandatory per-spec; RGB565
+ *  support is optional and compositor-dependent, and on one that doesn't
+ *  advertise it, lv_wayland_window_create() hangs waiting for a
+ *  wl_shm.format event that never arrives. So this must be 32 whenever the
+ *  Wayland driver is compiled in, and is left at the original 16
+ *  otherwise, unconditionally forcing every other consumer of this build
+ *  (SDL included) to 32bpp too on systems where wayland-client happens to
+ *  be installed even if they don't personally use lv.wayland_window_create_simple.
+ *  See README.md's "Wayland driver" section. */
+#ifdef MICROPY_WAYLAND
+    #define LV_COLOR_DEPTH 32
+#else
+    #define LV_COLOR_DEPTH 16
+#endif
 
 /*=========================
    STDLIB WRAPPER SETTINGS
@@ -1341,8 +1357,18 @@ extern void mp_lv_deinit_gc();
 #endif
 
 /** Use Wayland to open a window and handle input on Linux or BSD desktops */
-#define LV_USE_WAYLAND          0
+#ifdef MICROPY_WAYLAND
+    #define LV_USE_WAYLAND MICROPY_WAYLAND
+#else
+    #define LV_USE_WAYLAND 0
+#endif
 #if LV_USE_WAYLAND
+    /* NOTE: =1 (drawn client-side decorations) hits a real, reproducible
+     * abort ("Too many bits for size_t", a bad size in a wl_shm request)
+     * in the decoration-surface teardown path on lv_wayland_window_close()
+     * -- a timing/lifecycle bug in lv_wl_window_decorations.c, unrelated to
+     * anything in this binding. Left at the upstream default until that's
+     * fixed; windows are simply undecorated (no title bar) meanwhile. */
     #define LV_WAYLAND_WINDOW_DECORATIONS   0    /**< Draw client side window decorations only necessary on Mutter/GNOME */
     #define LV_WAYLAND_WL_SHELL             0    /**< Use the legacy wl_shell protocol instead of the default XDG shell */
 #endif

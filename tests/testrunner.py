@@ -52,11 +52,14 @@ def run(func, filename, disp_config=display_config, **kwargs):
 
         if hasattr(disp_config, "WINDOW_POS"):
             display_config.WINDOW_POS = disp_config.WINDOW_POS
+        if hasattr(disp_config, "DRIVER"):
+            display_config.DRIVER = disp_config.DRIVER
         display = get_display(
             disp_config.WIDTH,
             disp_config.HEIGHT,
             mode=disp_config.MODE if disp_config.MODE is not None else _mode,
             pointer=disp_config.POINTER,
+            driver=getattr(display_config, "DRIVER", "sdl"),
             color_format=display_config.COLOR_FORMAT,
             render_mode=display_config.RENDER_MODE,
             show_display_info=display_config.SHOW_INFO,

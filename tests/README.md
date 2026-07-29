@@ -17,6 +17,11 @@ To run from `micropython/tests`:
 ```
 e.g. in unix port a display will appear to provide visual feedback.
 
+On desktop (unix port), `display/` and `indev/` fall back to a native window
+driver, selected via `display_config.DRIVER` ("sdl", the default, or
+"wayland") - or the `LV_MP_TEST_DRIVER` env var, so CI can run the same
+tests against both without duplicating them. See README.md's "Wayland
+driver" section.
 
 - `indev/`: These are to test the `display` + indev (touch) driver. Intended for
 interactive HIL testing, e.g. they expect user input to complete the test. 

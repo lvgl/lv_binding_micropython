@@ -14,6 +14,9 @@ class TestDisplayConfig:
     HEIGHT = 320
     MODE = "sim"
     POINTER = "sim"
+    # Desktop window driver used when MODE == "interactive" and no real
+    # hardware display driver is found: "sdl" or "wayland".
+    DRIVER = "sdl"
     COLOR_FORMAT = lv.COLOR_FORMAT.RGB888
     RENDER_MODE = lv.DISPLAY_RENDER_MODE.PARTIAL
     SHOW_INFO = True
@@ -31,6 +34,7 @@ class TestDisplayDriver:
         pointer="sim",
         render_mode=lv.DISPLAY_RENDER_MODE.PARTIAL,
         fps=25,
+        driver="sdl",
     ):
         self.display_drv = display_drv
         self._color_size = lv.color_format_get_size(color_format)
@@ -45,9 +49,18 @@ class TestDisplayDriver:
         self._debug_press = True
         self._debug_release = True
         self.mode = mode
+        self.driver = driver
 
         if not lv_utils.event_loop.is_running():
-            self.event_loop = lv_utils.event_loop(freq=fps, asynchronous=True)
+            # lv_wayland_window_create()'d windows must be pumped via
+            # lv.wayland_timer_handler() instead of the plain lv.task_handler()
+            # -- see the comment on event_loop's handler_cb in lv_utils.py.
+            _handler_cb = (
+                lv.wayland_timer_handler if driver == "wayland" else None
+            )
+            self.event_loop = lv_utils.event_loop(
+                freq=fps, asynchronous=True, handler_cb=_handler_cb
+            )
 
         else:
             self.event_loop = lv_utils.event_loop.current_instance()
@@ -95,23 +108,31 @@ class TestDisplayDriver:
             else:
                 self.indev.set_read_cb(self._read_cb)
 
-        else:  # interactive + DummyDisplay -> SDL
+        else:  # interactive + DummyDisplay -> desktop window driver
             self.group = lv.group_create()
             self.group.set_default()
-            self.lv_display = lv.sdl_window_create(
-                display_drv.width, display_drv.height
-            )
-            lv.sdl_window_set_title(self.lv_display, "MicroPython-LVGL")
-            if hasattr(display_drv, "window_pos") and hasattr(
-                lv, "sdl_window_set_position"
-            ):
-                if any(display_drv.window_pos):
-                    lv.sdl_window_set_position(self.lv_display, *display_drv.window_pos)
-                lv.sdl_window_set_opacity(self.lv_display, 1.0)
-                lv.sdl_window_set_bordered(self.lv_display, 1)
-            self.mouse = lv.sdl_mouse_create()
-            self.keyboard = lv.sdl_keyboard_create()
-            self.keyboard.set_group(self.group)
+            if driver == "wayland":
+                self.lv_display = lv.wayland_window_create_simple(
+                    display_drv.width, display_drv.height, "MicroPython-LVGL"
+                )
+                self.mouse = lv.wayland_pointer_create()
+                self.keyboard = lv.wayland_keyboard_create()
+                self.keyboard.set_group(self.group)
+            else:  # "sdl"
+                self.lv_display = lv.sdl_window_create(
+                    display_drv.width, display_drv.height
+                )
+                lv.sdl_window_set_title(self.lv_display, "MicroPython-LVGL")
+                if hasattr(display_drv, "window_pos") and hasattr(
+                    lv, "sdl_window_set_position"
+                ):
+                    if any(display_drv.window_pos):
+                        lv.sdl_window_set_position(self.lv_display, *display_drv.window_pos)
+                    lv.sdl_window_set_opacity(self.lv_display, 1.0)
+                    lv.sdl_window_set_bordered(self.lv_display, 1)
+                self.mouse = lv.sdl_mouse_create()
+                self.keyboard = lv.sdl_keyboard_create()
+                self.keyboard.set_group(self.group)
             if pointer in ("sim", "encoder"):
                 self.indev = lv.indev_create()
                 self.indev.set_display(self.lv_display)
@@ -316,6 +337,7 @@ def get_display(
     color_format=lv.COLOR_FORMAT.RGB888,
     mode="sim",
     pointer="sim",
+    driver="sdl",
     show_display_info=False,
     render_mode=lv.DISPLAY_RENDER_MODE.PARTIAL,
     window_pos=(None, None),
@@ -376,5 +398,5 @@ def get_display(
     fbuf1 = alloc_buffer(buffer_size)
     fbuf2 = alloc_buffer(buffer_size) if double_buf else None
     return TestDisplayDriver(
-        disp, fbuf1, fbuf2, color_format, mode, pointer, render_mode
+        disp, fbuf1, fbuf2, color_format, mode, pointer, render_mode, driver=driver
     )
