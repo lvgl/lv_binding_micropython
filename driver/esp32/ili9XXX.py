@@ -36,7 +36,7 @@ MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
 MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
 # MADCTL values for each of the orientation constants for non-st7789 displays.
-ORIENTATION_TABLE = (MADCTL_MX, MADCTL_MV, MADCTL_MY, MADCTL_MY | MADCTL_MX | MADCTL_MV)
+DEFAULT_ORIENTATION_TABLE = (MADCTL_MX, MADCTL_MV, MADCTL_MY, MADCTL_MY | MADCTL_MX | MADCTL_MV)
 
 # Negative orientation constants indicate the MADCTL value will come from the ORIENTATION_TABLE,
 # otherwise the rot value is used as the MADCTL value.
@@ -497,7 +497,8 @@ class ili9341(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=240, height=320, start_x=0, start_y=0,
         colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True,
+        orientation_table=DEFAULT_ORIENTATION_TABLE
     ):
 
         # Make sure MicroPython was built such that color won't require processing before DMA
@@ -508,6 +509,7 @@ class ili9341(ili9XXX):
         self.display_name = 'ILI9341'
 
         self.init_cmds = [
+            {'cmd': 0x01, 'delay': 100}, # SW Reset
             {'cmd': 0xCF, 'data': bytes([0x00, 0x83, 0X30])},
             {'cmd': 0xED, 'data': bytes([0x64, 0x03, 0X12, 0X81])},
             {'cmd': 0xE8, 'data': bytes([0x85, 0x01, 0x79])},
@@ -520,7 +522,7 @@ class ili9341(ili9XXX):
             {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
 
             {'cmd': 0x36, 'data': bytes([
-                self.madctl(colormode, rot, ORIENTATION_TABLE)])},  # MADCTL
+                self.madctl(colormode, rot, orientation_table)])},  # MADCTL
 
             {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
             {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
@@ -549,7 +551,8 @@ class ili9488(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=8, hybrid=True, width=320, height=480, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=lv.COLOR_FORMAT.XRGB8888, display_type=DISPLAY_TYPE_ILI9488, p16=False, swap_rgb565_bytes=False
+        color_format=lv.COLOR_FORMAT.XRGB8888, display_type=DISPLAY_TYPE_ILI9488, p16=False, swap_rgb565_bytes=False,
+        orientation_table=DEFAULT_ORIENTATION_TABLE
     ):
 
         if (lv.color_format_get_bpp(color_format) != 32) and not p16:
@@ -576,7 +579,7 @@ class ili9488(ili9XXX):
             #{'cmd': 0xC5, 'data': bytes([0x00, 0x0, 0x0, 0x0])},
 
             {'cmd': 0x36, 'data': bytes([
-                self.madctl(colormode, rot, ORIENTATION_TABLE)])},  # MADCTL
+                self.madctl(colormode, rot, orientation_table)])},  # MADCTL
 
             {'cmd': 0x3A, 'data': bytes(pix_format)},
             {'cmd': 0xB0, 'data': bytes([0x00])},
@@ -633,7 +636,7 @@ class gc9a01(ili9XXX):
         miso=5, mosi=18, clk=19, cs=13, dc=12, rst=4, power=14, backlight=15, backlight_on=0, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=60, factor=4, hybrid=True, width=240, height=240, colormode=COLOR_MODE_RGB,
         rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True, asynchronous=False, initialize=True,
-        color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True
+        color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True, orientation_table=DEFAULT_ORIENTATION_TABLE
     ):
 
         if lv.color_format_get_bpp(color_format) != 16:
@@ -670,7 +673,7 @@ class gc9a01(ili9XXX):
             {'cmd': 0xB6, 'data': bytes([0x00, 0x00])},
 
             {'cmd': 0x36, 'data': bytes([
-                self.madctl(colormode, rot, ORIENTATION_TABLE)])},  # MADCTL
+                self.madctl(colormode, rot, orientation_table)])},  # MADCTL
 
             {'cmd': 0x3A, 'data': bytes([0x05])},
             {'cmd': 0x90, 'data': bytes([0x08, 0x08, 0x08, 0x08])},
@@ -774,7 +777,8 @@ class st7735(ili9XXX):
         miso=-1, mosi=19, clk=18, cs=13, dc=12, rst=4, power=-1, backlight=15, backlight_on=1, power_on=0,
         spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=128, height=160, start_x=0, start_y=0,
         colormode=COLOR_MODE_RGB, rot=PORTRAIT, invert=False, double_buffer=True, half_duplex=True,
-        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True):
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.RGB565, swap_rgb565_bytes=True,
+        orientation_table=(MADCTL_MX | MADCTL_MY, MADCTL_MV | MADCTL_MY, 0, MADCTL_MX | MADCTL_MV)):
 
         # Make sure Micropython was built such that color won't require processing before DMA
 
@@ -796,7 +800,7 @@ class st7735(ili9XXX):
             {'cmd': 0xC7, 'data': bytes([0xBE])},               # VCOM control
 
             {'cmd': 0x36, 'data': bytes([
-                self.madctl(colormode, rot, (MADCTL_MX | MADCTL_MY, MADCTL_MV | MADCTL_MY, 0, MADCTL_MX | MADCTL_MV))])},  # MADCTL
+                self.madctl(colormode, rot, orientation_table)])},  # MADCTL
 
             {'cmd': 0x3A, 'data': bytes([0x55])},               # Pixel Format Set
             {'cmd': 0xB1, 'data': bytes([0x00, 0x1B])},
