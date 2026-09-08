@@ -57,6 +57,8 @@ static const char TAG[] = "[RTCH]";
 #endif
 
 #define GPIO_TO_ADC_ELEMENT(x) [x] = CONCAT3(ADC1_GPIO, x, _CHANNEL)
+#if CONFIG_IDF_TARGET_ESP32
+// ESP32 ADC1 has 8 channels
 static const int gpio_to_adc[] = {
         GPIO_TO_ADC_ELEMENT(36),
         GPIO_TO_ADC_ELEMENT(37),
@@ -67,6 +69,30 @@ static const int gpio_to_adc[] = {
         GPIO_TO_ADC_ELEMENT(34),
         GPIO_TO_ADC_ELEMENT(35),
 };
+#elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H2
+// ESP32-C3 & ESP32-H2 ADC1 has 5 channels
+static const int gpio_to_adc[] = {
+        GPIO_TO_ADC_ELEMENT(0),
+        GPIO_TO_ADC_ELEMENT(1),
+        GPIO_TO_ADC_ELEMENT(2),
+        GPIO_TO_ADC_ELEMENT(3),
+        GPIO_TO_ADC_ELEMENT(4),
+};
+#elif CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+// ESP32-S2 & ESP32-S3 ADC1 has 10 channels
+static const int gpio_to_adc[] = {
+        GPIO_TO_ADC_ELEMENT(1),
+        GPIO_TO_ADC_ELEMENT(2),
+        GPIO_TO_ADC_ELEMENT(3),
+        GPIO_TO_ADC_ELEMENT(4),
+        GPIO_TO_ADC_ELEMENT(5),
+        GPIO_TO_ADC_ELEMENT(6),
+        GPIO_TO_ADC_ELEMENT(7),
+        GPIO_TO_ADC_ELEMENT(8),
+        GPIO_TO_ADC_ELEMENT(9),
+        GPIO_TO_ADC_ELEMENT(10),
+};
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Module definition
@@ -392,7 +418,9 @@ STATIC int measure_axis(
 
     adc1_channel_t adc_channel = gpio_to_adc[measure];
 
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
     adc_gpio_init(ADC_UNIT_1, adc_channel);
+#endif
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(adc_channel,ADC_ATTEN_DB_11);
 
