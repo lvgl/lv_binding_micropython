@@ -83,12 +83,14 @@ jobs:
         make -j $(nproc) -C ports/rp2 BOARD=RPI_PICO USER_C_MODULES=../../user_modules/lv_binding_micropython/micropython.cmake
 
     # ESP32 port
+        # USER_C_MODULES defined in esp32_common.cmake
     - name: Build esp32 port
       if: matrix.port == 'esp32'
       run: |
         source tools/ci.sh && ci_esp32_idf_setup
         source tools/ci.sh && ci_esp32_build_common
-        make -C ports/esp32 BOARD=ESP32_GENERIC_S3 USER_C_MODULES=../../user_modules/lv_binding_micropython/micropython.cmake
+        make -C ports/esp32 BOARD=ESP32_GENERIC_S3 
+    
 
     # Unix port
     - name: Build unix port
