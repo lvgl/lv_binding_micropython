@@ -1,4 +1,18 @@
-# init
+"""
+LVGL Example 1: Basic Widget Demonstration
+
+This example demonstrates:
+- LVGL initialization for different platforms (SDL, ESP32, STM32)
+- Basic widget creation (button, label, image)
+- Event handling
+- Style application
+- Loading images from binary data
+
+Supported platforms:
+- Unix port with SDL
+- ESP32 with ILI9341 display
+- STM32 with built-in display
+"""
 
 import usys as sys
 sys.path.append('') # See: https://github.com/micropython/micropython/issues/6419
@@ -45,13 +59,14 @@ class driver:
         event_loop = lv_utils.event_loop()
         lcd.init(w=hres, h=vres)
         
-        buf1 = lcd.framebuffer(1)
-        buf2 = lcd.framebuffer(2)
+        draw_buf1 = lv.draw_buf_create(hres, 50, color_format, 0)
+        draw_buf2 = lv.draw_buf_create(hres, 50, color_format, 0)
         
         self.disp_drv = lv.display_create(hres, vres)
         self.disp_drv.set_flush_cb(lcd.flush)
         self.disp_drv.set_color_format(color_format)
-        self.disp_drv.set_buffers(buf1, buf2, len(buf1), lv.DISPLAY_RENDER_MODE.PARTIAL)
+        self.disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
+        self.disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
 
         # disp_drv.gpu_blend_cb = lcd.gpu_blend
         # disp_drv.gpu_fill_cb = lcd.gpu_fill
@@ -95,9 +110,15 @@ image_data = b'!fN\xff#WM\xff\x1aC8\xff\x1dbG\xff/\x80a\xff3v^\xff+]O\xff%MF\xff
 
 # Create a screen with a draggable image
 
+# Create a new screen object (not yet active)
 scr = lv.obj()
+
+# Create an image widget on the screen
 image = lv.image(scr)
-image.align(lv.ALIGN.CENTER, 0, 0)
+image.align(lv.ALIGN.CENTER)
+
+# Create image descriptor with binary data
+# Format: ARGB8888 (32-bit with alpha channel)
 image_dsc = lv.image_dsc_t(
     {
         "header": {"w": 100, "h": 75, "cf": lv.COLOR_FORMAT.ARGB8888},
@@ -106,9 +127,9 @@ image_dsc = lv.image_dsc_t(
     }
 )
 
+# Set the image source to our descriptor
 image.set_src(image_dsc)
-# image.set_drag(True)
+# Note: set_drag() was removed in v9, use FLAG.CLICKABLE + event handlers for dragging
 
 # Load the screen and display image
-
 lv.screen_load(scr)

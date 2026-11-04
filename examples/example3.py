@@ -16,13 +16,14 @@ try:
     event_loop = lv_utils.event_loop()
     lcd.init(w=hres, h=vres)
 
-    buf1 = lcd.framebuffer(1)
-    buf2 = lcd.framebuffer(2)
+    draw_buf1 = lv.draw_buf_create(hres, 50, color_format, 0)
+    draw_buf2 = lv.draw_buf_create(hres, 50, color_format, 0)
     
     disp_drv = lv.display_create(hres, vres)
     disp_drv.set_flush_cb(lcd.flush)
     disp_drv.set_color_format(color_format)
-    disp_drv.set_buffers(buf1, buf2, len(buf1), lv.DISPLAY_RENDER_MODE.PARTIAL)
+    disp_drv.set_draw_buffers(draw_buf1, draw_buf2)
+    disp_drv.set_render_mode(lv.DISPLAY_RENDER_MODE.PARTIAL)
 
     # disp_drv.gpu_blend_cb = lcd.gpu_blend
     # disp_drv.gpu_fill_cb = lcd.gpu_fill
@@ -40,20 +41,23 @@ lv.screen_load(scr1)
 
 slider = lv.slider(scr2)
 slider.set_width(150)
-slider.align(lv.ALIGN.TOP_MID, 0, 15)
+slider.align(lv.ALIGN.TOP_MID)
+slider.set_y(15)
 
 button1 = lv.button(scr1)
-button1.align(lv.ALIGN.TOP_RIGHT, -5, 5)
+button1.align(lv.ALIGN.TOP_RIGHT)
+button1.set_pos(button1.get_x() - 5, 5)
 label = lv.label(button1)
 label.set_text(">")
 
 button2 = lv.button(scr2)
-button2.align(lv.ALIGN.TOP_LEFT, 5, 5)
+button2.align(lv.ALIGN.TOP_LEFT)
+button2.set_pos(5, 5)
 label2 = lv.label(button2)
 label2.set_text("<")
 
 led1 = lv.led(scr2)
-led1.align(lv.ALIGN.CENTER, 0, 0)
+led1.align(lv.ALIGN.CENTER)
 led1.set_brightness(slider.get_value() * 2)
 # led1.set_drag(True)
 led1.set_size(20,20)
@@ -81,7 +85,7 @@ kb = lv.keyboard(scr1)
 ta = lv.textarea(scr1)
 ta.set_width(450)
 ta.set_height(70)
-ta.align(lv.ALIGN.CENTER, 0, 0)
+ta.align(lv.ALIGN.CENTER)
 ta.set_text("")
 
 # Assign the text area to the keyboard
@@ -91,5 +95,5 @@ kb.set_textarea(ta)
 spin = lv.spinner(scr2)
 spin.set_anim_params(1000, 100)
 spin.set_size(100, 100)
-spin.align(lv.ALIGN.CENTER, 0, 0)
+spin.align(lv.ALIGN.CENTER)
 # spin.set_type(lv.spinner.TYPE.FILLSPIN_ARC)

@@ -1,5 +1,6 @@
 import sys
 sys.path.append('.')
+import machine
 from st77xx import *
 from xpt2046 import *
 
@@ -31,6 +32,6 @@ scr=lv.obj()
 btn=lv.button(scr)
 lbl=lv.label(btn)
 lbl.set_text("Press me!")
-btn.center()
-btn.add_event(lambda event: print('Button clicked!'),lv.EVENT.CLICKED,None)
+btn.align(lv.ALIGN.CENTER)
+btn.add_event_cb(lambda event: print('Button clicked!'),lv.EVENT.CLICKED,None)
 lv.screen_load(scr)
