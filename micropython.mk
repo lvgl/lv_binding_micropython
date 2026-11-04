@@ -80,30 +80,30 @@ $(info CFLAGS_USERMOD is $(CFLAGS_USERMOD))
 AWK ?= awk
 
 LV_INTERNAL_HEADERS = lv_obj_style_internal.h lv_obj_style_internal_gen.h
-LV_HASH := \\\#
+LV_HASH := \#
 LV_PP_FILTER = $(AWK) '$$1=="$(LV_HASH)"{p=($(foreach h,$(LV_INTERNAL_HEADERS),$$3!~"$(h)" &&) 1)} p{print}'
 
 # Generate LVGL API JSON for enhanced binding generation
 $(LVGL_JSON): $(ALL_LVGL_SRC)
 	$(ECHO) "LVGL-JSON $@"
 	$(Q)mkdir -p $(dir $@)
-	$(Q)if [ -f "$(LVGL_DIR)/scripts/gen_json/gen_json.py" ]; then \\
-		$(PYTHON) $(LVGL_DIR)/scripts/gen_json/gen_json.py \\
-			--output-path $@ \\
-			--lvgl-config $(LV_CONF_PATH); \\
-	else \\
-		echo '{}' > $@; \\
-		echo "Warning: LVGL JSON generator not found, using empty JSON"; \\
+	$(Q)if [ -f "$(LVGL_DIR)/scripts/gen_json/gen_json.py" ]; then \
+		$(PYTHON) $(LVGL_DIR)/scripts/gen_json/gen_json.py \
+			--output-path $@ \
+			--lvgl-config $(LV_CONF_PATH); \
+	else \
+		echo '{}' > $@; \
+		echo "Warning: LVGL JSON generator not found, using empty JSON"; \
 	fi
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py $(LVGL_JSON)
 	$(ECHO) "LVGL-GEN $@"
 	$(Q)mkdir -p $(dir $@)
-	$(Q)$(CPP) -DPYCPARSER -x c \\
-		-I $(LVGL_BINDING_DIR)/stubs/include/freetype2 \\
-		-I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include \\
-		-I $(LVGL_BINDING_DIR)/stubs/include \\
-		$(CFLAGS_USERMOD) \\
+	$(Q)$(CPP) -DPYCPARSER -x c \
+		-I $(LVGL_BINDING_DIR)/stubs/include/freetype2 \
+		-I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include \
+		-I $(LVGL_BINDING_DIR)/stubs/include \
+		$(CFLAGS_USERMOD) \
 		$(LVGL_DIR)/lvgl_private.h | $(LV_PP_FILTER) > $(LVGL_PP)
 	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -J $(LVGL_JSON) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
 
