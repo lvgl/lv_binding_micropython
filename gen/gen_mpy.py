@@ -1832,7 +1832,13 @@ static unsigned long long mp_obj_get_ull(mp_obj_t obj)
 
     unsigned long long val = 0;
     bool big_endian = !(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+    // mp_obj_int_to_bytes() replaced mp_obj_int_to_bytes_impl() in MicroPython
+    // 1.29 (commit e00daa3a), adding is_signed and overflow_check parameters.
+#if MICROPY_VERSION >= MICROPY_MAKE_VERSION(1, 29, 0)
+    mp_obj_int_to_bytes(obj, sizeof(val), (byte*)&val, big_endian, false, false);
+#else
     mp_obj_int_to_bytes_impl(obj, big_endian, sizeof(val), (byte*)&val);
+#endif
     return val;
 }
 

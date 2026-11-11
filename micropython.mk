@@ -90,7 +90,7 @@ $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py
 		-I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include \
 		-I $(LVGL_BINDING_DIR)/stubs/include \
 		$(CFLAGS_USERMOD) \
-		$(LVGL_DIR)/lvgl_private.h | $(LV_PP_FILTER) > $(LVGL_PP)
+		$(LVGL_DIR)/lvgl.h | $(LV_PP_FILTER) > $(LVGL_PP)
 	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
 
 .PHONY: LVGL_MPY
