@@ -1122,6 +1122,8 @@ typedef struct mp_lv_struct_t
 
 static const mp_lv_struct_t mp_lv_null_obj;
 
+static int _nesting = 0;
+
 #ifdef LV_OBJ_T
 static mp_int_t mp_lv_obj_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags);
 #else
@@ -1349,14 +1351,12 @@ void mp_lv_log_cb(lv_log_level_t level, const char * buf){
     mp_printf(&mp_plat_print, buf);
 }
 
-void mp_lv_init_gc()
-{
-    if (!MP_STATE_VM(mp_lv_roots_initialized)) {
-        // mp_printf(&mp_plat_print, "[ INIT GC ]");
-        mp_lv_roots = MP_STATE_VM(mp_lv_roots) = m_new0(lv_global_t, 1);
-        mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 1;
-    }
-}
+// Finalisable holder for LVGL's global state. The soft-reset GC sweep runs
+// its finaliser, which calls lv_deinit() before the heap is freed.
+typedef struct _mp_lv_roots_t {
+    mp_obj_base_t base;
+    lv_global_t global;
+} mp_lv_roots_t;
 
 void mp_lv_deinit_gc()
 {
@@ -1367,6 +1367,50 @@ void mp_lv_deinit_gc()
     mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 0;
     lvgl_mod_initialized = MP_STATE_VM(lvgl_mod_initialized) = 0;
 
+}
+
+static mp_obj_t mp_lv_roots___del__(mp_obj_t self_in) {
+    // Ignore stale holders left behind by an explicit lv_deinit().
+    if (MP_OBJ_TO_PTR(self_in) == MP_STATE_VM(mp_lv_roots)) {
+        // The heap is locked during the sweep, so a callback run by
+        // lv_deinit() can raise MemoryError. Abandon teardown in that case.
+        volatile int nesting = _nesting;
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            if (lv_is_initialized()) {
+                lv_deinit();
+            }
+            nlr_pop();
+        }
+        _nesting = nesting;
+        mp_lv_deinit_gc();
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_roots___del___obj, mp_lv_roots___del__);
+
+static const mp_rom_map_elem_t mp_lv_roots_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&mp_lv_roots___del___obj) },
+};
+static MP_DEFINE_CONST_DICT(mp_lv_roots_locals_dict, mp_lv_roots_locals_dict_table);
+
+static MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lv_roots_type,
+    MP_QSTR_lv_roots,
+    MP_TYPE_FLAG_NONE,
+    locals_dict, &mp_lv_roots_locals_dict
+);
+
+void mp_lv_init_gc()
+{
+    if (!MP_STATE_VM(mp_lv_roots_initialized)) {
+        // mp_printf(&mp_plat_print, "[ INIT GC ]");
+        mp_lv_roots_t *roots = mp_obj_malloc_with_finaliser(mp_lv_roots_t, &mp_lv_roots_type);
+        memset(&roots->global, 0, sizeof(roots->global));
+        MP_STATE_VM(mp_lv_roots) = roots;
+        mp_lv_roots = &roots->global;
+        mp_lv_roots_initialized = MP_STATE_VM(mp_lv_roots_initialized) = 1;
+    }
 }
 
 static mp_obj_t lvgl_mod___init__(void) {
@@ -1803,8 +1847,6 @@ static void *mp_lv_callback(mp_obj_t mp_callback, void *lv_callback, qstr callba
         return mp_to_ptr(mp_callback);
     }
 }
-
-static int _nesting = 0;
 
 // Function pointers wrapper
 

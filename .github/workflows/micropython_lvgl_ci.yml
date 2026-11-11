@@ -73,7 +73,7 @@ jobs:
       run: |
         source tools/ci.sh && ci_stm32_setup
         make -C ports/stm32 BOARD=PYBV11 submodules
-        make -j $(nproc) -C ports/stm32 BOARD=PYBV11 USER_C_MODULES=../../user_modules LV_CONF_PATH=../../user_modules/lv_binding_micropython/ports/stm32/lv_conf_stm32.h
+        make -j $(nproc) -C ports/stm32 BOARD=PYBV11 USER_C_MODULES=../../user_modules LV_CONF_PATH=$(pwd)/user_modules/lv_binding_micropython/ports/stm32/lv_conf_stm32.h
     # Raspberry Pi Pico port
     - name: Build rp2 port
       if: matrix.port == 'rp2'
@@ -88,7 +88,7 @@ jobs:
       run: |
         source tools/ci.sh && ci_esp32_idf_setup
         source tools/ci.sh && ci_esp32_build_common
-        make -C ports/esp32 BOARD=ESP32_GENERIC_S3 USER_C_MODULES=../../user_modules/lv_binding_micropython/micropython.cmake
+        make -C ports/esp32 BOARD=ESP32_GENERIC_S3
 
     # Unix port
     - name: Build unix port
